@@ -637,256 +637,368 @@ PlotDataPieFromPie<-function(microSetObj, taxalvl, metadata, clslevel,
    
   lowlvl_nm <<- lowtaxa;
 
-   datataxa<-as.matrix(tax_table(datapie));
-   subsettax_table<-tax_table(subset(datataxa,datataxa[,taxalvl]==high_taxa));
-   data1<-prune_taxa(taxa_names(subsettax_table),datapie);
-   datapietaxatab <<- data_tax <- tax_table(data1);
-   datapietaxa <<- data <- t(data.frame(otu_table(data1)));
-   taxa_nm<-data.matrix(data_tax[,lowlvl_nm]);
+  datataxa <- as.matrix(tax_table(datapie));
+  subsettax_table <- tax_table(subset(datataxa,datataxa[,taxalvl]==high_taxa));
+  data1 <- prune_taxa(taxa_names(subsettax_table),datapie);
+  datapietaxatab <<- data_tax <- tax_table(data1);
+  datapietaxa <<- data <- t(data.frame(otu_table(data1)));
+  taxa_nm <- data.matrix(data_tax[,lowlvl_nm]);
 
-   #converting NA values to unassigned
-   y <- which(is.na(taxa_nm)==TRUE);
-   taxa_nm[y] <- "Not_Assigned";
-   colnames(data)<-taxa_nm[,1];
-   nms <-colnames(data);
-   data<-data.frame(data %*% sapply(unique(nms),"==",nms));
-   if(length(nms)==1){
-       colnames(data)<-nms;
-    }
+  #converting NA values to unassigned
+  y <- which(is.na(taxa_nm)==TRUE);
+  taxa_nm[y] <- "Not_Assigned";
+  colnames(data) <- taxa_nm[,1];
+  nms <- colnames(data);
+  data <- data.frame(data %*% sapply(unique(nms),"==",nms));
+   
+  if(length(nms)==1){
+    colnames(data)<-nms;
+  }
 
-   colnames(data)<- gsub("\\."," ",colnames(data));
-   data$step<-factor(rownames(data));
-   data<-melt(data,id='step');
-   data$step<-as.numeric(data$step);
-   color_var<-levels(factor(data$variable));
-   x<-length(color_var);
-   x.colors<<-rep(col_vector,length.out=x);
+  colnames(data) <- gsub("\\."," ",colnames(data));
+  data$step <- factor(rownames(data));
+  data <- melt(data,id='step');
+  data$step <- as.numeric(data$step);
+  color_var <- levels(factor(data$variable));
+  x <- length(color_var);
+  x.colors <<- rep(col_vector,length.out=x);
 
-   piedata2<-aggregate(. ~variable , data=data[-1], FUN=sum);
-   # order by abundance
-   ord.inx <- order(piedata2$value, decreasing = TRUE);
-   piedata2<<-piedata2[ord.inx,];
-   return(1);
+  piedata2 <- aggregate(. ~variable , data=data[-1], FUN=sum);
+  # order by abundance
+  ord.inx <- order(piedata2$value, decreasing = TRUE);
+  piedata2 <<- piedata2[ord.inx,];
+  
+  if(.on.public.web){
+    .set.microSet(microSetObj)
+    return(1);
+  }else{
+    return(.set.microSet(microSetObj))
+  }
 }
 
-UpdatePieData<-function(lowtaxa){
-   suppressMessages(library(reshape));
-   set.seed(280534432);
-   data<-datapietaxa;
-   data_tax<-datapietaxatab;
-   high_taxa<-high_taxa;
-   lowlvl_nm<<-lowtaxa;
-   taxa_nm<-as.data.frame(data_tax[,lowlvl_nm]);
-   taxa_nm<-as.matrix(taxa_nm);
-   y <- which(is.na(taxa_nm)==TRUE);
-   #converting NA values to unassigned
-   taxa_nm[y] <- "Not_Assigned";
-   colnames(data)<-taxa_nm[,1];
-   nms <-colnames(data);
-   data<-data %*% sapply(unique(nms),"==",nms);
-   data<-data.frame(data);
-   if(length(nms)==1){
-       colnames(data)<-nms;
-    }
-   colnames(data)<- gsub("\\."," ",colnames(data));
-   data$step<-factor(rownames(data));
-   data<-melt(data,id='step');
-   data$step<-as.numeric(data$step);
-   color_var<-levels(factor(data$variable));
-   x<-length(color_var);
-   x.colors<<-rep(col_vector,length.out=x);
-   piedata2<<-aggregate(. ~variable , data=data[-1], FUN=sum);
-   # piedatas is two column stats (variable and value)
-   return(1);
+#'Function to update pie-chart data.
+#'@description This functions updates pie chart data. 
+#'@param microSetObj Input the name of the microSetObj.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+#'@import reshape
+UpdatePieData<-function(microSetObj, lowtaxa){
+  
+  microSetObj <- .get.microSetObj(microSetObj);
+  
+  if(.on.public.web){
+    load_reshape();
+  }
+  
+  set.seed(280534432);
+   
+  data <- datapietaxa;
+  data_tax <- datapietaxatab;
+  high_taxa <- high_taxa;
+  lowlvl_nm <<- lowtaxa;
+  taxa_nm <- as.data.frame(data_tax[,lowlvl_nm]);
+  taxa_nm <- as.matrix(taxa_nm);
+  y <- which(is.na(taxa_nm)==TRUE);
+   
+  #converting NA values to unassigned
+  taxa_nm[y] <- "Not_Assigned";
+  colnames(data) <- taxa_nm[,1];
+  nms <- colnames(data);
+  data <- data %*% sapply(unique(nms),"==",nms);
+  data <- data.frame(data);
+   
+  if(length(nms)==1){
+    colnames(data)<-nms;
+  }
+   
+  colnames(data) <- gsub("\\."," ",colnames(data));
+  data$step <- factor(rownames(data));
+  data <- melt(data,id='step');
+  data$step <- as.numeric(data$step);
+  color_var <- levels(factor(data$variable));
+  x <- length(color_var);
+  x.colors <<- rep(col_vector,length.out=x);
+  # piedatas is two column stats (variable and value)
+  piedata2 <<- aggregate(. ~variable , data=data[-1], FUN=sum);
+
+  if(.on.public.web){
+    .set.microSet(microSetObj)
+    return(1);
+  }else{
+    return(.set.microSet(microSetObj))
+  }
 }
 
-SavePiechartImg <- function(taxalvl,pieName,format="png", dpi=72) {
-    set.seed(280);
-    pieName = paste(pieName,".", format, sep="");
-    piedata<-transform(transform(piedata, value=value/sum(value)));
-    #rownames are still arranged by decending order
-    piedataimg<-piedata;
-    imgSet$pie<-pieName;
-    imgSet<<-imgSet;
-    row.names(piedataimg)<-NULL;
-    x.cols<-pie.cols;
-    # java color code to R color code
-    x.cols <- paste("#",x.cols, sep="");
-    Cairo(file=pieName,width=630, height=500, type=format, bg="white",dpi=dpi);
-    box<-ggplot(piedataimg, aes(x="", y = value, fill=reorder(variable,-value))) +
-        geom_bar(width = 1, stat = "identity") + theme_bw() +
-        coord_polar(theta = "y",direction=-1,start = 4.71239) + scale_fill_manual(values=c(x.cols))+
-        geom_text(aes(x=1.6,label = scales::percent(round(value,2))), check_overlap = T,size=3,position = position_stack(vjust = 0.5),color="grey48") +
-        theme(legend.position="right",axis.text = element_blank(),axis.ticks = element_blank(),panel.grid  = element_blank(), plot.title = element_text(hjust=0.5, face="bold"),legend.text=element_text(color="grey48")) +
-        labs(x="", y="",fill="");
-    print(box);
-    analSet$pie<-piedataimg;
-    analSet$pie.taxalvl<-taxalvl;
-    analSet<<-analSet;
-    dev.off();
+#'Function to save pie-chart
+#'@description This functions saves created pie chart plot. 
+#'@param microSetObj Input the name of the microSetObj.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+SavePiechartImg <- function(microSetObj, taxalvl, pieName, format="png", dpi=72) {
+    
+  microSetObj <- .get.microSetObj(microSetObj);
+  set.seed(280);
+    
+  pieName = paste(pieName,".", format, sep="");
+  piedata <- transform(transform(piedata, value=value/sum(value)));
+    
+  #rownames are still arranged by decending order
+  piedataimg <- piedata;
+  microSetObj$imgSet$pie <- pieName;
+
+  row.names(piedataimg) <- NULL;
+  x.cols <- pie.cols;
+    
+  # java color code to R color code
+  x.cols <- paste("#",x.cols, sep="");
+  Cairo(file=pieName, width=630, height=500, type=format, bg="white", dpi=dpi);
+    
+  box <- ggplot(piedataimg, aes(x="", y = value, fill=reorder(variable,-value))) +
+         geom_bar(width = 1, stat = "identity") + theme_bw() +
+         coord_polar(theta = "y",direction=-1,start = 4.71239) + scale_fill_manual(values=c(x.cols))+
+         geom_text(aes(x=1.6,label = scales::percent(round(value,2))), check_overlap = T,size=3,position = position_stack(vjust = 0.5),color="grey48") +
+         theme(legend.position="right",axis.text = element_blank(),axis.ticks = element_blank(),panel.grid  = element_blank(), plot.title = element_text(hjust=0.5, face="bold"),legend.text=element_text(color="grey48")) +
+         labs(x="", y="",fill="");
+  print(box);
+  microSetObj$analSet$pie<-piedataimg;
+  microSetObj$analSet$pie.taxalvl<-taxalvl;
+  dev.off();
+  return(.set.microSet(microSetObj))
 }
 
-
-PlotPiechart<-function(rel_perct,pieName,format="png", dpi=72) {
-    set.seed(28056188);
-    pieName = paste(pieName,".", format, sep="");
-    piedata2<-transform(transform(piedata2, value=value/sum(value)));
-    ind<-which(piedata2[,"value"]>rel_perct);
-    ind1<-which(piedata2[,"value"]<rel_perct);
-    if(length(ind)==0){
-        current.msg<<-"All features have lower relative abundance than given minimum abundance. Please lower the cut off for relative abundance.";
-        return(0);
-    }
-    if(length(ind1)>0){
-        levels(piedata2$variable)[ind1]<-"Others";
-        piedata2<-aggregate(value~variable, piedata2, FUN=sum);
-    }
-    ind_zero<-which(piedata2[,"value"]==0);
-    if(length(ind_zero)>0){
-        piedata2<-piedata2[-ind_zero,];
-    }
-    Cairo(file=pieName,width=630, height=400, type=format, bg="white",dpi=dpi);
-    box=ggplot(piedata2, aes(x="", y = value, fill=variable)) +
+#'Function to create pie-chart plot.
+#'@description This functions creates the pie chart plot. 
+#'@param microSetObj Input the name of the microSetObj.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+PlotPiechart <- function(microSetObj, rel_perct, pieName, format="png", dpi=72) {
+  
+  microSetObj <- .get.microSetObj(microSetObj);
+  
+  set.seed(28056188); 
+  pieName = paste(pieName,".", format, sep="");
+  piedata2 <- transform(transform(piedata2, value=value/sum(value)));
+  ind <- which(piedata2[,"value"]>rel_perct);
+  ind1 <- which(piedata2[,"value"]<rel_perct);
+    
+  if(length(ind)==0){
+    current.msg <<- "All features have lower relative abundance than given minimum abundance. Please lower the cut off for relative abundance.";
+    return(0);
+  }
+    
+  if(length(ind1)>0){
+    levels(piedata2$variable)[ind1] <- "Others";
+    piedata2 <- aggregate(value~variable, piedata2, FUN=sum);
+  }
+    
+  ind_zero <- which(piedata2[,"value"]==0);
+    
+  if(length(ind_zero)>0){
+    piedata2 <- piedata2[-ind_zero,];
+  }
+    
+  Cairo::Cairo(file=pieName,width=630, height=400, type=format, bg="white",dpi=dpi);
+    
+  box=ggplot(piedata2, aes(x="", y = value, fill=variable)) +
         geom_bar(width = 1, stat = "identity") + theme_bw() +
         coord_polar(theta = "y") + scale_fill_manual(values=c(x.colors))+
         geom_text(aes(x=1.7, label = scales::percent(value)), check_overlap = T,size=3, position = position_stack(vjust = 0.5)) +
         theme(legend.position="bottom",axis.text = element_blank(),axis.ticks = element_blank(),panel.grid  = element_blank(), plot.title = element_text(hjust=0.5, face="bold")) +
         labs(x="", y="",fill =lowlvl_nm) + ggtitle(high_taxa);
-    print(box);
-    dev.off();
+  print(box);
+    
+  dev.off();
+  
+  if(.on.public.web){
+    .set.microSet(microSetObj)
     return(1);
+  }else{
+    return(.set.microSet(microSetObj))
+  }
 }
 
 #######################################
 ###########Alpha-diversity#############
 #######################################
-PlotAlphaData<-function(data.src, bargraphName,distName,metadata,taxrank,format="png",dpi=72){
-    set.seed(13133);
-    if(data.src == "orig"){
-        data<-readRDS("orig.phyobj");
-    }else{
-        data<-dataSet$proc.phyobj;
-    }
 
-    if(taxrank!="OTU"){
-        #merging at taxonomy levels
-        data<-fast_tax_glom_first(data,taxrank);
-    }
+#'Function to plot alpha-diversity analysis.
+#'@description This functions creates a plot for alpha-diversity. 
+#'@param microSetObj Input the name of the microSetObj.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+PlotAlphaData<-function(microSetObj, data.src, bargraphName, distName,
+                        metadata, taxrank, format="png", dpi=72){
+  
+  microSetObj <- .get.microSetObj(microSetObj);  
+  
+  set.seed(13133);
+    
+  if(data.src == "orig"){
+    data <- readRDS("orig.phyobj");
+  }else{
+    data <- microSetObj$dataSet$proc.phyobj;
+  }
 
-    bargraphName = paste(bargraphName, ".", format, sep="");
-    imgSet$alpha<-bargraphName;
-    imgSet<<-imgSet;
-    Cairo(file=bargraphName, width=900, height=450, type=format, bg="white",dpi=dpi);
-    #reordering the sample (getting reordered rownames)
-    sam<-sample_data(data);
-    sam<-sam[order(sam[[metadata]])];
-    smplord<-rownames(sam);
+  if(taxrank!="OTU"){
+    #merging at taxonomy levels
+    data <- fast_tax_glom_first(data, taxrank);
+  }
 
-    box = plot_richness(data,color=metadata,measures = distName)+scale_x_discrete(limits=c(smplord));
-    analSet$alpha<-box$data;
-    write.csv(analSet$alpha, file="alphadiversity.csv");
-    box=box+theme_bw()+theme(axis.text.x = element_text(angle = 45, hjust = 1,vjust= 1));
-    box$layers <- box$layers[-1];
-    box<-box+geom_point(size=2);
-    #getting scale for plot (using same for boxplot also)
-    ylimits<<-layer_scales(box)$y$range$range;
-    print(box);
-    dev.off();
-    analSet$alpha.meth<-distName;
-    analSet$alpha.metadata<-metadata;
-    analSet$alpha.taxalvl<-taxrank;
-    analSet<<-analSet;
+  bargraphName = paste(bargraphName, ".", format, sep="");
+  microSetObj$imgSet$alpha <- bargraphName;
+
+  Cairo::Cairo(file=bargraphName, width=900, height=450, type=format, bg="white",dpi=dpi);
+    
+  #reordering the sample (getting reordered rownames)
+  sam <- sample_data(data);
+  sam <- sam[order(sam[[metadata]])];
+  smplord <- rownames(sam);
+
+  box = plot_richness(data,color=metadata,measures = distName)+scale_x_discrete(limits=c(smplord));
+  microSetObj$analSet$alpha<-box$data;
+  write.csv(microSetObj$analSet$alpha, file="alphadiversity.csv");
+  box = box + theme_bw() + theme(axis.text.x = element_text(angle = 45, hjust = 1,vjust= 1));
+  box$layers <- box$layers[-1];
+  box <- box + geom_point(size=2);
+  #getting scale for plot (using same for boxplot also)
+  ylimits <<- layer_scales(box)$y$range$range;
+  print(box);
+    
+  dev.off();
+  microSetObj$analSet$alpha.meth <- distName;
+  microSetObj$analSet$alpha.metadata <- metadata;
+  microSetObj$analSet$alpha.taxalvl <- taxrank;
+  return(.set.microSet(microSetObj))
 }
 
-PlotTaxaAlphaBarSam<-function(barplotName,taxalvl,samplnm,imgOpt,feat_cnt,format="png",dpi=72){
-    suppressMessages(library(reshape));
-    #using filtered data
-    data<-dataSet$filt.data;
-    if(class(dataSet$filt.data)=="matrix"){
-       data<-otu_table(data,taxa_are_rows =TRUE);
-    }
-    sample_table<-sample_data(dataSet$proc.phyobj, errorIfNULL=TRUE);
-    data1<-merge_phyloslim(data,tax_table(dataSet$proc.phyobj),sample_table);
+#'Function to create bar plots of selected taxa level.
+#'@description This functions creates bar plots of a selected taxa level. 
+#'@param microSetObj Input the name of the microSetObj.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+#'@import reshape
+PlotTaxaAlphaBarSam<-function(microSetObj, barplotName, taxalvl, samplnm,
+                              imgOpt, feat_cnt, format="png", dpi=72){
+  
+  microSetObj <- .get.microSetObj(microSetObj);
+  
+  if(.on.public.web){
+    load_reshape();
+  }
 
-    yLbl <- "Actual Abundance";
+  #using filtered data
+  data <- microSetObj$dataSet$filt.data;
+    
+  if(class(microSetObj$dataSet$filt.data)=="matrix"){
+    data<-otu_table(data, taxa_are_rows =TRUE);
+  }
+    
+  sample_table <- sample_data(microSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
+  data1 <- merge_phyloslim(data, tax_table(microSetObj$dataSet$proc.phyobj), sample_table);
 
-    data<-as.matrix(otu_table(data1));
-    data<-data[,samplnm,drop=FALSE];
-    data<-t(data);
-    data_tax<-tax_table(data1);
-    #reshaping data
-    taxa_nm<-as.data.frame(data_tax[,taxalvl]);
-    taxa_nm<-as.matrix(taxa_nm);
-    y <- which(is.na(taxa_nm)==TRUE);
+  yLbl <- "Actual Abundance";
 
-   #converting NA values to unassigned; before order it to last position using ZZZ as its name
-    taxa_nm[y] <- "ZZZ";
-    colnames(data)<-taxa_nm[,1];
-    nms <-colnames(data);
-    data<-data %*% sapply(unique(nms),"==",nms);
-    data<-data.frame(data);
-    data<-data[ , order(names(data))];
-    indx<-which(colnames(data)=="ZZZ");
-    colnames(data)[indx]<-"NA";
-    ind<-which(colSums(data)>feat_cnt);
-    ind1<-which(colSums(data)<feat_cnt);
-    if(length(ind)==0){
-        current.msg<<-"All features have lower read count than given minimum count filter. Please lower the cut off for minimum count.";
-        return(0);
-    }
-    if(length(ind1)>0){
-        colnames(data)[ind1] <- "Others";
-        data<-as.data.frame(t(rowsum(t(data),group = colnames(data))));
-    }
-    if(imgOpt=="barnorm"){
-        data <- as.data.frame(apply(data,1, function(x) x/sum(x)));
-        data<-as.data.frame(t(data));
-        yLbl <- "Relative Abundance";
-    }
-    feat_no<-ncol(data);
-    #adjust height according to number of legends
-    w<-600;
-    if(feat_no < 10){
-        w<-w;
-    } else if (feat_no < 20){
-        w<-w+100;
-    } else if (feat_no < 50){
-        w<-w+200;
-    } else if (feat_no < 100){
-        w<-w+400;
-    } else if (feat_no > 100){
-        w<-w+500;
-    }
-    write.csv(t(data), file="taxa_abund.csv");
-    data$step<-factor(rownames(data));
-    data<-melt(data,id='step');
-    data$step<-as.numeric(data$step);
-    data<-data[order(data[,2]),];
-    data<-data[,-1];
-    a<-feat_no;
-    if(length(a)<50){
-        h<-feat_no*50;
-    }else{
-        h<-feat_no*25;
-    }
-    #sorting by descending
+  data <- as.matrix(otu_table(data1));
+  data <- data[,samplnm,drop=FALSE];
+  data <- t(data);
+  data_tax <- tax_table(data1);
+    
+  #reshaping data
+  taxa_nm <- as.data.frame(data_tax[,taxalvl]);
+  taxa_nm <- as.matrix(taxa_nm);
+  y <- which(is.na(taxa_nm)==TRUE);
 
-    barplotName = paste(barplotName, ".",format, sep="");
-    imgSet$stack<-barplotName;
-    imgSet<<-imgSet;
-    Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
-    box<-ggplot(data, aes(x=reorder(variable,value),y=value))+geom_bar(stat="identity",width=0.6,fill="steelblue")+theme_bw()+
+  #converting NA values to unassigned; before order it to last position using ZZZ as its name
+  taxa_nm[y] <- "ZZZ";
+  colnames(data) <- taxa_nm[,1];
+  nms <- colnames(data);
+  data <- data %*% sapply(unique(nms),"==",nms);
+  data <- data.frame(data);
+  data <- data[ , order(names(data))];
+  indx <- which(colnames(data)=="ZZZ");
+  colnames(data)[indx] <- "NA";
+  ind <- which(colSums(data)>feat_cnt);
+  ind1 <- which(colSums(data)<feat_cnt);
+    
+  if(length(ind)==0){
+    current.msg <<- "All features have lower read count than given minimum count filter. Please lower the cut off for minimum count.";
+    return(0);
+  }
+    
+  if(length(ind1)>0){
+    colnames(data)[ind1] <- "Others";
+    data <- as.data.frame(t(rowsum(t(data),group = colnames(data))));
+  }
+    
+  if(imgOpt=="barnorm"){
+    data <- as.data.frame(apply(data,1, function(x) x/sum(x)));
+    data <- as.data.frame(t(data));
+    yLbl <- "Relative Abundance";
+  }
+    
+  feat_no<-ncol(data);
+  #adjust height according to number of legends
+    
+  w<-600;
+    
+  if(feat_no < 10){
+    w<-w;
+  } else if (feat_no < 20){
+    w<-w+100;
+  } else if (feat_no < 50){
+    w<-w+200;
+  } else if (feat_no < 100){
+    w<-w+400;
+  } else if (feat_no > 100){
+    w<-w+500;
+  }
+  
+  write.csv(t(data), file="taxa_abund.csv");
+  data$step <- factor(rownames(data));
+  data <- melt(data,id='step');
+  data$step <- as.numeric(data$step);
+  data <- data[order(data[,2]),];
+  data <- data[,-1];
+  a <- feat_no;
+    
+  if(length(a)<50){
+    h<-feat_no*50;
+  }else{
+    h<-feat_no*25;
+  }
+    
+  #sorting by descending
+  barplotName = paste(barplotName, ".",format, sep="");
+  microSetObj$imgSet$stack<-barplotName;
+
+  Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
+  box<-ggplot(data, aes(x=reorder(variable,value),y=value))+geom_bar(stat="identity",width=0.6,fill="steelblue")+theme_bw()+
         theme(axis.text.x = element_text(angle = 0,vjust=0.5))+
         labs(y=yLbl,x="",fill=taxalvl)+coord_flip()+
         theme(panel.background = element_blank(),
         panel.grid.major = element_blank(), panel.grid.minor = element_blank(),legend.position="none");
-    print(box);
-    dev.off();
-    analSet$stack<-data;
-    analSet$stack.taxalvl<-taxalvl;
-    analSet$plot<-"Stacked Bar";
-    analSet<<-dataSet;
+  print(box);
+  dev.off();
+  microSetObj$analSet$stack<-data;
+  microSetObj$analSet$stack.taxalvl<-taxalvl;
+  microSetObj$analSet$plot<-"Stacked Bar";
+
+  if(.on.public.web){
+    .set.microSet(microSetObj)
     return(1);
+  }else{
+    return(.set.microSet(microSetObj))
+  }
 }
 
 ###########Beta-diversity#############
