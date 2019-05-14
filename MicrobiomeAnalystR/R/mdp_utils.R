@@ -1003,214 +1003,266 @@ PlotTaxaAlphaBarSam<-function(microSetObj, barplotName, taxalvl, samplnm,
 
 ###########Beta-diversity#############
 #######################################
-PlotBetaDiversity<-function(plotNm,ordmeth,distName,colopt,metadata,showlabel,taxrank,taxa,alphaopt,ellopt,format="png",dpi=72){
 
-    library(data.table);
-    set.seed(13134);
-    metadata<-metadata;
-    #using normalized data
+#'Function to plot beta diversity.
+#'@description This functions creates beta diversity plots.
+#'@param microSetObj Input the name of the microSetObj.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+#'@import data.table
+#'@import ape
+PlotBetaDiversity<-function(microSetObj, plotNm, ordmeth, distName, colopt, metadata, 
+                            showlabel, taxrank, taxa, alphaopt, ellopt, format="png", dpi=72){
+
+  microSetObj <- .get.microSetObj(microSetObj);
+  
+  if(.on.public.web){
+    load_datatable();
+  }
+  
+  set.seed(13134);
+  metadata <- metadata;
+    
+  #using normalized data
+  if(taxrank=="OTU"){
+    taxa_table <- tax_table(microSetObj$dataSet$proc.phyobj);
+    data <- merge_phyloslim(microSetObj$dataSet$norm.phyobj, taxa_table);
+  }else{
+    taxa_table <- tax_table(microSetObj$dataSet$proc.phyobj);
+    data <- merge_phyloslim(microSetObj$dataSet$norm.phyobj, taxa_table);
+    #merging at taxonomy levels
+    data <- fast_tax_glom_first(data,taxrank);
+  }
+    
+  if(colopt=="taxa"){
     if(taxrank=="OTU"){
-            taxa_table<-tax_table(dataSet$proc.phyobj);
-            data<-merge_phyloslim(dataSet$norm.phyobj,taxa_table);
-    }else {
-        taxa_table<-tax_table(dataSet$proc.phyobj);
-        data<-merge_phyloslim(dataSet$norm.phyobj,taxa_table);
-        #merging at taxonomy levels
-        data<-fast_tax_glom_first(data,taxrank);
-    }
-    if(colopt=="taxa"){
-        if(taxrank=="OTU"){
-            data1<-as.matrix(otu_table(data));
-            feat_data<-as.numeric(data1[taxa,]);
-        }else {
-            nm<-as.character(tax_table(data)[,taxrank]);
-            #converting NA values to unassigned
-            nm[is.na(nm)] <- "Not_Assigned";
-            data1<-as.matrix(otu_table(data));
-            rownames(data1)<-nm;
-            #all NA club together
-            data1<-as.matrix(t(sapply(by(data1,rownames(data1),colSums),identity)));
-            feat_data<-data1[taxa,];
-        }
-        sample_data(data)$taxa<-feat_data;
-        indx<-which(colnames(sample_data(data))=="taxa");
-        colnames(sample_data(data))[indx]<-taxa;
-        taxa1<-colnames(sample_data(data))[indx];
-        taxaorig<-taxa;
-        #if the taxa names are numeric then X is appending to column name
-        if(!is.na(as.numeric(taxa))=="TRUE"){
-            taxa<-paste("X",taxa, sep = "", collapse = NULL);
-        }
-    }else if(colopt=="alphadiv") {
-        data1<-dataSet$proc.phyobj;
-        box<-plot_richness(data1,measures = alphaopt);
-        alphaboxdata<-box$data;
-        sam_nm<-sample_names(data);
-        alphaboxdata<-alphaboxdata[alphaboxdata$samples %in% sam_nm,];
-        alphaval<-alphaboxdata$value;
-        sample_data(data)$alphaopt<-alphaval;
-        indx<-which(colnames(sample_data(data))=="alphaopt");
-        colnames(sample_data(data))[indx]<-alphaopt;
-    }else {
-        data<-data;
-    }
-
-    if(distName=="wunifrac"){
-        library(ape);
-        pg_tree <- readRDS("tree.RDS");
-        pg_tb <- tax_table(data);
-        pg_ot <- otu_table(data);
-        pg_sd <- sample_data(data);
-        pg_tree <- prune_taxa(taxa_names(pg_ot), pg_tree);
-        data <- merge_phyloslim(pg_tb, pg_ot, pg_sd, pg_tree);
-
-       if(!ape::is.rooted(phy_tree(data))){
-                pick_new_outgroup <- function(tree.unrooted){
-                treeDT <-
-                    cbind(cbind(
-                    data.table(tree.unrooted$edge),
-                    data.table(length = tree.unrooted$edge.length))[1:Ntip(tree.unrooted)],
-                    data.table(id = tree.unrooted$tip.label));
-                    new.outgroup <- treeDT[which.max(treeDT$length), ]$id
-                    return(new.outgroup);
-                }
-                new.outgroup <- pick_new_outgroup(phy_tree(data));
-                phy_tree(data) <- ape::root(phy_tree(data),
-                                outgroup = new.outgroup,
-                                resolve.root=TRUE)
-        }
-        saveRDS(data, "data_unifra.RDS");
-        ord<-phyloslimR::ordinate(data,method = ordmeth,"unifrac",weighted=TRUE);
-
-    } else if (distName=="unifrac") {
-        library(ape);
-        pg_tree <- readRDS("tree.RDS");
-        pg_tb <- tax_table(data);
-        pg_ot <- otu_table(data);
-        pg_sd <- sample_data(data);
-        pg_tree <- prune_taxa(taxa_names(pg_ot), pg_tree);
-        data <- merge_phyloslim(pg_tb, pg_ot, pg_sd, pg_tree);
-
-        if(!ape::is.rooted(phy_tree(data))){
-                pick_new_outgroup <- function(tree.unrooted){
-                treeDT <-
-                cbind(cbind(
-                    data.table(tree.unrooted$edge),
-                    data.table(length = tree.unrooted$edge.length))[1:Ntip(tree.unrooted)],
-                data.table(id = tree.unrooted$tip.label));
-                new.outgroup <- treeDT[which.max(treeDT$length), ]$id
-                return(new.outgroup);
-            }
-
-            new.outgroup <- pick_new_outgroup(phy_tree(data));
-            phy_tree(data) <- ape::root(phy_tree(data),
-                                outgroup = new.outgroup,
-                                resolve.root=TRUE);
-        }
-       saveRDS(data, "data_unifra.RDS");
-       ord<-phyloslimR::ordinate(data,method = ordmeth,"unifrac");
-
+      data1 <- as.matrix(otu_table(data));
+      feat_data <- as.numeric(data1[taxa,]);
     }else{
-       ord<-phyloslimR::ordinate(data,method = ordmeth,distName);
+      nm <- as.character(tax_table(data)[,taxrank]);
+      #converting NA values to unassigned
+      nm[is.na(nm)] <- "Not_Assigned";
+      data1 <- as.matrix(otu_table(data));
+      rownames(data1) <- nm;
+      #all NA club together
+      data1 <- as.matrix(t(sapply(by(data1, rownames(data1), colSums), identity)));
+      feat_data <- data1[taxa,];
     }
-
-    plotNm = paste(plotNm, ".", format, sep="");
-    imgSet$beta2d<-plotNm;
-    imgSet<<-imgSet;
-
-    Cairo(file=plotNm, width=720, height=500, type=format, bg="white",dpi=dpi);
-    if(colopt=="taxa"){
-        box = phyloslimR::plot_ordination(data,ord,color=taxa)+ labs(aesthetic=taxaorig)+scale_colour_gradient(low="green", high="red");
-    }else if(colopt=="alphadiv") {
-        box = phyloslimR::plot_ordination(data,ord,color=alphaopt)+ scale_colour_gradient(low="green", high="red");
-    }else {
-        box = phyloslimR::plot_ordination(data,ord,color=metadata);
+    sample_data(data)$taxa <- feat_data;
+    indx <- which(colnames(sample_data(data))=="taxa");
+    colnames(sample_data(data))[indx] <- taxa;
+    taxa1 <- colnames(sample_data(data))[indx];
+    taxaorig <- taxa;
+    #if the taxa names are numeric then X is appending to column name
+        
+    if(!is.na(as.numeric(taxa))=="TRUE"){
+      taxa <- paste("X",taxa, sep = "", collapse = NULL);
     }
-    box$layers <- box$layers[-1];
-    if(showlabel=="samnm"){
-        box = box+geom_text(aes(label=sample_id),hjust=0.5, vjust=2,size=3,fontface="bold");
-        box=box+geom_point(size =4,alpha=0.6)+theme_bw();
-    }else if (showlabel=="none"){
-        box=box+geom_point(size =4,alpha=0.8)+theme_bw();
-    }else {
-        showlabel<<-showlabel;
-        bx_data<<-data.frame(box$data);
-        box = box+geom_text(aes(label=bx_data[ ,showlabel]),hjust=0.5, vjust=2,size=3,fontface="bold");
-        box=box+geom_point(size =4,alpha=0.6)+theme_bw();
+  }else if(colopt=="alphadiv") {
+    data1 <- microSetObj$dataSet$proc.phyobj;
+    box <- plot_richness(data1,measures = alphaopt);
+    alphaboxdata <- box$data;
+    sam_nm <- sample_names(data);
+    alphaboxdata <- alphaboxdata[alphaboxdata$samples %in% sam_nm,];
+    alphaval <- alphaboxdata$value;
+    sample_data(data)$alphaopt <- alphaval;
+    indx <- which(colnames(sample_data(data))=="alphaopt");
+    colnames(sample_data(data))[indx] <- alphaopt;
+  }else{
+    data<-data;
+  }
+
+  if(distName=="wunifrac"){
+    
+    if(.on.public.web){
+      load_ape();
     }
-    #used for area color for ellipse
-    if(colopt=="expfac"){
-        sam_data<-as.data.frame(sample_data(data));
-        clsLbl<-sam_data[[metadata]];
+    
+    pg_tree <- readRDS("tree.RDS");
+    pg_tb <- tax_table(data);
+    pg_ot <- otu_table(data);
+    pg_sd <- sample_data(data);
+    pg_tree <- prune_taxa(taxa_names(pg_ot), pg_tree);
+    data <- merge_phyloslim(pg_tb, pg_ot, pg_sd, pg_tree);
 
-            if (ellopt=="yes"){
-               box=box+ stat_ellipse(type="norm", linetype=2, geom = "polygon",alpha = 0.2, aes_string(fill = clsLbl), show.legend=FALSE);
-            }
+    if(!ape::is.rooted(phy_tree(data))){
+      pick_new_outgroup <- function(tree.unrooted){
+        treeDT <- cbind(cbind(data.table(tree.unrooted$edge),
+                  data.table(length = tree.unrooted$edge.length))[1:Ntip(tree.unrooted)],
+                  data.table(id = tree.unrooted$tip.label));
+                  new.outgroup <- treeDT[which.max(treeDT$length), ]$id
+                  return(new.outgroup);
+      }
+      new.outgroup <- pick_new_outgroup(phy_tree(data));
+      phy_tree(data) <- ape::root(phy_tree(data),
+                        outgroup = new.outgroup,
+                        resolve.root=TRUE)
+      }
+        
+    saveRDS(data, "data_unifra.RDS");
+    ord <- phyloslimR::ordinate(data,method = ordmeth,"unifrac",weighted=TRUE);
+
+  } else if (distName=="unifrac") {
+      
+    if(.on.public.web){
+      load_ape();
+    }        
+      
+    pg_tree <- readRDS("tree.RDS");
+    pg_tb <- tax_table(data);
+    pg_ot <- otu_table(data);
+    pg_sd <- sample_data(data);
+    pg_tree <- prune_taxa(taxa_names(pg_ot), pg_tree);
+    data <- merge_phyloslim(pg_tb, pg_ot, pg_sd, pg_tree);
+
+    if(!ape::is.rooted(phy_tree(data))){
+        pick_new_outgroup <- function(tree.unrooted){
+        treeDT <- cbind(cbind(data.table(tree.unrooted$edge),
+        data.table(length = tree.unrooted$edge.length))[1:Ntip(tree.unrooted)],
+        data.table(id = tree.unrooted$tip.label));
+        new.outgroup <- treeDT[which.max(treeDT$length), ]$id
+        return(new.outgroup);}
+
+        new.outgroup <- pick_new_outgroup(phy_tree(data));
+        phy_tree(data) <- ape::root(phy_tree(data),
+                          outgroup = new.outgroup,
+                          resolve.root=TRUE);
     }
+    
+    saveRDS(data, "data_unifra.RDS");
+    ord<-phyloslimR::ordinate(data,method = ordmeth,"unifrac");
 
-    print(box);
-    dev.off();
+  }else{
+    ord<-phyloslimR::ordinate(data,method = ordmeth,distName);
+  }
+  
+  plotNm = paste(plotNm, ".", format, sep="");
+  microSetObj$imgSet$beta2d<-plotNm;
 
-    #saving info for report generation
-    analSet$beta<-data;
-    analSet$beta.meth<-ordmeth;
-    analSet$beta.dist<-distName;
-    analSet$beta.taxalvl<-taxrank;
+  Cairo::Cairo(file=plotNm, width=720, height=500, type=format, bg="white",dpi=dpi);
+    
+  if(colopt=="taxa"){
+    box = phyloslimR::plot_ordination(data,ord,color=taxa)+ labs(aesthetic=taxaorig)+scale_colour_gradient(low="green", high="red");
+  }else if(colopt=="alphadiv") {
+    box = phyloslimR::plot_ordination(data,ord,color=alphaopt)+ scale_colour_gradient(low="green", high="red");
+  }else{
+    box = phyloslimR::plot_ordination(data,ord,color=metadata);
+  }
+    
+  box$layers <- box$layers[-1];
+    
+  if(showlabel=="samnm"){
+    box = box + geom_text(aes(label=sample_id), hjust=0.5, vjust=2, size=3, fontface="bold");
+    box = box + geom_point(size=4, alpha=0.6) + theme_bw();
+  }else if(showlabel=="none"){
+    box=box+geom_point(size=4, alpha=0.8) + theme_bw();
+  }else{
+    showlabel <<- showlabel;
+    bx_data <<- data.frame(box$data);
+    box = box + geom_text(aes(label=bx_data[ ,showlabel]), hjust=0.5, vjust=2, size=3, fontface="bold");
+    box = box + geom_point(size=4, alpha=0.6) + theme_bw();
+  }
+  
+  #used for area color for ellipse
+  if(colopt=="expfac"){
+    sam_data <- as.data.frame(sample_data(data));
+    clsLbl <- sam_data[[metadata]];
 
-    # if it is NMDS, show stress value in the plot
-    if(ordmeth == "NMDS"){
-        analSet$beta.stress <- paste("[NMDS] Stress =", signif(ord$stress, 5));
+    if (ellopt=="yes"){
+      box = box + stat_ellipse(type="norm", linetype=2, geom = "polygon", alpha = 0.2, aes_string(fill = clsLbl), show.legend=FALSE);
     }
-    analSet<<-analSet;
+  }
+
+  print(box);
+  dev.off();
+
+  #saving info for report generation
+  microSetObj$analSet$beta <- data;
+  microSetObj$analSet$beta.meth <- ordmeth;
+  microSetObj$analSet$beta.dist <- distName;
+  microSetObj$analSet$beta.taxalvl <- taxrank;
+
+  # if it is NMDS, show stress value in the plot
+  if(ordmeth == "NMDS"){
+    microSetObj$analSet$beta.stress <- paste("[NMDS] Stress =", signif(ord$stress, 5));
+  }
+  return(.set.microSet(microSetObj))
 }
 
-PlotFunAnotSummary<-function(imgName,format="png",dpi=72) {
-    set.seed(280561499);
-    if(is.null(analSet$func.pred)){
-        result <- readRDS("func.pred");
-    }else{
-        result<-analSet$func.pred;
-        saveRDS(analSet$func.pred, file="func.pred");
-        analSet$func.pred <- NULL;
-        analSet <<- analSet;
-    }
-    imgName = paste(imgName, ".",format, sep="");
-    imgSet$func.pred<-imgName;
-    imgSet<<-imgSet;
-    Cairo(file=imgName, width=900, height=480, type=format, bg="white",dpi=dpi);
-    box <- ggplot(stack(log(result)), aes(x = factor(ind, levels = names(result)), y=values)) + labs(x=NULL, y="log (KO Counts)") + geom_boxplot() + theme(axis.text.x = element_text(angle = 90, hjust = 1))
-    print(box);
-    dev.off();
+#'Plot functional annotation summary
+#'@description This functions plots the functional annotation summary.
+#'@param microSetObj Input the name of the microSetObj.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+PlotFunAnotSummary<-function(microSetObj, imgName, format="png", dpi=72){
+  
+  microSetObj <- .get.microSetObj(microSetObj);
+  
+  set.seed(280561499);
+    
+  if(is.null(microSetObj$analSet$func.pred)){
+    result <- readRDS("func.pred");
+  }else{
+    result <- microSetObj$analSet$func.pred;
+    saveRDS(microSetObj$analSet$func.pred, file="func.pred");
+    microSetObj$analSet$func.pred <- NULL;
+  }
+    
+  imgName = paste(imgName, ".",format, sep="");
+  microSetObj$imgSet$func.pred <- imgName;
+  Cairo::Cairo(file=imgName, width=900, height=480, type=format, bg="white",dpi=dpi);
+  box <- ggplot(stack(log(result)), aes(x = factor(ind, levels = names(result)), y=values)) + labs(x=NULL, y="log (KO Counts)") + geom_boxplot() + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  print(box);
+  dev.off();
+  
+  return(.set.microSet(microSetObj))
 }
 
-PlotTaxaAlphaArea<-function(barplotName,viewOpt,taxalvl, metadata,imgOpt,feat_cnt,colpalopt,calcmeth,format="png",dpi=72){
+#'Plot functional annotation summary
+#'@description This functions plots the functional annotation summary.
+#'@param microSetObj Input the name of the microSetObj.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+PlotTaxaAlphaArea<-function(microSetObj, barplotName, viewOpt, taxalvl, metadata,
+                            imgOpt, feat_cnt, colpalopt, calcmeth, format="png", dpi=72){
 
-  suppressMessages(library(reshape));
+  microSetObj <- .get.microSetObj(microSetObj);
+  
+  if(.on.public.web){
+    load_reshape();
+  }
+
   #using filtered data
-  data <- dataSet$filt.data;
+  data <- microSetObj$dataSet$filt.data;
 
-  if(class(dataSet$filt.data)=="matrix"){
+  if(class(microSetObj$dataSet$filt.data)=="matrix"){
     data <- otu_table(data,taxa_are_rows =TRUE);
   }
 
-  sample_table <- sample_data(dataSet$proc.phyobj, errorIfNULL=TRUE);
-  data1 <- merge_phyloslim(data,tax_table(dataSet$proc.phyobj),sample_table);
+  sample_table <- sample_data(microSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
+  data1 <- merge_phyloslim(data, tax_table(microSetObj$dataSet$proc.phyobj), sample_table);
 
   if(viewOpt=="smpl_grp"){
     data <- as.data.frame(t(otu_table(data1)));
     data <- cbind(data,variable=data1@sam_data[[metadata]]);
-    data<-aggregate(. ~variable,data,sum);
-    gp_nm<-rownames(data)<-data[,1];
-    data<-data[,-1];
-    data<-data[order(rownames(data)),];
+    data <- aggregate(. ~variable,data,sum);
+    gp_nm <- rownames(data)<-data[,1];
+    data <- data[,-1];
+    data <- data[order(rownames(data)),];
     clsLbl <- sort(unique(factor(data1@sam_data[[metadata]])));
     colvec <- NULL;
   }else {
-    smpl_nm<-sample_names(data1);
-    data<-data.frame(otu_table(data1));
+    smpl_nm <- sample_names(data1);
+    data <- data.frame(otu_table(data1));
 
     # reorder data based on groups
-    sam<-sample_data(data1);
+    sam <- sample_data(data1);
     clsLbl <- factor(sam[[metadata]]);
     ord.inx <- order(clsLbl);
     smpl_nm <- smpl_nm[ord.inx];
@@ -1244,14 +1296,17 @@ PlotTaxaAlphaArea<-function(barplotName,viewOpt,taxalvl, metadata,imgOpt,feat_cn
     ind<-which(dt>feat_cnt);
     ind1<-which(dt<feat_cnt);
   }
+  
   if(length(ind)==0){
     current.msg<<-"All features have lower read count than given minimum count filter. Please lower the cut off for minimum count.";
     return(0);
   }
+  
   if(length(ind1)>0){
     colnames(data)[ind1] <- "Others";
     data<- as.data.frame(do.call(cbind, by(t(data),INDICES=names(data),FUN=colSums)));
   }
+  
   feat_no<-ncol(data);
   #adjust height according to number of legends
   h<-540;
@@ -1271,26 +1326,26 @@ PlotTaxaAlphaArea<-function(barplotName,viewOpt,taxalvl, metadata,imgOpt,feat_cn
   a <- nsamples(data1);
   min.w <- 540;
   if(length(a)<50){
-    w<-a*35;
+    w <- a*35;
   }else{
-    w<-a*25;
+    w <- a*25;
   }
   if(w < min.w){
     w <- min.w;
   }
 
   write.csv(t(data), file="taxa_abund.csv");
-  data$step<-factor(rownames(data));
-  data<-melt(data,id='step');
-  data$step<-as.numeric(data$step);
-  data<-data[order(data[,2]),];
-  data<-data[,-1];
+  data$step <- factor(rownames(data));
+  data <- melt(data,id='step');
+  data$step <- as.numeric(data$step);
+  data <- data[order(data[,2]),];
+  data <- data[,-1];
   if(viewOpt=="smpl_grp"){
-    data$step<-rep(1:length(gp_nm),feat_no);
-    lbl<-gp_nm;
+    data$step <- rep(1:length(gp_nm),feat_no);
+    lbl <- gp_nm;
   }else {
-    data$step<-rep(1:a,feat_no);
-    lbl<-smpl_nm;
+    data$step <- rep(1:a,feat_no);
+    lbl <- smpl_nm;
   }
 
   tmp_df <- aggregate(data$value, by=list(data$variable), FUN=mean)
@@ -1299,31 +1354,30 @@ PlotTaxaAlphaArea<-function(barplotName,viewOpt,taxalvl, metadata,imgOpt,feat_cn
                           levels = var_level) # change the factor level of taxa
 
   #color schema
-  color_var<-levels(factor(data$variable));
-  x<-length(color_var);
+  color_var <- levels(factor(data$variable));
+  x <- length(color_var);
   if(colpalopt=="grad"){
-    indx<-which(color_var=="NA");
+    indx <- which(color_var=="NA");
     #color schema for ggplot
     x.colors <- hcl(h=seq(15,375,length=(x+1)),l=65,c=100)[1:x];
     x.colors[indx] <- "#666666";
   }else if (colpalopt=="cont21"){
-    x.colors<-rep(custom_col21,length.out=x);
+    x.colors <- rep(custom_col21,length.out=x);
   }else if (colpalopt=="cont28"){
-    x.colors<-rep(custom_final28,length.out=x);
+    x.colors <- rep(custom_final28,length.out=x);
   }else {
-    x.colors<-rep(custom_col42,length.out=x);
+    x.colors <- rep(custom_col42,length.out=x);
   }
 
   barplotName = paste(barplotName, ".",format, sep="");
-  imgSet$stack<-barplotName;
-  imgSet<<-imgSet;
-  Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
-  box<-ggplot(data,aes(x=step,y=value))+theme_bw()+
-    theme(axis.text.x = element_text(angle = 90, hjust =1,vjust=0.5))+
-    geom_area(aes(fill=variable),position='fill')+
-    scale_x_continuous(breaks=seq(1,length(unique(data$step)),1),labels=lbl)+
-    labs(y="Relative abundance",x="",fill=taxalvl)+
-    theme(legend.position="bottom",legend.box = "vertical")+
+  microSetObj$imgSet$stack<-barplotName;
+  Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
+  box <- ggplot(data,aes(x=step,y=value)) + theme_bw() +
+    theme(axis.text.x = element_text(angle = 90, hjust =1,vjust=0.5)) +
+    geom_area(aes(fill=variable), position='fill') +
+    scale_x_continuous(breaks=seq(1,length(unique(data$step)),1),labels=lbl) +
+    labs(y="Relative abundance",x="",fill=taxalvl) +
+    theme(legend.position="bottom",legend.box = "vertical") +
     theme(axis.text.x = element_text(colour=colvec),axis.title.x=element_blank());
 
   if(colpalopt=="set3"){
@@ -1344,41 +1398,63 @@ PlotTaxaAlphaArea<-function(barplotName,viewOpt,taxalvl, metadata,imgOpt,feat_cn
 
   print(box);
   dev.off();
-  analSet$stack<-data;
-  analSet$stack.taxalvl<-taxalvl;
-  analSet$plot<-"Stacked Area";
-  analSet<<-analSet;
-  return(1);
+  microSetObj$analSet$stack<-data;
+  microSetObj$analSet$stack.taxalvl<-taxalvl;
+  microSetObj$analSet$plot<-"Stacked Area";
+  
+  if(.on.public.web){
+    .set.microSet(microSetObj)
+    return(1);
+  }else{
+    return(.set.microSet(microSetObj))
+  }
 }
 
-PlotTaxaAlphaBar<-function(barplotName,taxalvl,metadata,facet, imgOpt, feat_cnt,colpalopt,calcmeth,format="png",dpi=72){
+#'Function to plot bar charts for alpha diversity
+#'@description This functions plots bar charts of different taxonomic levels
+#'for alpha diversity.
+#'@param microSetObj Input the name of the microSetObj.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+PlotTaxaAlphaBar<-function(microSetObj, barplotName, taxalvl, metadata, facet, imgOpt, 
+                           feat_cnt, colpalopt, calcmeth, format="png", dpi=72){
 
-    suppressMessages(library(reshape));
-    suppressMessages(library(ggplot2));
-    data<-dataSet$filt.data;
-  if(class(dataSet$filt.data)=="matrix"){
-    data<-otu_table(data,taxa_are_rows =TRUE);
+  microSetObj <- .get.microSetObj(microSetObj);
+  
+  if(.on.public.web){
+    load_reshape();
+    load_ggplot();
   }
-  sample_table<-sample_data(dataSet$proc.phyobj, errorIfNULL=TRUE);
-  data1<-merge_phyloslim(data,tax_table(dataSet$proc.phyobj),sample_table);
 
-  data<-as.data.frame(otu_table(data1));
-  data_tax<-tax_table(data1);
+  data <- microSetObj$dataSet$filt.data;
+  
+  if(class(microSetObj$dataSet$filt.data)=="matrix"){
+    data <- otu_table(data, taxa_are_rows =TRUE);
+  }
+  
+  sample_table <- sample_data(microSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
+  data1 <- merge_phyloslim(data, tax_table(microSetObj$dataSet$proc.phyobj), sample_table);
+
+  data <- as.data.frame(otu_table(data1));
+  data_tax <- tax_table(data1);
 
   # reorder data based on groups
-  sam<-sample_data(data1);
-
-if(facet == "none"){
+  sam <- sample_data(data1);
+  
+  if(facet == "none"){
     sam$newnewnew <- rep("one", nrow(sam));
     facet <- "newnewnew";
   }
-
-sample_data(data1) <- sam
+  
+  sample_data(data1) <- sam
 
   metalp <- as(sample_data(data1), "data.frame") #extract metadata table
 
-  smpl_nm<-sample_names(data1);
+  smpl_nm <- sample_names(data1);
   clsLbl <- factor(sam[[facet]]);
+  
   if(min(table(clsLbl)) < 2){
     current.msg<<-"Too many facets to be displayed - please select a more meaninful facet option with at least 3 samples per group.";
     return(0);
@@ -1391,38 +1467,42 @@ sample_data(data1) <- sam
   colvec <- as.numeric(clsLbl)+1;
   data <- t(data[,ord.inx]);
   #reshaping data
-  taxa_nm<-as.data.frame(data_tax[,taxalvl]);
-  taxa_nm<-as.matrix(taxa_nm);
+  taxa_nm <- as.data.frame(data_tax[,taxalvl]);
+  taxa_nm <- as.matrix(taxa_nm);
   y <- which(is.na(taxa_nm)==TRUE);
 
   #converting NA values to unassigned; before order it to last position using ZZZ as its name
   taxa_nm[y] <- "ZZZ";
-  colnames(data)<-taxa_nm[,1];
-  nms <-colnames(data);
-  data<-as.matrix(data);
-  data<-data %*% sapply(unique(nms),"==",nms);
-  data<-data.frame(data);
-  data<-data[ , order(names(data))];
-  indx<-which(colnames(data)=="ZZZ");
-  colnames(data)[indx]<-"NA";
+  colnames(data) <- taxa_nm[,1];
+  nms <- colnames(data);
+  data <- as.matrix(data);
+  data <- data %*% sapply(unique(nms),"==",nms);
+  data <- data.frame(data);
+  data <- data[ , order(names(data))];
+  indx <- which(colnames(data)=="ZZZ");
+  colnames(data)[indx] <- "NA";
 
   if(calcmeth=="sum"){
-    ind<-which(colSums(data)>feat_cnt);
-    ind1<-which(colSums(data)<feat_cnt);
+    ind <- which(colSums(data)>feat_cnt);
+    ind1 <- which(colSums(data)<feat_cnt);
   } else {
-    dt<-apply(data,2,median);
-    ind<-which(dt>feat_cnt);
-    ind1<-which(dt<feat_cnt);
+    dt <- apply(data,2,median);
+    ind <- which(dt>feat_cnt);
+    ind1 <- which(dt<feat_cnt);
   }
+  
   if(length(ind)==0){
     current.msg<<-"All features have lower read count than given minimum count filter. Please lower the cut off for minimum count.";
     return(0);
   }
+  
   if(length(ind1)>0){
     colnames(data)[ind1] <- "Others";
-    data<- as.data.frame(do.call(cbind, by(t(data),INDICES=names(data),FUN=colSums)));
+    data <- as.data.frame(do.call(cbind, by(t(data),INDICES=names(data),FUN=colSums)));
   }
+  
   yLbl <- "Actual Abundance";
+  
   if(imgOpt=="barnorm"){
     data <- as.data.frame(apply(data,1, function(x) x/sum(x)));
     data<-as.data.frame(t(data));
@@ -1430,27 +1510,27 @@ sample_data(data1) <- sam
   }
 
   # height according to number of legends
-  feat_no<-ncol(data);
-  h<-540;
+  feat_no <- ncol(data);
+  h <- 540;
   if(feat_no < 10){
-    h<-h;
+    h <- h;
   } else if (feat_no < 20){
-    h<-h+100;
+    h <- h+100;
   } else if (feat_no < 50){
-    h<-h+200;
+    h <- h+200;
   } else if (feat_no < 100){
-    h<-h+400;
+    h <- h+400;
   } else if (feat_no > 100){
-    h<-h+500;
+    h <- h+500;
   }
 
   # width calculation
-  a<-nsamples(data1);
+  a <- nsamples(data1);
   min.w <- 540;
   if(length(a)<50){
-    w<-a*35;
+    w <- a*35;
   }else{
-    w<-a*25;
+    w <- a*25;
   }
   if(w < min.w){
     w <- min.w;
@@ -1460,7 +1540,7 @@ sample_data(data1) <- sam
   data[[get("facet")]] <- metalp[[get("facet")]]
   data$sample <- row.names(data);
   write.csv(t(data), file="taxa_abund.csv");
-  data<-melt(data, id = c("sample", get("facet")))
+  data <- melt(data, id = c("sample", get("facet")))
   tmp_df <- aggregate(data$value, by=list(data$variable), FUN=mean)
   var_level <- tmp_df[order(tmp_df$x, decreasing = TRUE), ][[1]]
     as.character()# get the order of taxa relative abundance
@@ -1469,27 +1549,28 @@ sample_data(data1) <- sam
                           levels = var_level) # change the factor level of taxa
 
   #color schema
-  color_var<-levels(factor(data$variable));
-  x<-length(color_var);
+  color_var <- levels(factor(data$variable));
+  x <- length(color_var);
+  
   if(colpalopt=="grad"){
-    indx<-which(color_var=="NA");
+    indx <- which(color_var=="NA");
     #color schema for ggplot
     x.colors <- hcl(h=seq(15,375,length=(x+1)),l=65,c=100)[1:x];
     x.colors[indx] <- "#666666";
   }else if (colpalopt=="cont21"){
-    x.colors<-rep(custom_col21,length.out=x);
+    x.colors <- rep(custom_col21,length.out=x);
   }else if (colpalopt=="cont28"){
-    x.colors<-rep(custom_final28,length.out=x);
+    x.colors <- rep(custom_final28,length.out=x);
   }else {
-    x.colors<-rep(custom_col42,length.out=x);
+    x.colors <- rep(custom_col42,length.out=x);
   }
 
   barplotName = paste(barplotName, ".",format, sep="");
-  imgSet$stack<-barplotName;
-  imgSet<<-imgSet;
-  Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
+  microSetObj$imgSet$stack <- barplotName;
 
-   box <- ggplot(data = data,
+  Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
+
+  box <- ggplot(data = data,
                 aes(x = sample,
                     y = value,
                     fill = variable)) +
@@ -1504,187 +1585,231 @@ sample_data(data1) <- sam
                                 colour = "grey90",
                                 size = 0.5, linetype = "solid"),
           axis.line = element_line(colour = "lightgrey"));
-    if(colpalopt=="set3"){
-        cols.needed <- length(unique(data$variable))
-        if(cols.needed > 12){
-            col.func <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(12, "Set3"))
-            box <- box + scale_fill_manual(values=col.func(cols.needed),
-                                   guide = guide_legend(direction = "horizontal",
-                                                        ncol = 5))
-        }else{
-            box <- box + scale_fill_brewer(palette = "Set3",
-                                   guide = guide_legend(direction = "horizontal",
-                                                        ncol = 5))
-        }
-    }else {
-        box <- box + scale_fill_manual(values=c(x.colors))
-    }
+  
+  if(colpalopt=="set3"){
+    cols.needed <- length(unique(data$variable))
+      if(cols.needed > 12){
+        col.func <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(12, "Set3"))
+        box <- box + scale_fill_manual(values=col.func(cols.needed), guide = guide_legend(direction = "horizontal", ncol = 5))
+      }else{
+        box <- box + scale_fill_brewer(palette = "Set3", guide = guide_legend(direction = "horizontal", ncol = 5))
+      }
+  }else{
+    box <- box + scale_fill_manual(values=c(x.colors))
+  }
 
-    if(facet == "newnewnew"){
+  if(facet == "newnewnew"){
     box <- box + theme(strip.text.x = element_blank())
-    }
+  }
 
-    print(box);
-    dev.off();
-    analSet$stack<-data;
-    analSet$stack.taxalvl<-taxalvl;
-    analSet$plot<-"Stacked Bar";
-    analSet<<-analSet;
+  print(box);
+  dev.off();
+  microSetObj$analSet$stack <- data;
+  microSetObj$analSet$stack.taxalvl <- taxalvl;
+  microSetObj$analSet$plot <- "Stacked Bar";
+  
+  if(.on.public.web){
+    .set.microSet(microSetObj)
     return(1);
+  }else{
+    return(.set.microSet(microSetObj))
+  }
 }
 
+#'Function to perform categorical comparison.
+#'@description This functions performs categorical comparisons.
+#'@param microSetObj Input the name of the microSetObj.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+PerformCategoryComp <- function(microSetObj, method, distnm, variable){
 
-PerformCategoryComp <- function(method, distnm, variable){
+  microSetObj <- .get.microSetObj(microSetObj);
+  
+  if(.on.public.web){
+    load_vegan();
+  }
 
-    library("vegan");
-
-    if(distnm %in% c("wunifrac", "unifrac")) {
+  if(distnm %in% c("wunifrac", "unifrac")) {
     data <- readRDS("data_unifra.RDS");
-    } else {
-    data<-dataSet$proc.phyobj;
-    data<-merge_phyloslim(data);
-    }
+  } else {
+    data <- microSetObj$dataSet$proc.phyobj;
+    data <- merge_phyloslim(data);
+  }
 
-    data<-transform_sample_counts(data, function(x) x/sum(x));
-    data.dist <- phyloslimR::distance(data, method=distnm);
-    group<-get_variable(data,variable);
-    stat.info <- "";
-    resTab <- list();
-    if(method=="adonis"){
-        sampledf <- data.frame(sample_data(data),check.names=F);
-        res<-adonis(data.dist~sampledf[ ,variable],data = sampledf);
-        resTab<-res$aov.tab[1,];
-        stat.info <- paste("[PERMANOVA] F-value: ", signif(resTab$F.Model, 5),  "; R-squared: ", signif(resTab$R2, 5), "; p-value < ", signif(resTab$Pr, 5), sep="");
-    }else if(method=="anosim"){
-        anosim<-anosim(data.dist,group=group);
-        resTab$Rval<-anosim$statistic;
-        resTab$pval<-anosim$signif;
-        stat.info <- paste("[ANOSIM] R: ", signif(resTab$Rval, 5), "; p-value < ", signif(resTab$pval, 5), sep="");
-    }else if (method=="permdisp") {
-        beta<-betadisper(data.dist,group=group);
-        resTab<-anova(beta);
-        stat.info <- paste("[PERMDISP] F-value: ", signif(resTab$"F value"[1], 5), "; p-value: ", signif(resTab$"Pr(>F)"[1], 5), sep="");
-    }
+  data <- transform_sample_counts(data, function(x) x/sum(x));
+  data.dist <- phyloslimR::distance(data, method=distnm);
+  group <- get_variable(data,variable);
+  stat.info <- "";
+  resTab <- list();
+    
+  if(method=="adonis"){
+    sampledf <- data.frame(sample_data(data),check.names=F);
+    res <- adonis(data.dist~sampledf[ ,variable],data = sampledf);
+    resTab <- res$aov.tab[1,];
+    stat.info <- paste("[PERMANOVA] F-value: ", signif(resTab$F.Model, 5),  "; R-squared: ", signif(resTab$R2, 5), "; p-value < ", signif(resTab$Pr, 5), sep="");
+  }else if(method=="anosim"){
+    anosim <- anosim(data.dist,group=group);
+    resTab$Rval <- anosim$statistic;
+    resTab$pval <- anosim$signif;
+    stat.info <- paste("[ANOSIM] R: ", signif(resTab$Rval, 5), "; p-value < ", signif(resTab$pval, 5), sep="");
+  }else if (method=="permdisp"){
+    beta <- betadisper(data.dist,group=group);
+    resTab <- anova(beta);
+    stat.info <- paste("[PERMDISP] F-value: ", signif(resTab$"F value"[1], 5), "; p-value: ", signif(resTab$"Pr(>F)"[1], 5), sep="");
+  }
 
-    analSet$stat.info <- stat.info;
-    analSet<<-analSet;
+  microSetObj$analSet$stat.info <- stat.info;
+  
+  if(.on.public.web){
+    .set.microSet(microSetObj)
     return(1);
+  }else{
+    return(.set.microSet(microSetObj))
+  }
 }
 
 ###################################################################
 # generate figure barplot with group#############################
 ###################################################################
-PlotTaxaAlphaBarSamGrp<-function(barplotName,taxalvl,metadata,imgOpt,feat_cnt,colpalopt,calcmeth,format="png",dpi=72){
-    suppressMessages(library(reshape));
-    #using filtered data
-    data<-dataSet$filt.data;
-    if(class(dataSet$filt.data)=="matrix"){
-       data<-otu_table(data,taxa_are_rows =TRUE);
-    }
-    sample_table<-sample_data(dataSet$proc.phyobj, errorIfNULL=TRUE);
-    data1<-merge_phyloslim(data,tax_table(dataSet$proc.phyobj),sample_table);
 
-    yLbl <- "Actual Abundance";
+#'Function to plot group-wise bar charts.
+#'@description This functions plots group-wise bar charts of a specified 
+#'taxa for alpha diversity analysis.
+#'@param microSetObj Input the name of the microSetObj.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
 
-    data<-as.data.frame(t(otu_table(data1)));
-    data<-cbind(data,variable=data1@sam_data[[metadata]]);
-    data<-aggregate(. ~variable,data,sum);
-    gp_nm<-rownames(data)<-data[,1];
-    data<-data[,-1];
-    data<-data[order(rownames(data)),];
-    clsLbl <- sort(unique(factor(data1@sam_data[[metadata]])));
-    data_tax<-tax_table(data1);
-    #reshaping data
-    taxa_nm<-as.data.frame(data_tax[,taxalvl]);
-    taxa_nm<-as.matrix(taxa_nm);
-    y <- which(is.na(taxa_nm)==TRUE);
+PlotTaxaAlphaBarSamGrp<-function(microSetObj, barplotName, taxalvl, metadata, imgOpt,
+                                 feat_cnt, colpalopt, calcmeth, format="png", dpi=72){
+  
+  microSetObj <- .get.microSetObj(microSetObj);
+  
+  if(.on.public.web){
+    load_reshape();
+  }
+  
+  #using filtered data
+  data <- microSetObj$dataSet$filt.data;
+    
+  if(class(microSetObj$dataSet$filt.data)=="matrix"){
+    data<-otu_table(data,taxa_are_rows =TRUE);
+  }
+    
+  sample_table <- sample_data(microSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
+  data1 <- merge_phyloslim(data, tax_table(microSetObj$dataSet$proc.phyobj), sample_table);
 
-    #converting NA values to unassigned; before order it to last position using ZZZ as its name
-    taxa_nm[y] <- "ZZZ";
-    colnames(data)<-taxa_nm[,1];
-    nms <-colnames(data);
-    data<-as.matrix(data);
-    data<-data %*% sapply(unique(nms),"==",nms);
-    data<-data.frame(data);
-    data<-data[ , order(names(data))];
-    indx<-which(colnames(data)=="ZZZ");
-    colnames(data)[indx]<-"NA";
-    if(calcmeth=="sum"){
-        ind<-which(colSums(data)>feat_cnt);
-        ind1<-which(colSums(data)<feat_cnt);
-    } else {
-        dt<-apply(data,2,median);
-        ind<-which(dt>feat_cnt);
-        ind1<-which(dt<feat_cnt);
-    }
-    if(length(ind)==0){
-        current.msg<<-"All features have lower read count than given minimum count filter. Please lower the cut off for minimum count.";
-        return(0);
-    }
-    if(length(ind1)>0){
-        colnames(data)[ind1] <- "Others";
-        data<- as.data.frame(do.call(cbind, by(t(data),INDICES=names(data),FUN=colSums)));
-    }
+  yLbl <- "Actual Abundance";
 
-    if(imgOpt=="barnorm"){
-        data <- as.data.frame(apply(data,1, function(x) x/sum(x)));
-        data<-as.data.frame(t(data));
-        yLbl <- "Relative Abundance";
-    }
-    feat_no<-ncol(data);
+  data <- as.data.frame(t(otu_table(data1)));
+  data <- cbind(data, variable=data1@sam_data[[metadata]]);
+  data <- aggregate(. ~variable,data,sum);
+  gp_nm <- rownames(data) <- data[,1];
+  data <- data[,-1];
+  data <- data[order(rownames(data)),];
+  clsLbl <- sort(unique(factor(data1@sam_data[[metadata]])));
+  data_tax <- tax_table(data1);
+    
+  #reshaping data
+  taxa_nm <- as.data.frame(data_tax[,taxalvl]);
+  taxa_nm <- as.matrix(taxa_nm);
+  y <- which(is.na(taxa_nm)==TRUE);
 
-    #adjust height according to number of legends
-    w<-600;
-    if(feat_no < 10){
-        w<-w;
-    } else if (feat_no < 20){
-        w<-w+100;
-    } else if (feat_no < 50){
-        w<-w+200;
-    } else if (feat_no < 100){
-        w<-w+400;
-    } else if (feat_no > 100){
-        w<-w+500;
-    }
-    write.csv(t(data), file="taxa_abund.csv");
-    data$step<-factor(rownames(data));
-    data<-melt(data,id='step');
-    data$step<-as.numeric(data$step);
-    data<-data[order(data[,2]),];
-    data<-data[,-1];
-    data$step<-rep(gp_nm,feat_no);
+  #converting NA values to unassigned; before order it to last position using ZZZ as its name
+  taxa_nm[y] <- "ZZZ";
+  colnames(data) <- taxa_nm[,1];
+  nms <- colnames(data);
+  data <- as.matrix(data);
+  data <- data %*% sapply(unique(nms),"==",nms);
+  data <- data.frame(data);
+  data <- data[ , order(names(data))];
+  indx <- which(colnames(data)=="ZZZ");
+  colnames(data)[indx] <- "NA";
+    
+  if(calcmeth=="sum"){
+    ind <- which(colSums(data)>feat_cnt);
+    ind1 <- which(colSums(data)<feat_cnt);
+  } else {
+    dt <- apply(data,2,median);
+    ind <- which(dt>feat_cnt);
+    ind1 <- which(dt<feat_cnt);
+  }
+    
+  if(length(ind)==0){
+    current.msg << -"All features have lower read count than given minimum count filter. Please lower the cut off for minimum count.";
+    return(0);
+  }
+    
+  if(length(ind1)>0){
+    colnames(data)[ind1] <- "Others";
+    data <- as.data.frame(do.call(cbind, by(t(data),INDICES=names(data),FUN=colSums)));
+  }
 
-    tmp_df <- aggregate(data$value, by=list(data$variable), FUN=mean)
-    var_level <- tmp_df[order(tmp_df$x, decreasing = TRUE), ][[1]]
-    data$variable <- factor(data$variable,
-                          levels = var_level) # change the factor level of taxa
-   #color schema
-    color_var<-levels(factor(data$variable));
-    x<-length(color_var);
-     if(colpalopt=="grad"){
-        indx<-which(color_var=="NA");
-        #color schema for ggplot
-        x.colors <- hcl(h=seq(15,375,length=(x+1)),l=65,c=100)[1:x];
-        x.colors[indx] <- "#666666";
-    }else if (colpalopt=="cont21"){
-        x.colors<-rep(custom_col21,length.out=x);
-    }else if (colpalopt=="cont28"){
-        x.colors<-rep(custom_final28,length.out=x);
-    }else {
-        x.colors<-rep(custom_col42,length.out=x);
-    }
+  if(imgOpt=="barnorm"){
+    data <- as.data.frame(apply(data,1, function(x) x/sum(x)));
+    data <- as.data.frame(t(data));
+    yLbl <- "Relative Abundance";
+  }
+    
+  feat_no <- ncol(data);
 
-    h<-length(clsLbl)*100;
+  #adjust height according to number of legends
+  w <- 600;
+    
+  if(feat_no < 10){
+    w<-w;
+  } else if (feat_no < 20){
+    w<-w+100;
+  } else if (feat_no < 50){
+    w<-w+200;
+  } else if (feat_no < 100){
+    w<-w+400;
+  } else if (feat_no > 100){
+    w<-w+500;
+  }
+    
+  write.csv(t(data), file="taxa_abund.csv");
+  data$step <- factor(rownames(data));
+  data <- melt(data,id='step');
+  data$step <- as.numeric(data$step);
+  data <- data[order(data[,2]),];
+  data <- data[,-1];
+  data$step <- rep(gp_nm,feat_no);
 
-    barplotName = paste(barplotName, ".",format, sep="");
-    imgSet$stack<-barplotName;
-    imgSet<<-imgSet;
-    Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
-    box<-ggplot(data,aes(x = step, y = value, fill = variable))+
+  tmp_df <- aggregate(data$value, by=list(data$variable), FUN=mean)
+  var_level <- tmp_df[order(tmp_df$x, decreasing = TRUE), ][[1]]
+  data$variable <- factor(data$variable, levels = var_level) # change the factor level of taxa
+   
+  #color schema
+  color_var <- levels(factor(data$variable));
+  x <- length(color_var);
+     
+  if(colpalopt=="grad"){
+    indx <- which(color_var=="NA");
+    #color schema for ggplot
+    x.colors <- hcl(h=seq(15,375,length=(x+1)),l=65,c=100)[1:x];
+    x.colors[indx] <- "#666666";
+  }else if (colpalopt=="cont21"){
+    x.colors <- rep(custom_col21,length.out=x);
+  }else if (colpalopt=="cont28"){
+    x.colors <- rep(custom_final28,length.out=x);
+  }else {
+    x.colors<-rep(custom_col42,length.out=x);
+  }
+
+  h<-length(clsLbl)*100;
+
+  barplotName = paste(barplotName, ".",format, sep="");
+  microSetObj$imgSet$stack<-barplotName;
+
+  Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
+  box<-ggplot(data,aes(x = step, y = value, fill = variable))+
             geom_bar(stat="identity", position="stack", width = 0.4)+
             #scale_y_continuous(expand = c(0, 0, 0.3, 0)) +
-            theme_bw()+
-            theme(legend.position="bottom",legend.box = "vertical")+
+            theme_bw() + theme(legend.position="bottom",legend.box = "vertical")+
             labs(y=yLbl,x="",fill=taxalvl)+
             theme(axis.text.x = element_text(angle = 0,vjust=0.5))+
             coord_flip()+
@@ -1693,7 +1818,7 @@ PlotTaxaAlphaBarSamGrp<-function(barplotName,taxalvl,metadata,imgOpt,feat_cnt,co
                                           size = 0.5, linetype = "solid"),
                   panel.border = element_blank())
 
-    if(colpalopt=="set3"){
+  if(colpalopt=="set3"){
     cols.needed <- length(unique(data$variable))
     if(cols.needed > 12){
       col.func <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(12, "Set3"))
@@ -1705,31 +1830,49 @@ PlotTaxaAlphaBarSamGrp<-function(barplotName,taxalvl,metadata,imgOpt,feat_cnt,co
                                      guide = guide_legend(direction = "horizontal",
                                                           ncol = 5))
         }
-    } else {
+  } else {
     box <- box + scale_fill_manual(values=c(x.colors))
-      }
-    print(box);
-    dev.off();
-    analSet$stack<-data;
-    analSet$stack.taxalvl<-taxalvl;
-    analSet$plot<-"Stacked Bar";
-    analSet<<-analSet;
+  }
+    
+  print(box);
+  dev.off();
+  microSetObj$analSet$stack<-data;
+  microSetObj$analSet$stack.taxalvl<-taxalvl;
+  microSetObj$analSet$plot<-"Stacked Bar";
+  
+  if(.on.public.web){
+    .set.microSet(microSetObj)
     return(1);
+  }else{
+    return(.set.microSet(microSetObj))
+  }
 }
 
 
-######################################
+###############################################
 ###########alpha diversity boxplot#############
-#######################################
-PlotAlphaBoxData<-function(boxplotName,distName,metadata,format="png",dpi=72){
-    set.seed(1313397);
-    data<-analSet$alpha;
-    CLASS<-data[,metadata];
-    boxplotName = paste(boxplotName, ".", format, sep="");
-    imgSet$alpha.box<-boxplotName;
-    imgSet<<-imgSet;
-    Cairo(file=boxplotName,width=500, height=400, type=format, bg="white",dpi=dpi);
-    box1=ggplot(data,
+###############################################
+
+#'Function to create box plots for alpha diversity analysis
+#'@description This functions performs metagenome seq analysis on the microbiome data.
+#'@param microSetObj Input the name of the microSetObj.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+PlotAlphaBoxData<-function(microSetObj, boxplotName, distName, metadata, format="png", dpi=72){
+  
+  microSetObj <- .get.microSetObj(microSetObj);
+  
+  set.seed(1313397);
+  data <- microSetObj$analSet$alpha;
+  CLASS <- data[,metadata];
+  boxplotName = paste(boxplotName, ".", format, sep="");
+  microSetObj$imgSet$alpha.box<-boxplotName;
+
+  Cairo::Cairo(file=boxplotName,width=500, height=400, type=format, bg="white",dpi=dpi);
+  
+  box1 = ggplot(data,
               aes(data[,metadata],data$value,
                   color = CLASS))+#change fill to color
     stat_boxplot(geom ='errorbar',width=0.2)+
@@ -1748,44 +1891,56 @@ PlotAlphaBoxData<-function(boxplotName,distName,metadata,format="png",dpi=72){
          y= paste("Alpha-diversity index", as.character(data$variable[[1]]), sep = " "),
          x="") + #remove x = CLASS, add title name, change y name
     coord_cartesian(ylim = c(ylimits[1],ylimits[2]));
-    print(box1);
-    dev.off();
+  print(box1);
+  dev.off();
+  return(.set.microSet(microSetObj))
 }
 
+#'Function to create rarefraction curves of microbiome data
+#'@description This functions plots rarefraction curves.
+#'@param microSetObj Input the name of the microSetObj.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+PlotRarefactionCurve<-function(microSetObj, data.src, linecolor, linetype, facet, step, imgName, format="png",dpi=72){
 
-PlotRarefactionCurve<-function(data.src, linecolor, linetype, facet, step, imgName, format="png",dpi=72){
+  microSetObj <- .get.microSetObj(microSetObj);
+    
+  # should use unfiltered data
+  if(data.src == "orig"){
+    data_rare <- readRDS("orig.phyobj");
+  }else{
+    data_rare <- microSetObj$dataSet$proc.phyobj;
+  }
 
-    # should use unfiltered data
-    if(data.src == "orig"){
-        data_rare <- readRDS("orig.phyobj");
-    }else{
-        data_rare <- dataSet$proc.phyobj;
-    }
+  #get good's coverage index
+  goods_coverage <- ComputeGoods(data_rare)
+  write.csv(goods_coverage, "goods_coverage.csv", row.names = FALSE, quote = FALSE);
 
-    #get good's coverage index
-    goods_coverage <- ComputeGoods(data_rare)
-    write.csv(goods_coverage, "goods_coverage.csv", row.names = FALSE, quote = FALSE);
+  feat_no <- nsamples(data_rare);
+    
+  #adjust height according to number of legends
+  w <- 600;
+    
+  if(feat_no < 10){
+    w<-w;
+  } else if (feat_no < 20){
+    w<-w+100;
+  } else if (feat_no < 50){
+    w<-w+200;
+  } else if (feat_no < 100){
+    w<-w+400;
+  } else if (feat_no > 100){
+    w<-w+500;
+  }
+    
+  imgName = paste(imgName,".", format, sep="");
+  Cairo::Cairo(file=imgName, width = 1.5 * w, height = 540, type=format, bg="white", dpi=dpi);
+  linecolor <- ifelse(linecolor == "none", "NULL", linecolor);
+  linetype <- ifelse(linetype == "none", "NULL", linetype);
 
-    feat_no<- nsamples(data_rare);
-    #adjust height according to number of legends
-    w<-600;
-    if(feat_no < 10){
-        w<-w;
-    } else if (feat_no < 20){
-        w<-w+100;
-    } else if (feat_no < 50){
-        w<-w+200;
-    } else if (feat_no < 100){
-        w<-w+400;
-    } else if (feat_no > 100){
-        w<-w+500;
-    }
-    imgName = paste(imgName,".", format, sep="");
-    Cairo(file=imgName, width = 1.5 * w, height = 540, type=format, bg="white", dpi=dpi);
-    linecolor <- ifelse(linecolor == "none", "NULL", linecolor);
-    linetype <- ifelse(linetype == "none", "NULL", linetype);
-
-    box <- ggrare2(data_rare,
+  box <- ggrare2(data_rare,
                 data.src = data.src,
                 color = linecolor,
                 label = "Sample",
@@ -1793,34 +1948,37 @@ PlotRarefactionCurve<-function(data.src, linecolor, linetype, facet, step, imgNa
                 se = FALSE,  # this is not to meaningful
                 step = step);
 
-    if(!is.null(facet) & facet != "none"){
-        box <- box + facet_wrap(as.formula(paste("~", facet)))
-    } else {
-        box <- box;
-    }
-    print(box);
-    dev.off();
+  if(!is.null(facet) & facet != "none"){
+    box <- box + facet_wrap(as.formula(paste("~", facet)))
+  } else {
+    box <- box;
+  }
+  print(box);
+  dev.off();
+  return(.set.microSet(microSetObj))
 }
 
+# Utility function
 # get goods's coverage
 ComputeGoods <-function(physeq_object){
-    com <- t(get_sample(physeq_object))
-    no.seqs <- rowSums(com)
-    sing <- com==1
-    no.singleton <- apply(sing, 1, sum)
-    goods <- 100*(1-no.singleton/no.seqs)
-    sample <- row.names(com)
-    goods.sum <- cbind(sample, no.singleton, no.seqs, goods)
-    goods.sum <- as.data.frame(goods.sum)
-    row.names(goods.sum) <- c()
-    return(goods.sum)
-    }
+  com <- t(get_sample(physeq_object))
+  no.seqs <- rowSums(com)
+  sing <- com==1
+  no.singleton <- apply(sing, 1, sum)
+  goods <- 100*(1-no.singleton/no.seqs)
+  sample <- row.names(com)
+  goods.sum <- cbind(sample, no.singleton, no.seqs, goods)
+  goods.sum <- as.data.frame(goods.sum)
+  row.names(goods.sum) <- c()
+  return(goods.sum)
+}
 
-# perform rarefaction
+# Utility function that performs rarefaction
 ggrare2 <- function(physeq_object, data.src, label = NULL, color = NULL, plot = TRUE, linetype = NULL, se = FALSE, step=5) {
 
-    x <- methods::as(phyloslimR::otu_table(physeq_object), "matrix")
-    if (phyloslimR::taxa_are_rows(physeq_object)) { x <- t(x) }
+  x <- methods::as(phyloslimR::otu_table(physeq_object), "matrix")
+  
+  if (phyloslimR::taxa_are_rows(physeq_object)) { x <- t(x) }
 
     ## This script is adapted from vegan `rarecurve` function
     tot <- rowSums(x)
@@ -1912,15 +2070,25 @@ ggrare2 <- function(physeq_object, data.src, label = NULL, color = NULL, plot = 
     invisible(p)
 }
 
-
-PreparePhylogeneticTreePlot <-function(color, shape, taxa, treeshape, imgName, format="png",dpi=72){
-  #using filtered data
-  data<-dataSet$filt.data;
-  if(class(dataSet$filt.data)=="matrix"){
-    data<-otu_table(data,taxa_are_rows =TRUE);
+#'Function to prepare data for phylogenetic tree.
+#'@description This functions prepares the data to plot the phylogenetic tree.
+#'@param microSetObj Input the name of the microSetObj.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+PreparePhylogeneticTreePlot <-function(microSetObj, color, shape, taxa, treeshape, imgName, format="png", dpi=72){
+  
+  microSetObj <- .get.microSetObj(microSetObj);
+  
+  data <- microSetObj$dataSet$filt.data;
+  
+  if(class(microSetObj$dataSet$filt.data)=="matrix"){
+    data <- otu_table(data,taxa_are_rows =TRUE);
   }
-  sample_table<-sample_data(dataSet$proc.phyobj, errorIfNULL=TRUE);
-  data1<-merge_phyloslim(data,tax_table(dataSet$proc.phyobj),sample_table);
+  
+  sample_table <- sample_data(microSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
+  data1 <- merge_phyloslim(data,tax_table(microSetObj$dataSet$proc.phyobj), sample_table);
   pg_tree <- readRDS("tree.RDS");
   pg_tb <- tax_table(data1);
   pg_ot <- otu_table(data1);
@@ -1934,12 +2102,13 @@ PreparePhylogeneticTreePlot <-function(color, shape, taxa, treeshape, imgName, f
     }
   }
 
-  feat_no<- length(phy_tree(tax_glom(data_tree, taxa))$tip.label);
+  feat_no <- length(phy_tree(tax_glom(data_tree, taxa))$tip.label);
 
   if(feat_no > 50){
-        current.msg <<-"There are too many tree tips to be display, please select a higher taxonomy level";
-        return(0);
-    }
+    current.msg <<-"There are too many tree tips to be display, please select a higher taxonomy level";
+    return(0);
+  }
+  
   #adjust height according to number of legends
   w<-600;
   if(feat_no < 10){
@@ -1953,6 +2122,7 @@ PreparePhylogeneticTreePlot <-function(color, shape, taxa, treeshape, imgName, f
   } else if (feat_no > 100){
     w<-w+500;
   }
+  
   imgName = paste(imgName,".", format, sep="");
   box <- plot_tree(tax_glom(data_tree, taxa),
                    ladderize = "left",
@@ -1967,28 +2137,46 @@ PreparePhylogeneticTreePlot <-function(color, shape, taxa, treeshape, imgName, f
     print(box);
     dev.off();
   }else{
-  box <- box + coord_polar(theta="y");
-  Cairo(file=imgName, width = 1.5*w, height = 1.5*w, type=format, bg="white", dpi=dpi);
+    box <- box + coord_polar(theta="y");
+    Cairo::Cairo(file=imgName, width = 1.5*w, height = 1.5*w, type=format, bg="white", dpi=dpi);
     print(box);
     dev.off();
   }
+  return(.set.microSet(microSetObj))
 }
 
 #######################################
-###########Tax4Fun/PICRUSt ########
+###########Tax4Fun/PICRUSt ############
 #######################################
-Perform16FunAnot<-function(type,pipeline) {
 
-    dataSet$type <- type;
-    merge.otu<-readRDS("data.orig");
-    merge.otu <- apply(merge.otu, 2, as.numeric);
-    rownames(merge.otu)<-dataSet$comp_taxnm;
+#'Main function to perform 16S functional annotation
+#'@description This is the main function to perform either PICRUSt or
+#'SILVA for functional annotation on the microSetObj.
+#'@param microSetObj Input the name of the microSetObj.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+#'@import Tax4Fun
+Perform16FunAnot<-function(microSetObj, type, pipeline) {
+  
+  microSetObj <- .get.microSetObj(microSetObj);
+  
+  microSetObj$dataSet$type <- type;
+  merge.otu <- readRDS("data.orig");
+  merge.otu <- apply(merge.otu, 2, as.numeric);
+  rownames(merge.otu) <- microSetObj$dataSet$comp_taxnm;
 
-    #getting whole taxa labels back
-    if(type=="SILVA"){
-        func.meth<-"Tax4Fun";
-        library("Tax4Fun");
-        if(pipeline=="qi_silva"){
+  #getting whole taxa labels back
+  if(type=="SILVA"){
+    
+    func.meth<-"Tax4Fun";
+
+    if(.on.public.web){
+      load_tax4fun();
+    }
+    
+    if(pipeline=="qi_silva"){
             ModSilvaIds <- gsub("uncultured archaeon","",rownames(merge.otu));
             ModSilvaIds <- gsub("uncultured organism","",ModSilvaIds);
             ModSilvaIds <- gsub("uncultured bacterium","",ModSilvaIds);
@@ -2007,91 +2195,100 @@ Perform16FunAnot<-function(type,pipeline) {
         colnames(result2)<-substr(colnames(result2),1,6);
         result<-t(result2);
         result<-as.data.frame(round(1000000*result));  # get to integers
-    } else {
-        func.meth<-"PICRUSt";
-        if(type == "Greengenes"){
-            a<-rownames(merge.otu);
-            rownames(merge.otu)<-NULL;
-            merge.otu<-data.frame(merge.otu);
-            merge.otu <- cbind(a,merge.otu)
-            colnames(merge.otu)[1]<-"X.OTU_IDs";
-            otu.dic<<-readRDS("../../lib/greengenes_taxmap.rds");
-            merge.otu[,1]<-as.character(merge.otu[,1]);
-            merge.otu[,1]<-otu.dic[match(merge.otu$X.OTU_IDs,otu.dic$Greengenes),1];
-            merge.otu<-merge.otu[!is.na(merge.otu$X.OTU_IDs),];
-            nm<-rownames(merge.otu)<-merge.otu[,1];
-            merge.otu<-merge.otu[,-1];
-            merge.otu<-apply(merge.otu, 2, as.numeric);
-            rownames(merge.otu)<-nm;
-        }
-
-        query<-as.data.frame(merge.otu);
-        samplenm<-colnames(query);
-
-        #normalizing by 16S copy number
-        copyno<-readRDS("../../lib/16S_copyno.rds");
-        result2<-merge(query,copyno, by ="row.names");
-        index1<-match(samplenm,colnames(result2), nomatch = NA_integer_, incomparables = NULL);
-        result2[index1]<-result2[index1]/result2[['X16S_rRNA_Count']];
-        result2[index1]<-round(result2[index1],2);
-        rownames(result2)<-result2[,1];
-        result2<-result2[,-1];
-
-        # need to fetch and merge results from 5 parts of picrust to get around memory issue (from 2G => 400M)
-        res <- data.frame(matrix(0, nrow=nrow(result2), ncol= 6885));
-        row.names(res) <- row.names(result2);
-        pc.lib <- readRDS("../../lib/picrust/picrust_part1.rds");
-        row.hits <- match(row.names(result2), rownames(pc.lib));
-        res[, 1:1377] <- pc.lib[row.hits,];
-        colnames(res)[1:1377] <- colnames(pc.lib);
-
-        pc.lib <- readRDS("../../lib/picrust/picrust_part2.rds");
-        res[, 1378:2754] <- pc.lib[row.hits,];
-        colnames(res)[1378:2754] <- colnames(pc.lib);
-
-        pc.lib <- readRDS("../../lib/picrust/picrust_part3.rds");
-        res[, 2755:4131] <- pc.lib[row.hits,];
-        colnames(res)[2755:4131] <- colnames(pc.lib);
-
-        pc.lib <- readRDS("../../lib/picrust/picrust_part4.rds");
-        res[, 4132:5508] <- pc.lib[row.hits,];
-        colnames(res)[4132:5508] <- colnames(pc.lib);
-
-        pc.lib <- readRDS("../../lib/picrust/picrust_part5.rds");
-        res[, 5509:6885] <- pc.lib[row.hits,];
-        colnames(res)[5509:6885] <- colnames(pc.lib);
-
-        ko.nms <- colnames(res);
-        res<-merge(result2,res, by ="row.names");
-
-        index2<-match(samplenm,colnames(res), nomatch = NA_integer_, incomparables = NULL);
-        index3<-match(ko.nms,colnames(res), nomatch = NA_integer_, incomparables = NULL);
-
-        myList <- vector('list', length(index2));
-        for (i in 1:length(index2)) {
-            myList[[i]]<-data.frame(colSums(res[index3]*res[,index2[i]]));
-        }
-
-        res <- NULL;
-        gc();
-
-        MyMerge<- function(x, y){
-            df<- merge(x, y, by= "row.names", all.x= F, all.y= F);
-            rownames(df)  <- df$Row.names
-            df$Row.names  <- NULL
-            return(df)
-        }
-        result<- Reduce(MyMerge, myList);
-        #orignal class label
-        colnames(result)<-samplenm;
+  } else {
+    func.meth<-"PICRUSt";
+        
+    if(type == "Greengenes"){
+      a<-rownames(merge.otu);
+      rownames(merge.otu)<-NULL;
+      merge.otu<-data.frame(merge.otu);
+      merge.otu <- cbind(a,merge.otu)
+      colnames(merge.otu)[1]<-"X.OTU_IDs";
+      otu.dic<<-readRDS("../../lib/greengenes_taxmap.rds");
+      merge.otu[,1]<-as.character(merge.otu[,1]);
+      merge.otu[,1]<-otu.dic[match(merge.otu$X.OTU_IDs,otu.dic$Greengenes),1];
+      merge.otu<-merge.otu[!is.na(merge.otu$X.OTU_IDs),];
+      nm<-rownames(merge.otu)<-merge.otu[,1];
+      merge.otu<-merge.otu[,-1];
+      merge.otu<-apply(merge.otu, 2, as.numeric);
+      rownames(merge.otu)<-nm;
     }
-    result<-round(result, digits =0);
-    write.csv(result, file="functionalprof_output.csv");
-    result<-result[!apply(result==0,1,all), ]; #filtering zero counts across all
 
-    # save as RDS for memory saving
-    analSet$func.pred<-result;
-    analSet$func.meth<-func.meth;
-    analSet<<-analSet;
+    query<-as.data.frame(merge.otu);
+    samplenm<-colnames(query);
+
+    #normalizing by 16S copy number
+    copyno<-readRDS("../../lib/16S_copyno.rds");
+    result2<-merge(query,copyno, by ="row.names");
+    index1<-match(samplenm,colnames(result2), nomatch = NA_integer_, incomparables = NULL);
+    result2[index1]<-result2[index1]/result2[['X16S_rRNA_Count']];
+    result2[index1]<-round(result2[index1],2);
+    rownames(result2)<-result2[,1];
+    result2<-result2[,-1];
+
+    # need to fetch and merge results from 5 parts of picrust to get around memory issue (from 2G => 400M)
+    res <- data.frame(matrix(0, nrow=nrow(result2), ncol= 6885));
+    row.names(res) <- row.names(result2);
+    pc.lib <- readRDS("../../lib/picrust/picrust_part1.rds");
+    row.hits <- match(row.names(result2), rownames(pc.lib));
+    res[, 1:1377] <- pc.lib[row.hits,];
+    colnames(res)[1:1377] <- colnames(pc.lib);
+
+    pc.lib <- readRDS("../../lib/picrust/picrust_part2.rds");
+    res[, 1378:2754] <- pc.lib[row.hits,];
+    colnames(res)[1378:2754] <- colnames(pc.lib);
+
+    pc.lib <- readRDS("../../lib/picrust/picrust_part3.rds");
+    res[, 2755:4131] <- pc.lib[row.hits,];
+    colnames(res)[2755:4131] <- colnames(pc.lib);
+
+    pc.lib <- readRDS("../../lib/picrust/picrust_part4.rds");
+    res[, 4132:5508] <- pc.lib[row.hits,];
+    colnames(res)[4132:5508] <- colnames(pc.lib);
+
+    pc.lib <- readRDS("../../lib/picrust/picrust_part5.rds");
+    res[, 5509:6885] <- pc.lib[row.hits,];
+    colnames(res)[5509:6885] <- colnames(pc.lib);
+
+    ko.nms <- colnames(res);
+    res<-merge(result2,res, by ="row.names");
+
+    index2<-match(samplenm,colnames(res), nomatch = NA_integer_, incomparables = NULL);
+    index3<-match(ko.nms,colnames(res), nomatch = NA_integer_, incomparables = NULL);
+
+    myList <- vector('list', length(index2));
+        
+    for (i in 1:length(index2)) {
+      myList[[i]]<-data.frame(colSums(res[index3]*res[,index2[i]]));
+    }
+
+    res <- NULL;
+    gc();
+
+    MyMerge <- function(x, y){
+      df<- merge(x, y, by= "row.names", all.x= F, all.y= F);
+      rownames(df) <- df$Row.names
+      df$Row.names <- NULL
+      return(df)
+    }
+        
+    result<- Reduce(MyMerge, myList);
+    #orignal class label
+    colnames(result)<-samplenm;
+  }
+    
+  result <- round(result, digits =0);
+  write.csv(result, file="functionalprof_output.csv");
+  result <- result[!apply(result==0,1,all), ]; #filtering zero counts across all
+
+  # save as RDS for memory saving
+  microSetObj$analSet$func.pred<-result;
+  microSetObj$analSet$func.meth<-func.meth;
+    
+  if(.on.public.web){
+    .set.microSet(microSetObj)
     return(1);
+  }else{
+    return(.set.microSet(microSetObj))
+  }
 }

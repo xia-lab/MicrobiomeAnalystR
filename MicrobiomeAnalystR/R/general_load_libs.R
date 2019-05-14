@@ -83,3 +83,12 @@ load_reshape <- function(){
   suppressMessages(library(reshape))
 }
 
+# Load ape
+load_ape <- function(){
+  suppressMessages(library(ape))
+}
+
+# Load Tax4Fun
+load_tax4fun <- function(){
+  suppressMessages(library(Tax4Fun))
+}
