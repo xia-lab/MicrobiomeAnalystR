@@ -63,6 +63,11 @@ load_rjsonio <- function(){
   suppressMessages(library(RJSONIO))
 }
 
+# Load ggfortify
+load_ggfortify <- function(){
+  suppressMessages(library(ggfortify))
+}
+
 # Load pheatmap
 load_pheatmap <- function(){
   suppressMessages(library(pheatmap))
@@ -111,4 +116,25 @@ load_grid <- function(){
 # Load gridExtra
 load_gridExtra <- function(){
   suppressMessages(library(gridExtra))
+}
+
+# Load splitstackshape
+load_splitstackshape <- function(){
+  suppressMessages(library(splitstackshape))
+}
+
+
+# Load edgeR
+load_edgeR <- function(){
+  suppressMessages(library(edgeR))
+}
+
+# Load metagenomeSeq
+load_metagenomeSeq <- function(){
+  suppressMessages(library(metagenomeSeq))
+}
+
+# Load globaltest
+load_globaltest <- function(){
+  suppressMessages(library(globaltest))
 }
