@@ -1739,7 +1739,7 @@ PlotTaxaAlphaBarSamGrp<-function(microSetObj, barplotName, taxalvl, metadata, im
   }
     
   if(length(ind)==0){
-    current.msg << -"All features have lower read count than given minimum count filter. Please lower the cut off for minimum count.";
+    current.msg <<- "All features have lower read count than given minimum count filter. Please lower the cut off for minimum count.";
     return(0);
   }
     

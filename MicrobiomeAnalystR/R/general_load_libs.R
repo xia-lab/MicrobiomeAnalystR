@@ -1,6 +1,11 @@
-# Load phyloseq
-load_phyloseq <- function(){
-  suppressMessages(library(phyloseq))
+# Load phyloslimR
+load_phyloslim <- function(){
+  suppressMessages(library(phyloslimR))
+}
+
+# Load biomformat
+load_biomformat <- function(){
+  suppressMessages(library(biomformat))
 }
 
 # Load R color brewer
@@ -63,7 +68,7 @@ load_pheatmap <- function(){
   suppressMessages(library(pheatmap))
 }
 
-# Load pheatmap
+# Load xtable
 load_xtable <- function(){
   suppressMessages(library(xtable))
 }
@@ -83,6 +88,11 @@ load_reshape <- function(){
   suppressMessages(library(reshape))
 }
 
+# Load stringr
+load_stringr <- function(){
+  suppressMessages(library(stringr))
+}
+
 # Load ape
 load_ape <- function(){
   suppressMessages(library(ape))
@@ -91,4 +101,14 @@ load_ape <- function(){
 # Load Tax4Fun
 load_tax4fun <- function(){
   suppressMessages(library(Tax4Fun))
+}
+
+# Load grid
+load_grid <- function(){
+  suppressMessages(library(grid))
+}
+
+# Load gridExtra
+load_gridExtra <- function(){
+  suppressMessages(library(gridExtra))
 }

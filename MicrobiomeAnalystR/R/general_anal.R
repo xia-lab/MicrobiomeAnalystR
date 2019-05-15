@@ -76,7 +76,7 @@ RF.Anal <- function(microSetObj, treeNum, tryNum, randomOn, variable, taxrank, d
     data1 <- sapply(by(data1,rownames(data1),colSums),identity);
   }
 
-  data.impfeat << -data1;
+  data.impfeat <<- data1;
   cls <- sample_data(microSetObj$dataSet$norm.phyobj)[[variable]];
   variable <<- variable;
   rf_out <- randomForest(data1,cls, ntree = treeNum, mtry = tryNum, importance = TRUE, proximity = TRUE);
@@ -677,7 +677,7 @@ PerformLefseAnal<- function(microSetObj, p.lvl, lda.lvl, variable, isfunc, datat
   ldabar<<-ldabar;
     
   #preparing data for indvidual box plot
-  sigfeat << -rownames(resTable);
+  sigfeat <<- rownames(resTable);
   taxrank <<- taxrank;
   box_data <- as.data.frame(wil_datadf[, sigfeat]);
   colnames(box_data) <- sigfeat;
