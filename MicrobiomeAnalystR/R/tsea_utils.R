@@ -1,210 +1,272 @@
-######################################
+############################
 ###########TSEA#############
-#######################################
+############################
 
-Setup.MapData<-function(qvec){
-    dataSet$species <- qvec;
-    dataSet <<- dataSet;
+#'Function to set up data for TSEA
+#'@description This function sets up data for TSEA.
+#'@param microSetObj Input the name of the microSetObj.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+Setup.MapData<-function(microSetObj, qvec){
+  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj$dataSet$species <- qvec;
+  return(.set.microSet(microSetObj))
 }
 
-# given a list of species names or ids, find matched name or ids from selected databases
-CrossReferencing <- function(q.type, module.type){
-   # record all the data
-   name.map <<- list();
-   # distribute job
-   dataSet$q.type <- q.type;
-   dataSet$module.type<-module.type;
-   dataSet <<- dataSet;
-   SpeciesMappingExact(q.type);
+#'Perform cross referencing.
+#'@description This function performs cross referencing of user's data
+#'with the MicrobiomeAnalyst database. Given a list of species names or ids, 
+#'it finds matched names or ids from selected internal databases.
+#'@param microSetObj Input the name of the microSetObj.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
 
-    # do some sanity check
-   if(length(which(is.na(name.map$hit.inx)))/length(name.map$hit.inx) > 0.75){
-        nmcheck.msg <<- c(1, "Over 3/4 of the IDs could not be matched to our database. Please make 
+CrossReferencing <- function(microSetObj, q.type, module.type){
+  
+  microSetObj <- .get.microSetObj(microSetObj);
+  
+  # record all the data
+  name.map <<- list();
+  
+  # distribute job
+  microSetObj$dataSet$q.type <- q.type;
+  microSetObj$dataSet$module.type<-module.type;
+  
+  .set.microSet(microSetObj)
+  
+  SpeciesMappingExact(microSetObj, q.type);
+
+  # do some sanity check
+  if(length(which(is.na(name.map$hit.inx)))/length(name.map$hit.inx) > 0.75){
+    nmcheck.msg <<- c(1, "Over 3/4 of the IDs could not be matched to our database. Please make 
                         sure that correct taxonomy IDs or common taxa names are used.");        
-    }else{
-        nmcheck.msg <<- c(1, "Name matching OK, please inspect (and manual correct) the results then proceed.");   
-    }  
+  }else{
+    nmcheck.msg <<- c(1, "Name matching OK, please inspect (and manual correct) the results then proceed.");   
+  }  
+  return(.set.microSet(microSetObj))
 }
 
+# Utility function
 # Mapping from different metabolite IDs
 # For compound names to other id, can do exact or approximate match
 # For other IDs, except HMDB ID, all other may return multiple /non-unique hits
 # multiple hits or non-unique hits will all users to manually select
-SpeciesMappingExact<-function(q.type){
-       qvec <- dataSet$species;
-       # local variable to save memory
-       species.db <- readRDS("../../lib/tsea/microbe_db.rds")
-       # variables to record results
-       hit.inx = vector(mode='numeric', length=length(qvec)); # record hit index, initial 0
-       match.values = vector(mode='character', length=length(qvec)); # the best matched values (hit names), initial ""
-       match.state = vector(mode='numeric', length=length(qvec));  # match status - 0, no match; 1, exact match; initial 0 
-       if(q.type == "gold"){
-            hit.inx <- match(tolower(qvec), tolower(species.db$GOLD_ID));
-            match.values <- species.db$GOLD_ID[hit.inx];
-            match.state[!is.na(hit.inx)] <- 1;
-       }else if(q.type == "taxa"){
-            hit.inx <- match(tolower(qvec), tolower(species.db$taxa));
-            match.values <- species.db$taxa[hit.inx];
-            match.state[!is.na(hit.inx)] <- 1;
-       }else if(q.type == "ncbitax"){
-            hit.inx <- match(tolower(qvec), tolower(species.db$NCBITAX));
-            match.values <- species.db$NCBITAX[hit.inx];
-            match.state[!is.na(hit.inx)] <- 1;
-       }else{
-            print(paste("Unknown species ID type:", q.type));
-      }
-      # empty memory
-      name.map$hit.inx <- hit.inx;
-      name.map$hit.values <- match.values;
-      name.map$match.state <- match.state;
-      name.map <<- name.map;
+SpeciesMappingExact<-function(microSetObj, q.type){
+  
+  microSetObj <- .get.microSetObj(microSetObj);
+  
+  qvec <- microSetObj$dataSet$species;
+       
+  # local variable to save memory
+  species.db <- readRDS("../../lib/tsea/microbe_db.rds")
+       
+  # variables to record results
+  hit.inx = vector(mode='numeric', length=length(qvec)); # record hit index, initial 0
+  match.values = vector(mode='character', length=length(qvec)); # the best matched values (hit names), initial ""
+  match.state = vector(mode='numeric', length=length(qvec));  # match status - 0, no match; 1, exact match; initial 0 
+       
+  if(q.type == "gold"){
+    hit.inx <- match(tolower(qvec), tolower(species.db$GOLD_ID));
+    match.values <- species.db$GOLD_ID[hit.inx];
+    match.state[!is.na(hit.inx)] <- 1;
+  }else if(q.type == "taxa"){
+    hit.inx <- match(tolower(qvec), tolower(species.db$taxa));
+    match.values <- species.db$taxa[hit.inx];
+    match.state[!is.na(hit.inx)] <- 1;
+  }else if(q.type == "ncbitax"){
+    hit.inx <- match(tolower(qvec), tolower(species.db$NCBITAX));
+    match.values <- species.db$NCBITAX[hit.inx];
+    match.state[!is.na(hit.inx)] <- 1;
+  }else{
+    print(paste("Unknown species ID type:", q.type));
+  }
+      
+  # empty memory
+  name.map$hit.inx <- hit.inx;
+  name.map$hit.values <- match.values;
+  name.map$match.state <- match.state;
+  name.map <<- name.map;
 
-       qvec <- dataSet$species;
-       # style for highlighted background for unmatched names
-       pre.style<-NULL;
-       post.style<-NULL;
+  qvec <- microSetObj$dataSet$species;
+  # style for highlighted background for unmatched names
+  pre.style<-NULL;
+  post.style<-NULL;
 
-       # style for no matches
-       no.prestyle<-"<strong style=\"background-color:yellow; font-size=125%; color=\"black\">";
-       no.poststyle<-"</strong>";
+  # style for no matches
+  no.prestyle<-"<strong style=\"background-color:yellow; font-size=125%; color=\"black\">";
+  no.poststyle<-"</strong>";
     
-       hit.inx<-name.map$hit.inx;
-       hit.values<-name.map$hit.values;
-       match.state<-name.map$match.state;
+  hit.inx<-name.map$hit.inx;
+  hit.values<-name.map$hit.values;
+  match.state<-name.map$match.state;
 
-       # construct the result table with cells wrapped in html tags
-       # the unmatched will be highlighted in different background
-       html.res<-matrix("", nrow=length(qvec), ncol=6);
-       colnames(html.res)<-c("Query", "Match","Species","Genus","NCBI_Taxonomy_ID","GOLDSTAMP_ID");
+  # construct the result table with cells wrapped in html tags
+  # the unmatched will be highlighted in different background
+  html.res<-matrix("", nrow=length(qvec), ncol=6);
+  colnames(html.res)<-c("Query", "Match","Species","Genus","NCBI_Taxonomy_ID","GOLDSTAMP_ID");
 
-       for (i in 1:length(qvec)){
-         if(match.state[i]==1){
-           pre.style<-"";
-           post.style="";
+  for (i in 1:length(qvec)){
+    if(match.state[i]==1){
+      pre.style<-"";
+      post.style="";
+    }else{ # no matches
+      pre.style<-no.prestyle;
+      post.style<-no.poststyle;
+    }
            
-           }else{ # no matches
-               pre.style<-no.prestyle;
-               post.style<-no.poststyle;
-           }
-           hit <-species.db[hit.inx[i], ,drop=F];
+    hit <-species.db[hit.inx[i], ,drop=F];
 
-           html.res[i, ]<-c(paste(pre.style, qvec[i], post.style, sep=""),
+    html.res[i, ]<-c(paste(pre.style, qvec[i], post.style, sep=""),
                             paste(ifelse(match.state[i]==0, "", hit.values[i]), sep=""),
                             paste(ifelse(match.state[i]==0 || is.na(hit$species) ||is.null(hit$species) || hit$species=="" || hit$species=="NA","-",hit$species),sep=""),
                             paste(ifelse(match.state[i]==0 || is.na(hit$genus) ||is.null(hit$genus) || hit$genus=="" || hit$genus=="NA","-",hit$genus),  sep=""), 
                             paste(ifelse(match.state[i]==0 || is.na(hit$NCBITAX) ||is.null(hit$NCBITAX) || hit$NCBITAX=="" || hit$NCBITAX=="NA","-", paste("<a href=https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=", hit$NCBITAX," target='_blank'>", hit$NCBITAX,"</a>", sep="")),  sep=""),
                             paste(ifelse(match.state[i]==0 || is.na(hit$GOLDMAPID) ||is.null(hit$GOLDMAPID) || hit$GOLDMAPID=="" || hit$GOLDMAPID=="NA", "-", paste("<a href=https://gold.jgi.doe.gov/project?id=", hit$GOLDMAPID," target='_blank'>", hit$GOLDMAPID,"</a>", sep="")), sep=""))
-        }
+  }
 
-     analSet$resTable <- data.frame(html.res);
-     analSet$mapTable<-cbind(Query=qvec,analSet$resTable[,2:ncol(analSet$resTable)]);
-     analSet <<- analSet;
+  microSetObj$analSet$resTable <- data.frame(html.res);
+  microSetObj$analSet$mapTable<-cbind(Query=qvec, microSetObj$analSet$resTable[,2:ncol(microSetObj$analSet$resTable)]);
+  return(.set.microSet(microSetObj))
 }
 
-CalculateHyperScore <- function(){
+#'Calculate enrichment score.
+#'@description This function calculates the enrichment score for TSEA.
+#'@param microSetObj Input the name of the microSetObj.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+CalculateHyperScore <- function(microSetObj){
+  
+  microSetObj <- .get.microSetObj(microSetObj);
 
-    nm.map <- GetFinalNameMap();
-    valid.inx <- !(is.na(nm.map$Strain)| duplicated(nm.map$Strain));
-    ora.vec <- nm.map$Strain[valid.inx];
-    q.size <- length(ora.vec);
+  nm.map <- GetFinalNameMap(microSetObj);
+  valid.inx <- !(is.na(nm.map$Strain)| duplicated(nm.map$Strain));
+  ora.vec <- nm.map$Strain[valid.inx];
+  q.size <- length(ora.vec);
 
-    if(is.na(ora.vec) || q.size==0) {
-        return(0);
-    }
+  if(is.na(ora.vec) || q.size==0) {
+    return(0);
+  }
     
-    # total uniq cmpds in the current mset lib
-    uniq.count <- length(unique(unlist(current.mset, use.names = FALSE)));
-	  set.size<-length(current.mset);
-    if(set.size ==1){
-        AddErrMsg("Cannot perform enrichment analysis on a single metabolite set!");
-        return(0);
-    }
-
-    hits <- lapply(current.mset, function(x){x[x %in% ora.vec]});
-    hit.num <- unlist(lapply(hits, function(x) length(x)), use.names = FALSE);
+  # total uniq cmpds in the current mset lib
+  uniq.count <- length(unique(unlist(current.mset, use.names = FALSE)));
+	set.size<-length(current.mset);
     
-    if(sum(hit.num>0)==0){
+  if(set.size ==1){
+    AddErrMsg("Cannot perform enrichment analysis on a single metabolite set!");
+    return(0);
+  }
 
-        AddErrMsg("No matches were found in the selected taxon set library!");
+  hits <- lapply(current.mset, function(x){x[x %in% ora.vec]});
+  hit.num <- unlist(lapply(hits, function(x) length(x)), use.names = FALSE);
+    
+  if(sum(hit.num>0)==0){
 
-        if(dataSet$tset.type=="host_int_species"|dataSet$tset.type=="env_species"|dataSet$tset.type=="host_ext_species"){
-           AddErrMsg("Species-level taxa set was selected: verify that your list contains species names!");
-        }else if(dataSet$tset.type=="host_int_strain"|dataSet$tset.type=="env_strain"|dataSet$tset.type=="mic_int_strain"){
-           AddErrMsg("Strain-level taxa set was selected: verify that your list contains strain names!");
-        }else{
-           AddErrMsg("Mixed-level taxa set was selected!");
-        }
-        return(0);
+    AddErrMsg("No matches were found in the selected taxon set library!");
+
+    if(microSetObj$dataSet$tset.type=="host_int_species"|microSetObj$dataSet$tset.type=="env_species"|microSetObj$dataSet$tset.type=="host_ext_species"){
+      AddErrMsg("Species-level taxa set was selected: verify that your list contains species names!");
+    }else if(microSetObj$dataSet$tset.type=="host_int_strain"|microSetObj$dataSet$tset.type=="env_strain"|microSetObj$dataSet$tset.type=="mic_int_strain"){
+      AddErrMsg("Strain-level taxa set was selected: verify that your list contains strain names!");
+    }else{
+      AddErrMsg("Mixed-level taxa set was selected!");
     }
-
-    set.num<-unlist(lapply(current.mset, length), use.names = FALSE);
-
-    # prepare for the result table
-    res.mat<-matrix(NA, nrow=set.size, ncol=6);        
-    rownames(res.mat)<-names(current.mset);
-    colnames(res.mat)<-c("total", "expected", "hits", "Raw p", "Holm p", "FDR");
-
-    res.mat[,1]<-set.num;
-    res.mat[,2]<-q.size*(set.num/uniq.count);
-    res.mat[,3]<-hit.num;
-    res.mat[,4]<-phyper(hit.num-1, set.num, uniq.count-set.num, q.size, lower.tail=F);
-
-    # adjust for multiple testing problems
-    res.mat[,5] <- p.adjust(res.mat[,4], "holm");
-    res.mat[,6] <- p.adjust(res.mat[,4], "fdr");
-
-    res.mat <- res.mat[hit.num>0,];
-
-    # fix error when only 1 hit (not sig), no longer a matrix
-    if(class(res.mat)!= "matrix"){
-      AddErrMsg("No significant hits found using enrichment analysis!");
       return(0);
     }
 
-    ord.inx<-order(res.mat[,4]);
+  set.num<-unlist(lapply(current.mset, length), use.names = FALSE);
 
-    # download result
-    
-    analSet$ora.mat = signif(res.mat[ord.inx,],3);
-    analSet$ora.hits = hits;
-    write.csv(analSet$ora.mat, file="tsea_ora_result.csv");
-    analSet <<- analSet;
+  # prepare for the result table
+  res.mat<-matrix(NA, nrow=set.size, ncol=6);        
+  rownames(res.mat)<-names(current.mset);
+  colnames(res.mat)<-c("total", "expected", "hits", "Raw p", "Holm p", "FDR");
 
+  res.mat[,1]<-set.num;
+  res.mat[,2]<-q.size*(set.num/uniq.count);
+  res.mat[,3]<-hit.num;
+  res.mat[,4]<-phyper(hit.num-1, set.num, uniq.count-set.num, q.size, lower.tail=F);
+
+  # adjust for multiple testing problems
+  res.mat[,5] <- p.adjust(res.mat[,4], "holm");
+  res.mat[,6] <- p.adjust(res.mat[,4], "fdr");
+
+  res.mat <- res.mat[hit.num>0,];
+
+  # fix error when only 1 hit (not sig), no longer a matrix
+  if(class(res.mat)!= "matrix"){
+    AddErrMsg("No significant hits found using enrichment analysis!");
+    return(0);
+  }
+
+  ord.inx<-order(res.mat[,4]);
+
+  # download result
+  microSetObj$analSet$ora.mat = signif(res.mat[ord.inx,],3);
+  microSetObj$analSet$ora.hits = hits;
+  write.csv(analSet$ora.mat, file="tsea_ora_result.csv");
+
+  if(.on.public.web){
+    .set.microSet(microSetObj)
     return(1);
+  }else{
+    return(.set.microSet(microSetObj))
+  }
 }
 
-# return the final (after user selection) map as dataframe
-# two col, original name and strain ,
-# for Enrichment and pathway analysis, respectively
-GetFinalNameMap<-function(){
-    enrtype <- dataSet$q.type;
-    qvec <- dataSet$species;
-    nm.mat<-matrix(nrow=length(qvec), ncol=2);
-    colnames(nm.mat)<-c("query", "Strain");
-    if(enrtype=="taxa"){
-        for (i in 1:length(qvec)){
-            nm.mat[i, ]<-c(qvec[i],qvec[i]);
-        }
-        return(as.data.frame(nm.mat));
-    }else{
-        hit.inx<-name.map$hit.inx;
-        hit.values<-name.map$hit.values;
-        match.state<-name.map$match.state;
-        species.db <- readRDS("../../lib/tsea/microbe_db.rds");
-        for (i in 1:length(qvec)){
-            hit <-species.db[hit.inx[i], ,drop=F];
-            if(match.state[i]==0){
-                kegg.hit <- NA;
-            }else{
-                kegg.hit <- ifelse(nchar(hit$organism.name)==0, NA, hit$organism.name);
-            }
-            nm.mat[i, ]<-c(qvec[i], kegg.hit);
-        }
-        return(as.data.frame(nm.mat));
+#'Getter to return final map
+#'@description This function returns the final (after user selection) map as a dataframe.
+#'Consists of two columns, original name and strain.
+#'@param microSetObj Input the name of the microSetObj.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+GetFinalNameMap<-function(microSetObj){
+  
+  microSetObj <- .get.microSetObj(microSetObj);
+  
+  enrtype <- microSetObj$dataSet$q.type;
+  qvec <- microSetObj$dataSet$species;
+  n.mat<-matrix(nrow=length(qvec), ncol=2);
+  colnames(nm.mat)<-c("query", "Strain");
+    
+  if(enrtype=="taxa"){
+    for (i in 1:length(qvec)){
+      nm.mat[i, ]<-c(qvec[i],qvec[i]);
     }
+    return(as.data.frame(nm.mat));
+  }else{
+    hit.inx<-name.map$hit.inx;
+    hit.values<-name.map$hit.values;
+    match.state<-name.map$match.state;
+    species.db <- readRDS("../../lib/tsea/microbe_db.rds");
+        
+    for (i in 1:length(qvec)){
+      hit <-species.db[hit.inx[i], ,drop=F];
+      if(match.state[i]==0){
+        kegg.hit <- NA;
+      }else{
+        kegg.hit <- ifelse(nchar(hit$organism.name)==0, NA, hit$organism.name);
+      }
+      nm.mat[i, ]<-c(qvec[i], kegg.hit);
+    }
+    return(as.data.frame(nm.mat));
+  }
 }
 
-PrepareEnrichNet<-function(){
+#'Function to prepare data for enrichment network.
+#'@description This function prepares data for enrichment network.
+#'@param microSetObj Input the name of the microSetObj.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+PrepareEnrichNet<-function(microSetObj){
     #calculate the enrichment fold change
     folds <- analSet$ora.mat[,3]/analSet$ora.mat[,2];
     names(folds)<-GetShortNames(rownames(analSet$ora.mat));

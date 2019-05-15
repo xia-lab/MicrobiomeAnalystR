@@ -263,6 +263,13 @@ SaveData <- function(microSetObj, anal.type){
   return(.set.microSet(microSetObj));
 }
 
+#'Function to read in sample data
+#'@description This functions reads in sample data.
+#'@param microSetObj Input the name of the microSetObj.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
 ReadSampleTable<- function(microSetObj, dataName) {
   
   microSetObj <- .get.microSetObj(microSetObj);
@@ -318,8 +325,12 @@ ReadSampleTable<- function(microSetObj, dataName) {
   }
 }
 
+#'@import phyloslimR
 ReadTreeFile<- function(dataName) {
-  suppressMessages(library("phyloslimR"));
+  
+  if(.on.public.web){
+    load_phyloslim();
+  }
   msg <- NULL;
   tree <- phyloslimR::read_tree(dataName);
   saveRDS(tree, "tree.RDS");

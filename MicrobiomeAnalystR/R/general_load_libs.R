@@ -3,6 +3,11 @@ load_phyloslim <- function(){
   suppressMessages(library(phyloslimR))
 }
 
+# Load pryr
+load_pryr <- function(){
+  suppressMessages(library(pryr))
+}
+
 # Load biomformat
 load_biomformat <- function(){
   suppressMessages(library(biomformat))
