@@ -26,7 +26,8 @@ GetGeneListStat <- function(microSetObj){
     val.range <- c(0, 0);
   }else{
     val.range <- range(microSetObj$analSet$ko.mapped[,1])
-    }
+  }
+  
   return(c(nrow(microSetObj$analSet$ko.orig), nrow(microSetObj$analSet$ko.mapped), microSetObj$analSet$gene.only, val.range));
 }
 
@@ -81,8 +82,8 @@ ReadShotgunTabData <- function(microSetObj, dataName, geneidtype, datatype) {
 
   # look for #NAME, store in a list
   #just to check the name of labels.
-  sam.nm<-substr(colnames(mydata[1]),1,5);
-  sam.nm<-tolower(sam.nm);
+  sam.nm <- substr(colnames(mydata[1]),1,5);
+  sam.nm <- tolower(sam.nm);
   sam.inx <- grep("^#name",sam.nm);
     
   if(length(sam.inx) > 0){
@@ -286,8 +287,8 @@ PlotFunctionStack<-function(microSetObj, summaryplot, functionlvl, abundcal, gen
     load_reshape();
   }
     
-  data<-microSetObj$dataSet$proc.phyobj;
-  smpl_nm<-sample_names(data);
+  data <- microSetObj$dataSet$proc.phyobj;
+  smpl_nm <- sample_names(data);
   clsLbl <- factor(sample_data(data)[[metadata]]);
 
   #reorder data based on groups
@@ -295,30 +296,30 @@ PlotFunctionStack<-function(microSetObj, summaryplot, functionlvl, abundcal, gen
   clsLbl <- clsLbl[ord.inx];
   colvec <- as.numeric(clsLbl) + 1;
   smpl_nm <- smpl_nm[ord.inx];
-  query<-otu_table(data)[,ord.inx];
+  query <- otu_table(data)[,ord.inx];
 
   if(geneidtype=="cog"){
-    ko_higher_path<-readRDS("../../lib/cog_functioncount.rds");
+    ko_higher_path <- .read.microbiomeanalyst.lib("cog_functioncount.rds");
   }else {
     if(functionlvl=="KEGG metabolism"){
-      ko_higher_path<-readRDS("../../lib/ko_higherpathway.rds");
+      ko_higher_path<-.read.microbiomeanalyst.lib("ko_higherpathway.rds");
     }else if(functionlvl=="KEGG pathways"){
-      ko_higher_path<-readRDS("../../lib/ko_pathwaycount.rds");
+      ko_higher_path<-.read.microbiomeanalyst.lib("ko_pathwaycount.rds");
     }else if(functionlvl=="KEGG modules"){
-      ko_higher_path<-readRDS("../../lib/ko_modulecount.rds");
+      ko_higher_path<-.read.microbiomeanalyst.lib("ko_modulecount.rds");
     }else if(functionlvl=="COG Functional category"){
-      ko_higher_path<-readRDS("../../lib/ko_cogfunction.rds");
+      ko_higher_path<-.read.microbiomeanalyst.lib("ko_cogfunction.rds");
     }
   }
 
   #sample,categories name
-  samplenm<-colnames(query);
-  categnm<-colnames(ko_higher_path)<-gsub("\\.", " ",colnames(ko_higher_path));
+  samplenm <- colnames(query);
+  categnm <- colnames(ko_higher_path)<-gsub("\\.", " ",colnames(ko_higher_path));
 
   #merging user KO query with the require KO file
-  result2<-merge(query,ko_higher_path, by ="row.names");
-  indx2<-match(samplenm,colnames(result2), nomatch = NA_integer_, incomparables = NULL);
-  indx1<-match(categnm,colnames(result2), nomatch = NA_integer_, incomparables = NULL);
+  result2 <- merge(query,ko_higher_path, by ="row.names");
+  indx2 <- match(samplenm,colnames(result2), nomatch = NA_integer_, incomparables = NULL);
+  indx1 <- match(categnm,colnames(result2), nomatch = NA_integer_, incomparables = NULL);
 
   #actual weight of node/no of pathways in which it is present
   if(abundcal=="weig_hit"){
@@ -385,27 +386,27 @@ PlotFunctionStack<-function(microSetObj, summaryplot, functionlvl, abundcal, gen
   data<-t(result);
 
   nms <-colnames(data);
-  data<-data %*% sapply(unique(nms),"==",nms);
-  data<-data.frame(data);
-  data$step<-factor(rownames(data));
-  data<-melt(data,id='step');
-  data$step<-as.numeric(data$step);
-  data$variable<-gsub("\\.", " ",data$variable); # remove the dot introduced for readability
+  data <- data %*% sapply(unique(nms),"==",nms);
+  data <- data.frame(data);
+  data$step <- factor(rownames(data));
+  data <- melt(data,id='step');
+  data$step <- as.numeric(data$step);
+  data$variable <- gsub("\\.", " ",data$variable); # remove the dot introduced for readability
   #color schema
-  color_var<-levels(factor(data$variable));
-  x<-length(color_var);
+  color_var <- levels(factor(data$variable));
+  x <- length(color_var);
     
   if(colpalopt=="grad"){
-    indx<-which(color_var=="NA");
+    indx <- which(color_var=="NA");
     #color schema for ggplot
     x.colors <- hcl(h=seq(15,375,length=(x+1)),l=65,c=100)[1:x];
     x.colors[indx] <- "#666666";
   }else if (colpalopt=="cont21"){
-    x.colors<-rep(custom_col21,length.out=x);
+    x.colors <- rep(custom_col21,length.out=x);
   }else if (colpalopt=="cont28"){
-    x.colors<-rep(custom_final28,length.out=x);
+    x.colors <- rep(custom_final28,length.out=x);
   }else {
-    x.colors<-rep(custom_col42,length.out=x);
+    x.colors <- rep(custom_col42,length.out=x);
   }
     
   Cairo::Cairo(file=summaryplot,width=w, height=600, type=format, bg="white",dpi=dpi);
@@ -428,7 +429,7 @@ PlotFunctionStack<-function(microSetObj, summaryplot, functionlvl, abundcal, gen
 # Utility function
 doKO2NameMapping <- function(ko.vec){
 
-  ko.dic <- readRDS("../../lib/ko_dic.rds");
+  ko.dic <- .read.microbiomeanalyst.lib("ko_dic.rds");
   hit.inx <- match(ko.vec, ko.dic[, "KO"]);
   symbols <- ko.dic[hit.inx, "Label"];
 
@@ -443,7 +444,7 @@ doKO2NameMapping <- function(ko.vec){
 # return matched KO in the same order (NA if no match)
 doKOFiltering <- function(ko.vec, type){
 
-  ko.dic <- readRDS("../../lib/ko_dic.rds");
+  ko.dic <- .read.microbiomeanalyst.lib("ko_dic.rds");
     
   if(type == "ko"){
     hit.inx <- match(ko.vec, ko.dic$KO);
@@ -593,7 +594,7 @@ PrepareQueryJson <- function(microSetObj){
     exp.vec <- microSetObj$analSet$data[,1]; # drop dim for json
   }else{
     # for global test, all KO measured should be highlighted
-    genemat<-as.data.frame(t(otu_table(microSetObj$dataSet$norm.phyobj)));
+    genemat <- as.data.frame(t(otu_table(microSetObj$dataSet$norm.phyobj)));
     exp.vec <- rep(2, ncol(genemat));
     names(exp.vec) <- colnames(genemat);
   }
@@ -647,29 +648,28 @@ PerformKOEnrichAnalysis_List <- function(microSetObj, file.nm){
   microSetObj <- .get.microSetObj(microSetObj);
 
   # prepare for the result table
-  set.size<-length(current.geneset);
-  res.mat<-matrix(0, nrow=set.size, ncol=5);
-  rownames(res.mat)<-names(current.geneset);
-  colnames(res.mat)<-c("Total", "Expected", "Hits", "Pval", "FDR");
+  set.size <- length(current.geneset);
+  res.mat <- matrix(0, nrow=set.size, ncol=5);
+  rownames(res.mat) <- names(current.geneset);
+  colnames(res.mat) <- c("Total", "Expected", "Hits", "Pval", "FDR");
 
   # prepare query
   ora.vec <- NULL;
-  exp.vec <- analSet$data[,1]; # drop dim for json
+  exp.vec <- microSetObj$analSet$data[,1]; # drop dim for json
   ora.vec <- names(exp.vec);
 
   # need to cut to the universe covered by the pathways, not all genes
   hits.inx <- ora.vec %in% current.universe;
   ora.vec <- ora.vec[hits.inx];
   #ora.nms <- ora.nms[hits.inx];
-  q.size<-length(ora.vec);
+  q.size <- length(ora.vec);
 
   # get the matched query for each pathway
   hits.query <- lapply(current.geneset, function(x) {
-            ora.vec[ora.vec%in%unlist(x)];
-        });
+            ora.vec[ora.vec%in%unlist(x)];});
   names(hits.query) <- names(current.geneset);
 
-  hit.num<-unlist(lapply(hits.query, function(x){length(x)}), use.names=FALSE);
+  hit.num <- unlist(lapply(hits.query, function(x){length(x)}), use.names=FALSE);
 
   # total unique gene number
   uniq.count <- length(current.universe);
@@ -677,13 +677,13 @@ PerformKOEnrichAnalysis_List <- function(microSetObj, file.nm){
   # unique gene count in each pathway
   set.size <- unlist(lapply(current.geneset, length));
 
-  res.mat[,1]<-set.size;
-  res.mat[,2]<-q.size*(set.size/uniq.count);
-  res.mat[,3]<-hit.num;
+  res.mat[,1] <- set.size;
+  res.mat[,2] <- q.size*(set.size/uniq.count);
+  res.mat[,3] <- hit.num;
 
   # use lower.tail = F for P(X>x)
   raw.pvals <- phyper(hit.num-1, set.size, uniq.count-set.size, q.size, lower.tail=F);
-  res.mat[,4]<- raw.pvals;
+  res.mat[,4] <- raw.pvals;
   res.mat[,5] <- p.adjust(raw.pvals, "fdr");
 
   # now, clean up result, synchronize with hit.query
@@ -692,7 +692,7 @@ PerformKOEnrichAnalysis_List <- function(microSetObj, file.nm){
 
   if(nrow(res.mat)> 1){
     # order by p value
-    ord.inx<-order(res.mat[,4]);
+    ord.inx <- order(res.mat[,4]);
     res.mat <- signif(res.mat[ord.inx,],3);
     hits.query <- hits.query[ord.inx];
     imp.inx <- res.mat[,4] <= 0.05;
@@ -734,15 +734,19 @@ Save2KEGGJSON <- function(hits.query, res.mat, file.nm){
   current.msg <<- "Functional enrichment analysis was completed";
     
   if(!exists("ko.edge.map")){
-    ko.edge.path <- paste("../../lib/ko_edge.csv", sep="");
+    
+    if(.on.public.web){
+      ko.edge.path <- paste("../../lib/ko_edge.csv", sep="");
+    }else{
+      ko.edge.path <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/ko_edge.csv", sep="");
+    }
     ko.edge.map <- .readDataTable(ko.edge.path);
     ko.edge.map <- ko.edge.map[ko.edge.map$net=="ko01100",];  #only one map
     ko.edge.map <<- ko.edge.map;
   }
 
   hits.edge <- lapply(hits.query, function(x) {
-            as.character(unique(ko.edge.map$edge[ko.edge.map$gene%in%unlist(x)]));
-        });
+            as.character(unique(ko.edge.map$edge[ko.edge.map$gene%in%unlist(x)]));});
     
   # only keep hits with edges in the map
   hits.inx <- unlist(lapply(hits.edge, length))>0;
@@ -793,7 +797,7 @@ PerformKOEnrichAnalysis_Table <- function(microSetObj, file.nm){
   microSetObj <- .get.microSetObj(microSetObj);
 
   phenotype <- as.factor(sample_data(microSetObj$dataSet$norm.phyobj)[[selected.meta.data]]);
-  genemat<-as.data.frame(t(otu_table(microSetObj$dataSet$norm.phyobj)));
+  genemat <- as.data.frame(t(otu_table(microSetObj$dataSet$norm.phyobj)));
 
   # now, perform the enrichment analysis
   if(.on.public.web){
@@ -801,12 +805,12 @@ PerformKOEnrichAnalysis_Table <- function(microSetObj, file.nm){
   }
 
   # first, get the matched entries from current.geneset
-  hits<-lapply(current.geneset, function(x){x[x %in% colnames(genemat)]});
+  hits <- lapply(current.geneset, function(x){x[x %in% colnames(genemat)]});
 
   # this step is very slow
   gt.obj <- globaltest::gt(phenotype, genemat, subsets=hits);
-  gt.res<-globaltest::result(gt.obj);
-  set.num<-unlist(lapply(current.geneset, length), use.names = FALSE);
+  gt.res <- globaltest::result(gt.obj);
+  set.num <- unlist(lapply(current.geneset, length), use.names = FALSE);
 
   match.num <- gt.res[,5];
     
@@ -822,12 +826,12 @@ PerformKOEnrichAnalysis_Table <- function(microSetObj, file.nm){
   fdr.p <- p.adjust(raw.p, "fdr");
 
   res.mat <- cbind(set.num, match.num, gt.res[,2], gt.res[,3], raw.p, bonf.p, fdr.p);
-  rownames(res.mat)<-names(hits);
-  colnames(res.mat)<-c("Size", "Hits", "Statistic Q", "Expected Q", "Pval", "Holm p", "FDR");
-  hit.inx<-res.mat[,2]>0;
-  res.mat<-res.mat[hit.inx, ];
-  ord.inx<-order(res.mat[,5]);
-  res.mat<-res.mat[ord.inx,];
+  rownames(res.mat) <- names(hits);
+  colnames(res.mat) <- c("Size", "Hits", "Statistic Q", "Expected Q", "Pval", "Holm p", "FDR");
+  hit.inx <- res.mat[,2]>0;
+  res.mat <- res.mat[hit.inx, ];
+  ord.inx <- order(res.mat[,5]);
+  res.mat <- res.mat[ord.inx,];
 
   # in R, sort list is by its name!, using pos order has issues!
   nms <- rownames(res.mat);
@@ -847,27 +851,29 @@ PerformKOEnrichAnalysis_Table <- function(microSetObj, file.nm){
 LoadKEGGKO_lib<-function(category){
     
   if(category == "module"){
-    kegg.rda <- "../../lib/ko_modules.rda";
-    load(kegg.rda);
+    .load.microbiomeanalyst.lib("ko_modules.rda")
     current.setlink <- kegg.anot$link;
     current.mset <- kegg.anot$sets$"Pathway module";
   }else{
-    kegg.rda <- "../../lib/ko_pathways.rda";
-    load(kegg.rda);
+    .load.microbiomeanalyst.lib("ko_pathways.rda")
     current.setlink <- kegg.anot$link;
     current.mset <- kegg.anot$sets$Metabolism;
   }
     
   # now need to update the msets to contain only those in ko01100 map
   if(!exists("ko.edge.map")){
-    ko.edge.path <- paste("../../lib/ko_edge.csv", sep="");
+    
+    if(.on.public.web){
+      ko.edge.path <- paste("../../lib/ko_edge.csv", sep="");
+    }else{
+      ko.edge.path <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/ko_edge.csv", sep="");
+    }
     ko.edge.map <<- .readDataTable(ko.edge.path);
   }
 
   kos.01100 <- ko.edge.map$gene[ko.edge.map$net == "ko01100"];
   current.mset <- lapply(current.mset, function(x) {
-            as.character(unique(x[x %in% kos.01100]));
-        });
+            as.character(unique(x[x %in% kos.01100]))});
   # remove those empty ones
   mset.ln <- lapply(current.mset, length);
   current.mset <- current.mset[mset.ln > 0];
@@ -884,7 +890,12 @@ LoadKEGGKO_lib<-function(category){
 MapKO2KEGGEdges<- function(kos, net="ko01100"){
     
   if(!exists("ko.edge.map")){
-    ko.edge.path <- paste("../../lib/ko_edge.csv", sep="");
+    
+    if(.on.public.web){
+      ko.edge.path <- paste("../../lib/ko_edge.csv", sep="");
+    }else{
+      ko.edge.path <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/ko_edge.csv", sep="");
+    }
     ko.edge.map <<- .readDataTable(ko.edge.path);
   }
     
@@ -930,8 +941,8 @@ PerformKOProjection <- function(microSetObj){
   }
 
   microSetObj$analSet$sig.mat <- resTable;
-  gene.mat<-data.matrix(-log10(resTable$Pvalues));
-  rownames(gene.mat)<-row.names(resTable);
+  gene.mat <- data.matrix(-log10(resTable$Pvalues));
+  rownames(gene.mat) <- row.names(resTable);
   gene.mat <- RemoveDuplicates(gene.mat, "sum", quiet=F);
   microSetObj$analSet$ko.uniq <- gene.mat;
   id.type <- microSetObj$analSet$id.type;
@@ -1000,7 +1011,7 @@ RemoveDuplicates <- function(data, lvlOpt, quiet=T){
     }
         
     if(!quiet){
-        current.msg <<- paste(current.msg, paste("A total of ", sum(dup.inx), " of duplicates were replaced by their ", lvlOpt, ".", sep=""), collapse="\n");
+      current.msg <<- paste(current.msg, paste("A total of ", sum(dup.inx), " of duplicates were replaced by their ", lvlOpt, ".", sep=""), collapse="\n");
     }
     return(uniq.data);
   }else{

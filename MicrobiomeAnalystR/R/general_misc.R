@@ -107,6 +107,14 @@ scale_colours = function(mat, col = rainbow(10), breaks = NA){
   return(matrix(scale_vec_colours(as.vector(mat), col = col, breaks = breaks), nrow(mat), ncol(mat), dimnames = list(rownames(mat), colnames(mat))))
 }
 
+#'Read data table
+#'@description Function to read in a data table. First, it will try to use fread, however, it has issues with 
+#'some windows 10 files. In such case, use the slower read.table method.
+#'@param fileName Input filename
+#'@author Jeff Xia\email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
 .readDataTable <- function(fileName){
   dat <- try(data.table::fread(fileName, header=TRUE, check.names=FALSE, blank.lines.skip=TRUE, data.table=FALSE));
   if(class(dat) == "try-error" || any(dim(dat) == 0)){

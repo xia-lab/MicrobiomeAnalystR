@@ -45,31 +45,48 @@ PerformRefDataMapping<-function(microSetObj, refdataNm, taxo_type, sample_var, b
   
   microSetObj <- .get.microSetObj(microSetObj);
 
-  msg<-NULL;
+  msg <- NULL;
   #reading the reference data: (OTU abundance and tax info) and associated sample data file seperately.
-  refdatafileNm<-paste(refdataNm ,".rds", sep="");
-  refdataloc<-paste("../../lib/ref_data",refdatafileNm,sep="/");
+  refdatafileNm <- paste(refdataNm ,".rds", sep="");
+  
+  if(.on.public.web){
+    refdataloc <- paste("../../lib/ref_data", refdatafileNm, sep="/");
+  }else{
+    refdataloc <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/ref_data", refdatafileNm, sep="/");
+  }
   current.refset <- readRDS(refdataloc);
     
   #sample data
-  refsmpldataNm<-paste(refdataNm ,"_sampledata.csv", sep="");
-  refsmpldataloc<-paste("../../lib/ref_data",refsmpldataNm,sep="/");
-  current.sample<-read.csv(refsmpldataloc,sep = "\t",header = T,row.names = 1);
+  refsmpldataNm <- paste(refdataNm ,"_sampledata.csv", sep="");
+  
+  if(.on.public.web){
+    refsmpldataloc <- paste("../../lib/ref_data",refsmpldataNm,sep="/");
+  }else{
+    refsmpldataloc <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/ref_data", refsmpldataNm, sep="/");
+  }
+  
+  current.sample <- read.csv(refsmpldataloc,sep = "\t",header = T,row.names = 1);
     
   #reading user data
-  data<-microSetObj$dataSet$proc.phyobj;
-  otu_no<-phyloslimR::ntaxa(data);
+  data <- microSetObj$dataSet$proc.phyobj;
+  otu_no <- phyloslimR::ntaxa(data);
     
   #since we use modified name for each OTU(to make it unique and convenient);in order to do mapping we need complete and original mapping label.
   #since our reference data has Greengenes OTU Ids as taxonomy identifier, so if data is already in this format, we will directly merge both of them(reference and users data;kepping all OTU's unique to user data)
   #if taxo_type is SILVA; first we have to map it with Greengenes OTU Ids from mapping file;#then we have to compare Greengenes OTU Ids OTUs between user and reference data
   if(taxo_type=="SILVA"){
-    taxa_names(data)<-microSetObj$dataSet$comp_taxnm;
-    a<-phyloslimR::taxa_names(data);
+    taxa_names(data) <- microSetObj$dataSet$comp_taxnm;
+    a <- phyloslimR::taxa_names(data);
     #taxonomy mapping file
-    otu.dic<<-readRDS("../../lib/greengenes_taxmap.rds");
+    
+    if(.on.public.web){
+      otu.dic <<- readRDS("../../lib/greengenes_taxmap.rds");
+    }else{
+      otu.dic <<- readRDS("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/greengenes_taxmap.rds");
+    }
+    
     #returns a vector of the positions of (first) matches of its first argument in user data(second argument).
-    match_ind<-match(unique(otu.dic[ ,taxo_type]),a);
+    match_ind <- match(unique(otu.dic[ ,taxo_type]),a);
     #getting all the indices of user data that match(removing NA)
     match_ind1 <- match_ind[!is.na(match_ind)];
         
@@ -79,24 +96,24 @@ PerformRefDataMapping<-function(microSetObj, refdataNm, taxo_type, sample_var, b
     }
         
     #getting only matched taxa in user data and then have to prune other taxa;
-    match_taxa<-a[match_ind1];
+    match_taxa <- a[match_ind1];
     #now replacing the taxonomy names with Greengenes OTU Idss
-    match_taxagg<-otu.dic[match(match_taxa,otu.dic[ ,taxo_type]),1];
-    match_taxagg<-as.character(match_taxagg);
+    match_taxagg <- otu.dic[match(match_taxa,otu.dic[ ,taxo_type]),1];
+    match_taxagg <- as.character(match_taxagg);
 
     #getting only matched taxa in user data and then have to prune other taxa;followed by replacing it with Greengenes OTU Ids;
     data = phyloslimR::prune_taxa(match_taxa,data);
-    taxa_names(data)<-match_taxagg;
+    taxa_names(data) <- match_taxagg;
   }
     
   # have to check whether 20% of  OTUs common in user and reference data or not;
-  taxa_ind<-match(phyloslimR::taxa_names(data),phyloslimR::taxa_names(current.refset));
+  taxa_ind <- match(phyloslimR::taxa_names(data),phyloslimR::taxa_names(current.refset));
     
   if(length(which(taxa_ind != "NA")) < 0.20*otu_no){
     msg <- c(msg,paste("Less than 20 percent OTU  match between user and reference data."));
     return(0);
   } else {
-    msg<-paste("Dataset from",biome,"have been selected for comparison with user's data")
+    msg <- paste("Dataset from",biome,"have been selected for comparison with user's data")
   }
     
   #pruning reference dataset
@@ -104,34 +121,34 @@ PerformRefDataMapping<-function(microSetObj, refdataNm, taxo_type, sample_var, b
 
   if(taxo_type=="SILVA"){
     #for SILVA id we can compare only between common id that matches between user and reference data;pruning others OTUs in reference data.
-    data<-phyloslimR::prune_taxa(phyloslimR::taxa_names(current.refset),data);
+    data <- phyloslimR::prune_taxa(phyloslimR::taxa_names(current.refset),data);
   }
     
   #merging both the user and reference phyloslim objects(sample data will be merged seperately)
   #storing taxonomic rank for users data
   #all reference data have kingdom column which can be removed;
-  colnames(phyloslimR::tax_table(current.refset))<-c("Kingdom","Phylum","Class","Order", "Family", "Genus","Species");
-  phyloslimR::tax_table(current.refset)<-phyloslimR::tax_table(current.refset)[,-1];
-  userdatarank<<-phyloslimR::rank_names(current.refset);
-  current.ref_userdata<-phyloslimR::merge_phyloslim(phyloslimR::otu_table(data),phyloslimR::otu_table(current.refset),phyloslimR::tax_table(data),phyloslimR::tax_table(current.refset));
+  colnames(phyloslimR::tax_table(current.refset)) <- c("Kingdom","Phylum","Class","Order", "Family", "Genus","Species");
+  phyloslimR::tax_table(current.refset) <- phyloslimR::tax_table(current.refset)[,-1];
+  userdatarank <<- phyloslimR::rank_names(current.refset);
+  current.ref_userdata <- phyloslimR::merge_phyloslim(phyloslimR::otu_table(data),phyloslimR::otu_table(current.refset),phyloslimR::tax_table(data),phyloslimR::tax_table(current.refset));
   #dummy variable for showing different shape for user and reference data
-  phyloslimR::sample_data(data)$data<-rep("user",nrow(phyloslimR::sample_data(data)));
-  current.sample$data<-rep("reference",nrow(current.sample));
-  sam_data<-as.data.frame(phyloslimR::sample_data(data));
+  phyloslimR::sample_data(data)$data <- rep("user",nrow(phyloslimR::sample_data(data)));
+  current.sample$data <- rep("reference",nrow(current.sample));
+  sam_data <- as.data.frame(phyloslimR::sample_data(data));
   #selecting primary variable data
   #user_sam<-sam_data[sample_var];
   #making the name of same variable same for reference sample data and then merging them
-  colnames(current.sample)<-colnames(sam_data);
-  current.ref_usersamdata<-rbind(current.sample,sam_data);
-  current.ref_usersamdata$data<-as.factor(current.ref_usersamdata$data);    
-  current.ref_usersamdata<-phyloslimR::sample_data(current.ref_usersamdata);
+  colnames(current.sample) <- colnames(sam_data);
+  current.ref_usersamdata <- rbind(current.sample,sam_data);
+  current.ref_usersamdata$data <- as.factor(current.ref_usersamdata$data);    
+  current.ref_usersamdata <- phyloslimR::sample_data(current.ref_usersamdata);
   #storing the taxonomy rank from users data
   #final phyloslim object;(taxonomy table after merging will get distorted if taxa_ranks are not same in both user and reference data;but it's of no use)
-  merged.data<-phyloslimR::merge_phyloslim(current.ref_userdata,current.ref_usersamdata);
+  merged.data <- phyloslimR::merge_phyloslim(current.ref_userdata,current.ref_usersamdata);
   #data filteration and transformation
-  merged.data<-phyloslimR::transform_sample_counts(merged.data, function(x) x / sum(x) );
-  merged.data<<-merged.data;
-  microSetObj$dataSet$lib.msg<<-current.msg <<- paste(msg, collapse=".");
+  merged.data <- phyloslimR::transform_sample_counts(merged.data, function(x) x / sum(x) );
+  merged.data <<- merged.data;
+  microSetObj$dataSet$lib.msg <<- current.msg <<- paste(msg, collapse=".");
     
   if(.on.public.web){
     .set.microSet(microSetObj)

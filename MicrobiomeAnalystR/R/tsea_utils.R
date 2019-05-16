@@ -62,7 +62,7 @@ SpeciesMappingExact<-function(microSetObj, q.type){
   qvec <- microSetObj$dataSet$species;
        
   # local variable to save memory
-  species.db <- readRDS("../../lib/tsea/microbe_db.rds")
+  species.db <- .read.microbiomeanalyst.lib("microbe_db.rds", "tsea")
        
   # variables to record results
   hit.inx = vector(mode='numeric', length=length(qvec)); # record hit index, initial 0
@@ -93,34 +93,34 @@ SpeciesMappingExact<-function(microSetObj, q.type){
 
   qvec <- microSetObj$dataSet$species;
   # style for highlighted background for unmatched names
-  pre.style<-NULL;
-  post.style<-NULL;
+  pre.style <- NULL;
+  post.style <- NULL;
 
   # style for no matches
-  no.prestyle<-"<strong style=\"background-color:yellow; font-size=125%; color=\"black\">";
-  no.poststyle<-"</strong>";
+  no.prestyle <- "<strong style=\"background-color:yellow; font-size=125%; color=\"black\">";
+  no.poststyle <- "</strong>";
     
-  hit.inx<-name.map$hit.inx;
-  hit.values<-name.map$hit.values;
-  match.state<-name.map$match.state;
+  hit.inx <- name.map$hit.inx;
+  hit.values <- name.map$hit.values;
+  match.state <- name.map$match.state;
 
   # construct the result table with cells wrapped in html tags
   # the unmatched will be highlighted in different background
-  html.res<-matrix("", nrow=length(qvec), ncol=6);
-  colnames(html.res)<-c("Query", "Match","Species","Genus","NCBI_Taxonomy_ID","GOLDSTAMP_ID");
+  html.res <- matrix("", nrow=length(qvec), ncol=6);
+  colnames(html.res) <- c("Query", "Match","Species","Genus","NCBI_Taxonomy_ID","GOLDSTAMP_ID");
 
   for (i in 1:length(qvec)){
     if(match.state[i]==1){
-      pre.style<-"";
-      post.style="";
+      pre.style <- "";
+      post.style = "";
     }else{ # no matches
-      pre.style<-no.prestyle;
-      post.style<-no.poststyle;
+      pre.style <- no.prestyle;
+      post.style <- no.poststyle;
     }
            
-    hit <-species.db[hit.inx[i], ,drop=F];
+    hit <- species.db[hit.inx[i], ,drop=F];
 
-    html.res[i, ]<-c(paste(pre.style, qvec[i], post.style, sep=""),
+    html.res[i, ] <- c(paste(pre.style, qvec[i], post.style, sep=""),
                             paste(ifelse(match.state[i]==0, "", hit.values[i]), sep=""),
                             paste(ifelse(match.state[i]==0 || is.na(hit$species) ||is.null(hit$species) || hit$species=="" || hit$species=="NA","-",hit$species),sep=""),
                             paste(ifelse(match.state[i]==0 || is.na(hit$genus) ||is.null(hit$genus) || hit$genus=="" || hit$genus=="NA","-",hit$genus),  sep=""), 
@@ -129,7 +129,7 @@ SpeciesMappingExact<-function(microSetObj, q.type){
   }
 
   microSetObj$analSet$resTable <- data.frame(html.res);
-  microSetObj$analSet$mapTable<-cbind(Query=qvec, microSetObj$analSet$resTable[,2:ncol(microSetObj$analSet$resTable)]);
+  microSetObj$analSet$mapTable <- cbind(Query=qvec, microSetObj$analSet$resTable[,2:ncol(microSetObj$analSet$resTable)]);
   return(.set.microSet(microSetObj))
 }
 
@@ -251,7 +251,7 @@ GetFinalNameMap<-function(microSetObj){
     hit.inx <- name.map$hit.inx;
     hit.values <- name.map$hit.values;
     match.state <- name.map$match.state;
-    species.db <- readRDS("../../lib/tsea/microbe_db.rds");
+    species.db <- .read.microbiomeanalyst.lib("microbe_db.rds", "tsea");
         
     for (i in 1:length(qvec)){
       hit <-species.db[hit.inx[i], ,drop=F];
@@ -305,29 +305,55 @@ SetMsetLib <- function(microSetObj, tset.type){
   microSetObj <- .get.microSetObj(microSetObj);
 
   microSetObj$dataSet$tset.type <- tset.type
-
-  if(tset.type=="host_int"){
-    libPath <- "../../lib/tsea/tsea_host_int.csv";
-  }else if(tset.type=="host_ext"){
-    libPath <- "../../lib/tsea/tsea_host_ext.csv";
-  }else if(tset.type=="env"){
-    libPath <- "../../lib/tsea/tsea_environment.csv";
-  }else if(tset.type=="mic_int"){
-    libPath <- "../../lib/tsea/tsea_microbiome_int.csv";
-  }else if(tset.type=="gene"){
-    libPath <- "../../lib/tsea/tsea_host_snps_new.csv";
-  }else if(tset.type=="host_int_species") {
-    libPath <- "../../lib/tsea/tsea_host_int_species.csv";
-  }else if(tset.type=="env_species"){
-    libPath <- "../../lib/tsea/tsea_environment_species.csv";
-  }else if(tset.type=="host_ext_species"){
-    libPath <- "../../lib/tsea/tsea_host_ext_species.csv";
-  }else if(tset.type=="host_int_strain"){
-    libPath <- "../../lib/tsea/tsea_host_int_strain.csv";
-  }else if(tset.type=="env_strain"){
-    libPath <- "../../lib/tsea/tsea_environment_strain.csv";
+  
+  if(.on.public.web){
+    if(tset.type=="host_int"){
+      libPath <- "../../lib/tsea/tsea_host_int.csv";
+    }else if(tset.type=="host_ext"){
+      libPath <- "../../lib/tsea/tsea_host_ext.csv";
+    }else if(tset.type=="env"){
+      libPath <- "../../lib/tsea/tsea_environment.csv";
+    }else if(tset.type=="mic_int"){
+      libPath <- "../../lib/tsea/tsea_microbiome_int.csv";
+    }else if(tset.type=="gene"){
+      libPath <- "../../lib/tsea/tsea_host_snps_new.csv";
+    }else if(tset.type=="host_int_species") {
+      libPath <- "../../lib/tsea/tsea_host_int_species.csv";
+    }else if(tset.type=="env_species"){
+      libPath <- "../../lib/tsea/tsea_environment_species.csv";
+    }else if(tset.type=="host_ext_species"){
+      libPath <- "../../lib/tsea/tsea_host_ext_species.csv";
+    }else if(tset.type=="host_int_strain"){
+      libPath <- "../../lib/tsea/tsea_host_int_strain.csv";
+    }else if(tset.type=="env_strain"){
+      libPath <- "../../lib/tsea/tsea_environment_strain.csv";
+    }else{
+      libPath <- "../../lib/tsea/tsea_microbiome_int_strain.csv";
+    }
   }else{
-    libPath <- "../../lib/tsea/tsea_microbiome_int_strain.csv";
+    if(tset.type=="host_int"){
+      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/tsea/tsea_host_int.csv";
+    }else if(tset.type=="host_ext"){
+      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/tsea/tsea_host_ext.csv";
+    }else if(tset.type=="env"){
+      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/tsea/tsea_environment.csv";
+    }else if(tset.type=="mic_int"){
+      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/tsea/tsea_microbiome_int.csv";
+    }else if(tset.type=="gene"){
+      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/tsea/tsea_host_snps_new.csv";
+    }else if(tset.type=="host_int_species") {
+      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/tsea/tsea_host_int_species.csv";
+    }else if(tset.type=="env_species"){
+      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/tsea/tsea_environment_species.csv";
+    }else if(tset.type=="host_ext_species"){
+      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/tsea/tsea_host_ext_species.csv";
+    }else if(tset.type=="host_int_strain"){
+      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/tsea/tsea_host_int_strain.csv";
+    }else if(tset.type=="env_strain"){
+      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/tsea/tsea_environment_strain.csv";
+    }else{
+      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/tsea/tsea_microbiome_int_strain.csv";
+    }
   }
       
   current.msetlib <<- .readDataTable(libPath);

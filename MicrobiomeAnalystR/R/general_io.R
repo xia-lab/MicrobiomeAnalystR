@@ -52,16 +52,126 @@ Init.Data <- function(){
   msg.vec <<- vector(mode="character");
 
   if(.on.public.web){
+    lib.path <<- "../../lib/";
     load_cairo();
     load_ggplot();
     load_biocparallel();
     BiocParallel::register(BiocParallel::SerialParam());
+  }else{
+    lib.path <<- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/";
   }
 
   # preload some general package
   Cairo::CairoFonts("Arial:style=Regular","Arial:style=Bold","Arial:style=Italic","Helvetica","Symbol")
   print("Init MicrobiomeAnalyst!");
   return(.set.microSet(microSetObj))
+}
+
+#' Read RDS files from the internet
+#' @description Function downloads the required file and reads it only if not already in working directory.
+#' Need to specify the file URL and the destfile. 
+#' @param filenm Input the name of the file to download
+
+# read binary RDS files
+.read.microbiomeanalyst.lib <- function(filenm, opt = NA){
+  if(.on.public.web){
+    
+    if(tsea){
+      lib.path <- paste("../../lib/tsea/", filenm, sep="");
+    }else{
+      lib.path <- paste("../../lib/", filenm, sep="");
+    }
+
+    return(readRDS(lib.path));
+  }else{
+    lib.download <- FALSE;
+    if(!file.exists(filenm)){
+      lib.download <- TRUE;
+    }else{
+      time <- file.info(filenm)
+      diff_time <- difftime(Sys.time(), time[,"mtime"], unit="days") 
+      if(diff_time>30){
+        lib.download <- TRUE;
+      }
+    }
+    # Deal with curl issues
+    if(lib.download){
+      if(opt == "tsea"){
+        lib.url <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/tsea/", filenm, sep="");
+      }else if(opt == "picrust"){
+        lib.url <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/picrust/", filenm, sep="");
+      }else{
+        lib.url <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/", filenm, sep="");
+      }
+      tryCatch(
+        {
+          download.file(lib.url, destfile=filenm, method="curl")
+        }, warning = function(w){ print() },
+        error = function(e) {
+          print("Download unsucceful. Ensure that curl is downloaded on your computer.")
+          print("Attempting to re-try download using libcurl...")
+          download.file(lib.url, destfile=filenm, method="libcurl")
+        }
+      )
+    }
+    lib.path <- filenm;
+  }
+  
+  # Deal w. corrupt downloaded files
+  tryCatch({
+    my.lib <- readRDS(lib.path); # this is a returned value, my.lib never called outside this function, should not be in global env.
+    print("Loaded files from MetaboAnalyst web-server.")
+  },
+  warning = function(w) { print() },
+  error = function(err) {
+    print("Reading data unsuccessful, attempting to re-download file...")
+    tryCatch(
+      {
+        if(opt == "tsea"){
+          lib.url <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/tsea/", filenm, sep="");
+        }else if(opt == "picrust"){
+          lib.url <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/picrust/", filenm, sep="");
+        }else{
+          lib.url <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/", filenm, sep="");
+        }
+
+        download.file(lib.url, destfile=filenm, method="curl")
+        my.lib <- readRDS(lib.path);
+        print("Loaded necessary files.")
+      },
+      warning = function(w) { print() },
+      error = function(err) {
+        print("Loading files from server unsuccessful. Ensure curl is downloaded on your computer.")
+      }
+    )
+  })
+  return(my.lib)
+}
+
+# read binary RDA files (old style should be all RDS)
+# type should mset or kegg
+.load.microbiomeanalyst.lib <- function(libname){
+  
+  destfile <- paste(libname, ".rda", sep="");
+  if(.on.public.web){
+    destfile <- paste("../../lib/", libname, ".rda", sep="");
+  }else{
+    lib.download <- FALSE;
+    if(!file.exists(destfile)){
+      lib.download <- TRUE;
+    }else{
+      time <- file.info(destfile)
+      diff_time <- difftime(Sys.time(), time[,"mtime"], unit="days") 
+      if(diff_time>30){
+        lib.download <- TRUE;
+      }
+    }
+    if(lib.download){
+      libPath <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/", libname, ".rda", sep="");
+      download.file(libPath, destfile);
+    }
+  }
+  load(destfile, .GlobalEnv);  
 }
 
 SetAnalType <- function(analType){

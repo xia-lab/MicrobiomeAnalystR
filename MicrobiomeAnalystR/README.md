@@ -1,7 +1,5 @@
 # MicrobiomeAnalystR
 
-Continue tsea_utils line 239.
-
 TO DO:
 
 1. Add download code for local (i.e. file paths in sdp_utils).

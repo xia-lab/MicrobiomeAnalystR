@@ -2187,7 +2187,12 @@ Perform16FunAnot<-function(microSetObj, type, pipeline) {
             merge.otu <- rowsum(as.data.frame(merge.otu),ModSilvaIds);
         }
         data<-list(sampleNames=colnames(merge.otu),otuTable=merge.otu);
-        folderReferenceData <- "../../lib/SILVA123";
+        
+        if(.on.public.web){
+          folderReferenceData <- "../../lib/SILVA123";
+        }else{
+          folderReferenceData <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/SILVA123";
+        }
         Tax4FunOutput <- Tax4Fun(data, folderReferenceData, fctProfiling = TRUE, refProfile = "UProC", shortReadMode = TRUE, normCopyNo = TRUE);
         result2<-as.data.frame(Tax4FunOutput[1]);
         #removing unnecessary data from column name.
@@ -2204,7 +2209,13 @@ Perform16FunAnot<-function(microSetObj, type, pipeline) {
       merge.otu<-data.frame(merge.otu);
       merge.otu <- cbind(a,merge.otu)
       colnames(merge.otu)[1]<-"X.OTU_IDs";
-      otu.dic<<-readRDS("../../lib/greengenes_taxmap.rds");
+      
+      if(.on.public.web){
+        otu.dic <<- readRDS("../../lib/greengenes_taxmap.rds");
+      }else{
+        otu.dic <<- .read.microbiomeanalyst.lib("greengenes_taxmap.rds");
+      }
+      
       merge.otu[,1]<-as.character(merge.otu[,1]);
       merge.otu[,1]<-otu.dic[match(merge.otu$X.OTU_IDs,otu.dic$Greengenes),1];
       merge.otu<-merge.otu[!is.na(merge.otu$X.OTU_IDs),];
@@ -2218,7 +2229,13 @@ Perform16FunAnot<-function(microSetObj, type, pipeline) {
     samplenm<-colnames(query);
 
     #normalizing by 16S copy number
-    copyno<-readRDS("../../lib/16S_copyno.rds");
+    
+    if(.on.public.web){
+      copyno <- readRDS("../../lib/16S_copyno.rds");
+    }else{
+      copyno <- .read.microbiomeanalyst.lib("16S_copyno.rds");
+    }
+  
     result2<-merge(query,copyno, by ="row.names");
     index1<-match(samplenm,colnames(result2), nomatch = NA_integer_, incomparables = NULL);
     result2[index1]<-result2[index1]/result2[['X16S_rRNA_Count']];
@@ -2229,24 +2246,50 @@ Perform16FunAnot<-function(microSetObj, type, pipeline) {
     # need to fetch and merge results from 5 parts of picrust to get around memory issue (from 2G => 400M)
     res <- data.frame(matrix(0, nrow=nrow(result2), ncol= 6885));
     row.names(res) <- row.names(result2);
-    pc.lib <- readRDS("../../lib/picrust/picrust_part1.rds");
+    
+    if(.on.public.web){
+      pc.lib <- readRDS("../../lib/picrust/picrust_part1.rds");
+    }else{
+      pc.lib <- .read.microbiomeanalyst.lib("picrust_part1.rds", "picrust");
+    }
+    
     row.hits <- match(row.names(result2), rownames(pc.lib));
     res[, 1:1377] <- pc.lib[row.hits,];
     colnames(res)[1:1377] <- colnames(pc.lib);
-
-    pc.lib <- readRDS("../../lib/picrust/picrust_part2.rds");
+    
+    if(.on.public.web){
+      pc.lib <- readRDS("../../lib/picrust/picrust_part2.rds");
+    }else{
+      pc.lib <- .read.microbiomeanalyst.lib("picrust_part2.rds", "picrust");
+    }
+    
     res[, 1378:2754] <- pc.lib[row.hits,];
     colnames(res)[1378:2754] <- colnames(pc.lib);
 
-    pc.lib <- readRDS("../../lib/picrust/picrust_part3.rds");
+    if(.on.public.web){
+      pc.lib <- readRDS("../../lib/picrust/picrust_part3.rds");
+    }else{
+      pc.lib <- .read.microbiomeanalyst.lib("picrust_part3.rds", "picrust");
+    }
+    
     res[, 2755:4131] <- pc.lib[row.hits,];
     colnames(res)[2755:4131] <- colnames(pc.lib);
 
-    pc.lib <- readRDS("../../lib/picrust/picrust_part4.rds");
+    if(.on.public.web){
+      pc.lib <- readRDS("../../lib/picrust/picrust_part4.rds");
+    }else{
+      pc.lib <- .read.microbiomeanalyst.lib("picrust_part4.rds", "picrust");
+    }
+    
     res[, 4132:5508] <- pc.lib[row.hits,];
     colnames(res)[4132:5508] <- colnames(pc.lib);
 
-    pc.lib <- readRDS("../../lib/picrust/picrust_part5.rds");
+    if(.on.public.web){
+      pc.lib <- readRDS("../../lib/picrust/picrust_part5.rds");
+    }else{
+      pc.lib <- .read.microbiomeanalyst.lib("picrust_part5.rds", "picrust");
+    }
+    
     res[, 5509:6885] <- pc.lib[row.hits,];
     colnames(res)[5509:6885] <- colnames(pc.lib);
 
