@@ -232,18 +232,25 @@ GetFinalNameMap<-function(microSetObj){
   
   enrtype <- microSetObj$dataSet$q.type;
   qvec <- microSetObj$dataSet$species;
-  n.mat<-matrix(nrow=length(qvec), ncol=2);
-  colnames(nm.mat)<-c("query", "Strain");
+  n.mat <- matrix(nrow=length(qvec), ncol=2);
+  colnames(nm.mat) <- c("query", "Strain");
     
   if(enrtype=="taxa"){
     for (i in 1:length(qvec)){
       nm.mat[i, ]<-c(qvec[i],qvec[i]);
     }
-    return(as.data.frame(nm.mat));
+    
+    if(.on.public.web){
+      return(as.data.frame(nm.mat));
+    }else{
+      print(as.data.frame(nm.mat))
+      return(.set.microSet(microSetObj))
+    }
+    
   }else{
-    hit.inx<-name.map$hit.inx;
-    hit.values<-name.map$hit.values;
-    match.state<-name.map$match.state;
+    hit.inx <- name.map$hit.inx;
+    hit.values <- name.map$hit.values;
+    match.state <- name.map$match.state;
     species.db <- readRDS("../../lib/tsea/microbe_db.rds");
         
     for (i in 1:length(qvec)){
@@ -253,9 +260,16 @@ GetFinalNameMap<-function(microSetObj){
       }else{
         kegg.hit <- ifelse(nchar(hit$organism.name)==0, NA, hit$organism.name);
       }
-      nm.mat[i, ]<-c(qvec[i], kegg.hit);
+      nm.mat[i, ] <- c(qvec[i], kegg.hit);
     }
-    return(as.data.frame(nm.mat));
+    
+    if(.on.public.web){
+      return(as.data.frame(nm.mat));
+    }else{
+      print(as.data.frame(nm.mat))
+      return(.set.microSet(microSetObj))
+    }
+
   }
 }
 
@@ -267,236 +281,287 @@ GetFinalNameMap<-function(microSetObj){
 #'License: GNU GPL (>= 2)
 #'@export
 PrepareEnrichNet<-function(microSetObj){
-    #calculate the enrichment fold change
-    folds <- analSet$ora.mat[,3]/analSet$ora.mat[,2];
-    names(folds)<-GetShortNames(rownames(analSet$ora.mat));
-    hits <-  analSet$ora.mat[,3];
-    pvals <- analSet$ora.mat[,4];
-    PlotEnrichNet.Overview(hits, pvals);
+  
+  microSetObj <- .get.microSetObj(microSetObj);
+    
+  #calculate the enrichment fold change
+  folds <- microSetObj$analSet$ora.mat[,3]/microSetObj$analSet$ora.mat[,2];
+  names(folds) <- GetShortNames(rownames(microSetObj$analSet$ora.mat));
+  hits <- microSetObj$analSet$ora.mat[,3];
+  pvals <- microSetObj$analSet$ora.mat[,4];
+  PlotEnrichNet.Overview(hits, pvals);
 }
 
-GetORA.rowNames<-function(){
-    nms <- rownames(analSet$ora.mat);
-    if(is.null(nms)){
-        return("NA");
-    }
-    return (nms);
-}
+#'Set the microbe set library
+#'@description This function sets the microbe
+#'set library for TSEA.
+#'@param microSetObj Input the name of the microSetObj.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+SetMsetLib <- function(microSetObj, tset.type){
+  
+  microSetObj <- .get.microSetObj(microSetObj);
 
-GetORA.mat<-function(){
-    return(analSet$ora.mat);
-}
+  microSetObj$dataSet$tset.type <- tset.type
 
-GetORA.colorBar<-function(){
-    len <- nrow(analSet$ora.mat);
-    if(len > 50){
-        ht.col <- c(substr(heat.colors(50), 0, 7), rep("#FFFFFF", len-50));
-    }else{
-        # reduce to hex by remove the last character so HTML understand
-        ht.col <- substr(heat.colors(len), 0, 7);
-    }
-    return (ht.col);
-}
-
-SetMsetLib <- function(tset.type){
-
-    dataSet$tset.type <- tset.type
-    dataSet <<- dataSet;
-
-    if(tset.type=="host_int"){
-      libPath <- "../../lib/tsea/tsea_host_int.csv";
-    }else if(tset.type=="host_ext"){
-      libPath <- "../../lib/tsea/tsea_host_ext.csv";
-    }else if(tset.type=="env"){
-      libPath <- "../../lib/tsea/tsea_environment.csv";
-    }else if(tset.type=="mic_int"){
-      libPath <- "../../lib/tsea/tsea_microbiome_int.csv";
-    }else if(tset.type=="gene"){
-      libPath <- "../../lib/tsea/tsea_host_snps_new.csv";
-    }else if(tset.type=="host_int_species") {
-      libPath <- "../../lib/tsea/tsea_host_int_species.csv";
-    }else if(tset.type=="env_species"){
-      libPath <- "../../lib/tsea/tsea_environment_species.csv";
-    }else if(tset.type=="host_ext_species"){
-      libPath <- "../../lib/tsea/tsea_host_ext_species.csv";
-    }else if(tset.type=="host_int_strain"){
-      libPath <- "../../lib/tsea/tsea_host_int_strain.csv";
-    }else if(tset.type=="env_strain"){
-      libPath <- "../../lib/tsea/tsea_environment_strain.csv";
-    }else{
-      libPath <- "../../lib/tsea/tsea_microbiome_int_strain.csv";
-    }
+  if(tset.type=="host_int"){
+    libPath <- "../../lib/tsea/tsea_host_int.csv";
+  }else if(tset.type=="host_ext"){
+    libPath <- "../../lib/tsea/tsea_host_ext.csv";
+  }else if(tset.type=="env"){
+    libPath <- "../../lib/tsea/tsea_environment.csv";
+  }else if(tset.type=="mic_int"){
+    libPath <- "../../lib/tsea/tsea_microbiome_int.csv";
+  }else if(tset.type=="gene"){
+    libPath <- "../../lib/tsea/tsea_host_snps_new.csv";
+  }else if(tset.type=="host_int_species") {
+    libPath <- "../../lib/tsea/tsea_host_int_species.csv";
+  }else if(tset.type=="env_species"){
+    libPath <- "../../lib/tsea/tsea_environment_species.csv";
+  }else if(tset.type=="host_ext_species"){
+    libPath <- "../../lib/tsea/tsea_host_ext_species.csv";
+  }else if(tset.type=="host_int_strain"){
+    libPath <- "../../lib/tsea/tsea_host_int_strain.csv";
+  }else if(tset.type=="env_strain"){
+    libPath <- "../../lib/tsea/tsea_environment_strain.csv";
+  }else{
+    libPath <- "../../lib/tsea/tsea_microbiome_int_strain.csv";
+  }
       
-    current.msetlib <<- .readDataTable(libPath);
-    
-    ms.list<-strsplit(current.msetlib[,2],"; ");
-    names(ms.list)<-current.msetlib[,1];
-    current.mset <<- ms.list;
-    # total uniq cmpds in the mset lib
-    uniq.count <<- length(unique(unlist(current.mset, use.names = FALSE)));
+  current.msetlib <<- .readDataTable(libPath);
+  ms.list <- strsplit(current.msetlib[,2],"; ");
+  names(ms.list) <- current.msetlib[,1];
+  current.mset <<- ms.list;
+  # total uniq cmpds in the mset lib
+  uniq.count <<- length(unique(unlist(current.mset, use.names = FALSE)));
+  return(.set.microSet(microSetObj))
 }
 
-# methods to return the selected metset require to java for display
-GetMsetNames<-function(){
-    return(current.msetlib$name);
-}
-
-GetMsetMembers<-function(){
-    return(current.msetlib$member);
-}
-
-GetMsetReferences<-function(){
-    return(current.msetlib$reference);
-}
-
-GetShortNames<-function(nm.vec, max.len= 45){
-    new.nms <- vector(mode="character", length=length(nm.vec));
-    for(i in 1:length(nm.vec)){
-        nm <- nm.vec[i];
-        if(nchar(nm) <= max.len){
-            new.nms[i] <- nm;
-        }else{
-            wrds <- strsplit(nm, "[[:space:]]+")[[1]];
-            new.nm <- "";
-            if(length(wrds)>1){
-                   for(m in 1:length(wrds)){
-                        wrd <- wrds[m];
-                        if(nchar(new.nm)+4+nchar(wrd) <= max.len){
-                            new.nm <- paste(new.nm, wrd);
-                        }else{
-                            new.nms[i] <- paste (new.nm, "...", sep="");
-                            break;
-                        }
-                   }
-            }else{
-                new.nms[i] <- paste (substr(nm, 0, 21), "...", sep="");
-            }
-        }
-    }
-    return (new.nms);
-}
-
-# barplot height is enrichment fold change
-# color is based on p values
+#'Create network for enrichmnet overview
+#'@description This function creates the plot
+#'for the enrichent network overview.
+#'@param microSetObj Input the name of the microSetObj.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+#'@import igraph
+#'@import reshape
+#'@import RJSONIO
 PlotEnrichNet.Overview<-function(hits, pvals){
+  
+  if(.on.public.web){
+    load_igraph();
+    load_reshape();
+    load_rjsonio();
+  }
 
-    # due to space limitation, plot top 50 if more than 50 were given
-    title <- "Taxon Set Enrichment Network Overview";
-    if(length(hits) > 50){
-        hits <- hits[1:50];
-        pvals <- pvals[1:50];
-        title <- "Enrichment Overview (top 50)";
+  # due to space limitation, plot top 50 if more than 50 were given
+  title <- "Taxon Set Enrichment Network Overview";
+  if(length(hits) > 50){
+    hits <- hits[1:50];
+    pvals <- pvals[1:50];
+    title <- "Enrichment Overview (top 50)";
+  }
+  
+  pvalue <- pvals;
+  id <- names(pvalue);
+  geneSets <- current.mset;
+  n <- length(pvalue);
+  w <- matrix(NA, nrow=n, ncol=n);
+  colnames(w) <- rownames(w) <- id;
+
+  for (i in 1:n) {
+    for (j in i:n) {
+      w[i,j] = overlap_ratio(geneSets[id[i]], geneSets[id[j]])
     }
+  }
 
-    library(igraph);
-    library(reshape);
-    pvalue <- pvals;
-    id <- names(pvalue);
-    geneSets <- current.mset;
-    n <- length(pvalue);
-    w <- matrix(NA, nrow=n, ncol=n);
-    colnames(w) <- rownames(w) <- id;
+  wd <- melt(w);
+  wd <- wd[wd[,1] != wd[,2],];
+  wd <- wd[!is.na(wd[,3]),];
+  g <- graph.data.frame(wd[,-3], directed=F);
+  E(g)$width <- sqrt(wd[,3]*20);
+  g <- delete.edges(g, E(g)[wd[,3] < 0.2]);
+  idx <- unlist(sapply(V(g)$name, function(x) which(x == id)));
+  cols <- color_scale("red", "#E5C494");
+  V(g)$color <- cols[sapply(pvalue, getIdx, min(pvalue), max(pvalue))];
 
-    for (i in 1:n) {
-        for (j in i:n) {
-            w[i,j] = overlap_ratio(geneSets[id[i]], geneSets[id[j]])
-        }
-    }
-
-    wd <- melt(w);
-    wd <- wd[wd[,1] != wd[,2],];
-    wd <- wd[!is.na(wd[,3]),];
-    g <- graph.data.frame(wd[,-3], directed=F);
-    E(g)$width <- sqrt(wd[,3]*20);
-    g <- delete.edges(g, E(g)[wd[,3] < 0.2]);
-    idx <- unlist(sapply(V(g)$name, function(x) which(x == id)));
-    cols <- color_scale("red", "#E5C494");
-    V(g)$color <- cols[sapply(pvalue, getIdx, min(pvalue), max(pvalue))];
-
-    cnt <- hits + 2;
-    names(cnt) <- id;
-    cnt2 <- cnt[V(g)$name];
-    V(g)$size <- log(cnt2, base=10) * 10; ## cnt2/sum(cnt2) * 100;
-    #V(g)$size <- cnt2/sum(cnt2) * 10;
+  cnt <- hits + 2;
+  names(cnt) <- id;
+  cnt2 <- cnt[V(g)$name];
+  V(g)$size <- log(cnt2, base=10) * 10; ## cnt2/sum(cnt2) * 100;
+  #V(g)$size <- cnt2/sum(cnt2) * 10;
     
-    # layout
-    pos.xy <- layout.fruchterman.reingold(g);
+  # layout
+  pos.xy <- layout.fruchterman.reingold(g);
 
-    # now create the json object
-    nodes <- vector(mode="list");
-    node.nms <- V(g)$name;
-    node.sizes <- V(g)$size;
-    node.cols <- V(g)$color;
-    for(i in 1:length(node.sizes)){
-        nodes[[i]] <- list(
-                  id = node.nms[i],
+  # now create the json object
+  nodes <- vector(mode="list");
+  node.nms <- V(g)$name;
+  node.sizes <- V(g)$size;
+  node.cols <- V(g)$color;
+    
+  for(i in 1:length(node.sizes)){
+    nodes[[i]] <- list(id = node.nms[i],
                   label=node.nms[i], 
                   size=node.sizes[i], 
                   color=node.cols[i],
                   x = pos.xy[i,1],
-                  y = pos.xy[i,2]
-                );
+                  y = pos.xy[i,2]);
+  }
+    
+  edge.mat <- get.edgelist(g);
+  edge.mat <- cbind(id=1:nrow(edge.mat), source=edge.mat[,1], target=edge.mat[,2]);
+  # covert to json
+
+  netData <- list(nodes=nodes, edges=edge.mat);
+  sink("tsea_network.json");
+  cat(RJSONIO::toJSON(netData));
+  sink();
+}
+
+#################################
+########## Utility Fx ###########
+#################################
+
+# Getter for ORA matrix
+GetORA.rowNames<-function(microSetObj){
+  
+  microSetObj <- .get.microSetObj(microSetObj);
+  
+  nms <- rownames(microSetObj$analSet$ora.mat);
+  
+  if(is.null(nms)){
+    return("NA");
+  }
+  return(nms);
+}
+
+# Getter
+GetORA.mat<-function(microSetObj){
+  microSetObj <- .get.microSetObj(microSetObj);
+  return(microSetObj$analSet$ora.mat);
+}
+
+# Getter
+GetORA.colorBar<-function(microSetObj){
+  
+  microSetObj <- .get.microSetObj(microSetObj);
+  
+  len <- nrow(microSetObj$analSet$ora.mat);
+  
+  if(len > 50){
+    ht.col <- c(substr(heat.colors(50), 0, 7), rep("#FFFFFF", len-50));
+  }else{
+    # reduce to hex by remove the last character so HTML understand
+    ht.col <- substr(heat.colors(len), 0, 7);
+  }
+  return (ht.col);
+}
+
+# methods to return the selected metset require to java for display
+GetMsetNames<-function(){
+  return(current.msetlib$name);
+}
+
+GetMsetMembers<-function(){
+  return(current.msetlib$member);
+}
+
+GetMsetReferences<-function(){
+  return(current.msetlib$reference);
+}
+
+GetShortNames<-function(nm.vec, max.len= 45){
+  new.nms <- vector(mode="character", length=length(nm.vec));
+  for(i in 1:length(nm.vec)){
+    nm <- nm.vec[i];
+    if(nchar(nm) <= max.len){
+      new.nms[i] <- nm;
+    }else{
+      wrds <- strsplit(nm, "[[:space:]]+")[[1]];
+      new.nm <- "";
+      if(length(wrds)>1){
+        for(m in 1:length(wrds)){
+          wrd <- wrds[m];
+          if(nchar(new.nm)+4+nchar(wrd) <= max.len){
+            new.nm <- paste(new.nm, wrd);
+          }else{
+            new.nms[i] <- paste (new.nm, "...", sep="");
+            break;
+          }
+        }
+      }else{
+        new.nms[i] <- paste (substr(nm, 0, 21), "...", sep="");
+      }
     }
-    edge.mat <- get.edgelist(g);
-    edge.mat <- cbind(id=1:nrow(edge.mat), source=edge.mat[,1], target=edge.mat[,2]);
-    # covert to json
-    library(RJSONIO);
-    netData <- list(nodes=nodes, edges=edge.mat);
-    sink("tsea_network.json");
-    cat(RJSONIO::toJSON(netData));
-    sink();
+  }
+  return (new.nms);
 }
 
 overlap_ratio <- function(x, y) {
-    x <- unlist(x)
-    y <- unlist(y)
-    length(intersect(x, y))/length(unique(c(x,y)))
+  x <- unlist(x)
+  y <- unlist(y)
+  length(intersect(x, y))/length(unique(c(x,y)))
 }
 
-##' @importFrom grDevices colorRampPalette
+#' @importFrom grDevices colorRampPalette
 color_scale <- function(c1="grey", c2="red") {
-    pal <- grDevices::colorRampPalette(c(c1, c2))
-    colors <- pal(100)
-    return(colors)
+  pal <- grDevices::colorRampPalette(c(c1, c2))
+  colors <- pal(100)
+  return(colors)
 }
 
 getIdx <- function(v, MIN, MAX) {
-    if ( MIN == MAX ) {
-        return(100)
-    }
-    intervals <- seq(MIN, MAX, length.out=100)
-    max(which(intervals <= v))
+  if ( MIN == MAX ) {
+    return(100)
+  }
+  intervals <- seq(MIN, MAX, length.out=100)
+  max(which(intervals <= v))
 }
 
-GetCurrentImg<-function(){
-    return (current.img);
+GetCurrentImg <- function(){
+  return (current.img);
 }
 
 # given a metset inx, return hmtl highlighted metset cmpds and references
-GetHTMLMetSet<-function(msetNm){
-    hits <- analSet$ora.hits;
-    # highlighting with different colors
-    mset <- current.mset[[msetNm]];
-    red.inx <- which(mset %in% hits[[msetNm]]);
-    mset[red.inx] <- paste("<font color=\"red\">", "<b>", mset[red.inx], "</b>", "</font>",sep="");
+GetHTMLMetSet<-function(microSetObj, msetNm){
+  
+  microSetObj <- .get.microSetObj(microSetObj);
+  
+  hits <- microSetObj$analSet$ora.hits;
+  # highlighting with different colors
+  mset <- current.mset[[msetNm]];
+  red.inx <- which(mset %in% hits[[msetNm]]);
+  mset[red.inx] <- paste("<font color=\"red\">", "<b>", mset[red.inx], "</b>", "</font>",sep="");
 
-    grey.inx <- which(!(mset %in% current.mset[[msetNm]]));
-    mset[grey.inx] <- paste("<font color=\"grey\">", "<b>", mset[grey.inx], "</b>", "</font>",sep="");
+  grey.inx <- which(!(mset %in% current.mset[[msetNm]]));
+  mset[grey.inx] <- paste("<font color=\"grey\">", "<b>", mset[grey.inx], "</b>", "</font>",sep="");
 
-    # get references
-    matched.inx <- match(tolower(msetNm), tolower(current.msetlib$name))[1];
-    return(cbind(msetNm, paste(mset, collapse="; "), current.msetlib$reference[matched.inx]));
+  # get references
+  matched.inx <- match(tolower(msetNm), tolower(current.msetlib$name))[1];
+  return(cbind(msetNm, paste(mset, collapse="; "), current.msetlib$reference[matched.inx]));
 }
 
-GetMsetPval<-function(msetNm){
-    return(analSet$ora.mat[msetNm, "Raw p"]);
+GetMsetPval<-function(microSetObj, msetNm){
+  microSetObj <- .get.microSetObj(microSetObj);
+  return(microSetObj$analSet$ora.mat[msetNm, "Raw p"]);
 }
 
 # given a metset inx, return all info
-GetTaxaSet<-function(msetNm){
+GetTaxaSet <- function(microSetObj, msetNm){
+  microSetObj <- .get.microSetObj(microSetObj);
   mset <- subset(current.msetlib, name == msetNm)
-  analSet$tseaInfo <- t(rbind(colnames(current.msetlib), mset))
-  print(analSet$tseaInfo)
-  analSet <<- analSet
-  return(1);
+  microSetObj$analSet$tseaInfo <- t(rbind(colnames(current.msetlib), mset))
+  print(microSetObj$analSet$tseaInfo)
+  
+  if(.on.public.web){
+    .set.microSet(microSetObj)
+    return(1);
+  }else{
+    return(.set.microSet(microSetObj))
+  }
 }

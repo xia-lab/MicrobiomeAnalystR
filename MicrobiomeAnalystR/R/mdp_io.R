@@ -501,7 +501,7 @@ PlotSelectedSample <-function(microSetObj, imgNm, smplID, idtype, OtuIdType, rel
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import stringr
-GetDataForPie<-function(data_n,datataxa,txlvl,OtuIdType,feat_cnt){
+GetDataForPie<-function(data_n, datataxa, txlvl, OtuIdType, feat_cnt){
   
   #using reduce names
   data_new<-otu_table(data_n);

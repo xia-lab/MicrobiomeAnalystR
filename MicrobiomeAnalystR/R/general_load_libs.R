@@ -33,6 +33,11 @@ load_cairo <- function(){
   suppressMessages(library(Cairo))
 }
 
+# Load igraph
+load_igraph <- function(){
+  suppressMessages(library(igraph))
+}
+
 # Load biocparallel
 load_biocparallel <- function(){
   suppressMessages(library(BiocParallel))
