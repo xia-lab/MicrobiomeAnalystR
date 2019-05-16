@@ -94,8 +94,8 @@ Read16STabData <- function(microSetObj, dataName, type, ismetafile) {
   if(ismetafile=="T"){
     # note dateSet$sample_data already set
     # getting NAME label
-    sam.nm<-substr(colnames(mydata[1]),1,5);
-    sam.nm<-tolower(sam.nm);
+    sam.nm <- substr(colnames(mydata[1]),1,5);
+    sam.nm <- tolower(sam.nm);
     sam.inx <- grep("^#name",sam.nm);
         
     if(length(sam.inx) == 0){
@@ -103,14 +103,14 @@ Read16STabData <- function(microSetObj, dataName, type, ismetafile) {
       return(FALSE);
     }
         
-    smpl_nm<-colnames(mydata[-1]);
+    smpl_nm <- colnames(mydata[-1]);
     
   }else{
     # look for #CLASS,have class labels, store in a list
     meta.info <- list();
     #getting Group label
-    sam.nm<-substr(mydata[1,1],1,6);
-    sam.nm<-tolower(sam.nm);
+    sam.nm <- substr(mydata[1,1],1,6);
+    sam.nm <- tolower(sam.nm);
     cls.inx <- grep("^#class",sam.nm);
         
     if(length(cls.inx) > 0){
@@ -125,7 +125,6 @@ Read16STabData <- function(microSetObj, dataName, type, ismetafile) {
         na.inx <- is.na(cls.lbls);
         cls.lbls[na.inx] <- "NA";
         cls.lbls <- ClearFactorStrings(cls.nm, cls.lbls);
-
         meta.info[[cls.nm]] <- cls.lbls;
       }
     }else{
@@ -134,9 +133,9 @@ Read16STabData <- function(microSetObj, dataName, type, ismetafile) {
     }
         
     #creating phyloseq(sample_data)object
-    sample_data<-as.data.frame(cls.lbls);
-    names(sample_data)<-"CLASS";
-    rownames(sample_data)<-smpl_nm<-colnames(mydata)[-1];
+    sample_data <- as.data.frame(cls.lbls);
+    names(sample_data) <- "CLASS";
+    rownames(sample_data) <- smpl_nm <- colnames(mydata)[-1];
     microSetObj$dataSet$sample_data <- sample_data; # set up sample_data
     mydata<-mydata[-1, ];
   }
@@ -231,8 +230,8 @@ Read16SBiomData <- function(microSetObj, dataName, type, taxa_type, ismetadata){
     
   #sample data
   if(ismetadata=="T"){
-    sample_data<-sample_data(mydata,errorIfNULL = FALSE);
-    sample_data<-as.data.frame(sample_data);
+    sample_data <- sample_data(mydata,errorIfNULL = FALSE);
+    sample_data <- as.data.frame(sample_data);
         
     if(length(sample_data)==0){
       current.msg <<- "Metadata file not detected in your biom file. Please upload metadata file seperately.";
@@ -240,12 +239,12 @@ Read16SBiomData <- function(microSetObj, dataName, type, taxa_type, ismetadata){
       return(FALSE);
     }
         
-    microSetObj$dataSet$sample_data<-as.data.frame(sample_data);
+    microSetObj$dataSet$sample_data <- as.data.frame(sample_data);
     msg <- c(msg, "Metadata file is detected in your biom file.");
   }
     
   current.msg <<- paste(msg, collapse=". ");
-  microSetObj$dataSet$taxa.type<-taxa_type;
+  microSetObj$dataSet$taxa.type <- taxa_type;
   
   if(.on.public.web){
     .set.microSet(microSetObj)
@@ -293,7 +292,7 @@ ReadMothurData<-function(microSetObj, dataName, taxdataNm, taxa_type, module.typ
   }
 
   #reading mothur data using phyloseq seperately.
-  mydata<-import_mothur(mothur_shared_file = dataName);
+  mydata <- import_mothur(mothur_shared_file = dataName);
     
   if(length(mydata)==0){
     current.msg <<-"Data format error. Make sure the file is not empty and is in mothur shared file format(.shared).";
@@ -305,9 +304,9 @@ ReadMothurData<-function(microSetObj, dataName, taxdataNm, taxa_type, module.typ
   #taxonomy table
     
   if(taxa_type=="Greengenes"||taxa_type=="GreengenesID"){
-    tax_data<-import_mothur(mothur_constaxonomy_file = taxdataNm,parseFunction = parse_taxonomy_greengenes);
+    tax_data <- import_mothur(mothur_constaxonomy_file = taxdataNm,parseFunction = parse_taxonomy_greengenes);
   }else{
-    tax_data<-import_mothur(mothur_constaxonomy_file = taxdataNm,parseFunction = parse_taxonomy_default);
+    tax_data <- import_mothur(mothur_constaxonomy_file = taxdataNm,parseFunction = parse_taxonomy_default);
   }
 
   #getting orignal label from .taxonomy file (Tax4Fun)
@@ -316,10 +315,10 @@ ReadMothurData<-function(microSetObj, dataName, taxdataNm, taxa_type, module.typ
     return(0);
   }
     
-  taxa_names(tax_data)<-taxa_names(mydata);
-  tax_tabdata<-fread(taxdataNm, header=TRUE, check.names=FALSE, data.table=FALSE);
-  comp_taxnm<-tax_tabdata$Taxonomy;
-  taxa_table<-tax_table(tax_data,errorIfNULL = FALSE);
+  taxa_names(tax_data) <- taxa_names(mydata);
+  tax_tabdata <- fread(taxdataNm, header=TRUE, check.names=FALSE, data.table=FALSE);
+  comp_taxnm <- tax_tabdata$Taxonomy;
+  taxa_table <- tax_table(tax_data,errorIfNULL = FALSE);
     
   if(length(taxa_table)==0){
     current.msg <- "Make sure the file is not empty and is in Mothur taxonomy file format (should have header).";
@@ -339,8 +338,8 @@ ReadMothurData<-function(microSetObj, dataName, taxdataNm, taxa_type, module.typ
     return(0);
   }
     
-  taxa_table<-taxa_table[indx,];
-  rownames(taxa_table)<-rownames(mydata);
+  taxa_table <- taxa_table[indx,];
+  rownames(taxa_table) <- rownames(mydata);
 
   microSetObj$dataSet$name <- basename(dataName);
   microSetObj$dataSet$data.orig <- mydata;
@@ -348,10 +347,10 @@ ReadMothurData<-function(microSetObj, dataName, taxdataNm, taxa_type, module.typ
   microSetObj$dataSet$comp_taxnm <- comp_taxnm;
   msg <- c(msg,paste("A total of ",ncol(mydata) , " samples and ", nrow(mydata), "features were found."));
   current.msg <<- paste(msg, collapse="; ");
-  microSetObj$dataSet$read.msg<-current.msg;
-  microSetObj$dataSet$data.type<-"mothur";
-  microSetObj$dataSet$taxa.type<-taxa_type;
-  microSetObj$dataSet$module.type<-module.type;
+  microSetObj$dataSet$read.msg <- current.msg;
+  microSetObj$dataSet$data.type <- "mothur";
+  microSetObj$dataSet$taxa.type <- taxa_type;
+  microSetObj$dataSet$module.type <- module.type;
   
   if(.on.public.web){
     .set.microSet(microSetObj)
@@ -382,25 +381,25 @@ Read16STaxaTable <- function(microSetObj, dataName) {
   }
 
   # look for #TAXONOMY, store in a list
-  sam.nm<-substr(colnames(mydata[1]),1,9);
-  sam.nm<-tolower(sam.nm);
+  sam.nm <- substr(colnames(mydata[1]),1,9);
+  sam.nm <- tolower(sam.nm);
   sam.inx <- grep("^#taxonomy",sam.nm);
     
   if(length(sam.inx) > 0){
-    tax_nm<-mydata[,1];
-    tax_rank<-colnames(mydata[-1]);
+    tax_nm <- mydata[,1];
+    tax_rank <- colnames(mydata[-1]);
   }else{
     current.msg <<- "No labels #TAXONOMY found in your data!";
     return(0);
   }
     
   # converting to character matrix as duplicate row names not allowed in data frame.
-  mydata<-as.matrix(mydata[,-1]);
-  rownames(mydata)<-tax_nm;
-  colnames(mydata)<-tax_rank;
+  mydata <- as.matrix(mydata[,-1]);
+  rownames(mydata) <- tax_nm;
+  colnames(mydata) <- tax_rank;
   current.msg <<- paste("Taxonomy file has total of ",nrow(mydata),"features and",ncol(mydata), "taxonomic rank. Additional features which are not present in abundance table has been removed if present.");
     
-  microSetObj$dataSet$taxa_table<-mydata;
+  microSetObj$dataSet$taxa_table <- mydata;
   
   if(.on.public.web){
     .set.microSet(microSetObj)
@@ -446,19 +445,19 @@ PlotSelectedSample <-function(microSetObj, imgNm, smplID, idtype, OtuIdType, rel
   data_s <- prune_samples(smplID,data);
     
   #creating a new pruned phyloseq object
-  data_newph<-data_s;
-  data_tax<-tax_table(data_newph);
-  piedata_new<-GetDataForPie(data_newph,data_tax,txlvl,OtuIdType,feat_cnt);
+  data_newph <- data_s;
+  data_tax <- tax_table(data_newph);
+  piedata_new <- GetDataForPie(data_newph,data_tax,txlvl,OtuIdType,feat_cnt);
   h <- 460;
-  a<-length(unique(data_tax[,txlvl]));
-  x.colors<-rep(col_vector,length.out=a);
+  a <- length(unique(data_tax[,txlvl]));
+  x.colors <- rep(col_vector,length.out=a);
   rowNum <- ceiling(a/3);
   myH <- rowNum*18 + h;
   imgNm = paste(imgNm,".",format, sep="");
   Cairo::Cairo(file=imgNm,width=420, height=myH, type=format, bg="white",dpi=dpi);
-  piedata_rel<-transform(transform(piedata_new, value=value/sum(value)));
-  ind<-which(piedata_rel[,"value"]>rel_perct);
-  ind1<-which(piedata_rel[,"value"]<rel_perct);
+  piedata_rel <- transform(transform(piedata_new, value=value/sum(value)));
+  ind <- which(piedata_rel[,"value"]>rel_perct);
+  ind1 <- which(piedata_rel[,"value"]<rel_perct);
     
   if(length(ind)==0){
     current.msg<<-"All features have lower relative abundance than given minimum abundance. Please lower the cut off for relative abundance.";
@@ -466,17 +465,17 @@ PlotSelectedSample <-function(microSetObj, imgNm, smplID, idtype, OtuIdType, rel
   }
     
   if(length(ind1)>0){
-    levels(piedata_rel$variable)[ind1]<-"Others";
-    piedata_rel<-aggregate(value~variable, piedata_rel, FUN=sum);
+    levels(piedata_rel$variable)[ind1] <- "Others";
+    piedata_rel <- aggregate(value~variable, piedata_rel, FUN=sum);
   }
     
-  ind_zero<-which(piedata_rel[,"value"]==0);
+  ind_zero <- which(piedata_rel[,"value"]==0);
     
   if(length(ind_zero)>0){
-    piedata_rel<-piedata_rel[-ind_zero,];
+    piedata_rel <- piedata_rel[-ind_zero,];
   }
     
-  box=ggplot(piedata_rel,
+  box = ggplot(piedata_rel,
         aes(x="", y = value, fill=variable)) +geom_bar(width = 1, stat = "identity") + theme_bw() +coord_polar(theta = "y") +
         geom_text(aes(x=1.7, label = scales::percent(value)), check_overlap = T,size=3, position = position_stack(vjust = 0.5)) +
         theme(axis.text = element_blank(),axis.ticks = element_blank(),panel.grid  = element_blank())+
@@ -504,10 +503,10 @@ PlotSelectedSample <-function(microSetObj, imgNm, smplID, idtype, OtuIdType, rel
 GetDataForPie<-function(data_n, datataxa, txlvl, OtuIdType, feat_cnt){
   
   #using reduce names
-  data_new<-otu_table(data_n);
-  data_new<-data.frame(data_new);
-  data_new<-t(data_new);
-  taxa_nm<-as.data.frame(datataxa[,txlvl]);
+  data_new <- otu_table(data_n);
+  data_new <- data.frame(data_new);
+  data_new <- t(data_new);
+  taxa_nm <- as.data.frame(datataxa[,txlvl]);
     
   if(OtuIdType=="GreengenesID"){
     
@@ -545,8 +544,9 @@ GetDataForPie<-function(data_n, datataxa, txlvl, OtuIdType, feat_cnt){
   return(piedata_new);
 }
 
-########
-########
+################################# 
+######## Utility Function #######
+################################# 
 
 # utilty function to remove from, within, leading and trailing spaces
 # also removes /

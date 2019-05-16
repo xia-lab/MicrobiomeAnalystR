@@ -4,9 +4,9 @@
 ## Author: Jeff Xia, jeff.xia@mcgill.ca
 ###################################################
 
-#######################################
-########### I/O #######################
-#######################################
+###########################
+########### I/O ###########
+###########################
 
 #'Function to get gene list statistics
 #'@description This function gets the gene list stats.
@@ -211,7 +211,7 @@ PreparePCA4Shotgun<- function(microSetObj, imgName,imgName2, format="json", inx1
   dat <- as.matrix(otu_table(microSetObj$dataSet$norm.phyobj));
   pca3d <- list();
   pca <- prcomp(t(dat), center=T, scale=T);
-  imp.pca<-summary(pca)$importance;
+  imp.pca <- summary(pca)$importance;
   write.csv(signif(pca$x,5), file="pca_score.csv");
   pca3d$score$axis <- paste("PC", 1:3, " (", 100*round(imp.pca[2,][1:3], 3), "%)", sep="");
     
@@ -221,11 +221,11 @@ PreparePCA4Shotgun<- function(microSetObj, imgName,imgName2, format="json", inx1
   pca3d$score$type <- "factor";
   pca3d$score$xyz <- coords;
   pca3d$score$name <- sample_names(microSetObj$dataSet$norm.phyobj);
-  sam_data<-data.frame(sample_data(microSetObj$dataSet$norm.phyobj));
-  cls<-as.character(sample_data(microSetObj$dataSet$norm.phyobj)[[variable]]);
-  clsLbl<-sam_data[[variable]];
+  sam_data <- data.frame(sample_data(microSetObj$dataSet$norm.phyobj));
+  cls <- as.character(sample_data(microSetObj$dataSet$norm.phyobj)[[variable]]);
+  clsLbl <- sam_data[[variable]];
   pca3d$score$facA <- cls;
-  variable<<-variable;
+  variable <<- variable;
     
   # now set color for each group
   cols <- unique(as.numeric(factor(cls)))+1;
@@ -323,18 +323,18 @@ PlotFunctionStack<-function(microSetObj, summaryplot, functionlvl, abundcal, gen
 
   #actual weight of node/no of pathways in which it is present
   if(abundcal=="weig_hit"){
-    result2[indx1]<-result2[indx1]/rowSums(result2[,indx1]);
+    result2[indx1] <- result2[indx1]/rowSums(result2[,indx1]);
     #removing NA introduced
-    result2<-replace(result2, is.na(result2), 0);
+    result2 <- replace(result2, is.na(result2), 0);
   }
     
   myList <- vector('list', length(indx2));
   for (i in 1:length(indx2)) {
-    myList[[i]]<-as.data.frame(colSums(result2[indx1]*result2[,indx2[i]]));
+    myList[[i]] <- as.data.frame(colSums(result2[indx1]*result2[,indx2[i]]));
   }
 
   MyMerge<- function(x, y){
-    df<- merge(x, y, by= "row.names", all.x= F, all.y= F);
+    df <- merge(x, y, by= "row.names", all.x= F, all.y= F);
     rownames(df) <- df$Row.names
     df$Row.names <- NULL
     return(df)
@@ -343,23 +343,23 @@ PlotFunctionStack<-function(microSetObj, summaryplot, functionlvl, abundcal, gen
   result <- Reduce(MyMerge, myList);
 
   #orignal class label
-  colnames(result)<-samplenm;
-  result<-result[rowSums(result)!=0, ];
+  colnames(result) <- samplenm;
+  result <- result[rowSums(result)!=0, ];
 
   if(abundcal=="norm_hit"){
     #getting the size of categories
-    categ_size<-as.data.frame(colSums(ko_higher_path));
-    colnames(categ_size)<-"size";
-    result<-merge(result,categ_size, by ="row.names");
-    result[indx2]<-result[indx2]/result[['size']];
+    categ_size <- as.data.frame(colSums(ko_higher_path));
+    colnames(categ_size) <- "size";
+    result <- merge(result,categ_size, by ="row.names");
+    result[indx2] <- result[indx2]/result[['size']];
 
     #removing the extra (size) column
-    result<-result[ ,c(1,indx2)];
-    rownames(result)<-result[,1];
-    result<-result[,-1];
+    result <- result[ ,c(1,indx2)];
+    rownames(result) <- result[,1];
+    result <- result[,-1];
 
     #removing zero abundance KEGG pathways, metabolism and modules
-    result<-result[ rowSums(result)!=0, ];
+    result <- result[ rowSums(result)!=0, ];
   }
     
   write.csv(result, file="funcprof_abund.csv");
@@ -385,7 +385,7 @@ PlotFunctionStack<-function(microSetObj, summaryplot, functionlvl, abundcal, gen
 
   data<-t(result);
 
-  nms <-colnames(data);
+  nms <- colnames(data);
   data <- data %*% sapply(unique(nms),"==",nms);
   data <- data.frame(data);
   data$step <- factor(rownames(data));
@@ -424,91 +424,6 @@ PlotFunctionStack<-function(microSetObj, summaryplot, functionlvl, abundcal, gen
   microSetObj$analSet$func.prof<-data;
   microSetObj$analSet$func.lvl<-functionlvl;
   return(.set.microSet(microSetObj))
-}
-
-# Utility function
-doKO2NameMapping <- function(ko.vec){
-
-  ko.dic <- .read.microbiomeanalyst.lib("ko_dic.rds");
-  hit.inx <- match(ko.vec, ko.dic[, "KO"]);
-  symbols <- ko.dic[hit.inx, "Label"];
-
-  # if not gene symbol, use id by itself
-  na.inx <- is.na(symbols);
-  symbols[na.inx] <- ko.vec[na.inx];
-
-  return(symbols);
-}
-
-# Utility function
-# return matched KO in the same order (NA if no match)
-doKOFiltering <- function(ko.vec, type){
-
-  ko.dic <- .read.microbiomeanalyst.lib("ko_dic.rds");
-    
-  if(type == "ko"){
-    hit.inx <- match(ko.vec, ko.dic$KO);
-    return(ko.dic$KO[hit.inx]);
-  }
-    
-  if(type == "ec"){
-    hit.inx = vector(mode='numeric', length=length(ko.vec)); # record hit index, initial 0
-    match.values = rep(NA, length=length(ko.vec)); # the best matched values (hit names), initial ""
-
-    if(substring(ko.vec[1], 0, 2) == "EC"){
-      ko.vec <- gsub("^EC", "", ko.vec)
-    }
-       
-    # first find exact match to the common compound names
-    hit.inx <- match(ko.vec, ko.dic[, "EC"]);
-    match.values <- ko.dic$KO[hit.inx];
-    todo.inx <-which(is.na(hit.inx));
-       
-    if(length(todo.inx) > 0){
-      multi.ec.inx <- grep("; ", ko.dic$EC);
-      m.dic <- ko.dic[multi.ec.inx,];
-      ec.list <- strsplit(m.dic$EC, "; ");
-      ecs2ko <- m.dic$KO;
-
-      for(i in 1:length(ec.list)){
-        hitInx <- match(ko.vec[todo.inx], ec.list[[i]]);
-        hitPos <- which(!is.na(hitInx));
-        orig.inx<-todo.inx[hitPos];
-        match.values[orig.inx] <- ecs2ko[i];
-      }
-    }
-    return(match.values);
-  }
-    
-  if(type == "cog"){
-    hit.inx = vector(mode='numeric', length=length(ko.vec)); # record hit index, initial 0
-    match.values = rep(NA, length=length(ko.vec)); # the best matched values (hit names), initial ""
-    # first find exact match to the common compound names
-    hit.inx <- match(ko.vec, ko.dic[, "COG"]);
-    match.values <- ko.dic$KO[hit.inx];
-    todo.inx <-which(is.na(hit.inx));
-       
-    if(length(todo.inx) > 0){
-      multi.cog.inx <- grep(";", ko.dic$COG);
-      m.dic <- ko.dic[multi.cog.inx,];
-      cog.list <- strsplit(m.dic$COG, ";");
-      cog2ko <- m.dic$KO;
-
-      for(i in 1:length(cog.list)){
-        hitInx <- match(ko.vec[todo.inx], cog.list[[i]]);
-        hitPos <- which(!is.na(hitInx));
-        orig.inx<-todo.inx[hitPos];
-        match.values[orig.inx] <- cog2ko[i];
-      }
-    }
-    return(match.values);
-  }
-}
-
-# Utility function
-PerformExprFilter<-function(gene.mat, cutoff=0){
-  gd.inx <- gene.mat[,1] >= cutoff;
-  gene.mat[gd.inx, , drop=F];
 }
 
 #'Function to perform KO mapping.
@@ -641,149 +556,6 @@ PerformKOEnrichAnalysis_KO01100 <- function(microSetObj, category, file.nm){
   return(.set.microSet(microSetObj))
 }
 
-# Utility function
-# note: only return hits in this map KO01100
-PerformKOEnrichAnalysis_List <- function(microSetObj, file.nm){
-  
-  microSetObj <- .get.microSetObj(microSetObj);
-
-  # prepare for the result table
-  set.size <- length(current.geneset);
-  res.mat <- matrix(0, nrow=set.size, ncol=5);
-  rownames(res.mat) <- names(current.geneset);
-  colnames(res.mat) <- c("Total", "Expected", "Hits", "Pval", "FDR");
-
-  # prepare query
-  ora.vec <- NULL;
-  exp.vec <- microSetObj$analSet$data[,1]; # drop dim for json
-  ora.vec <- names(exp.vec);
-
-  # need to cut to the universe covered by the pathways, not all genes
-  hits.inx <- ora.vec %in% current.universe;
-  ora.vec <- ora.vec[hits.inx];
-  #ora.nms <- ora.nms[hits.inx];
-  q.size <- length(ora.vec);
-
-  # get the matched query for each pathway
-  hits.query <- lapply(current.geneset, function(x) {
-            ora.vec[ora.vec%in%unlist(x)];});
-  names(hits.query) <- names(current.geneset);
-
-  hit.num <- unlist(lapply(hits.query, function(x){length(x)}), use.names=FALSE);
-
-  # total unique gene number
-  uniq.count <- length(current.universe);
-
-  # unique gene count in each pathway
-  set.size <- unlist(lapply(current.geneset, length));
-
-  res.mat[,1] <- set.size;
-  res.mat[,2] <- q.size*(set.size/uniq.count);
-  res.mat[,3] <- hit.num;
-
-  # use lower.tail = F for P(X>x)
-  raw.pvals <- phyper(hit.num-1, set.size, uniq.count-set.size, q.size, lower.tail=F);
-  res.mat[,4] <- raw.pvals;
-  res.mat[,5] <- p.adjust(raw.pvals, "fdr");
-
-  # now, clean up result, synchronize with hit.query
-  res.mat <- res.mat[hit.num>0,,drop = F];
-  hits.query <- hits.query[hit.num>0];
-
-  if(nrow(res.mat)> 1){
-    # order by p value
-    ord.inx <- order(res.mat[,4]);
-    res.mat <- signif(res.mat[ord.inx,],3);
-    hits.query <- hits.query[ord.inx];
-    imp.inx <- res.mat[,4] <= 0.05;
-        
-    if(sum(imp.inx) < 10){ # too little left, give the top ones
-      topn <- ifelse(nrow(res.mat) > 10, 10, nrow(res.mat));
-      res.mat <- res.mat[1:topn,];
-      hits.query <- hits.query[1:topn];
-    }else{
-      res.mat <- res.mat[imp.inx,];
-      hits.query <- hits.query[imp.inx];
-            
-      if(sum(imp.inx) > 120){
-        # now, clean up result, synchronize with hit.query
-        res.mat <- res.mat[1:120,];
-        hits.query <- hits.query[1:120];
-      }
-    }
-  }
-  Save2KEGGJSON(hits.query, res.mat, file.nm);
-  if(.on.public.web){
-    .set.microSet(microSetObj)
-    return(1);
-  }else{
-    return(.set.microSet(microSetObj))
-  }
-}
-
-# Utility function
-# for KO01100
-#'@import RJSONIO
-Save2KEGGJSON <- function(hits.query, res.mat, file.nm){
-  
-  if(.on.public.web){
-    load_rjsonio();
-  }
-  
-  resTable <- data.frame(Pathway=rownames(res.mat), res.mat);
-  current.msg <<- "Functional enrichment analysis was completed";
-    
-  if(!exists("ko.edge.map")){
-    
-    if(.on.public.web){
-      ko.edge.path <- paste("../../lib/ko_edge.csv", sep="");
-    }else{
-      ko.edge.path <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/ko_edge.csv", sep="");
-    }
-    ko.edge.map <- .readDataTable(ko.edge.path);
-    ko.edge.map <- ko.edge.map[ko.edge.map$net=="ko01100",];  #only one map
-    ko.edge.map <<- ko.edge.map;
-  }
-
-  hits.edge <- lapply(hits.query, function(x) {
-            as.character(unique(ko.edge.map$edge[ko.edge.map$gene%in%unlist(x)]));});
-    
-  # only keep hits with edges in the map
-  hits.inx <- unlist(lapply(hits.edge, length))>0;
-  hits.query <- hits.query[hits.inx];
-  resTable <- resTable[hits.inx, ];
-
-  # write json
-  fun.pval = resTable$Pval; if(length(fun.pval) ==1) { fun.pval <- matrix(fun.pval) };
-  hit.num = resTable$Hits; if(length(hit.num) ==1) { hit.num <- matrix(hit.num) };
-  fun.ids <- as.vector(current.setids[names(hits.query)]); if(length(fun.ids) ==1) { fun.ids <- matrix(fun.ids) };
-
-  json.res <- list(hits.query = hits.query,
-                  hits.edge = hits.edge,
-                  path.id = fun.ids,
-                  fun.pval = fun.pval,
-                  hit.num = hit.num);
-    
-  json.mat <- RJSONIO::toJSON(json.res, .na='null');
-  json.nm <- paste(file.nm, ".json", sep="");
-  sink(json.nm)
-  cat(json.mat);
-  sink();
-
-  # write csv
-  fun.hits <<- hits.query;
-  fun.pval <<- resTable[,5];
-  hit.num <<- resTable[,4];
-  csv.nm <- paste(file.nm, ".csv", sep="");
-  write.csv(resTable, file=csv.nm, row.names=F);
-}
-
-# Utility function
-SetCurrentMetaData <- function(meta.data, type){
-  selected.meta.data <<- meta.data
-  enrich.type <<- type;
-}
-
 #'Perform KO Enrichment Analysis 
 #'@description This functions performs KO enrichment analysis
 #'on a tabled input.
@@ -886,37 +658,9 @@ LoadKEGGKO_lib<-function(category){
   current.universe <<- unique(unlist(current.mset));
 }
 
-# Utility function
-MapKO2KEGGEdges<- function(kos, net="ko01100"){
-    
-  if(!exists("ko.edge.map")){
-    
-    if(.on.public.web){
-      ko.edge.path <- paste("../../lib/ko_edge.csv", sep="");
-    }else{
-      ko.edge.path <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/ko_edge.csv", sep="");
-    }
-    ko.edge.map <<- .readDataTable(ko.edge.path);
-  }
-    
-  all.hits <- ko.edge.map$gene %in% names(kos) & ko.edge.map$net == net;
-  my.map <- ko.edge.map[all.hits, ];
-  q.map <- data.frame(gene=names(kos), expr=as.numeric(kos));
-
-  # first merge to get ko abundance to each edge
-  dat <- merge(my.map, q.map, by="gene");
-
-  # now merge duplicated edge to sum
-  dup.inx <- duplicated(dat[,2]);
-  dat <- dat[!dup.inx,];
-  rownames(dat) <- dat[,2];
-
-  return(dat[,-2]);
-}
-
-###############################################
-###########Metabolic Pathway projection########
-###############################################
+###################################################
+########### Metabolic Pathway projection ##########
+###################################################
 
 #'Function to perform KO projection
 #'@description This function projects user-uploaded
@@ -972,8 +716,182 @@ PerformKOProjection <- function(microSetObj){
   }
 }
 
+##############################################
+############## Utility Functions #############
+##############################################
+
 # Utility function
-# given a data with duplicates, dups is the one with duplicates
+MapKO2KEGGEdges<- function(kos, net="ko01100"){
+  
+  if(!exists("ko.edge.map")){
+    
+    if(.on.public.web){
+      ko.edge.path <- paste("../../lib/ko_edge.csv", sep="");
+    }else{
+      ko.edge.path <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/ko_edge.csv", sep="");
+    }
+    ko.edge.map <<- .readDataTable(ko.edge.path);
+  }
+  
+  all.hits <- ko.edge.map$gene %in% names(kos) & ko.edge.map$net == net;
+  my.map <- ko.edge.map[all.hits, ];
+  q.map <- data.frame(gene=names(kos), expr=as.numeric(kos));
+  
+  # first merge to get ko abundance to each edge
+  dat <- merge(my.map, q.map, by="gene");
+  
+  # now merge duplicated edge to sum
+  dup.inx <- duplicated(dat[,2]);
+  dat <- dat[!dup.inx,];
+  rownames(dat) <- dat[,2];
+  
+  return(dat[,-2]);
+}
+
+# Utility function
+# note: only return hits in this map KO01100
+PerformKOEnrichAnalysis_List <- function(microSetObj, file.nm){
+  
+  microSetObj <- .get.microSetObj(microSetObj);
+  
+  # prepare for the result table
+  set.size <- length(current.geneset);
+  res.mat <- matrix(0, nrow=set.size, ncol=5);
+  rownames(res.mat) <- names(current.geneset);
+  colnames(res.mat) <- c("Total", "Expected", "Hits", "Pval", "FDR");
+  
+  # prepare query
+  ora.vec <- NULL;
+  exp.vec <- microSetObj$analSet$data[,1]; # drop dim for json
+  ora.vec <- names(exp.vec);
+  
+  # need to cut to the universe covered by the pathways, not all genes
+  hits.inx <- ora.vec %in% current.universe;
+  ora.vec <- ora.vec[hits.inx];
+  #ora.nms <- ora.nms[hits.inx];
+  q.size <- length(ora.vec);
+  
+  # get the matched query for each pathway
+  hits.query <- lapply(current.geneset, function(x) {
+    ora.vec[ora.vec%in%unlist(x)];});
+  names(hits.query) <- names(current.geneset);
+  
+  hit.num <- unlist(lapply(hits.query, function(x){length(x)}), use.names=FALSE);
+  
+  # total unique gene number
+  uniq.count <- length(current.universe);
+  
+  # unique gene count in each pathway
+  set.size <- unlist(lapply(current.geneset, length));
+  
+  res.mat[,1] <- set.size;
+  res.mat[,2] <- q.size*(set.size/uniq.count);
+  res.mat[,3] <- hit.num;
+  
+  # use lower.tail = F for P(X>x)
+  raw.pvals <- phyper(hit.num-1, set.size, uniq.count-set.size, q.size, lower.tail=F);
+  res.mat[,4] <- raw.pvals;
+  res.mat[,5] <- p.adjust(raw.pvals, "fdr");
+  
+  # now, clean up result, synchronize with hit.query
+  res.mat <- res.mat[hit.num>0,,drop = F];
+  hits.query <- hits.query[hit.num>0];
+  
+  if(nrow(res.mat)> 1){
+    # order by p value
+    ord.inx <- order(res.mat[,4]);
+    res.mat <- signif(res.mat[ord.inx,],3);
+    hits.query <- hits.query[ord.inx];
+    imp.inx <- res.mat[,4] <= 0.05;
+    
+    if(sum(imp.inx) < 10){ # too little left, give the top ones
+      topn <- ifelse(nrow(res.mat) > 10, 10, nrow(res.mat));
+      res.mat <- res.mat[1:topn,];
+      hits.query <- hits.query[1:topn];
+    }else{
+      res.mat <- res.mat[imp.inx,];
+      hits.query <- hits.query[imp.inx];
+      
+      if(sum(imp.inx) > 120){
+        # now, clean up result, synchronize with hit.query
+        res.mat <- res.mat[1:120,];
+        hits.query <- hits.query[1:120];
+      }
+    }
+  }
+  Save2KEGGJSON(hits.query, res.mat, file.nm);
+  if(.on.public.web){
+    .set.microSet(microSetObj)
+    return(1);
+  }else{
+    return(.set.microSet(microSetObj))
+  }
+}
+
+# Utility function
+# for KO01100
+#'@import RJSONIO
+Save2KEGGJSON <- function(hits.query, res.mat, file.nm){
+  
+  if(.on.public.web){
+    load_rjsonio();
+  }
+  
+  resTable <- data.frame(Pathway=rownames(res.mat), res.mat);
+  current.msg <<- "Functional enrichment analysis was completed";
+  
+  if(!exists("ko.edge.map")){
+    
+    if(.on.public.web){
+      ko.edge.path <- paste("../../lib/ko_edge.csv", sep="");
+    }else{
+      ko.edge.path <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/ko_edge.csv", sep="");
+    }
+    ko.edge.map <- .readDataTable(ko.edge.path);
+    ko.edge.map <- ko.edge.map[ko.edge.map$net=="ko01100",];  #only one map
+    ko.edge.map <<- ko.edge.map;
+  }
+  
+  hits.edge <- lapply(hits.query, function(x) {
+    as.character(unique(ko.edge.map$edge[ko.edge.map$gene%in%unlist(x)]));});
+  
+  # only keep hits with edges in the map
+  hits.inx <- unlist(lapply(hits.edge, length))>0;
+  hits.query <- hits.query[hits.inx];
+  resTable <- resTable[hits.inx, ];
+  
+  # write json
+  fun.pval = resTable$Pval; if(length(fun.pval) ==1) { fun.pval <- matrix(fun.pval) };
+  hit.num = resTable$Hits; if(length(hit.num) ==1) { hit.num <- matrix(hit.num) };
+  fun.ids <- as.vector(current.setids[names(hits.query)]); if(length(fun.ids) ==1) { fun.ids <- matrix(fun.ids) };
+  
+  json.res <- list(hits.query = hits.query,
+                   hits.edge = hits.edge,
+                   path.id = fun.ids,
+                   fun.pval = fun.pval,
+                   hit.num = hit.num);
+  
+  json.mat <- RJSONIO::toJSON(json.res, .na='null');
+  json.nm <- paste(file.nm, ".json", sep="");
+  sink(json.nm)
+  cat(json.mat);
+  sink();
+  
+  # write csv
+  fun.hits <<- hits.query;
+  fun.pval <<- resTable[,5];
+  hit.num <<- resTable[,4];
+  csv.nm <- paste(file.nm, ".csv", sep="");
+  write.csv(resTable, file=csv.nm, row.names=F);
+}
+
+# Utility function
+SetCurrentMetaData <- function(meta.data, type){
+  selected.meta.data <<- meta.data
+  enrich.type <<- type;
+}
+
+# Given a data with duplicates, dups is the one with duplicates
 RemoveDuplicates <- function(data, lvlOpt, quiet=T){
 
   all.nms <- rownames(data);
@@ -1020,4 +938,92 @@ RemoveDuplicates <- function(data, lvlOpt, quiet=T){
     }
     return(data);
   }
+}
+
+# Utility function
+doKO2NameMapping <- function(ko.vec){
+  
+  ko.dic <- .read.microbiomeanalyst.lib("ko_dic.rds");
+  hit.inx <- match(ko.vec, ko.dic[, "KO"]);
+  symbols <- ko.dic[hit.inx, "Label"];
+  
+  # if not gene symbol, use id by itself
+  na.inx <- is.na(symbols);
+  symbols[na.inx] <- ko.vec[na.inx];
+  
+  return(symbols);
+}
+
+#############################
+##### Utility Functions #####
+#############################
+
+# return matched KO in the same order (NA if no match)
+doKOFiltering <- function(ko.vec, type){
+  
+  ko.dic <- .read.microbiomeanalyst.lib("ko_dic.rds");
+  
+  if(type == "ko"){
+    hit.inx <- match(ko.vec, ko.dic$KO);
+    return(ko.dic$KO[hit.inx]);
+  }
+  
+  if(type == "ec"){
+    hit.inx = vector(mode='numeric', length=length(ko.vec)); # record hit index, initial 0
+    match.values = rep(NA, length=length(ko.vec)); # the best matched values (hit names), initial ""
+    
+    if(substring(ko.vec[1], 0, 2) == "EC"){
+      ko.vec <- gsub("^EC", "", ko.vec)
+    }
+    
+    # first find exact match to the common compound names
+    hit.inx <- match(ko.vec, ko.dic[, "EC"]);
+    match.values <- ko.dic$KO[hit.inx];
+    todo.inx <-which(is.na(hit.inx));
+    
+    if(length(todo.inx) > 0){
+      multi.ec.inx <- grep("; ", ko.dic$EC);
+      m.dic <- ko.dic[multi.ec.inx,];
+      ec.list <- strsplit(m.dic$EC, "; ");
+      ecs2ko <- m.dic$KO;
+      
+      for(i in 1:length(ec.list)){
+        hitInx <- match(ko.vec[todo.inx], ec.list[[i]]);
+        hitPos <- which(!is.na(hitInx));
+        orig.inx<-todo.inx[hitPos];
+        match.values[orig.inx] <- ecs2ko[i];
+      }
+    }
+    return(match.values);
+  }
+  
+  if(type == "cog"){
+    hit.inx = vector(mode='numeric', length=length(ko.vec)); # record hit index, initial 0
+    match.values = rep(NA, length=length(ko.vec)); # the best matched values (hit names), initial ""
+    # first find exact match to the common compound names
+    hit.inx <- match(ko.vec, ko.dic[, "COG"]);
+    match.values <- ko.dic$KO[hit.inx];
+    todo.inx <-which(is.na(hit.inx));
+    
+    if(length(todo.inx) > 0){
+      multi.cog.inx <- grep(";", ko.dic$COG);
+      m.dic <- ko.dic[multi.cog.inx,];
+      cog.list <- strsplit(m.dic$COG, ";");
+      cog2ko <- m.dic$KO;
+      
+      for(i in 1:length(cog.list)){
+        hitInx <- match(ko.vec[todo.inx], cog.list[[i]]);
+        hitPos <- which(!is.na(hitInx));
+        orig.inx<-todo.inx[hitPos];
+        match.values[orig.inx] <- cog2ko[i];
+      }
+    }
+    return(match.values);
+  }
+}
+
+# Utility function
+PerformExprFilter<-function(gene.mat, cutoff=0){
+  gd.inx <- gene.mat[,1] >= cutoff;
+  gene.mat[gd.inx, , drop=F];
 }

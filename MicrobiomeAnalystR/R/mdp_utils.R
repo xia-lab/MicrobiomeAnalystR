@@ -4,16 +4,6 @@
 ## Author: Jeff Xia, jeff.xia@mcgill.ca
 ###################################################
 
-GetBetaDiversityStats<-function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);
-  return(microSetObj$analSet$stat.info);
-}
-
-GetStressNMDS<-function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);
-  return(microSetObj$analSet$beta.stress);
-}
-
 #'Perform alpha diversity
 #'@description This functions performs alpha diversity.
 #'@param microSetObj Input the name of the microSetObj.
@@ -62,9 +52,9 @@ PerformAlphaDiversityComp<-function(microSetObj, opt, metadata){
   }
 }
 
-#######################################
-###########Core Microbiome#############
-#######################################
+#####################################
+###########Core Microbiome###########
+#####################################
 
 #'Perform core microbiome analysis
 #'@description This functions performs core microbiome analysis.
@@ -174,7 +164,8 @@ CoreMicrobeAnalysis<-function(microSetObj, imgName, preval, detection, taxrank,
   }
 }
 
-##############Adapted from the Microbiome R package#########################
+######################Adapted from the Microbiome R package#########################
+
 core<-function(x, detection, prevalence, include.lowest=FALSE) {
     xorig <- x
     # TODO: add optional renormalization such that the core member
@@ -352,6 +343,10 @@ prevalence_nsamples <- function(x) {
     n
 }
 
+###########################
+### Pie Chart Functions ###
+###########################
+
 #'Main function to plot pie graphs of microbiome data.
 #'@description This functions plots pie graphs of microbiome data. 
 #'@param microSetObj Input the name of the microSetObj.
@@ -436,17 +431,6 @@ PlotOverallPieGraph<-function(microSetObj, taxalvl, feat_cnt, calcmeth){
   }else{
     return(.set.microSet(microSetObj))
   }
-}
-
-# getter
-GetPieTaxaNames<- function(){
-    res<-as.character(piedata$variable);
-    return(res);
-}
-
-# getter
-GetPieTaxaAbund<- function(){
-    return(piedata$value);
 }
 
 #'Main function to plot pie graphs of microbiome data.
@@ -982,11 +966,11 @@ PlotTaxaAlphaBarSam<-function(microSetObj, barplotName, taxalvl, samplnm,
   microSetObj$imgSet$stack<-barplotName;
 
   Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
-  box<-ggplot(data, aes(x=reorder(variable,value),y=value))+geom_bar(stat="identity",width=0.6,fill="steelblue")+theme_bw()+
-        theme(axis.text.x = element_text(angle = 0,vjust=0.5))+
-        labs(y=yLbl,x="",fill=taxalvl)+coord_flip()+
-        theme(panel.background = element_blank(),
-        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),legend.position="none");
+  box <- ggplot(data, aes(x=reorder(variable,value),y=value))+geom_bar(stat="identity",width=0.6,fill="steelblue")+theme_bw()+
+         theme(axis.text.x = element_text(angle = 0,vjust=0.5))+
+         labs(y=yLbl,x="",fill=taxalvl)+coord_flip()+
+         theme(panel.background = element_blank(),
+         panel.grid.major = element_blank(), panel.grid.minor = element_blank(),legend.position="none");
   print(box);
   dev.off();
   microSetObj$analSet$stack<-data;
@@ -1001,8 +985,9 @@ PlotTaxaAlphaBarSam<-function(microSetObj, barplotName, taxalvl, samplnm,
   }
 }
 
+######################################
 ###########Beta-diversity#############
-#######################################
+######################################
 
 #'Function to plot beta diversity.
 #'@description This functions creates beta diversity plots.
@@ -1370,7 +1355,8 @@ PlotTaxaAlphaArea<-function(microSetObj, barplotName, viewOpt, taxalvl, metadata
   }
 
   barplotName = paste(barplotName, ".",format, sep="");
-  microSetObj$imgSet$stack<-barplotName;
+  microSetObj$imgSet$stack <- barplotName;
+  
   Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
   box <- ggplot(data,aes(x=step,y=value)) + theme_bw() +
     theme(axis.text.x = element_text(angle = 90, hjust =1,vjust=0.5)) +
@@ -1670,10 +1656,9 @@ PerformCategoryComp <- function(microSetObj, method, distnm, variable){
   }
 }
 
-###################################################################
-# generate figure barplot with group#############################
-###################################################################
-
+################################################
+###### generate figure barplot with group#######
+################################################
 #'Function to plot group-wise bar charts.
 #'@description This functions plots group-wise bar charts of a specified 
 #'taxa for alpha diversity analysis.
@@ -1806,7 +1791,7 @@ PlotTaxaAlphaBarSamGrp<-function(microSetObj, barplotName, taxalvl, metadata, im
   microSetObj$imgSet$stack<-barplotName;
 
   Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
-  box<-ggplot(data,aes(x = step, y = value, fill = variable))+
+  box <- ggplot(data,aes(x = step, y = value, fill = variable))+
             geom_bar(stat="identity", position="stack", width = 0.4)+
             #scale_y_continuous(expand = c(0, 0, 0.3, 0)) +
             theme_bw() + theme(legend.position="bottom",legend.box = "vertical")+
@@ -1847,7 +1832,6 @@ PlotTaxaAlphaBarSamGrp<-function(microSetObj, barplotName, taxalvl, metadata, im
     return(.set.microSet(microSetObj))
   }
 }
-
 
 ###############################################
 ###########alpha diversity boxplot#############
@@ -1903,7 +1887,8 @@ PlotAlphaBoxData<-function(microSetObj, boxplotName, distName, metadata, format=
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotRarefactionCurve<-function(microSetObj, data.src, linecolor, linetype, facet, step, imgName, format="png",dpi=72){
+PlotRarefactionCurve <- function(microSetObj, data.src, linecolor, linetype, facet, step, 
+                                 imgName, format="png",dpi=72){
 
   microSetObj <- .get.microSetObj(microSetObj);
     
@@ -1956,118 +1941,6 @@ PlotRarefactionCurve<-function(microSetObj, data.src, linecolor, linetype, facet
   print(box);
   dev.off();
   return(.set.microSet(microSetObj))
-}
-
-# Utility function
-# get goods's coverage
-ComputeGoods <-function(physeq_object){
-  com <- t(get_sample(physeq_object))
-  no.seqs <- rowSums(com)
-  sing <- com==1
-  no.singleton <- apply(sing, 1, sum)
-  goods <- 100*(1-no.singleton/no.seqs)
-  sample <- row.names(com)
-  goods.sum <- cbind(sample, no.singleton, no.seqs, goods)
-  goods.sum <- as.data.frame(goods.sum)
-  row.names(goods.sum) <- c()
-  return(goods.sum)
-}
-
-# Utility function that performs rarefaction
-ggrare2 <- function(physeq_object, data.src, label = NULL, color = NULL, plot = TRUE, linetype = NULL, se = FALSE, step=5) {
-
-  x <- methods::as(phyloslimR::otu_table(physeq_object), "matrix")
-  
-  if (phyloslimR::taxa_are_rows(physeq_object)) { x <- t(x) }
-
-    ## This script is adapted from vegan `rarecurve` function
-    tot <- rowSums(x)
-    S <- rowSums(x > 0)
-    nr <- nrow(x)
-    step_new = floor(max(tot)/as.integer(step))
-    rarefun <- function(i) {
-      #cat(paste("rarefying sample", rownames(x)[i]), sep = "\n")
-      n <- seq(1, tot[i], by = step_new)
-      if (n[length(n)] != tot[i]) {
-        n <- c(n, tot[i])
-      }
-      y <- vegan::rarefy(x[i, ,drop = FALSE], n, se = se)
-      if (nrow(y) != 1) {
-        rownames(y) <- c(".S", ".se")
-        return(data.frame(t(y), Size = n, Sample = rownames(x)[i]))
-      } else {
-        return(data.frame(.S = y[1, ], Size = n, Sample = rownames(x)[i]))
-      }
-    }
-
-    f_n <- paste(data.src, step, "rds", sep = ".");
-
-    if(file.exists(f_n)){
-        df <- readRDS(file = f_n);
-    } else {
-        out <- lapply(seq_len(nr), rarefun)
-        df <- do.call(rbind, out);
-        saveRDS(df, file = f_n);
-    }
-
-    # Get sample data
-    if (!is.null(phyloslimR::sample_data(physeq_object, FALSE))) {
-      sdf <- methods::as(phyloslimR::sample_data(physeq_object), "data.frame")
-      sdf$Sample <- rownames(sdf)
-      data <- merge(df, sdf, by = "Sample")
-      labels <- data.frame(x = tot, y = S, Sample = rownames(x))
-      labels <- merge(labels, sdf, by = "Sample")
-    }
-
-
-    # Add, any custom-supplied plot-mapped variables
-    if (length(color) > 1) {
-      data$color <- color
-      names(data)[names(data) == "color"] <- deparse(substitute(color))
-      color <- deparse(substitute(color))
-    }
-
-    if (length(label) > 1) {
-      labels$label <- label
-      names(labels)[names(labels) == "label"] <- deparse(substitute(label))
-      label <- deparse(substitute(label))
-    }
-
-    if (length(linetype) > 1) {
-      data$linetype <- linetype
-      names(data)[names(data) == "linetype"] <- deparse(substitute(linetype))
-      linetype <- deparse(substitute(linetype))
-    }
-
-    p <- ggplot2::ggplot(data = data,
-                         ggplot2::aes_string(x = "Size",
-                                             y = ".S",
-                                             group = "Sample",
-                                             color = color,
-                                             linetype = linetype))
-
-    p <- p + ggplot2::labs(x = "Sequence Sample Size", y = "Species Richness")
-
-    if (!is.null(label)) {
-       p <- p + ggplot2::geom_text(data = labels,
-                              ggplot2::aes_string(x = "x",
-                                                  y = "y",
-                                                  label = label,
-                                                  color = color),
-                              size = 4, hjust = 0) +
-        scale_x_continuous(expand = c(0, 0, 0.3, 0))
-    }
-
-    p <- p + ggplot2::geom_line()
-    if (se) { ## add standard error if available
-      p <- p +
-        ggplot2::geom_ribbon(ggplot2::aes_string(ymin = ".S - .se",
-                                                 ymax = ".S + .se",
-                                                 color = NULL,
-                                                 fill = color),
-                             alpha = 0.2)
-    }
-    invisible(p)
 }
 
 #'Function to prepare data for phylogenetic tree.
@@ -2334,4 +2207,144 @@ Perform16FunAnot<-function(microSetObj, type, pipeline) {
   }else{
     return(.set.microSet(microSetObj))
   }
+}
+
+######################################
+########## Getter Functions ##########
+######################################
+
+GetBetaDiversityStats<-function(microSetObj){
+  microSetObj <- .get.microSetObj(microSetObj);
+  return(microSetObj$analSet$stat.info);
+}
+
+GetStressNMDS<-function(microSetObj){
+  microSetObj <- .get.microSetObj(microSetObj);
+  return(microSetObj$analSet$beta.stress);
+}
+
+# getter
+GetPieTaxaNames<- function(){
+  res<-as.character(piedata$variable);
+  return(res);
+}
+
+# getter
+GetPieTaxaAbund<- function(){
+  return(piedata$value);
+}
+
+######################################
+######### Utility Functions ##########
+######################################
+
+# Get goods's coverage
+ComputeGoods <-function(physeq_object){
+  com <- t(get_sample(physeq_object))
+  no.seqs <- rowSums(com)
+  sing <- com==1
+  no.singleton <- apply(sing, 1, sum)
+  goods <- 100*(1-no.singleton/no.seqs)
+  sample <- row.names(com)
+  goods.sum <- cbind(sample, no.singleton, no.seqs, goods)
+  goods.sum <- as.data.frame(goods.sum)
+  row.names(goods.sum) <- c()
+  return(goods.sum)
+}
+
+# Utility function that performs rarefaction
+ggrare2 <- function(physeq_object, data.src, label = NULL, color = NULL, plot = TRUE, linetype = NULL, se = FALSE, step=5) {
+  
+  x <- methods::as(phyloslimR::otu_table(physeq_object), "matrix")
+  
+  if (phyloslimR::taxa_are_rows(physeq_object)) { x <- t(x) }
+  
+  ## This script is adapted from vegan `rarecurve` function
+  tot <- rowSums(x)
+  S <- rowSums(x > 0)
+  nr <- nrow(x)
+  step_new = floor(max(tot)/as.integer(step))
+  rarefun <- function(i) {
+    #cat(paste("rarefying sample", rownames(x)[i]), sep = "\n")
+    n <- seq(1, tot[i], by = step_new)
+    if (n[length(n)] != tot[i]) {
+      n <- c(n, tot[i])
+    }
+    y <- vegan::rarefy(x[i, ,drop = FALSE], n, se = se)
+    if (nrow(y) != 1) {
+      rownames(y) <- c(".S", ".se")
+      return(data.frame(t(y), Size = n, Sample = rownames(x)[i]))
+    } else {
+      return(data.frame(.S = y[1, ], Size = n, Sample = rownames(x)[i]))
+    }
+  }
+  
+  f_n <- paste(data.src, step, "rds", sep = ".");
+  
+  if(file.exists(f_n)){
+    df <- readRDS(file = f_n);
+  } else {
+    out <- lapply(seq_len(nr), rarefun)
+    df <- do.call(rbind, out);
+    saveRDS(df, file = f_n);
+  }
+  
+  # Get sample data
+  if (!is.null(phyloslimR::sample_data(physeq_object, FALSE))) {
+    sdf <- methods::as(phyloslimR::sample_data(physeq_object), "data.frame")
+    sdf$Sample <- rownames(sdf)
+    data <- merge(df, sdf, by = "Sample")
+    labels <- data.frame(x = tot, y = S, Sample = rownames(x))
+    labels <- merge(labels, sdf, by = "Sample")
+  }
+  
+  
+  # Add, any custom-supplied plot-mapped variables
+  if (length(color) > 1) {
+    data$color <- color
+    names(data)[names(data) == "color"] <- deparse(substitute(color))
+    color <- deparse(substitute(color))
+  }
+  
+  if (length(label) > 1) {
+    labels$label <- label
+    names(labels)[names(labels) == "label"] <- deparse(substitute(label))
+    label <- deparse(substitute(label))
+  }
+  
+  if (length(linetype) > 1) {
+    data$linetype <- linetype
+    names(data)[names(data) == "linetype"] <- deparse(substitute(linetype))
+    linetype <- deparse(substitute(linetype))
+  }
+  
+  p <- ggplot2::ggplot(data = data,
+                       ggplot2::aes_string(x = "Size",
+                                           y = ".S",
+                                           group = "Sample",
+                                           color = color,
+                                           linetype = linetype))
+  
+  p <- p + ggplot2::labs(x = "Sequence Sample Size", y = "Species Richness")
+  
+  if (!is.null(label)) {
+    p <- p + ggplot2::geom_text(data = labels,
+                                ggplot2::aes_string(x = "x",
+                                                    y = "y",
+                                                    label = label,
+                                                    color = color),
+                                size = 4, hjust = 0) +
+      scale_x_continuous(expand = c(0, 0, 0.3, 0))
+  }
+  
+  p <- p + ggplot2::geom_line()
+  if (se) { ## add standard error if available
+    p <- p +
+      ggplot2::geom_ribbon(ggplot2::aes_string(ymin = ".S - .se",
+                                               ymax = ".S + .se",
+                                               color = NULL,
+                                               fill = color),
+                           alpha = 0.2)
+  }
+  invisible(p)
 }

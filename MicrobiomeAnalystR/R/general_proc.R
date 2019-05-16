@@ -274,33 +274,6 @@ UpdateSampleItems <- function(microSetObj){
   }
 }
 
-## Getters
-
-GetSamplNames<-function(){
-  prefilt.data <- readRDS("data.prefilt");
-  return(colnames(prefilt.data));
-}
-
-GetGroupNames<-function(){
-  prefilt.data <- readRDS("data.prefilt");
-  return(colnames(prefilt.data));
-}
-
-GetSampleNamesaftNorm<-function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);
-  return(sample_names(microSetObj$dataSet$norm.phyobj));
-}
-
-GetRemFeatNames<-function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);
-    return(microSetObj$dataSet$remfeat);
-}
-
-GetRemSamplNames<-function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);
-  return(microSetObj$dataSet$remsam);
-}
-
 #'Function to perform normalization
 #'@description This function performs normalization on the uploaded
 #'data.
@@ -532,29 +505,6 @@ PlotRareCurve <- function(microSetObj, graphName, variable){
 
   dev.off();
   return(.set.microSet(microSetObj))
-}
-
-## Utilty function to perform edgeR norm
-
-edgeRnorm = function(x,method){
-  # Enforce orientation.
-  # See if adding a single observation, 1,
-  # everywhere (so not zeros) prevents errors
-  # without needing to borrow and modify
-  # calcNormFactors (and its dependent functions)
-  # It did. This fixed all problems.
-  # Can the 1 be reduced to something smaller and still work?
-  x = x + 1;
-  # Now turn into a DGEList
-  y = DGEList(counts=x, remove.zeros=TRUE);
-  # Perform edgeR-encoded normalization, using the specified method (...)
-  z = edgeR::calcNormFactors(y, method=method);
-  # A check that we didn't divide by zero inside `calcNormFactors`
-  if( !all(is.finite(z$samples$norm.factors)) ){
-            current.msg <<- paste("Something wrong with edgeR::calcNormFactors on this data, non-finite $norm.factors.");
-            return(0);
-          }
-  return(z)
 }
 
 #'Function to plot library size 
@@ -894,4 +844,57 @@ CreatePhyloseqObj<-function(microSetObj, type, taxa_type, taxalabel, ismetafile)
   }else{
     return(.set.microSet(microSetObj))
   }
+}
+
+###########################################
+## Utilty function to perform edgeR norm ##
+###########################################
+edgeRnorm = function(x,method){
+  # Enforce orientation.
+  # See if adding a single observation, 1,
+  # everywhere (so not zeros) prevents errors
+  # without needing to borrow and modify
+  # calcNormFactors (and its dependent functions)
+  # It did. This fixed all problems.
+  # Can the 1 be reduced to something smaller and still work?
+  x = x + 1;
+  # Now turn into a DGEList
+  y = DGEList(counts=x, remove.zeros=TRUE);
+  # Perform edgeR-encoded normalization, using the specified method (...)
+  z = edgeR::calcNormFactors(y, method=method);
+  # A check that we didn't divide by zero inside `calcNormFactors`
+  if( !all(is.finite(z$samples$norm.factors)) ){
+    current.msg <<- paste("Something wrong with edgeR::calcNormFactors on this data, non-finite $norm.factors.");
+    return(0);
+  }
+  return(z)
+}
+
+###########################################
+##################Getters##################
+###########################################
+
+GetSamplNames<-function(){
+  prefilt.data <- readRDS("data.prefilt");
+  return(colnames(prefilt.data));
+}
+
+GetGroupNames<-function(){
+  prefilt.data <- readRDS("data.prefilt");
+  return(colnames(prefilt.data));
+}
+
+GetSampleNamesaftNorm<-function(microSetObj){
+  microSetObj <- .get.microSetObj(microSetObj);
+  return(sample_names(microSetObj$dataSet$norm.phyobj));
+}
+
+GetRemFeatNames<-function(microSetObj){
+  microSetObj <- .get.microSetObj(microSetObj);
+  return(microSetObj$dataSet$remfeat);
+}
+
+GetRemSamplNames<-function(microSetObj){
+  microSetObj <- .get.microSetObj(microSetObj);
+  return(microSetObj$dataSet$remsam);
 }

@@ -33,7 +33,6 @@
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-#'
 Init.Data <- function(){
   
   dataSet <- list();
@@ -52,13 +51,10 @@ Init.Data <- function(){
   msg.vec <<- vector(mode="character");
 
   if(.on.public.web){
-    lib.path <<- "../../lib/";
     load_cairo();
     load_ggplot();
     load_biocparallel();
     BiocParallel::register(BiocParallel::SerialParam());
-  }else{
-    lib.path <<- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/";
   }
 
   # preload some general package
@@ -76,7 +72,7 @@ Init.Data <- function(){
 .read.microbiomeanalyst.lib <- function(filenm, opt = NA){
   if(.on.public.web){
     
-    if(tsea){
+    if(opt=="tsea"){
       lib.path <- paste("../../lib/tsea/", filenm, sep="");
     }else{
       lib.path <- paste("../../lib/", filenm, sep="");

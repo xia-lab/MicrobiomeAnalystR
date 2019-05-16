@@ -343,7 +343,7 @@ PerformUnivarTest <- function(microSetObj, variable, p.lvl, datatype, shotgunid,
   }
 
   rownames(resTable) <- colnames(data1);
-  colnames(resTable)<-c("Statistics","Pvalues");
+  colnames(resTable) <- c("Statistics","Pvalues");
   resTable$FDR <- p.adjust(resTable$Pvalues,method ="fdr");
   ord.inx <- order(resTable$Pvalues);
   resTable <- resTable[ord.inx, , drop=FALSE];
@@ -362,7 +362,7 @@ PerformUnivarTest <- function(microSetObj, variable, p.lvl, datatype, shotgunid,
   }
     
   if(nrow(resTable) > 500){
-    resTable<-resTable[1:500, ];
+    resTable <- resTable[1:500, ];
   }
     
   #only getting the names of DE features
@@ -423,7 +423,7 @@ PerformMetagenomeSeqAnal<-function(microSetObj, variable, p.lvl, datatype, shotg
     
   #data<-dataSet$norm.phyobj;
   cls <- as.factor(sample_data(data)[[variable]]);
-  lvl<-length(levels(cls));
+  lvl <- length(levels(cls));
     
   if(datatype=="16S"){
     microSetObj$dataSet$taxa_table <- tax_table(microSetObj$dataSet$proc.phyobj);
@@ -511,7 +511,7 @@ PerformMetagenomeSeqAnal<-function(microSetObj, variable, p.lvl, datatype, shotg
   write.csv(resTable, file="metageno_de_output.csv");
 
   if(nrow(resTable) > 500){
-    resTable<-resTable[1:500, ];
+    resTable <- resTable[1:500, ];
   }
     
   microSetObj$analSet$metagenoseq$resTable <- microSetObj$analSet$resTable <- data.frame(resTable);
@@ -537,7 +537,7 @@ PerformMetagenomeSeqAnal<-function(microSetObj, variable, p.lvl, datatype, shotg
   microSetObj$analSet$sig.count <- de.Num;
   microSetObj$analSet$datatype <- datatype;
   microSetObj$analSet$anal.type <- "metagseq";
-  microSetObj$analSet$metageno.taxalvl<-taxrank;
+  microSetObj$analSet$metageno.taxalvl <- taxrank;
   microSetObj$analSet$id.type <- shotgunid;
     
   if(.on.public.web){
@@ -561,7 +561,7 @@ PerformMetagenomeSeqAnal<-function(microSetObj, variable, p.lvl, datatype, shotg
 #'@export
 #'@import MASS
 
-PerformLefseAnal<- function(microSetObj, p.lvl, lda.lvl, variable, isfunc, datatype, shotgunid, taxrank){
+PerformLefseAnal <- function(microSetObj, p.lvl, lda.lvl, variable, isfunc, datatype, shotgunid, taxrank){
   
   microSetObj <- .get.microSetObj(microSetObj);
   
@@ -600,12 +600,12 @@ PerformLefseAnal<- function(microSetObj, p.lvl, lda.lvl, variable, isfunc, datat
     nm[is.na(nm)] <- "Not_Assigned";
     data1 <- as.matrix(otu_table(data));
     rownames(data1) <- nm;
-    dat3t <- as.data.frame(t(t(sapply(by(data1,rownames(data1),colSums),identity))));
+    dat3t <- as.data.frame(t(t(sapply(by(data1, rownames(data1), colSums), identity))));
     }
   
   set.seed(56290);
   #KW rank sum test
-  rawpvalues <- apply(dat3t,2,function(x) kruskal.test(x,claslbl)$p.value);
+  rawpvalues <- apply(dat3t, 2, function(x) kruskal.test(x, claslbl)$p.value);
   ord.inx <- order(rawpvalues);
   rawpvalues <- rawpvalues[ord.inx];
   clapvalues <- p.adjust(rawpvalues, method ="fdr");
@@ -658,7 +658,7 @@ PerformLefseAnal<- function(microSetObj, p.lvl, lda.lvl, variable, isfunc, datat
   res.cls <- as.character(apply(grp.dat, 1, function(x){cls.lbls[which.max(x)]}));
     
   if(class_no==2){
-    indx<-which(res.cls==unique(claslbl)[1]);
+    indx <- which(res.cls==unique(claslbl)[1]);
     resTable$LDAscore[indx]<--abs(resTable$LDAscore[indx]);
   }
     
@@ -667,14 +667,14 @@ PerformLefseAnal<- function(microSetObj, p.lvl, lda.lvl, variable, isfunc, datat
     
   #subset dataset for bar plot visualization (LDA Score)
   ldabar <- as.data.frame(rownames(resTable));
-  ldabar[,2]<-resTable$LDAscore;
-  ldabar[,3]<-res.cls;
+  ldabar[,2] <- resTable$LDAscore;
+  ldabar[,3] <- res.cls;
     
   #visualizing top 25 features based on LDA score
   if(nrow(ldabar)>25) {
-    ldabar<-ldabar[1:25,];
+    ldabar <- ldabar[1:25,];
   }
-  ldabar<<-ldabar;
+  ldabar <<- ldabar;
     
   #preparing data for indvidual box plot
   sigfeat <<- rownames(resTable);
@@ -700,23 +700,27 @@ PerformLefseAnal<- function(microSetObj, p.lvl, lda.lvl, variable, isfunc, datat
 
 #'Plot LEfSe summary
 #'@description This functions graphically summarizes the LEfSe results
+#'@param microSetObj Input the name of the microSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-
-PlotLEfSeSummary<-function(imgName,format="png", dpi=72) {
+PlotLEfSeSummary <- function(imgName, format="png", dpi=72) {
+  
+  microSetObj <- .get.microSetObj(microSetObj);
+  
   set.seed(280561493);
   imgName = paste(imgName, ".", format, sep="");
-  ldabar<-ldabar;
+  ldabar <- ldabar;
   Cairo::Cairo(file=imgName, width=600, height=560, type=format, bg="white",dpi=dpi);
   box = ggplot(ldabar, aes(x=reorder(ldabar[,1],ldabar[,2]), y=ldabar[,2], fill=ldabar[,3]))
   box = box + geom_bar(stat="identity",width=0.8) + coord_flip() + labs(y="LDA score",x="Features",fill="Class")
   box = box + theme_bw() + scale_color_brewer(palette="Set1");
   print(box);
   dev.off();
+  
+  return(.set.microSet(microSetObj))
 }
-
 
 #######################################
 ###########EdgeR/DESeq2################
@@ -838,7 +842,6 @@ PerformRNAseqDE<-function(microSetObj, opts, p.lvl, variable, datatype, shotguni
   ord.inx <- order(resTable$Pvalues);
   resTable <- resTable[ord.inx, , drop=FALSE];
   write.csv(resTable, file="rnaseq_de.csv");
-
     
   if(nrow(resTable) > 500){
     resTable<-resTable[1:500, ];
@@ -871,39 +874,6 @@ PerformRNAseqDE<-function(microSetObj, opts, p.lvl, variable, datatype, shotguni
   }else{
     return(.set.microSet(microSetObj))
   }
-}
-
-# helper function
-# calculate geometric means prior to estimate size factors
-gm_mean = function(x, na.rm=TRUE){
-  exp(sum(log(x[x > 0]), na.rm=na.rm) / length(x))
-}
-
-# helper function
-phyloslim_to_edgeR = function(physeq, group, method="RLE", ...){
-    library("edgeR")
-    library("phyloslimR")
-    # Enforce orientation.
-    if( !taxa_are_rows(physeq) ){ physeq <- t(physeq) }
-    x = as(otu_table(physeq), "matrix")
-    # Add one to protect against overflow, log(0) issues.
-    x = x + 1
-    # Check `group` argument
-    if( identical(all.equal(length(group), 1), TRUE) & nsamples(physeq) > 1 ){
-        # Assume that group was a sample variable name (must be categorical)
-        group = get_variable(physeq, group)
-    }
-    # Define gene annotations (`genes`) as tax_table
-    taxonomy = tax_table(physeq, errorIfNULL=FALSE)
-    if( !is.null(taxonomy) ){
-        taxonomy = data.frame(as(taxonomy, "matrix"))
-    }
-
-    # Now turn into a DGEList
-    y = edgeR::DGEList(counts=x, group=group, genes=taxonomy, remove.zeros = TRUE, ...)
-    z = edgeR::calcNormFactors(y, method="RLE");
-    # Estimate dispersions
-    return(edgeR::estimateTagwiseDisp(edgeR::estimateCommonDisp(z)))
 }
 
 #######################################
@@ -1096,7 +1066,8 @@ PCoA3D.Anal <- function(microSetObj, ordMeth, distName, datatype, taxrank, colop
 #'License: GNU GPL (>= 2)
 #'@export
 
-FeatureCorrelation<-function(microSetObj, dist.name, taxrank, taxa, variable, datatype, shotfeat, shotgunid){
+FeatureCorrelation <- function(microSetObj, dist.name, taxrank, taxa, variable, 
+                               datatype, shotfeat, shotgunid){
   
   microSetObj <- .get.microSetObj(microSetObj);
   
@@ -1228,14 +1199,6 @@ PlotCorr <- function(microSetObj, imgName, format="png", dpi=72, width=NA){
   dev.off();
   
   return(.set.microSet(microSetObj))
-  
-}
-
-# Helper function
-# Run template on all the high region effect genes
-template.match <- function(x, template, dist.name) {
-  k<-cor.test(x,template, method=dist.name);
-  c(k$estimate, k$stat, k$p.value)
 }
 
 #'Function to match patterns
@@ -1246,7 +1209,8 @@ template.match <- function(x, template, dist.name) {
 #'License: GNU GPL (>= 2)
 #'@export
 
-Match.Pattern <- function(microSetObj, dist.name="pearson", pattern=NULL, taxrank, taxa, variable, datatype, shotfeat, shotgunid){
+Match.Pattern <- function(microSetObj, dist.name="pearson", pattern=NULL, taxrank, 
+                          taxa, variable, datatype, shotfeat, shotgunid){
   
   microSetObj <- .get.microSetObj(microSetObj);
     
@@ -1393,8 +1357,8 @@ GenerateTemplates <- function(microSetObj, variable){
 #'@import gplots
 #'@import pheatmap
 
-PlotCorrHeatMap<-function(microSetObj, imgName, format="png", width=NA, cor.method,
-                colors_cntrst, viewOpt,taxrank,fix.col, no.clst, top, topNum,datatype){
+PlotCorrHeatMap <- function(microSetObj, imgName, format="png", width=NA, cor.method,
+                            colors_cntrst, viewOpt,taxrank,fix.col, no.clst, top, topNum,datatype){
   
   microSetObj <- .get.microSetObj(microSetObj);
   
@@ -1550,6 +1514,50 @@ PlotCorrHeatMap<-function(microSetObj, imgName, format="png", width=NA, cor.meth
   microSetObj$analSet$corheat.meth<-cor.method;
   write.csv(signif(corr.mat,5), file="correlation_table.csv");
   return(.set.microSet(microSetObj))
+}
+
+###################################
+########## Util Functions #########
+###################################
+
+# helper function
+# calculate geometric means prior to estimate size factors
+gm_mean = function(x, na.rm=TRUE){
+  exp(sum(log(x[x > 0]), na.rm=na.rm) / length(x))
+}
+
+# helper function
+phyloslim_to_edgeR = function(physeq, group, method="RLE", ...){
+  library("edgeR")
+  library("phyloslimR")
+  # Enforce orientation.
+  if( !taxa_are_rows(physeq) ){ physeq <- t(physeq) }
+  x = as(otu_table(physeq), "matrix")
+  # Add one to protect against overflow, log(0) issues.
+  x = x + 1
+  # Check `group` argument
+  if( identical(all.equal(length(group), 1), TRUE) & nsamples(physeq) > 1 ){
+    # Assume that group was a sample variable name (must be categorical)
+    group = get_variable(physeq, group)
+  }
+  # Define gene annotations (`genes`) as tax_table
+  taxonomy = tax_table(physeq, errorIfNULL=FALSE)
+  if( !is.null(taxonomy) ){
+    taxonomy = data.frame(as(taxonomy, "matrix"))
+  }
+  
+  # Now turn into a DGEList
+  y = edgeR::DGEList(counts=x, group=group, genes=taxonomy, remove.zeros = TRUE, ...)
+  z = edgeR::calcNormFactors(y, method="RLE");
+  # Estimate dispersions
+  return(edgeR::estimateTagwiseDisp(edgeR::estimateCommonDisp(z)))
+}
+
+# Helper function
+# Run template on all the high region effect genes
+template.match <- function(x, template, dist.name) {
+  k<-cor.test(x,template, method=dist.name);
+  c(k$estimate, k$stat, k$p.value)
 }
 
 ####################################

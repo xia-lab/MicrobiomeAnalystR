@@ -41,7 +41,7 @@ PrepareMergedData <- function(microSetObj, metadata, keepfeat){
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PerformRefDataMapping<-function(microSetObj, refdataNm, taxo_type, sample_var, biome){
+PerformRefDataMapping <- function(microSetObj, refdataNm, taxo_type, sample_var, biome){
   
   microSetObj <- .get.microSetObj(microSetObj);
 
@@ -166,8 +166,8 @@ PerformRefDataMapping<-function(microSetObj, refdataNm, taxo_type, sample_var, b
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import vegan
-PCoA3DAnal.16SRef<-function(microSetObj, barplotNm, ordMeth, distName, datatype, taxrank, colopt,
-                            taxa, alphaopt, metadata, format="png", dpi=72){
+PCoA3DAnal.16SRef <- function(microSetObj, barplotNm, ordMeth, distName, datatype, taxrank, colopt,
+                             taxa, alphaopt, metadata, format="png", dpi=72){
   
   microSetObj <- .get.microSetObj(microSetObj);
   
@@ -213,7 +213,7 @@ PCoA3DAnal.16SRef<-function(microSetObj, barplotNm, ordMeth, distName, datatype,
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import RJSONIO
-PlotUsrRefPCoA3DScore<- function(microSetObj, imgName, format="json", inx1, inx2, inx3, variable){
+PlotUsrRefPCoA3DScore <- function(microSetObj, imgName, format="json", inx1, inx2, inx3, variable){
   
   microSetObj <- .get.microSetObj(microSetObj);
   
