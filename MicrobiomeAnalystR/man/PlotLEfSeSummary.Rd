@@ -4,7 +4,10 @@
 \alias{PlotLEfSeSummary}
 \title{Plot LEfSe summary}
 \usage{
-PlotLEfSeSummary(imgName, format = "png", dpi = 72)
+PlotLEfSeSummary(microSetObj, imgName, format = "png", dpi = 72)
+}
+\arguments{
+\item{microSetObj}{Input the name of the microSetObj.}
 }
 \description{
 This functions graphically summarizes the LEfSe results

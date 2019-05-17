@@ -4,7 +4,7 @@
 \alias{.read.microbiomeanalyst.lib}
 \title{Read RDS files from the internet}
 \usage{
-.read.microbiomeanalyst.lib(filenm, opt = NA)
+.read.microbiomeanalyst.lib(filenm, opt = "none")
 }
 \arguments{
 \item{filenm}{Input the name of the file to download}
