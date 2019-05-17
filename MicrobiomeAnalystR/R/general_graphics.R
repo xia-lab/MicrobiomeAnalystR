@@ -399,7 +399,7 @@ GetColorSchema <- function(microSetObj, grayscale=F){
               "#FFFF99", "#B15928");
     dist.cols <- grDevices::colorRampPalette(pal12)(grp.num);
     lvs <- levels(claslbl);
-    colors <- vector(mode="character", length=length(analSet$cls));
+    colors <- vector(mode="character", length=length(microSetObj$analSet$cls));
 
     for(i in 1:length(lvs)){
       colors[claslbl == lvs[i]] <- dist.cols[i];

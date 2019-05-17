@@ -2086,7 +2086,7 @@ Perform16FunAnot<-function(microSetObj, type, pipeline) {
       if(.on.public.web){
         otu.dic <<- readRDS("../../lib/greengenes_taxmap.rds");
       }else{
-        otu.dic <<- .read.microbiomeanalyst.lib("greengenes_taxmap.rds");
+        otu.dic <<- .read.microbiomeanalyst.lib("greengenes_taxmap.rds", "ko");
       }
       
       merge.otu[,1]<-as.character(merge.otu[,1]);
@@ -2106,7 +2106,7 @@ Perform16FunAnot<-function(microSetObj, type, pipeline) {
     if(.on.public.web){
       copyno <- readRDS("../../lib/16S_copyno.rds");
     }else{
-      copyno <- .read.microbiomeanalyst.lib("16S_copyno.rds");
+      copyno <- .read.microbiomeanalyst.lib("16S_copyno.rds", "ko");
     }
   
     result2<-merge(query,copyno, by ="row.names");

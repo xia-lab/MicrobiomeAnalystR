@@ -120,9 +120,9 @@ PlotRF.Classify<-function(microSetObj, imgName,format="png", dpi=72, width=NA){
 
   Cairo::Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
   par(mar=c(4,4,3,2));
-  cols <- grDevices::rainbow(length(levels(analSet$cls))+1);
+  cols <- grDevices::rainbow(length(levels(microSetObj$analSet$cls))+1);
   plot(microSetObj$analSet$rf, main="Random Forest classification", col=cols);
-  legend("topright", legend = c("Overall", levels(analSet$cls)), lty=2, lwd=1, col=cols);
+  legend("topright", legend = c("Overall", levels(microSetObj$analSet$cls)), lty=2, lwd=1, col=cols);
   dev.off();
   return(.set.microSet(microSetObj))
 }
@@ -705,7 +705,7 @@ PerformLefseAnal <- function(microSetObj, p.lvl, lda.lvl, variable, isfunc, data
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotLEfSeSummary <- function(imgName, format="png", dpi=72) {
+PlotLEfSeSummary <- function(microSetObj, imgName, format="png", dpi=72) {
   
   microSetObj <- .get.microSet(microSetObj);
   
@@ -1177,7 +1177,7 @@ PlotCorr <- function(microSetObj, imgName, format="png", dpi=72, width=NA){
   }
     
   cor.res <- cor.res[ord.inx, ];
-  title <- paste("Top",nrow(cor.res), tolower(analSet$taxrank), "correlated with the", pattern);
+  title <- paste("Top",nrow(cor.res), tolower(microSetObj$analSet$taxrank), "correlated with the", pattern);
   imgName = paste(imgName, ".", format, sep="");
   microSetObj$imgSet$cor.ph <- imgName;
   
@@ -1244,14 +1244,14 @@ Match.Pattern <- function(microSetObj, dist.name="pearson", pattern=NULL, taxran
     data <- merge_phyloslim(data, microSetObj$dataSet$taxa_table);
         
     if(taxrank=="OTU"){
-      taxa_table <- tax_table(dataSet$proc.phyobj);
-      data <- merge_phyloslim(dataSet$norm.phyobj,taxa_table);
+      taxa_table <- tax_table(microSetObj$dataSet$proc.phyobj);
+      data <- merge_phyloslim(microSetObj$dataSet$norm.phyobj, taxa_table);
       data1 <- as.matrix(otu_table(data));
       feat_data <- as.numeric(data1[taxa,]);
         
     }else{
       taxa_table <- tax_table(microSetObj$dataSet$proc.phyobj);
-      data <- merge_phyloslim(dataSet$norm.phyobj, taxa_table);
+      data <- merge_phyloslim(microSetObj$dataSet$norm.phyobj, taxa_table);
       #merging at taxonomy levels
       data <- fast_tax_glom_first(data, taxrank);
       nm <- as.character(tax_table(data)[,taxrank]);
@@ -1260,7 +1260,7 @@ Match.Pattern <- function(microSetObj, dist.name="pearson", pattern=NULL, taxran
       data1 <- as.matrix(otu_table(data));
       rownames(data1)<-nm;
       #all NA club together
-      data1<-as.matrix(t(sapply(by(data1,rownames(data1),colSums),identity)));
+      data1<-as.matrix(t(sapply(by(data1, rownames(data1), colSums), identity)));
       feat_data<-data1[taxa,];
     }
   }else{

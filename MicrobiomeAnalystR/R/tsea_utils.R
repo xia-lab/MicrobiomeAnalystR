@@ -34,11 +34,11 @@ CrossReferencing <- function(microSetObj, q.type, module.type){
   
   # distribute job
   microSetObj$dataSet$q.type <- q.type;
-  microSetObj$dataSet$module.type<-module.type;
+  microSetObj$dataSet$module.type <- module.type;
   
   .set.microSet(microSetObj)
   
-  SpeciesMappingExact(microSetObj, q.type);
+  microSetObj <- SpeciesMappingExact(microSetObj, q.type);
 
   # do some sanity check
   if(length(which(is.na(name.map$hit.inx)))/length(name.map$hit.inx) > 0.75){
@@ -208,7 +208,7 @@ CalculateHyperScore <- function(microSetObj){
   # download result
   microSetObj$analSet$ora.mat = signif(res.mat[ord.inx,],3);
   microSetObj$analSet$ora.hits = hits;
-  write.csv(analSet$ora.mat, file="tsea_ora_result.csv");
+  write.csv(microSetObj$analSet$ora.mat, file="tsea_ora_result.csv");
 
   if(.on.public.web){
     .set.microSet(microSetObj)
@@ -232,7 +232,7 @@ GetFinalNameMap<-function(microSetObj){
   
   enrtype <- microSetObj$dataSet$q.type;
   qvec <- microSetObj$dataSet$species;
-  n.mat <- matrix(nrow=length(qvec), ncol=2);
+  nm.mat <- matrix(nrow=length(qvec), ncol=2);
   colnames(nm.mat) <- c("query", "Strain");
     
   if(enrtype=="taxa"){
@@ -582,7 +582,6 @@ GetTaxaSet <- function(microSetObj, msetNm){
   microSetObj <- .get.microSet(microSetObj);
   mset <- subset(current.msetlib, name == msetNm)
   microSetObj$analSet$tseaInfo <- t(rbind(colnames(current.msetlib), mset))
-  print(microSetObj$analSet$tseaInfo)
   
   if(.on.public.web){
     .set.microSet(microSetObj)

@@ -195,7 +195,7 @@ ReadShotgunBiomData <- function(microSetObj, dataName, geneidtype, module.type, 
 #'@export
 #'@import RJSONIO
 #'@import ggfortify
-PreparePCA4Shotgun<- function(microSetObj, imgName,imgName2, format="json", inx1, inx2, inx3,
+PreparePCA4Shotgun <- function(microSetObj, imgName,imgName2, format="json", inx1, inx2, inx3,
                               variable, showlabel, format2d="png", dpi=72){
   
   microSetObj <- .get.microSet(microSetObj);
@@ -214,7 +214,7 @@ PreparePCA4Shotgun<- function(microSetObj, imgName,imgName2, format="json", inx1
   imp.pca <- summary(pca)$importance;
   write.csv(signif(pca$x,5), file="pca_score.csv");
   pca3d$score$axis <- paste("PC", 1:3, " (", 100*round(imp.pca[2,][1:3], 3), "%)", sep="");
-    
+  
   #3D
   coords <- data.frame(t(signif(pca$x[,1:3], 5)));
   colnames(coords) <- NULL;
@@ -226,12 +226,12 @@ PreparePCA4Shotgun<- function(microSetObj, imgName,imgName2, format="json", inx1
   clsLbl <- sam_data[[variable]];
   pca3d$score$facA <- cls;
   variable <<- variable;
-    
+  
   # now set color for each group
   cols <- unique(as.numeric(factor(cls)))+1;
   rgbcols <- col2rgb(cols);
   cols <- apply(rgbcols, 2, function(x){paste("rgb(", paste(x, collapse=","), ")", sep="")});
-  pca3d$score$colors <- cols;x
+  pca3d$score$colors <- cols;
   
   json.obj <- RJSONIO::toJSON(pca3d);
   sink(imgName);
@@ -243,7 +243,7 @@ PreparePCA4Shotgun<- function(microSetObj, imgName,imgName2, format="json", inx1
   label = FALSE;
     
   if(showlabel=="samnm"){
-    label=TRUE;
+    label = TRUE;
     box <- autoplot(pca,data=sam_data,colour=variable,size=4,alpha =0.8,label = label) + theme_bw()
     box <- box + stat_ellipse(type="norm", linetype=2, geom = "polygon",alpha = 0.2, aes_string(fill = clsLbl), show.legend=FALSE)
     box <- box + labs(x = pca3d$score$axis[1], y = pca3d$score$axis[2]);
@@ -252,8 +252,8 @@ PreparePCA4Shotgun<- function(microSetObj, imgName,imgName2, format="json", inx1
     box <- box + stat_ellipse(type="norm", linetype=2, geom = "polygon",alpha = 0.2, aes_string(fill = clsLbl), show.legend=FALSE)
     box <- box + labs(x = pca3d$score$axis[1], y = pca3d$score$axis[2]);
   } else {
-    grplbl<<-sam_data[ ,showlabel];
-    clsLbl<<-clsLbl;
+    grplbl <<- sam_data[ ,showlabel];
+    clsLbl <<- clsLbl;
     box <- autoplot(pca,data=sam_data,colour=variable,size=4,alpha =0.8,label = label) + geom_text(aes(label=grplbl,colour=clsLbl))
     box <- box + theme_bw()+ stat_ellipse(type="norm", linetype=2, geom = "polygon",alpha = 0.2, aes_string(fill = clsLbl), show.legend=FALSE)
     box <- box + labs(x = pca3d$score$axis[1], y = pca3d$score$axis[2]);
@@ -299,16 +299,16 @@ PlotFunctionStack<-function(microSetObj, summaryplot, functionlvl, abundcal, gen
   query <- otu_table(data)[,ord.inx];
 
   if(geneidtype=="cog"){
-    ko_higher_path <- .read.microbiomeanalyst.lib("cog_functioncount.rds");
+    ko_higher_path <- .read.microbiomeanalyst.lib("cog_functioncount.rds", "ko");
   }else {
     if(functionlvl=="KEGG metabolism"){
-      ko_higher_path<-.read.microbiomeanalyst.lib("ko_higherpathway.rds");
+      ko_higher_path<-.read.microbiomeanalyst.lib("ko_higherpathway.rds", "ko");
     }else if(functionlvl=="KEGG pathways"){
-      ko_higher_path<-.read.microbiomeanalyst.lib("ko_pathwaycount.rds");
+      ko_higher_path<-.read.microbiomeanalyst.lib("ko_pathwaycount.rds", "ko");
     }else if(functionlvl=="KEGG modules"){
-      ko_higher_path<-.read.microbiomeanalyst.lib("ko_modulecount.rds");
+      ko_higher_path<-.read.microbiomeanalyst.lib("ko_modulecount.rds", "ko");
     }else if(functionlvl=="COG Functional category"){
-      ko_higher_path<-.read.microbiomeanalyst.lib("ko_cogfunction.rds");
+      ko_higher_path<-.read.microbiomeanalyst.lib("ko_cogfunction.rds", "ko");
     }
   }
 
@@ -549,9 +549,9 @@ PerformKOEnrichAnalysis_KO01100 <- function(microSetObj, category, file.nm){
   LoadKEGGKO_lib(category);
     
   if(enrich.type == "hyper"){
-    PerformKOEnrichAnalysis_List(file.nm);
+    PerformKOEnrichAnalysis_List(microSetObj, file.nm);
   }else{
-    PerformKOEnrichAnalysis_Table(file.nm);
+    PerformKOEnrichAnalysis_Table(microSetObj, file.nm);
   }
   return(.set.microSet(microSetObj))
 }
@@ -943,7 +943,7 @@ RemoveDuplicates <- function(data, lvlOpt, quiet=T){
 # Utility function
 doKO2NameMapping <- function(ko.vec){
   
-  ko.dic <- .read.microbiomeanalyst.lib("ko_dic.rds");
+  ko.dic <- .read.microbiomeanalyst.lib("ko_dic.rds", "ko");
   hit.inx <- match(ko.vec, ko.dic[, "KO"]);
   symbols <- ko.dic[hit.inx, "Label"];
   
@@ -961,7 +961,7 @@ doKO2NameMapping <- function(ko.vec){
 # return matched KO in the same order (NA if no match)
 doKOFiltering <- function(ko.vec, type){
   
-  ko.dic <- .read.microbiomeanalyst.lib("ko_dic.rds");
+  ko.dic <- .read.microbiomeanalyst.lib("ko_dic.rds", "ko");
   
   if(type == "ko"){
     hit.inx <- match(ko.vec, ko.dic$KO);

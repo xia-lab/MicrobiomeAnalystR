@@ -148,7 +148,8 @@ PerformRefDataMapping <- function(microSetObj, refdataNm, taxo_type, sample_var,
   #data filteration and transformation
   merged.data <- phyloslimR::transform_sample_counts(merged.data, function(x) x / sum(x) );
   merged.data <<- merged.data;
-  microSetObj$dataSet$lib.msg <<- current.msg <<- paste(msg, collapse=".");
+  
+  microSetObj$dataSet$lib.msg <- current.msg <<- paste(msg, collapse=".");
     
   if(.on.public.web){
     .set.microSet(microSetObj)

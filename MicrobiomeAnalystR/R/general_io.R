@@ -69,16 +69,17 @@ Init.Data <- function(){
 #' @param filenm Input the name of the file to download
 
 # read binary RDS files
-.read.microbiomeanalyst.lib <- function(filenm, opt = NA){
+.read.microbiomeanalyst.lib <- function(filenm, opt = "none"){
+  
   if(.on.public.web){
-    
+  
     if(opt=="tsea"){
       lib.path <- paste("../../lib/tsea/", filenm, sep="");
     }else{
       lib.path <- paste("../../lib/", filenm, sep="");
     }
-
     return(readRDS(lib.path));
+    
   }else{
     lib.download <- FALSE;
     if(!file.exists(filenm)){
@@ -148,9 +149,9 @@ Init.Data <- function(){
 # type should mset or kegg
 .load.microbiomeanalyst.lib <- function(libname){
   
-  destfile <- paste(libname, ".rda", sep="");
+  destfile <- libname;
   if(.on.public.web){
-    destfile <- paste("../../lib/", libname, ".rda", sep="");
+    destfile <- paste("../../lib/", libname, sep="");
   }else{
     lib.download <- FALSE;
     if(!file.exists(destfile)){
@@ -163,7 +164,7 @@ Init.Data <- function(){
       }
     }
     if(lib.download){
-      libPath <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/", libname, ".rda", sep="");
+      libPath <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/", libname, sep="");
       download.file(libPath, destfile);
     }
   }
@@ -176,7 +177,12 @@ SetAnalType <- function(analType){
 
 GetNameMapCol <-function(microSetObj, colInx){
   microSetObj <- .get.microSet(microSetObj);
-  return(microSetObj$analSet$resTable[,colInx]);
+  if(.on.public.web){
+    return(microSetObj$analSet$resTable[,colInx]);
+  }else{
+    print(microSetObj$analSet$resTable[,colInx]);
+    return(.set.microSet(microSetObj))
+  }
 }
 
 GetResRowNames <- function(microSetObj){

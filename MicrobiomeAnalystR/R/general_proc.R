@@ -709,7 +709,7 @@ CreatePhyloseqObj<-function(microSetObj, type, taxa_type, taxalabel, ismetafile)
       data.proc<-otu_table(data.proc,taxa_are_rows =TRUE);
       taxa_names(data.proc)<-taxa_names(microSetObj$dataSet$taxa_table);
       # removing constant column and making standard names
-      ind<-apply(dataSet$taxa_table[,1], 2, function(x) which(x %in% c("Root", "root")));
+      ind<-apply(microSetObj$dataSet$taxa_table[,1], 2, function(x) which(x %in% c("Root", "root")));
             
       if(length(ind)>0){
         microSetObj$dataSet$taxa_table<-microSetObj$dataSet$taxa_table[,-1];
@@ -717,7 +717,7 @@ CreatePhyloseqObj<-function(microSetObj, type, taxa_type, taxalabel, ismetafile)
       }
       
       # removing first KINGDOM OR DOMAIN column
-      indx<-apply(dataSet$taxa_table[,1], 2, function(x) which(x %in% c("Bacteria","Archaea","k__Bacteria","k__Archea", "D_0__Bacteria","D_0__Archea")));
+      indx<-apply(microSetObj$dataSet$taxa_table[,1], 2, function(x) which(x %in% c("Bacteria","Archaea","k__Bacteria","k__Archea", "D_0__Bacteria","D_0__Archea")));
       # error thrown here - taxa_type = others/not specific
 
       if(length(indx)>0){
