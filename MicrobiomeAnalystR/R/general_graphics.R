@@ -15,7 +15,7 @@
 PlotTreeGraph<-function(microSetObj, plotNm, distnm, clstDist, metadata, datatype,
                         taxrank, format="png", dpi=72, width=NA){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   set.seed(2805619);
   plotNm <- paste(plotNm,".", format, sep="");
@@ -139,7 +139,7 @@ PlotTreeGraph<-function(microSetObj, plotNm, distnm, clstDist, metadata, datatyp
 #'@import gridExtra
 PlotBoxData<-function(microSetObj, boxplotName, feat, format="png", dpi=72){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   if(.on.public.web){
     load_ggplot();
@@ -185,7 +185,7 @@ PlotHeatmap<-function(microSetObj, plotNm, smplDist, clstDist, palette, metadata
                       taxrank, datatype, viewOpt, doclust, format="png", showfeatname,
                       appendnm, rowV=F, colV=T, var.inx=NA, border=T, width=NA, dpi=72){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   if(.on.public.web){
     load_pheatmap();
@@ -379,7 +379,7 @@ PlotHeatmap<-function(microSetObj, plotNm, smplDist, clstDist, palette, metadata
 #'@export
 GetColorSchema <- function(microSetObj, grayscale=F){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
     
   # test if total group number is over 9
   claslbl <- as.factor(sample_data(microSetObj$dataSet$norm.phyobj)[[variable]]);

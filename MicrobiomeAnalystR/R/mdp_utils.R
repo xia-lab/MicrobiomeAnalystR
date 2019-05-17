@@ -13,7 +13,7 @@
 #'@export
 PerformAlphaDiversityComp<-function(microSetObj, opt, metadata){
   
-  microSetObj <- .get.microSetObj(microSetObj); 
+  microSetObj <- .get.microSet(microSetObj); 
     
   data <- microSetObj$analSet$alpha;
   cls <- data[,metadata];
@@ -67,7 +67,7 @@ PerformAlphaDiversityComp<-function(microSetObj, opt, metadata){
 CoreMicrobeAnalysis<-function(microSetObj, imgName, preval, detection, taxrank,
                               palette, viewOpt, format="png", dpi=72, width=NA){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   #library("tidyr");
   data <- microSetObj$dataSet$proc.phyobj;
@@ -358,7 +358,7 @@ prevalence_nsamples <- function(x) {
 
 PlotOverallPieGraph<-function(microSetObj, taxalvl, feat_cnt, calcmeth){
 
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   if(.on.public.web){
     load_reshape();
@@ -444,7 +444,7 @@ PlotOverallPieGraph<-function(microSetObj, taxalvl, feat_cnt, calcmeth){
 PlotGroupPieGraph <- function(microSetObj, taxalvl, metadata, clslevel,
                               feat_cnt, calcmeth){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   if(.on.public.web){
     load_reshape();
@@ -528,7 +528,7 @@ PlotGroupPieGraph <- function(microSetObj, taxalvl, metadata, clslevel,
 
 PlotSamplePieGraph<-function(microSetObj, taxalvl, smplnm, feat_cnt){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   if(.on.public.web){
     load_reshape();
@@ -606,7 +606,7 @@ PlotSamplePieGraph<-function(microSetObj, taxalvl, smplnm, feat_cnt){
 PlotDataPieFromPie<-function(microSetObj, taxalvl, metadata, clslevel,
                              taxaposn, lowtaxa){
 
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   if(.on.public.web){
     load_reshape();
@@ -670,7 +670,7 @@ PlotDataPieFromPie<-function(microSetObj, taxalvl, metadata, clslevel,
 #'@import reshape
 UpdatePieData<-function(microSetObj, lowtaxa){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   if(.on.public.web){
     load_reshape();
@@ -724,7 +724,7 @@ UpdatePieData<-function(microSetObj, lowtaxa){
 #'@export
 SavePiechartImg <- function(microSetObj, taxalvl, pieName, format="png", dpi=72) {
     
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   set.seed(280);
     
   pieName = paste(pieName,".", format, sep="");
@@ -763,7 +763,7 @@ SavePiechartImg <- function(microSetObj, taxalvl, pieName, format="png", dpi=72)
 #'@export
 PlotPiechart <- function(microSetObj, rel_perct, pieName, format="png", dpi=72) {
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   set.seed(28056188); 
   pieName = paste(pieName,".", format, sep="");
@@ -821,7 +821,7 @@ PlotPiechart <- function(microSetObj, rel_perct, pieName, format="png", dpi=72) 
 PlotAlphaData<-function(microSetObj, data.src, bargraphName, distName,
                         metadata, taxrank, format="png", dpi=72){
   
-  microSetObj <- .get.microSetObj(microSetObj);  
+  microSetObj <- .get.microSet(microSetObj);  
   
   set.seed(13133);
     
@@ -874,7 +874,7 @@ PlotAlphaData<-function(microSetObj, data.src, bargraphName, distName,
 PlotTaxaAlphaBarSam<-function(microSetObj, barplotName, taxalvl, samplnm,
                               imgOpt, feat_cnt, format="png", dpi=72){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   if(.on.public.web){
     load_reshape();
@@ -1001,7 +1001,7 @@ PlotTaxaAlphaBarSam<-function(microSetObj, barplotName, taxalvl, samplnm,
 PlotBetaDiversity<-function(microSetObj, plotNm, ordmeth, distName, colopt, metadata, 
                             showlabel, taxrank, taxa, alphaopt, ellopt, format="png", dpi=72){
 
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   if(.on.public.web){
     load_datatable();
@@ -1185,7 +1185,7 @@ PlotBetaDiversity<-function(microSetObj, plotNm, ordmeth, distName, colopt, meta
 #'@export
 PlotFunAnotSummary<-function(microSetObj, imgName, format="png", dpi=72){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   set.seed(280561499);
     
@@ -1217,7 +1217,7 @@ PlotFunAnotSummary<-function(microSetObj, imgName, format="png", dpi=72){
 PlotTaxaAlphaArea<-function(microSetObj, barplotName, viewOpt, taxalvl, metadata,
                             imgOpt, feat_cnt, colpalopt, calcmeth, format="png", dpi=72){
 
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   if(.on.public.web){
     load_reshape();
@@ -1407,7 +1407,7 @@ PlotTaxaAlphaArea<-function(microSetObj, barplotName, viewOpt, taxalvl, metadata
 PlotTaxaAlphaBar<-function(microSetObj, barplotName, taxalvl, metadata, facet, imgOpt, 
                            feat_cnt, colpalopt, calcmeth, format="png", dpi=72){
 
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   if(.on.public.web){
     load_reshape();
@@ -1611,7 +1611,7 @@ PlotTaxaAlphaBar<-function(microSetObj, barplotName, taxalvl, metadata, facet, i
 #'@export
 PerformCategoryComp <- function(microSetObj, method, distnm, variable){
 
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   if(.on.public.web){
     load_vegan();
@@ -1671,7 +1671,7 @@ PerformCategoryComp <- function(microSetObj, method, distnm, variable){
 PlotTaxaAlphaBarSamGrp<-function(microSetObj, barplotName, taxalvl, metadata, imgOpt,
                                  feat_cnt, colpalopt, calcmeth, format="png", dpi=72){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   if(.on.public.web){
     load_reshape();
@@ -1846,7 +1846,7 @@ PlotTaxaAlphaBarSamGrp<-function(microSetObj, barplotName, taxalvl, metadata, im
 #'@export
 PlotAlphaBoxData<-function(microSetObj, boxplotName, distName, metadata, format="png", dpi=72){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   set.seed(1313397);
   data <- microSetObj$analSet$alpha;
@@ -1890,7 +1890,7 @@ PlotAlphaBoxData<-function(microSetObj, boxplotName, distName, metadata, format=
 PlotRarefactionCurve <- function(microSetObj, data.src, linecolor, linetype, facet, step, 
                                  imgName, format="png",dpi=72){
 
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
     
   # should use unfiltered data
   if(data.src == "orig"){
@@ -1952,7 +1952,7 @@ PlotRarefactionCurve <- function(microSetObj, data.src, linecolor, linetype, fac
 #'@export
 PreparePhylogeneticTreePlot <-function(microSetObj, color, shape, taxa, treeshape, imgName, format="png", dpi=72){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   data <- microSetObj$dataSet$filt.data;
   
@@ -2033,7 +2033,7 @@ PreparePhylogeneticTreePlot <-function(microSetObj, color, shape, taxa, treeshap
 #'@import Tax4Fun
 Perform16FunAnot<-function(microSetObj, type, pipeline) {
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   microSetObj$dataSet$type <- type;
   merge.otu <- readRDS("data.orig");
@@ -2214,12 +2214,12 @@ Perform16FunAnot<-function(microSetObj, type, pipeline) {
 ######################################
 
 GetBetaDiversityStats<-function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   return(microSetObj$analSet$stat.info);
 }
 
 GetStressNMDS<-function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   return(microSetObj$analSet$beta.stress);
 }
 

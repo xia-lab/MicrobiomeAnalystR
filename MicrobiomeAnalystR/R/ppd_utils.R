@@ -7,7 +7,7 @@
 #'@export
 PrepareMergedData <- function(microSetObj, metadata, keepfeat){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   set.seed(1315);
   metadata <<- metadata;
@@ -43,7 +43,7 @@ PrepareMergedData <- function(microSetObj, metadata, keepfeat){
 #'@export
 PerformRefDataMapping <- function(microSetObj, refdataNm, taxo_type, sample_var, biome){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
 
   msg <- NULL;
   #reading the reference data: (OTU abundance and tax info) and associated sample data file seperately.
@@ -169,7 +169,7 @@ PerformRefDataMapping <- function(microSetObj, refdataNm, taxo_type, sample_var,
 PCoA3DAnal.16SRef <- function(microSetObj, barplotNm, ordMeth, distName, datatype, taxrank, colopt,
                              taxa, alphaopt, metadata, format="png", dpi=72){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   if(.on.public.web){
     load_vegan();
@@ -215,7 +215,7 @@ PCoA3DAnal.16SRef <- function(microSetObj, barplotNm, ordMeth, distName, datatyp
 #'@import RJSONIO
 PlotUsrRefPCoA3DScore <- function(microSetObj, imgName, format="json", inx1, inx2, inx3, variable){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   if(.on.public.web){
     load_rjsonio();

@@ -19,7 +19,7 @@
 #'@export
 SanityCheckData <- function(microSetObj, datatype, filetype){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   feat.sums <- apply(microSetObj$dataSet$data.orig, 1, function(x){sum(x>0, na.rm=T)});
   #gd.inx <- feat.sums > 0; # occur in at least 1 samples
@@ -54,7 +54,7 @@ SanityCheckData <- function(microSetObj, datatype, filetype){
   sample_no <- ncol(microSetObj$dataSet$data.orig);
    
   if(filetype=="biom"||filetype=="mothur"){
-    samplemeta_no <- nrow(dataSet$sample_data);
+    samplemeta_no <- nrow(microSetObj$dataSet$sample_data);
   }else{
     samplemeta_no <- sample_no;
   }
@@ -69,7 +69,7 @@ SanityCheckData <- function(microSetObj, datatype, filetype){
   }
 
   #converting all sample variables to factor type
-  character_vars <- sapply(dataSet$sample_data, is.character);
+  character_vars <- sapply(microSetObj$dataSet$sample_data, is.character);
    
   if(any(character_vars)=="TRUE"){
     microSetObj$dataSet$sample_data[, character_vars] <- sapply(microSetObj$dataSet$sample_data[, character_vars], as.factor);
@@ -87,7 +87,7 @@ SanityCheckData <- function(microSetObj, datatype, filetype){
     tree_exist <- 0
   }
 
-   if(identical(sort(row.names(dataSet$sample_data)),
+   if(identical(sort(row.names(microSetObj$dataSet$sample_data)),
                sort(colnames(data.proc)))){
     samname_same <- 1;
   } else {
@@ -132,7 +132,7 @@ SanityCheckData <- function(microSetObj, datatype, filetype){
 
 ApplyAbundanceFilter <- function(microSetObj, filt.opt, count, smpl.perc){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
 
   data <- readRDS("data.prefilt");
   msg <- NULL;
@@ -179,7 +179,7 @@ ApplyAbundanceFilter <- function(microSetObj, filt.opt, count, smpl.perc){
 
 ApplyVarianceFilter <- function(microSetObj, filtopt, filtPerct){
 
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   data <- microSetObj$dataSet$filt.data;
   msg <- NULL;
@@ -235,7 +235,7 @@ ApplyVarianceFilter <- function(microSetObj, filtopt, filtPerct){
 #'@export
 UpdateSampleItems <- function(microSetObj){
 
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   if(!exists("smpl.nm.vec")){
     current.msg <<- "Cannot find the current sample names!";
@@ -286,7 +286,7 @@ UpdateSampleItems <- function(microSetObj){
 #'@import metagenomeSeq
 PerformNormalization <- function(microSetObj, rare.opt, scale.opt, transform.opt){
 
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   data <- readRDS("filt.data.orig");
   tax_nm <- rownames(data);
   msg <- NULL;
@@ -394,7 +394,7 @@ PerformNormalization <- function(microSetObj, rare.opt, scale.opt, transform.opt
 #'@export
 PerformRarefaction <- function(microSetObj, data, rare.opt){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   data <- data.matrix(data);
   tax_nm<-rownames(data);
@@ -440,7 +440,7 @@ PerformRarefaction <- function(microSetObj, data, rare.opt){
 
 PlotRareCurve <- function(microSetObj, graphName, variable){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   set.seed(13789);
   
   if(.on.public.web){
@@ -518,7 +518,7 @@ PlotRareCurve <- function(microSetObj, graphName, variable){
 
 PlotLibSizeView <- function(microSetObj, imgName, format="png", dpi=72){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   data.proc <- readRDS("data.proc");
   data_bef <- data.matrix(data.proc);
@@ -558,7 +558,7 @@ PlotLibSizeView <- function(microSetObj, imgName, format="png", dpi=72){
 #'@import phyloslimR
 CreatePhyloseqObj<-function(microSetObj, type, taxa_type, taxalabel, ismetafile){
 
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   if(.on.public.web){
     load_phyloslim();
@@ -700,8 +700,8 @@ CreatePhyloseqObj<-function(microSetObj, type, taxa_type, taxalabel, ismetafile)
           taxa_table<-as.matrix(taxa_table[indx,]);
           colnames(taxa_table)<-nm;
           #converting taxonomy file(data frame) to phyloseq taxonomy object;keeping the taxonomy names as it is.
-          microSetObjdataSet$taxa_table<-tax_table(taxa_table);
-          taxa_names(microSetObjdataSet$taxa_table)<-rownames(taxa_table);
+          microSetObj$dataSet$taxa_table<-tax_table(taxa_table);
+          taxa_names(microSetObj$dataSet$taxa_table)<-rownames(taxa_table);
         }
             
       # creating phyloseq object
@@ -885,16 +885,16 @@ GetGroupNames<-function(){
 }
 
 GetSampleNamesaftNorm<-function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   return(sample_names(microSetObj$dataSet$norm.phyobj));
 }
 
 GetRemFeatNames<-function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   return(microSetObj$dataSet$remfeat);
 }
 
 GetRemSamplNames<-function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   return(microSetObj$dataSet$remsam);
 }

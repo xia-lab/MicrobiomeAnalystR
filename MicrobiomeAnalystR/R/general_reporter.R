@@ -21,7 +21,7 @@
 #'@export
 PreparePDFReport <- function(microSetObj, usrName){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
 
   # create the Rnw file
   file.create("Analysis_Report.Rnw");
@@ -79,7 +79,7 @@ SaveCurrentSession <- function(){
 #'@export
 CreateMDPRnwReport<-function(microSetObj, usrName){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   CreateHeader(usrName);
   CreateIntr();
@@ -116,7 +116,7 @@ CreateMDPRnwReport<-function(microSetObj, usrName){
 #'@export
 CreateSDPRnwReport<-function(microSetObj, usrName){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
     
   CreateHeader(usrName);
   CreateIntr();
@@ -163,7 +163,7 @@ CreateIntr <- function(){
 # read and process the raw data
 CreateIOdoc <- function(microSetObj){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   if(microSetObj$dataSet$module.type == "metageno"){
     descr <- c("\\subsection{Reading and Processing the Raw Data}\n",
@@ -287,7 +287,7 @@ CreateIOdoc <- function(microSetObj){
 # create normalization doc 
 CreateNORMdoc<-function(microSetObj){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
 
   # need to check if this process is executed
   if(is.null(microSetObj$dataSet$norm.phyobj)){
@@ -438,7 +438,7 @@ CreateAnalNullMsg<-function(){
 # create Stacked Area/Bar plot/Piechart doc
 CreateVISEXPLRdoc <- function(microSetObj){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
 
   # need to check if this process is executed
   if(is.null(microSetObj$analSet$stack) & is.null(microSetObj$analSet$pie)){
@@ -499,7 +499,7 @@ CreateVISEXPLRdoc <- function(microSetObj){
 # Alpha-diversity
 CreateALPHDIVdoc <- function(microSetObj){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   # need to check if this process is executed
   if(is.null(microSetObj$analSet$alpha)){
@@ -558,7 +558,7 @@ CreateALPHDIVdoc <- function(microSetObj){
 # Beta-diversity
 CreateBETADIVdoc<-function(microSetObj){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   # need to check if this process is executed
   if(is.null(microSetObj$analSet$beta)){
@@ -605,7 +605,7 @@ CreateBETADIVdoc<-function(microSetObj){
 # Hierarchical clustering
 CreateHCdoc <- function(microSetObj){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   # need to check if this process is executed
   if(is.null(microSetObj$analSet$tree) & is.null(microSetObj$analSet$heatmap)){
@@ -675,7 +675,7 @@ CreateHCdoc <- function(microSetObj){
 # Core microbiome analysis
 CreateCOREdoc <- function(microSetObj){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   # need to check if this process is executed
   if(is.null(microSetObj$analSet$core)){
@@ -729,7 +729,7 @@ CreateCOREdoc <- function(microSetObj){
 # create Correlation doc
 CreateCORRdoc <- function(microSetObj){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
 
   # need to check if this process is executed
   if(is.null(microSetObj$analSet$cor.mat) & is.null(microSetObj$analSet$cor.heatmat)){
@@ -816,7 +816,7 @@ CreateCORRdoc <- function(microSetObj){
 # create Univariate doc
 CreateUNIVARdoc<-function(microSetObj){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
 
   # need to check if this process is executed
   if(is.null(microSetObj$analSet$Univar$resTable)){
@@ -860,7 +860,7 @@ CreateUNIVARdoc<-function(microSetObj){
 # create MetagenomeSeq doc
 CreateMETAGENOSEQdoc <- function(microSetObj){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
 
   # need to check if this process is executed
   if(is.null(microSetObj$analSet$metagenoseq$resTable)){
@@ -909,7 +909,7 @@ CreateMETAGENOSEQdoc <- function(microSetObj){
 # RNASeq method
 CreateRNASEQdoc <- function(microSetObj){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
 
   # need to check if this process is executed
   if(is.null(microSetObj$analSet$rnaseq$resTable)){
@@ -951,7 +951,7 @@ CreateRNASEQdoc <- function(microSetObj){
 # LEFSE
 CreateLEFSEdoc <- function(microSetObj){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
     
   # need to check if this process is executed
   if(is.null(microSetObj$analSet$lefse$resTable)){
@@ -990,7 +990,7 @@ CreateLEFSEdoc <- function(microSetObj){
 # random forests
 CreateRFdoc <- function(microSetObj){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
 
   # need to check if this process is executed
   if(is.null(microSetObj$analSet$rf)){
@@ -1051,7 +1051,7 @@ CreateRFdoc <- function(microSetObj){
 # Functional Prediction
 CreateFUNCPREDdoc <- function(microSetObj){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   # need to check if this process is executed
   if(is.null(microSetObj$analSet$func.pred)){
@@ -1099,7 +1099,7 @@ CreateFUNCPREDdoc <- function(microSetObj){
 # Functional Profiling
 CreateFUNCPROFdoc <- function(microSetObj){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   # need to check if this process is executed
   if(is.null(microSetObj$analSet$func.prof)){
@@ -1144,7 +1144,7 @@ CreateFUNCPROFdoc <- function(microSetObj){
 # create PCA doc
 CreatePCAdoc <- function(microSetObj){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   # need to check if this process is executed
   if(is.null(microSetObj$analSet$pca)){
@@ -1230,7 +1230,7 @@ CreateEnrichOverview<-function(){
 # create data input doc
 CreateEnrichInputDoc<-function(microSetObj){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   descr <- c("\\section{Data Input}\n",
              "There are three enrichment analysis algorithms offered by TSEA. Accordingly, three",
@@ -1334,7 +1334,7 @@ CreateEnrichORAdoc<-function(){
 
 CreateFooter<-function(microSetObj){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   if(microSetObj$dataSet$module.type == "metageno"){
     descr <- c("\\section{Other Features}\n",
@@ -1396,7 +1396,7 @@ CreatePPDOverview<-function(){
 
 CreatePPDAnalDoc<-function(microSetObj){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   descr <- c("\\section{Selection of Reference Dataset}\n",
              "MicrobiomeAnalyst supports large-scale well-annotated 16S public datasets collected from Qiita.",
@@ -1445,7 +1445,7 @@ CreatePPDAnalDoc<-function(microSetObj){
 
 CreatePPDResultDoc<-function(microSetObj){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   descr <- c("\\section{Meta Analysis Result}\n",
              "The results are represented in an interactive 3D (website) and 2D (report) PCoA plot with node colors based on different",

@@ -18,7 +18,7 @@
 
 GetGeneListStat <- function(microSetObj){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   range <- c(0, 0);
     
@@ -42,7 +42,7 @@ GetGeneListStat <- function(microSetObj){
 
 UpdateListInput <- function(microSetObj, minL, maxL=Inf){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   hit.inx <- microSetObj$analSet$ko.mapped >= minL & microSetObj$analSet$ko.mapped <= maxL;
     
@@ -71,7 +71,7 @@ UpdateListInput <- function(microSetObj, minL, maxL=Inf){
 #'@export
 ReadShotgunTabData <- function(microSetObj, dataName, geneidtype, datatype) {
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
 
   mydata <- .readDataTable(dataName);
     
@@ -131,7 +131,7 @@ ReadShotgunTabData <- function(microSetObj, dataName, geneidtype, datatype) {
 #'@import biomformat
 ReadShotgunBiomData <- function(microSetObj, dataName, geneidtype, module.type, ismetadata) {
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   #to support biom file produced by picrust, (read_biom:phyloseq) function doesn't work
   msg <- NULL;
@@ -198,7 +198,7 @@ ReadShotgunBiomData <- function(microSetObj, dataName, geneidtype, module.type, 
 PreparePCA4Shotgun<- function(microSetObj, imgName,imgName2, format="json", inx1, inx2, inx3,
                               variable, showlabel, format2d="png", dpi=72){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   if(.on.public.web){
     load_rjsonio();
@@ -279,7 +279,7 @@ PreparePCA4Shotgun<- function(microSetObj, imgName,imgName2, format="json", inx1
 PlotFunctionStack<-function(microSetObj, summaryplot, functionlvl, abundcal, geneidtype, metadata,
                             colpalopt, format="png", dpi=72){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
 
   summaryplot <- paste(summaryplot, ".", format, sep="");
   
@@ -435,10 +435,10 @@ PlotFunctionStack<-function(microSetObj, summaryplot, functionlvl, abundcal, gen
 #'@export
 PerformKOmapping <- function(microSetObj, geneIDs, type){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   microSetObj$analSet <- list();
-  microSetObjanalSet$orig <- geneIDs;
+  microSetObj$analSet$orig <- geneIDs;
   current.msg <<- NULL;
 
   lines <- unlist(strsplit(geneIDs, "\r|\n|\r\n")[1]);
@@ -499,7 +499,7 @@ PerformKOmapping <- function(microSetObj, geneIDs, type){
 
 PrepareQueryJson <- function(microSetObj){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   if(.on.public.web){
     load_rjsonio();
@@ -544,7 +544,7 @@ PrepareQueryJson <- function(microSetObj){
 #'@export
 PerformKOEnrichAnalysis_KO01100 <- function(microSetObj, category, file.nm){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   LoadKEGGKO_lib(category);
     
@@ -566,7 +566,7 @@ PerformKOEnrichAnalysis_KO01100 <- function(microSetObj, category, file.nm){
 #'@export
 PerformKOEnrichAnalysis_Table <- function(microSetObj, file.nm){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
 
   phenotype <- as.factor(sample_data(microSetObj$dataSet$norm.phyobj)[[selected.meta.data]]);
   genemat <- as.data.frame(t(otu_table(microSetObj$dataSet$norm.phyobj)));
@@ -673,7 +673,7 @@ LoadKEGGKO_lib<-function(category){
 
 PerformKOProjection <- function(microSetObj){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   datatype <- microSetObj$analSet$datatype;
   de.Num <- microSetObj$analSet$sig.count;
@@ -752,7 +752,7 @@ MapKO2KEGGEdges<- function(kos, net="ko01100"){
 # note: only return hits in this map KO01100
 PerformKOEnrichAnalysis_List <- function(microSetObj, file.nm){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   # prepare for the result table
   set.size <- length(current.geneset);

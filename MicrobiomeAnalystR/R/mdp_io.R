@@ -19,7 +19,7 @@ Read16SAbundData <- function(microSetObj, dataName, type, taxalabel, taxa_type,
     load_phyloslim();
   }
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   if(type=="text"){
     
@@ -28,6 +28,8 @@ Read16SAbundData <- function(microSetObj, dataName, type, taxalabel, taxa_type,
         return(0);
       }
     }else{
+      # offline
+      microSetObj <- Read16STabData(microSetObj, dataName, type, ismetafile)
       if(!microSetObj$dataSet$read){
         return(0);
       }
@@ -38,15 +40,21 @@ Read16SAbundData <- function(microSetObj, dataName, type, taxalabel, taxa_type,
     if(.on.public.web){
       if(!Read16SBiomData(microSetObj, dataName, type, taxa_type, ismetafile)){
         return(0);
-      }
+      } 
     }else{
+      # offline
+      microSetObj <- Read16SBiomData(microSetObj, dataName, type, taxa_type, ismetafile)
       if(!microSetObj$dataSet$read){
         return(0);
       }
     }
   }
   
+  #need to refetch microSetObj
+  microSetObj <- .get.microSet(microSetObj);
+  
   data.orig <- microSetObj$dataSet$data.orig;
+  print(data.orig)
   
   if(mode(data.orig)=="character"){
     current.msg <<- paste("Errors in parsing your data as numerical - possible reason: comma as decimal separator?");
@@ -54,12 +62,12 @@ Read16SAbundData <- function(microSetObj, dataName, type, taxalabel, taxa_type,
   }
   
   #storing whole taxonomy label(used for PICRUST & Tax4Fun; reference data mapping)
-  microSetObjdataSet$comp_taxnm <- rownames(data.orig);
+  microSetObj$dataSet$comp_taxnm <- rownames(data.orig);
   current.msg <<- paste("A total of",ncol(data.orig) ,"samples and ", nrow(data.orig), "features or taxa are present.");
-  microSetObjdataSet$read.msg <- current.msg;
-  microSetObjdataSet$data.type <- type;
-  microSetObjdataSet$taxa.type <- taxa_type;
-  microSetObjdataSet$module.type <- module.type;
+  microSetObj$dataSet$read.msg <- current.msg;
+  microSetObj$dataSet$data.type <- type;
+  microSetObj$dataSet$taxa.type <- taxa_type;
+  microSetObj$dataSet$module.type <- module.type;
   
   if(.on.public.web){
     .set.microSet(microSetObj)
@@ -80,7 +88,7 @@ Read16SAbundData <- function(microSetObj, dataName, type, taxalabel, taxa_type,
 
 Read16STabData <- function(microSetObj, dataName, type, ismetafile) {
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   msg <- NULL;
   mydata <- .readDataTable(dataName);
@@ -187,7 +195,7 @@ Read16STabData <- function(microSetObj, dataName, type, ismetafile) {
 #'@import phyloslimR
 Read16SBiomData <- function(microSetObj, dataName, type, taxa_type, ismetadata){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   if(.on.public.web){
     load_phyloslim();
@@ -268,7 +276,7 @@ Read16SBiomData <- function(microSetObj, dataName, type, taxa_type, ismetadata){
 
 ReadMothurData<-function(microSetObj, dataName, taxdataNm, taxa_type, module.type){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   if(.on.public.web){
     load_phyloslim();
@@ -370,7 +378,7 @@ ReadMothurData<-function(microSetObj, dataName, taxdataNm, taxa_type, module.typ
 #'@export
 Read16STaxaTable <- function(microSetObj, dataName) {
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   msg <- NULL;
   mydata <- .readDataTable(dataName);
@@ -421,7 +429,7 @@ Read16STaxaTable <- function(microSetObj, dataName) {
 PlotSelectedSample <-function(microSetObj, imgNm, smplID, idtype, OtuIdType, rel_perct,
                               format="png", dpi=72){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   if(.on.public.web){
     load_reshape();

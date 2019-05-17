@@ -10,7 +10,7 @@
 #'License: GNU GPL (>= 2)
 #'@export
 Setup.MapData<-function(microSetObj, qvec){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   microSetObj$dataSet$species <- qvec;
   return(.set.microSet(microSetObj))
 }
@@ -27,7 +27,7 @@ Setup.MapData<-function(microSetObj, qvec){
 
 CrossReferencing <- function(microSetObj, q.type, module.type){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   # record all the data
   name.map <<- list();
@@ -57,7 +57,7 @@ CrossReferencing <- function(microSetObj, q.type, module.type){
 # multiple hits or non-unique hits will all users to manually select
 SpeciesMappingExact<-function(microSetObj, q.type){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   qvec <- microSetObj$dataSet$species;
        
@@ -142,7 +142,7 @@ SpeciesMappingExact<-function(microSetObj, q.type){
 #'@export
 CalculateHyperScore <- function(microSetObj){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
 
   nm.map <- GetFinalNameMap(microSetObj);
   valid.inx <- !(is.na(nm.map$Strain)| duplicated(nm.map$Strain));
@@ -228,7 +228,7 @@ CalculateHyperScore <- function(microSetObj){
 #'@export
 GetFinalNameMap<-function(microSetObj){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   enrtype <- microSetObj$dataSet$q.type;
   qvec <- microSetObj$dataSet$species;
@@ -282,7 +282,7 @@ GetFinalNameMap<-function(microSetObj){
 #'@export
 PrepareEnrichNet<-function(microSetObj){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
     
   #calculate the enrichment fold change
   folds <- microSetObj$analSet$ora.mat[,3]/microSetObj$analSet$ora.mat[,2];
@@ -302,7 +302,7 @@ PrepareEnrichNet<-function(microSetObj){
 #'@export
 SetMsetLib <- function(microSetObj, tset.type){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
 
   microSetObj$dataSet$tset.type <- tset.type
   
@@ -456,7 +456,7 @@ PlotEnrichNet.Overview<-function(hits, pvals){
 # Getter for ORA matrix
 GetORA.rowNames<-function(microSetObj){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   nms <- rownames(microSetObj$analSet$ora.mat);
   
@@ -468,14 +468,14 @@ GetORA.rowNames<-function(microSetObj){
 
 # Getter
 GetORA.mat<-function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   return(microSetObj$analSet$ora.mat);
 }
 
 # Getter
 GetORA.colorBar<-function(microSetObj){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   len <- nrow(microSetObj$analSet$ora.mat);
   
@@ -556,7 +556,7 @@ GetCurrentImg <- function(){
 # given a metset inx, return hmtl highlighted metset cmpds and references
 GetHTMLMetSet<-function(microSetObj, msetNm){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   hits <- microSetObj$analSet$ora.hits;
   # highlighting with different colors
@@ -573,13 +573,13 @@ GetHTMLMetSet<-function(microSetObj, msetNm){
 }
 
 GetMsetPval<-function(microSetObj, msetNm){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   return(microSetObj$analSet$ora.mat[msetNm, "Raw p"]);
 }
 
 # given a metset inx, return all info
 GetTaxaSet <- function(microSetObj, msetNm){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   mset <- subset(current.msetlib, name == msetNm)
   microSetObj$analSet$tseaInfo <- t(rbind(colnames(current.msetlib), mset))
   print(microSetObj$analSet$tseaInfo)

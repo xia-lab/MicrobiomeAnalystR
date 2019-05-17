@@ -175,63 +175,63 @@ SetAnalType <- function(analType){
 }
 
 GetNameMapCol <-function(microSetObj, colInx){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   return(microSetObj$analSet$resTable[,colInx]);
 }
 
 GetResRowNames <- function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   return(rownames(microSetObj$analSet$resTable));
 }
 
 GetTseaRowNames <- function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   return(rownames(microSetObj$analSet$tseaInfo));
 }
 
 GetTseaCol <-function(microSetObj, colInx){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   return(microSetObj$analSet$resTable[,colInx]);
 }
 
 GetMirResCol <-function(microSetObj, colInx){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   return(microSetObj$analSet$resTable[,colInx]);
 }
 
 GetResColNames <- function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   return(colnames(microSetObj$analSet$resTable));
 }
 
 GetResMat <- function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   return(as.matrix(microSetObj$analSet$resTable));
 }
 
 GetMetaInfo <- function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   return(colnames(microSetObj$dataSet$sample_data));
 }
 
 GetMetaTaxaInfo <- function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   return(rank_names(microSetObj$dataSet$proc.phyobj));
 }
 
 GetSampleGrpInfo <- function(microSetObj, class){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   return(levels(factor(get_variable(microSetObj$dataSet$norm.phyobj, class))));
 }
 
 GetSampleGrpNo <- function(microSetObj, class){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   #Issue with phyloslim (after merging into phyloslim object the sample variable are converted to numeric again rather than factor)
   return(length(levels(factor(get_variable(microSetObj$dataSet$norm.phyobj, class)))));
 }
 
 GetAllSampleGrpInfo <- function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   #sample variable having more than one group will be selected as default
   sam_var<-which(sapply(sample_data(microSetObj$dataSet$norm.phyobj)[,sapply(sample_data(microSetObj$dataSet$norm.phyobj), is.factor)], nlevels)>1);
   if(length(sam_var)>0){
@@ -243,7 +243,7 @@ GetAllSampleGrpInfo <- function(microSetObj){
 
 GetTaxaFeatName<- function(microSetObj, taxlvl){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
     
   if(taxlvl=="OTU"){
     return(taxa_names(microSetObj$dataSet$norm.phyobj));
@@ -259,7 +259,7 @@ GetTaxaFeatName<- function(microSetObj, taxlvl){
 
 GetTaxaFeatSize<- function(microSetObj, taxlvl){
 
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
     
   if(taxlvl=="OTU"){
     feat.size <- length(taxa_names(microSetObj$dataSet$norm.phyobj));
@@ -273,7 +273,7 @@ GetTaxaFeatSize<- function(microSetObj, taxlvl){
 
 ValidateFeatureName<- function(microSetObj, taxlvl, nm){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   if(taxlvl=="OTU"){
     tax.nms <- taxa_names(microSetObj$dataSet$norm.phyobj);
@@ -301,14 +301,14 @@ ValidateFeatureName<- function(microSetObj, taxlvl, nm){
 }
 
 GetLowerTaxaLvlNm<- function(microSetObj, taxrank){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   indx <- which(colnames(tax_table(microSetObj$dataSet$proc.phyobj))==taxrank);
   rem <- ncol(tax_table(microSetObj$dataSet$proc.phyobj))-indx;
   return(colnames(tax_table(microSetObj$dataSet$proc.phyobj))[indx+1:rem]);
 }
 
 GetHighTaxaLvlNm<- function(microSetObj, taxrank){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   if(taxrank=="OTU"){
     return(colnames(tax_table(microSetObj$dataSet$proc.phyobj))[1:length(colnames(tax_table(microSetObj$dataSet$proc.phyobj)))]);
   }else{
@@ -319,14 +319,14 @@ GetHighTaxaLvlNm<- function(microSetObj, taxrank){
 }
 
 GetSampleGrpUser <- function(microSetObj, class){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   return(levels(get_variable(microSetObj$dataSet$proc.phyobj, class)));
 }
 
 #check whether sample variable is continuous and give warning abt it in metagenomeSeq and LEfSe
 CheckContSampleVar <- function(microSetObj, variable){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   cls<-as.factor(sample_data(microSetObj$dataSet$norm.phyobj)[[variable]]);
   
@@ -350,12 +350,12 @@ CheckContSampleVar <- function(microSetObj, variable){
 
 # save the processed data with class names
 SaveData <- function(microSetObj, anal.type){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   if(anal.type == "16S" || anal.type == "metageno"){
-    if(!is.null(dataSet$data.orig)){
+    if(!is.null(microSetObj$dataSet$data.orig)){
       write.csv(microSetObj$dataSet$data.orig, file="data_original.csv");
     }
-    if(!is.null(dataSet$filt.data)){
+    if(!is.null(microSetObj$dataSet$filt.data)){
       write.csv(microSetObj$dataSet$filt.data, file="data_filtered.csv");
     }
     if(!is.null(otu_table(microSetObj$dataSet$norm.phyobj,as.matrix()))){
@@ -378,10 +378,10 @@ SaveData <- function(microSetObj, anal.type){
 #'@export
 ReadSampleTable<- function(microSetObj, dataName) {
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   if(.on.public.web){
-    load_phyloseq();
+    load_phyloslim();
   }
 
   msg <- NULL;

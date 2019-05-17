@@ -26,7 +26,7 @@ RF.Anal <- function(microSetObj, treeNum, tryNum, randomOn, variable, taxrank, d
     load_randomforest();
   }
 
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   # set up random numbers
   if(is.null(microSetObj$analSet$random.seeds)){
@@ -103,7 +103,7 @@ RF.Anal <- function(microSetObj, treeNum, tryNum, randomOn, variable, taxrank, d
 #'@export
 PlotRF.Classify<-function(microSetObj, imgName,format="png", dpi=72, width=NA){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   imgName = paste(imgName,".", format, sep="");
   
@@ -137,7 +137,7 @@ PlotRF.Classify<-function(microSetObj, imgName,format="png", dpi=72, width=NA){
 #'@export
 PlotRF.VIP<-function(microSetObj, imgName,format="png", dpi=72, width=NA){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   imgName = paste(imgName, ".", format, sep="");
   microSetObj$imgSet$rf.imp <- imgName;
@@ -168,7 +168,7 @@ PlotRF.VIP<-function(microSetObj, imgName,format="png", dpi=72, width=NA){
 #'@export
 PlotImpVar <- function(microSetObj, imp.vec, xlbl, feat.num=15, color.BW=FALSE){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   cls.len <- length(levels(microSetObj$analSet$cls));
   
@@ -293,7 +293,7 @@ PlotImpVar <- function(microSetObj, imp.vec, xlbl, feat.num=15, color.BW=FALSE){
 
 PerformUnivarTest <- function(microSetObj, variable, p.lvl, datatype, shotgunid, taxrank, statOpt){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   #rather than whole name from taxonomy just last name.
   cls <- as.factor(sample_data(microSetObj$dataSet$norm.phyobj)[[variable]]);
@@ -407,7 +407,7 @@ PerformUnivarTest <- function(microSetObj, variable, p.lvl, datatype, shotgunid,
 
 PerformMetagenomeSeqAnal<-function(microSetObj, variable, p.lvl, datatype, shotgunid, taxrank, model){
     
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   if(.on.public.web){
     load_metagenomeseq();
@@ -563,7 +563,7 @@ PerformMetagenomeSeqAnal<-function(microSetObj, variable, p.lvl, datatype, shotg
 
 PerformLefseAnal <- function(microSetObj, p.lvl, lda.lvl, variable, isfunc, datatype, shotgunid, taxrank){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   if(.on.public.web){
     load_mass();
@@ -707,7 +707,7 @@ PerformLefseAnal <- function(microSetObj, p.lvl, lda.lvl, variable, isfunc, data
 #'@export
 PlotLEfSeSummary <- function(imgName, format="png", dpi=72) {
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   set.seed(280561493);
   imgName = paste(imgName, ".", format, sep="");
@@ -737,7 +737,7 @@ PlotLEfSeSummary <- function(imgName, format="png", dpi=72) {
 
 PerformRNAseqDE<-function(microSetObj, opts, p.lvl, variable, datatype, shotgunid, taxrank){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
 
   claslbl <- as.factor(sample_data(microSetObj$dataSet$norm.phyobj)[[variable]]);
 
@@ -892,7 +892,7 @@ PerformRNAseqDE<-function(microSetObj, opts, p.lvl, variable, datatype, shotguni
 
 PCoA3D.Anal <- function(microSetObj, ordMeth, distName, datatype, taxrank, colopt, variable, taxa, alphaopt, jsonNm){
 
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   if(.on.public.web){
     load_vegan();
@@ -1069,7 +1069,7 @@ PCoA3D.Anal <- function(microSetObj, ordMeth, distName, datatype, taxrank, colop
 FeatureCorrelation <- function(microSetObj, dist.name, taxrank, taxa, variable, 
                                datatype, shotfeat, shotgunid){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   if(datatype=="16S"){
     microSetObj$dataSet$taxa_table <- tax_table(microSetObj$dataSet$proc.phyobj);
@@ -1156,7 +1156,7 @@ FeatureCorrelation <- function(microSetObj, dist.name, taxrank, taxa, variable,
 
 PlotCorr <- function(microSetObj, imgName, format="png", dpi=72, width=NA){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   cor.res <- microSetObj$analSet$cor.mat;
   pattern <- microSetObj$analSet$pattern;
@@ -1212,7 +1212,7 @@ PlotCorr <- function(microSetObj, imgName, format="png", dpi=72, width=NA){
 Match.Pattern <- function(microSetObj, dist.name="pearson", pattern=NULL, taxrank, 
                           taxa, variable, datatype, shotfeat, shotgunid){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
     
   if(is.null(pattern)){
     pattern <- paste(1:length(levels(clslbl)), collapse="-");
@@ -1320,7 +1320,7 @@ Match.Pattern <- function(microSetObj, dist.name="pearson", pattern=NULL, taxran
 
 GenerateTemplates <- function(microSetObj, variable){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
     
   clslbl <- as.factor(sample_data(microSetObj$dataSet$norm.phyobj)[[variable]]);
   level.len <- length(levels(clslbl));
@@ -1360,7 +1360,7 @@ GenerateTemplates <- function(microSetObj, variable){
 PlotCorrHeatMap <- function(microSetObj, imgName, format="png", width=NA, cor.method,
                             colors_cntrst, viewOpt,taxrank,fix.col, no.clst, top, topNum,datatype){
   
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   
   main <- xlab <- ylab <- NULL;
     
@@ -1572,7 +1572,7 @@ template.match <- function(x, template, dist.name) {
 #'License: GNU GPL (>= 2)
 #'@export
 GetSigTable.UNIVAR<-function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   GetSigTable(microSetObj$analSet$Univar$resTable, "Univariate analysis");
 }
 
@@ -1584,7 +1584,7 @@ GetSigTable.UNIVAR<-function(microSetObj){
 #'License: GNU GPL (>= 2)
 #'@export
 GetSigTable.Corr<-function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   GetSigTable(microSetObj$analSet$cor.mat, "Pattern search using correlation analysis");
 }
 
@@ -1596,7 +1596,7 @@ GetSigTable.Corr<-function(microSetObj){
 #'License: GNU GPL (>= 2)
 #'@export
 GetSigTable.METAGENOSEQ<-function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);  
+  microSetObj <- .get.microSet(microSetObj);  
   GetSigTable(microSetObj$analSet$metagenoseq$resTable, "metagenomeSeq");
 }
 
@@ -1608,7 +1608,7 @@ GetSigTable.METAGENOSEQ<-function(microSetObj){
 #'License: GNU GPL (>= 2)
 #'@export
 GetSigTable.RNASeq<-function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);  
+  microSetObj <- .get.microSet(microSetObj);  
   GetSigTable(microSetObj$analSet$rnaseq$resTable, "RNAseq method");
 }
 
@@ -1620,7 +1620,7 @@ GetSigTable.RNASeq<-function(microSetObj){
 #'License: GNU GPL (>= 2)
 #'@export
 GetSigTable.LEFSE<-function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);  
+  microSetObj <- .get.microSet(microSetObj);  
   GetSigTable(microSetObj$analSet$lefse$resTable, "LEfSe");
 }
 
@@ -1633,7 +1633,7 @@ GetSigTable.LEFSE<-function(microSetObj){
 #'@export
 #'@import xtable
 GetRFConf.Table<-function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);  
+  microSetObj <- .get.microSet(microSetObj);  
   if(.on.public.web){
     load_xtable();
   }
@@ -1649,7 +1649,7 @@ GetRFConf.Table<-function(microSetObj){
 #'@export
 #'@import xtable
 GetMapTable<-function(){
-  microSetObj <- .get.microSetObj(microSetObj);  
+  microSetObj <- .get.microSet(microSetObj);  
   if(.on.public.web){
     load_xtable();
   }
@@ -1666,7 +1666,7 @@ GetMapTable<-function(){
 #'@export
 #'@import xtable
 GetORATable<-function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);  
+  microSetObj <- .get.microSet(microSetObj);  
   if(.on.public.web){
     load_xtable();
   }    
@@ -1738,7 +1738,7 @@ GetTtestRes<- function(cls, data, paired=FALSE, equal.var=TRUE, nonpar=F){
 
 # get the OOB error for the last signif
 GetRFOOB<-function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   errors = microSetObj$analSet$rf$err.rate;
   nrow = dim(errors)[1];
   signif(errors[nrow, 1],3);
@@ -1746,32 +1746,32 @@ GetRFOOB<-function(microSetObj){
 
 # significance measure, double[][]
 GetRFSigMat<-function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   return(CleanNumber(microSetObj$analSet$rf.sigmat))
 }
 
 GetRFSigRowNames<-function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   return(rownames(microSetObj$analSet$rf.sigmat));
 }
 
 GetRFSigColNames<-function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   return(colnames(microSetObj$analSet$rf.sigmat));
 }
 
 # return double[][] confusion matrix
 GetRFConfMat<-function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   return(signif(microSetObj$analSet$rf$confusion,3));
 }
 
 GetRFConfRowNames<-function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   return(rownames(microSetObj$analSet$rf$confusion));
 }
 
 GetRFConfColNames<-function(microSetObj){
-  microSetObj <- .get.microSetObj(microSetObj);
+  microSetObj <- .get.microSet(microSetObj);
   return(colnames(microSetObj$analSet$rf$confusion));
 }
