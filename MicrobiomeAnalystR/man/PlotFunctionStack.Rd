@@ -4,11 +4,11 @@
 \alias{PlotFunctionStack}
 \title{Function to plot stacked bar chart of functional data.}
 \usage{
-PlotFunctionStack(microSetObj, summaryplot, functionlvl, abundcal,
-  geneidtype, metadata, colpalopt, format = "png", dpi = 72)
+PlotFunctionStack(mbSetObj, summaryplot, functionlvl, abundcal, geneidtype,
+  metadata, colpalopt, format = "png", dpi = 72)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function plots stacked bar charts of functional data.

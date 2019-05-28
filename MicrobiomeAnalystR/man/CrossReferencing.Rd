@@ -4,10 +4,10 @@
 \alias{CrossReferencing}
 \title{Perform cross referencing.}
 \usage{
-CrossReferencing(microSetObj, q.type, module.type)
+CrossReferencing(mbSetObj, q.type, module.type)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function performs cross referencing of user's data

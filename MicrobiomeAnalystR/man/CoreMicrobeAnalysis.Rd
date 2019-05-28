@@ -4,11 +4,11 @@
 \alias{CoreMicrobeAnalysis}
 \title{Perform core microbiome analysis}
 \usage{
-CoreMicrobeAnalysis(microSetObj, imgName, preval, detection, taxrank,
-  palette, viewOpt, format = "png", dpi = 72, width = NA)
+CoreMicrobeAnalysis(mbSetObj, imgName, preval, detection, taxrank, palette,
+  viewOpt, format = "png", dpi = 72, width = NA)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions performs core microbiome analysis.

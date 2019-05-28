@@ -4,16 +4,16 @@
 \alias{PlotHeatmap}
 \title{Main function to plot heatmap.}
 \usage{
-PlotHeatmap(microSetObj, plotNm, smplDist, clstDist, palette, metadata,
+PlotHeatmap(mbSetObj, plotNm, smplDist, clstDist, palette, metadata,
   taxrank, datatype, viewOpt, doclust, format = "png", showfeatname,
   appendnm, rowV = F, colV = T, var.inx = NA, border = T,
   width = NA, dpi = 72)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
-This functions plots a heatmap from the microSetObj.
+This functions plots a heatmap from the mbSetObj.
 }
 \author{
 Jeff Xia \email{jeff.xia@mcgill.ca}

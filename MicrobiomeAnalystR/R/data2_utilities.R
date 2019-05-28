@@ -58,7 +58,7 @@ seqSanityCheck <- function(setParametersRes = setParametersRes, # results from s
                            ...){
   #tic("seqSanityCheck");
   #get R packages;
-  require(dada2); require(R.utils);
+  require(dada2); require(R.utils); #for everything
 
   #get data from setParameters;
   file_compressed = setParametersRes$file_compressed;

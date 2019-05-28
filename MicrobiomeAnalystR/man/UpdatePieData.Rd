@@ -4,10 +4,10 @@
 \alias{UpdatePieData}
 \title{Function to update pie-chart data.}
 \usage{
-UpdatePieData(microSetObj, lowtaxa)
+UpdatePieData(mbSetObj, lowtaxa)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions updates pie chart data.

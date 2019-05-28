@@ -4,11 +4,11 @@
 \alias{PCoA3DAnal.16SRef}
 \title{Function to create PCoA}
 \usage{
-PCoA3DAnal.16SRef(microSetObj, barplotNm, ordMeth, distName, datatype,
+PCoA3DAnal.16SRef(mbSetObj, barplotNm, ordMeth, distName, datatype,
   taxrank, colopt, taxa, alphaopt, metadata, format = "png", dpi = 72)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function creates data for plotting PCoA.

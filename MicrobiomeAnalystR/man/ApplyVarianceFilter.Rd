@@ -4,10 +4,10 @@
 \alias{ApplyVarianceFilter}
 \title{Function to filter uploaded data}
 \usage{
-ApplyVarianceFilter(microSetObj, filtopt, filtPerct)
+ApplyVarianceFilter(mbSetObj, filtopt, filtPerct)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function filters data based on low abundace or variance.

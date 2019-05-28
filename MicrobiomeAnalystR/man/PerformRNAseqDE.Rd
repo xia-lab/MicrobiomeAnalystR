@@ -4,11 +4,11 @@
 \alias{PerformRNAseqDE}
 \title{Main function to perform RNAseq analysis}
 \usage{
-PerformRNAseqDE(microSetObj, opts, p.lvl, variable, datatype, shotgunid,
+PerformRNAseqDE(mbSetObj, opts, p.lvl, variable, datatype, shotgunid,
   taxrank)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions performs RNAseq analysis on the microbiome data.

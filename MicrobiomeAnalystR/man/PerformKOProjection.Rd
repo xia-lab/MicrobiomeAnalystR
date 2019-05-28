@@ -4,10 +4,10 @@
 \alias{PerformKOProjection}
 \title{Function to perform KO projection}
 \usage{
-PerformKOProjection(microSetObj)
+PerformKOProjection(mbSetObj)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function projects user-uploaded

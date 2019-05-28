@@ -4,10 +4,10 @@
 \alias{ReadShotgunTabData}
 \title{Main function to read in shotgun data}
 \usage{
-ReadShotgunTabData(microSetObj, dataName, geneidtype, datatype)
+ReadShotgunTabData(mbSetObj, dataName, geneidtype, datatype)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function reads in shotgun data

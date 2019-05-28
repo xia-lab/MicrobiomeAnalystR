@@ -4,11 +4,11 @@
 \alias{PerformLefseAnal}
 \title{Main function to perform LEfSe analysis}
 \usage{
-PerformLefseAnal(microSetObj, p.lvl, lda.lvl, variable, isfunc, datatype,
+PerformLefseAnal(mbSetObj, p.lvl, lda.lvl, variable, isfunc, datatype,
   shotgunid, taxrank)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions performs LEfSe analysis on the microbiome data.

@@ -4,11 +4,11 @@
 \alias{PlotTreeGraph}
 \title{Main function to plot tree graphics}
 \usage{
-PlotTreeGraph(microSetObj, plotNm, distnm, clstDist, metadata, datatype,
+PlotTreeGraph(mbSetObj, plotNm, distnm, clstDist, metadata, datatype,
   taxrank, format = "png", dpi = 72, width = NA)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions creates tree plots from the microbiome data.

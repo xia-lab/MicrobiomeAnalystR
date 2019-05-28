@@ -4,10 +4,10 @@
 \alias{PerformRarefaction}
 \title{Utility function to perform rarefraction (used by PerformNormalization)}
 \usage{
-PerformRarefaction(microSetObj, data, rare.opt)
+PerformRarefaction(mbSetObj, data, rare.opt)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function performs rarefraction on the uploaded

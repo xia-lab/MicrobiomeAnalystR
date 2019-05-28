@@ -4,11 +4,11 @@
 \alias{PlotTaxaAlphaBarSamGrp}
 \title{Function to plot group-wise bar charts.}
 \usage{
-PlotTaxaAlphaBarSamGrp(microSetObj, barplotName, taxalvl, metadata, imgOpt,
+PlotTaxaAlphaBarSamGrp(mbSetObj, barplotName, taxalvl, metadata, imgOpt,
   feat_cnt, colpalopt, calcmeth, format = "png", dpi = 72)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions plots group-wise bar charts of a specified 

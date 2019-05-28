@@ -4,12 +4,12 @@
 \alias{PlotCorrHeatMap}
 \title{Function to create correlation heat map}
 \usage{
-PlotCorrHeatMap(microSetObj, imgName, format = "png", width = NA,
+PlotCorrHeatMap(mbSetObj, imgName, format = "png", width = NA,
   cor.method, colors_cntrst, viewOpt, taxrank, fix.col, no.clst, top,
   topNum, datatype)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function creates the correlation heat map

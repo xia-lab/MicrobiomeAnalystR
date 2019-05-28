@@ -4,10 +4,10 @@
 \alias{PlotImpVar}
 \title{Helper function to plot variable importance}
 \usage{
-PlotImpVar(microSetObj, imp.vec, xlbl, feat.num = 15, color.BW = FALSE)
+PlotImpVar(mbSetObj, imp.vec, xlbl, feat.num = 15, color.BW = FALSE)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions plots the variable importance

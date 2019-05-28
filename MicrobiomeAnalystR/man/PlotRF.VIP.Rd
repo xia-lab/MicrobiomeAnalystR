@@ -4,11 +4,10 @@
 \alias{PlotRF.VIP}
 \title{Plot variable importance ranked by MeanDecreaseAccuracy}
 \usage{
-PlotRF.VIP(microSetObj, imgName, format = "png", dpi = 72,
-  width = NA)
+PlotRF.VIP(mbSetObj, imgName, format = "png", dpi = 72, width = NA)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions plot variable importance ranked by MeanDecreaseAccuracy

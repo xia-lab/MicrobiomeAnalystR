@@ -4,10 +4,10 @@
 \alias{PrepareQueryJson}
 \title{Function to prepare query for JSON.}
 \usage{
-PrepareQueryJson(microSetObj)
+PrepareQueryJson(mbSetObj)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function prepares the data for JSON.

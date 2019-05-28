@@ -4,11 +4,11 @@
 \alias{PlotAlphaBoxData}
 \title{Function to create box plots for alpha diversity analysis}
 \usage{
-PlotAlphaBoxData(microSetObj, boxplotName, distName, metadata,
+PlotAlphaBoxData(mbSetObj, boxplotName, distName, metadata,
   format = "png", dpi = 72)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions performs metagenome seq analysis on the microbiome data.

@@ -4,11 +4,11 @@
 \alias{PlotBetaDiversity}
 \title{Function to plot beta diversity.}
 \usage{
-PlotBetaDiversity(microSetObj, plotNm, ordmeth, distName, colopt, metadata,
+PlotBetaDiversity(mbSetObj, plotNm, ordmeth, distName, colopt, metadata,
   showlabel, taxrank, taxa, alphaopt, ellopt, format = "png", dpi = 72)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions creates beta diversity plots.

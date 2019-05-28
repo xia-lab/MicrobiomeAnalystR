@@ -4,11 +4,11 @@
 \alias{PlotAlphaData}
 \title{Function to plot alpha-diversity analysis.}
 \usage{
-PlotAlphaData(microSetObj, data.src, bargraphName, distName, metadata,
+PlotAlphaData(mbSetObj, data.src, bargraphName, distName, metadata,
   taxrank, format = "png", dpi = 72)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions creates a plot for alpha-diversity.

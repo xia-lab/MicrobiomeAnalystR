@@ -4,10 +4,10 @@
 \alias{SetMsetLib}
 \title{Set the microbe set library}
 \usage{
-SetMsetLib(microSetObj, tset.type)
+SetMsetLib(mbSetObj, tset.type)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function sets the microbe

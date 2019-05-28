@@ -4,11 +4,11 @@
 \alias{Match.Pattern}
 \title{Function to match patterns}
 \usage{
-Match.Pattern(microSetObj, dist.name = "pearson", pattern = NULL,
-  taxrank, taxa, variable, datatype, shotfeat, shotgunid)
+Match.Pattern(mbSetObj, dist.name = "pearson", pattern = NULL, taxrank,
+  taxa, variable, datatype, shotfeat, shotgunid)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions matches patterns

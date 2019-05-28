@@ -4,10 +4,10 @@
 \alias{PrepareEnrichNet}
 \title{Function to prepare data for enrichment network.}
 \usage{
-PrepareEnrichNet(microSetObj)
+PrepareEnrichNet(mbSetObj)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function prepares data for enrichment network.

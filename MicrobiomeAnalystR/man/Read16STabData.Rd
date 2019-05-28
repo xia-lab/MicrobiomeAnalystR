@@ -4,14 +4,14 @@
 \alias{Read16STabData}
 \title{Function to read 16S data}
 \usage{
-Read16STabData(microSetObj, dataName, type, ismetafile)
+Read16STabData(mbSetObj, dataName, type, ismetafile)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This is the main function read in the 16S data in txt format
-into the microSetObj.
+into the mbSetObj.
 }
 \author{
 Jeff Xia \email{jeff.xia@mcgill.ca}

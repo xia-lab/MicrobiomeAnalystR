@@ -4,11 +4,11 @@
 \alias{PlotRarefactionCurve}
 \title{Function to create rarefraction curves of microbiome data}
 \usage{
-PlotRarefactionCurve(microSetObj, data.src, linecolor, linetype, facet,
-  step, imgName, format = "png", dpi = 72)
+PlotRarefactionCurve(mbSetObj, data.src, linecolor, linetype, facet, step,
+  imgName, format = "png", dpi = 72)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions plots rarefraction curves.

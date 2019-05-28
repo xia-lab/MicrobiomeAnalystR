@@ -4,10 +4,10 @@
 \alias{UpdateSampleItems}
 \title{Function to update samples}
 \usage{
-UpdateSampleItems(microSetObj)
+UpdateSampleItems(mbSetObj)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function prunes samples to be included 

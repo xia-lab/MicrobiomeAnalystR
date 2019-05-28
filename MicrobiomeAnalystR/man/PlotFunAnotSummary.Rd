@@ -4,10 +4,10 @@
 \alias{PlotFunAnotSummary}
 \title{Plot functional annotation summary}
 \usage{
-PlotFunAnotSummary(microSetObj, imgName, format = "png", dpi = 72)
+PlotFunAnotSummary(mbSetObj, imgName, format = "png", dpi = 72)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions plots the functional annotation summary.
