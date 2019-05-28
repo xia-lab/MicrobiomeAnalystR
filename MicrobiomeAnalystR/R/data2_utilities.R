@@ -259,7 +259,7 @@ constructSeqTab <- function(setParametersRes = setParametersRes, # results from 
          dir.create("sequence_table"),
          FALSE);
   print("write sequence abundance table");
-  write.table(cbind.data.frame("Sample" = row.names(seqtab),
+  write.table(cbind.data.frame("#SAMPLE" = row.names(seqtab),
                                seqtab),
               file = file.path("sequence_table", "sequence_abundance_table.txt"),
               sep = "\t",
@@ -391,11 +391,24 @@ assignTax <- function(constructSeqTabRes = constructSeqTabRes, #results from con
     stop("please specify a database!")
   };
 
+  taxa2[] <- lapply(taxa, as.character);
+  taxa2 <- within(taxa2,
+                 "NAME" <-  paste(Kingdom,
+                                  Phylum,
+                                  Class,
+                                  Order,
+                                  Family,
+                                  Genus,
+                                  Species,
+                                  sep = "; "));
+
+
   print("write taxa table");
-  write.table(data.frame("#TAXONOMY" = row.names(taxa),
-                         taxa),
+  write.table(data.frame("#NAME" = taxa2$NAME,
+                         seqtab.nochim),
               file = file.path("tax",
-                               paste0("taxa_table_against_", ref_db, ".txt")),
+                               paste0("taxa_table_against_", ref_db,
+                                      "_submit_to_MicrobiomeAnalyst.txt")),
               row.names = FALSE,
               quote = FALSE,
               sep = "\t");
