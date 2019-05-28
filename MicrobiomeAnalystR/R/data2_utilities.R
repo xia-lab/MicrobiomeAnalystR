@@ -227,8 +227,6 @@ processRawSeq <- function(setParametersRes = setParametersRes, # results from se
                 quote = FALSE);
   }
 
-
-
   processRawSeqRes <- list(mergers = mergers,
                            out = out,
                            dadaFs = dadaFs,
@@ -391,22 +389,19 @@ assignTax <- function(constructSeqTabRes = constructSeqTabRes, #results from con
   } else {
     stop("please specify a database!")
   };
-  taxa2 <- taxa;
-  taxa2[] <- lapply(taxa2, as.character);
+  taxa2 <- as.data.frame(taxa);
   taxa2 <- within(taxa2,
-                 "NAME" <-  paste(Kingdom,
-                                  Phylum,
-                                  Class,
-                                  Order,
-                                  Family,
-                                  Genus,
-                                  Species,
-                                  sep = "; "));
-
-
+                  "NAME" <-  paste(Kingdom,
+                                   Phylum,
+                                   Class,
+                                   Order,
+                                   Family,
+                                   Genus,
+                                   Species,
+                                   sep = "; "));
   print("write taxa table");
-  write.table(data.frame("#NAME" = taxa2$NAME,
-                         t(seqtab.nochim)),
+  write.table(cbind.data.frame("#NAME" = taxa2$NAME,
+                               t(seqtab.nochim)),
               file = file.path("tax",
                                paste0("taxa_table_against_", ref_db,
                                       "_submit_to_MicrobiomeAnalyst.txt")),
@@ -462,5 +457,3 @@ constructPhyloTree <- function(constrcutSeqTabRes = constrcutSeqTabRes, #results
   #detach("package:phangorn", unload=TRUE);
   #print(toc());
 }
-
-
