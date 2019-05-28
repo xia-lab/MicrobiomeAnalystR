@@ -4,10 +4,10 @@
 \alias{GetGeneListStat}
 \title{Function to get gene list statistics}
 \usage{
-GetGeneListStat(microSetObj)
+GetGeneListStat(mbSetObj)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function gets the gene list stats.

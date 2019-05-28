@@ -7,25 +7,25 @@
 
 #'Main function to plot tree graphics
 #'@description This functions creates tree plots from the microbiome data.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotTreeGraph<-function(microSetObj, plotNm, distnm, clstDist, metadata, datatype,
+PlotTreeGraph<-function(mbSetObj, plotNm, distnm, clstDist, metadata, datatype,
                         taxrank, format="png", dpi=72, width=NA){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   set.seed(2805619);
   plotNm <- paste(plotNm,".", format, sep="");
   variable<<-metadata;
     
-  data <- microSetObj$dataSet$norm.phyobj;
+  data <- mbSetObj$dataSet$norm.phyobj;
     
   if(datatype=="16S"){
-    microSetObj$dataSet$taxa_table <- tax_table(microSetObj$dataSet$proc.phyobj);
-    data <- merge_phyloslim(data,microSetObj$dataSet$taxa_table);
+    mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
+    data <- merge_phyloslim(data,mbSetObj$dataSet$taxa_table);
   }else{
     data <- data;
   }
@@ -69,14 +69,14 @@ PlotTreeGraph<-function(microSetObj, plotNm, distnm, clstDist, metadata, datatyp
                                   outgroup = new.outgroup,
                                   resolve.root=TRUE)
     }
-    dist.mat<-phyloslimR::distance(data,distnm,type = "samples")
+    dist.mat<-distance(data,distnm,type = "samples")
   } else {
-    dist.mat<-phyloslimR::distance(data,distnm,type = "samples")
+    dist.mat<-distance(data,distnm,type = "samples")
   }
 
   # build the tree
   hc_tree<-hclust(dist.mat, method=clstDist);
-  microSetObj$imgSet$tree<-plotNm;
+  mbSetObj$imgSet$tree<-plotNm;
 
   if(is.na(width)){
     w <- minH <- 650;
@@ -117,11 +117,11 @@ PlotTreeGraph<-function(microSetObj, plotNm, distnm, clstDist, metadata, datatyp
   legend.nm <-gsub("\\.", " ",legend.nm)
   legend("topleft", legend = legend.nm, pch=15, col=unique(cols), bty = "n");
   dev.off();
-  microSetObj$analSet$tree<-hc_tree;
-  microSetObj$analSet$tree.dist<-distnm;
-  microSetObj$analSet$tree.clust<-clstDist;
-  microSetObj$analSet$tree.taxalvl<-taxrank;
-  return(.set.microSet(microSetObj))
+  mbSetObj$analSet$tree<-hc_tree;
+  mbSetObj$analSet$tree.dist<-distnm;
+  mbSetObj$analSet$tree.clust<-clstDist;
+  mbSetObj$analSet$tree.taxalvl<-taxrank;
+  return(.set.mbSetObj(mbSetObj))
 }
 
 #######################################
@@ -130,16 +130,16 @@ PlotTreeGraph<-function(microSetObj, plotNm, distnm, clstDist, metadata, datatyp
 
 #'Function to create box plots of important features
 #'@description This functions plots box plots of a selected feature.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import grid
 #'@import gridExtra
-PlotBoxData<-function(microSetObj, boxplotName, feat, format="png", dpi=72){
+PlotBoxData<-function(mbSetObj, boxplotName, feat, format="png", dpi=72){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
     load_ggplot();
@@ -147,7 +147,7 @@ PlotBoxData<-function(microSetObj, boxplotName, feat, format="png", dpi=72){
     load_gridExtra();
   }
   
-  data <- microSetObj$analSet$boxdata;
+  data <- mbSetObj$analSet$boxdata;
   a <- data[,feat];
   ind <- which(a=="0");
   a[ind] <- 0.1;
@@ -165,7 +165,7 @@ PlotBoxData<-function(microSetObj, boxplotName, feat, format="png", dpi=72){
   
   grid.arrange(ggplotGrob(box), ggplotGrob(box1),ncol=2,nrow=1,top=feat);
   dev.off();
-  return(.set.microSet(microSetObj))
+  return(.set.mbSetObj(mbSetObj))
 }
 
 ###############################
@@ -173,19 +173,19 @@ PlotBoxData<-function(microSetObj, boxplotName, feat, format="png", dpi=72){
 ###############################
 
 #'Main function to plot heatmap.
-#'@description This functions plots a heatmap from the microSetObj.
-#'@param microSetObj Input the name of the microSetObj.
+#'@description This functions plots a heatmap from the mbSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import pheatmap
 
-PlotHeatmap<-function(microSetObj, plotNm, smplDist, clstDist, palette, metadata,
+PlotHeatmap<-function(mbSetObj, plotNm, smplDist, clstDist, palette, metadata,
                       taxrank, datatype, viewOpt, doclust, format="png", showfeatname,
                       appendnm, rowV=F, colV=T, var.inx=NA, border=T, width=NA, dpi=72){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
     load_pheatmap();
@@ -194,11 +194,11 @@ PlotHeatmap<-function(microSetObj, plotNm, smplDist, clstDist, palette, metadata
   set.seed(2805614);
   #used for color pallete
   variable <<- metadata;
-  data <- microSetObj$dataSet$norm.phyobj;
+  data <- mbSetObj$dataSet$norm.phyobj;
     
   if(datatype=="16S"){
-    microSetObj$dataSet$taxa_table <- tax_table(microSetObj$dataSet$proc.phyobj);
-    data <- merge_phyloslim(data, microSetObj$dataSet$taxa_table);
+    mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
+    data <- merge_phyloslim(data, mbSetObj$dataSet$taxa_table);
   }else{
     data <- data;
   }
@@ -317,7 +317,7 @@ PlotHeatmap<-function(microSetObj, plotNm, smplDist, clstDist, palette, metadata
   }
   
   plotNm = paste(plotNm, ".", format, sep="");
-  microSetObj$imgSet$heatmap<-plotNm;
+  mbSetObj$imgSet$heatmap<-plotNm;
 
   if(format=="pdf"){
     grDevices::pdf(file = plotNm, width=w, height=h, bg="white", onefile=FALSE);
@@ -361,28 +361,28 @@ PlotHeatmap<-function(microSetObj, plotNm, smplDist, clstDist, palette, metadata
   dev.off();
     
   # storing for Report Generation
-  microSetObj$analSet$heatmap<-data1;
-  microSetObj$analSet$heatmap.dist<-smplDist;
-  microSetObj$analSet$heatmap.clust<-clstDist;
-  microSetObj$analSet$heat.taxalvl<-taxrank;
-  return(.set.microSet(microSetObj))
+  mbSetObj$analSet$heatmap<-data1;
+  mbSetObj$analSet$heatmap.dist<-smplDist;
+  mbSetObj$analSet$heatmap.clust<-clstDist;
+  mbSetObj$analSet$heat.taxalvl<-taxrank;
+  return(.set.mbSetObj(mbSetObj))
 }
 
 #'Function to get color palette for graphics.
 #'@description This function is called to create a color palette
 #'based on the number of groups. It returns a vector of color
 #'hex codes based on the number of groups.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-GetColorSchema <- function(microSetObj, grayscale=F){
+GetColorSchema <- function(mbSetObj, grayscale=F){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
     
   # test if total group number is over 9
-  claslbl <- as.factor(sample_data(microSetObj$dataSet$norm.phyobj)[[variable]]);
+  claslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   grp.num <- length(levels(claslbl));
 
   if(grayscale){
@@ -391,7 +391,7 @@ GetColorSchema <- function(microSetObj, grayscale=F){
     colors <- vector(mode="character", length=length(claslbl));
         
     for(i in 1:length(lvs)){
-      colors[microSetObj$analSet$cls == lvs[i]] <- dist.cols[i];
+      colors[mbSetObj$analSet$cls == lvs[i]] <- dist.cols[i];
     }
   }else if(grp.num > 9){
     pal12 = c("#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", "#FB9A99",
@@ -399,7 +399,7 @@ GetColorSchema <- function(microSetObj, grayscale=F){
               "#FFFF99", "#B15928");
     dist.cols <- grDevices::colorRampPalette(pal12)(grp.num);
     lvs <- levels(claslbl);
-    colors <- vector(mode="character", length=length(microSetObj$analSet$cls));
+    colors <- vector(mode="character", length=length(mbSetObj$analSet$cls));
 
     for(i in 1:length(lvs)){
       colors[claslbl == lvs[i]] <- dist.cols[i];

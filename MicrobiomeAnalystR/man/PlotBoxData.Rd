@@ -4,10 +4,10 @@
 \alias{PlotBoxData}
 \title{Function to create box plots of important features}
 \usage{
-PlotBoxData(microSetObj, boxplotName, feat, format = "png", dpi = 72)
+PlotBoxData(mbSetObj, boxplotName, feat, format = "png", dpi = 72)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions plots box plots of a selected feature.

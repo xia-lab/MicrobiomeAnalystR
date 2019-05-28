@@ -4,10 +4,10 @@
 \alias{ApplyAbundanceFilter}
 \title{Function to filter uploaded data}
 \usage{
-ApplyAbundanceFilter(microSetObj, filt.opt, count, smpl.perc)
+ApplyAbundanceFilter(mbSetObj, filt.opt, count, smpl.perc)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function filters data based on low counts in high percentage samples.

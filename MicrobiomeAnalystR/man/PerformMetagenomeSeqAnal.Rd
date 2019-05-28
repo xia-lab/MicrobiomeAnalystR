@@ -4,11 +4,11 @@
 \alias{PerformMetagenomeSeqAnal}
 \title{Main function to perform metagenome seq analysis}
 \usage{
-PerformMetagenomeSeqAnal(microSetObj, variable, p.lvl, datatype, shotgunid,
+PerformMetagenomeSeqAnal(mbSetObj, variable, p.lvl, datatype, shotgunid,
   taxrank, model)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions performs metagenome seq analysis on the microbiome data.

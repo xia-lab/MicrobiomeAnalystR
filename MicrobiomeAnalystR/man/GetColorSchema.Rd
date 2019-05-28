@@ -4,10 +4,10 @@
 \alias{GetColorSchema}
 \title{Function to get color palette for graphics.}
 \usage{
-GetColorSchema(microSetObj, grayscale = F)
+GetColorSchema(mbSetObj, grayscale = F)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function is called to create a color palette

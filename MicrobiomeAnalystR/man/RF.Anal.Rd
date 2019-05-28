@@ -4,11 +4,10 @@
 \alias{RF.Anal}
 \title{Performs Random Forest Analysis}
 \usage{
-RF.Anal(microSetObj, treeNum, tryNum, randomOn, variable, taxrank,
-  datatype)
+RF.Anal(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank, datatype)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions performs the random forest analysis.

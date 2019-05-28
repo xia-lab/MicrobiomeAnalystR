@@ -4,14 +4,14 @@
 \alias{ReadMothurData}
 \title{Function to read 16S data in mothur format}
 \usage{
-ReadMothurData(microSetObj, dataName, taxdataNm, taxa_type, module.type)
+ReadMothurData(mbSetObj, dataName, taxdataNm, taxa_type, module.type)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function reads in the 16S data from mothur format
-into the microSetObj.
+into the mbSetObj.
 }
 \author{
 Jeff Xia \email{jeff.xia@mcgill.ca}

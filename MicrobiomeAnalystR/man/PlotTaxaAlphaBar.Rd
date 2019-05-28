@@ -4,11 +4,11 @@
 \alias{PlotTaxaAlphaBar}
 \title{Function to plot bar charts for alpha diversity}
 \usage{
-PlotTaxaAlphaBar(microSetObj, barplotName, taxalvl, metadata, facet,
-  imgOpt, feat_cnt, colpalopt, calcmeth, format = "png", dpi = 72)
+PlotTaxaAlphaBar(mbSetObj, barplotName, taxalvl, metadata, facet, imgOpt,
+  feat_cnt, colpalopt, calcmeth, format = "png", dpi = 72)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions plots bar charts of different taxonomic levels

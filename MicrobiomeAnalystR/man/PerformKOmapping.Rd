@@ -4,10 +4,10 @@
 \alias{PerformKOmapping}
 \title{Function to perform KO mapping.}
 \usage{
-PerformKOmapping(microSetObj, geneIDs, type)
+PerformKOmapping(mbSetObj, geneIDs, type)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function performs KO mapping.

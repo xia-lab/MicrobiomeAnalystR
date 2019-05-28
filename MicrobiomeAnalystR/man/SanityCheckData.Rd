@@ -4,10 +4,10 @@
 \alias{SanityCheckData}
 \title{Main function to sanity check on uploaded data}
 \usage{
-SanityCheckData(microSetObj, datatype, filetype)
+SanityCheckData(mbSetObj, datatype, filetype)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function performs a sanity check on the uploaded

@@ -4,10 +4,10 @@
 \alias{CreateSDPRnwReport}
 \title{Function to create PDF report for SDP module}
 \usage{
-CreateSDPRnwReport(microSetObj, usrName)
+CreateSDPRnwReport(mbSetObj, usrName)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function creates a PDF report

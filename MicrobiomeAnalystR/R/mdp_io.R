@@ -5,32 +5,32 @@
 
 #'Main function to read 16S data
 #'@description This is the main function read in the 16S data
-#'into the microSetObj.
-#'@param microSetObj Input the name of the microSetObj.
+#'into the mbSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-#'@import phyloslimR
-Read16SAbundData <- function(microSetObj, dataName, type, taxalabel, taxa_type,
+#'@import phyloseq
+Read16SAbundData <- function(mbSetObj, dataName, type, taxalabel, taxa_type,
                              ismetafile, module.type) {
   
   if(.on.public.web){
     load_phyloslim();
   }
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(type=="text"){
     
     if(.on.public.web){
-      if(!Read16STabData(microSetObj, dataName, type, ismetafile)){
+      if(!Read16STabData(mbSetObj, dataName, type, ismetafile)){
         return(0);
       }
     }else{
       # offline
-      microSetObj <- Read16STabData(microSetObj, dataName, type, ismetafile)
-      if(!microSetObj$dataSet$read){
+      mbSetObj <- Read16STabData(mbSetObj, dataName, type, ismetafile)
+      if(!mbSetObj$dataSet$read){
         return(0);
       }
     }
@@ -38,23 +38,22 @@ Read16SAbundData <- function(microSetObj, dataName, type, taxalabel, taxa_type,
   }else if(type=="biom"){
     
     if(.on.public.web){
-      if(!Read16SBiomData(microSetObj, dataName, type, taxa_type, ismetafile)){
+      if(!Read16SBiomData(mbSetObj, dataName, type, taxa_type, ismetafile)){
         return(0);
       } 
     }else{
       # offline
-      microSetObj <- Read16SBiomData(microSetObj, dataName, type, taxa_type, ismetafile)
-      if(!microSetObj$dataSet$read){
+      mbSetObj <- Read16SBiomData(mbSetObj, dataName, type, taxa_type, ismetafile)
+      if(!mbSetObj$dataSet$read){
         return(0);
       }
     }
   }
   
-  #need to refetch microSetObj
-  microSetObj <- .get.microSet(microSetObj);
+  #need to refetch mbSetObj
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  data.orig <- microSetObj$dataSet$data.orig;
-  print(data.orig)
+  data.orig <- mbSetObj$dataSet$data.orig;
   
   if(mode(data.orig)=="character"){
     current.msg <<- paste("Errors in parsing your data as numerical - possible reason: comma as decimal separator?");
@@ -62,33 +61,33 @@ Read16SAbundData <- function(microSetObj, dataName, type, taxalabel, taxa_type,
   }
   
   #storing whole taxonomy label(used for PICRUST & Tax4Fun; reference data mapping)
-  microSetObj$dataSet$comp_taxnm <- rownames(data.orig);
+  mbSetObj$dataSet$comp_taxnm <- rownames(data.orig);
   current.msg <<- paste("A total of",ncol(data.orig) ,"samples and ", nrow(data.orig), "features or taxa are present.");
-  microSetObj$dataSet$read.msg <- current.msg;
-  microSetObj$dataSet$data.type <- type;
-  microSetObj$dataSet$taxa.type <- taxa_type;
-  microSetObj$dataSet$module.type <- module.type;
+  mbSetObj$dataSet$read.msg <- current.msg;
+  mbSetObj$dataSet$data.type <- type;
+  mbSetObj$dataSet$taxa.type <- taxa_type;
+  mbSetObj$dataSet$module.type <- module.type;
   
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
 #'Function to read 16S data
 #'@description This is the main function read in the 16S data in txt format
-#'into the microSetObj.
-#'@param microSetObj Input the name of the microSetObj.
+#'into the mbSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 
-Read16STabData <- function(microSetObj, dataName, type, ismetafile) {
+Read16STabData <- function(mbSetObj, dataName, type, ismetafile) {
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   msg <- NULL;
   mydata <- .readDataTable(dataName);
@@ -144,7 +143,7 @@ Read16STabData <- function(microSetObj, dataName, type, ismetafile) {
     sample_data <- as.data.frame(cls.lbls);
     names(sample_data) <- "CLASS";
     rownames(sample_data) <- smpl_nm <- colnames(mydata)[-1];
-    microSetObj$dataSet$sample_data <- sample_data; # set up sample_data
+    mbSetObj$dataSet$sample_data <- sample_data; # set up sample_data
     mydata<-mydata[-1, ];
   }
 
@@ -171,31 +170,31 @@ Read16STabData <- function(microSetObj, dataName, type, ismetafile) {
 
   msg <<- paste(msg, collapse="; ");
 
-  microSetObj$dataSet$name <- basename(dataName);
-  microSetObj$dataSet$smpl_nm <- smpl_nm;
-  microSetObj$dataSet$data.orig <- data.matrix(mydata);
+  mbSetObj$dataSet$name <- basename(dataName);
+  mbSetObj$dataSet$smpl_nm <- smpl_nm;
+  mbSetObj$dataSet$data.orig <- data.matrix(mydata);
   
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(TRUE);
   }else{
-    microSetObj$dataSet$read <- TRUE
-    return(.set.microSet(microSetObj))
+    mbSetObj$dataSet$read <- TRUE
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
 #'Function to read 16S data in biom format
 #'@description This function reads in the 16S data from biom format
-#'into the microSetObj.
-#'@param microSetObj Input the name of the microSetObj.
+#'into the mbSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-#'@import phyloslimR
-Read16SBiomData <- function(microSetObj, dataName, type, taxa_type, ismetadata){
+#'@import phyloseq
+Read16SBiomData <- function(mbSetObj, dataName, type, taxa_type, ismetadata){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
     load_phyloslim();
@@ -232,9 +231,9 @@ Read16SBiomData <- function(microSetObj, dataName, type, taxa_type, ismetadata){
   taxa_table<-as.matrix(taxa_table);
   msg <- c(msg, "Taxonomy file is detected.");
 
-  microSetObj$dataSet$name <- basename(dataName);
-  microSetObj$dataSet$data.orig <- otu.dat;
-  microSetObj$dataSet$taxa_table <- taxa_table;
+  mbSetObj$dataSet$name <- basename(dataName);
+  mbSetObj$dataSet$data.orig <- otu.dat;
+  mbSetObj$dataSet$taxa_table <- taxa_table;
     
   #sample data
   if(ismetadata=="T"){
@@ -247,36 +246,36 @@ Read16SBiomData <- function(microSetObj, dataName, type, taxa_type, ismetadata){
       return(FALSE);
     }
         
-    microSetObj$dataSet$sample_data <- as.data.frame(sample_data);
+    mbSetObj$dataSet$sample_data <- as.data.frame(sample_data);
     msg <- c(msg, "Metadata file is detected in your biom file.");
   }
     
   current.msg <<- paste(msg, collapse=". ");
-  microSetObj$dataSet$taxa.type <- taxa_type;
+  mbSetObj$dataSet$taxa.type <- taxa_type;
   
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(TRUE);
   }else{
-    microSetObj$dataSet$read <- TRUE
-    return(.set.microSet(microSetObj))
+    mbSetObj$dataSet$read <- TRUE
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
 #'Function to read 16S data in mothur format
 #'@description This function reads in the 16S data from mothur format
-#'into the microSetObj.
-#'@param microSetObj Input the name of the microSetObj.
+#'into the mbSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-#'@import phyloslimR
+#'@import phyloseq
 #'@import data.table
 
-ReadMothurData<-function(microSetObj, dataName, taxdataNm, taxa_type, module.type){
+ReadMothurData<-function(mbSetObj, dataName, taxdataNm, taxa_type, module.type){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
     load_phyloslim();
@@ -349,36 +348,36 @@ ReadMothurData<-function(microSetObj, dataName, taxdataNm, taxa_type, module.typ
   taxa_table <- taxa_table[indx,];
   rownames(taxa_table) <- rownames(mydata);
 
-  microSetObj$dataSet$name <- basename(dataName);
-  microSetObj$dataSet$data.orig <- mydata;
-  microSetObj$dataSet$taxa_table <- taxa_table;
-  microSetObj$dataSet$comp_taxnm <- comp_taxnm;
+  mbSetObj$dataSet$name <- basename(dataName);
+  mbSetObj$dataSet$data.orig <- mydata;
+  mbSetObj$dataSet$taxa_table <- taxa_table;
+  mbSetObj$dataSet$comp_taxnm <- comp_taxnm;
   msg <- c(msg,paste("A total of ",ncol(mydata) , " samples and ", nrow(mydata), "features were found."));
   current.msg <<- paste(msg, collapse="; ");
-  microSetObj$dataSet$read.msg <- current.msg;
-  microSetObj$dataSet$data.type <- "mothur";
-  microSetObj$dataSet$taxa.type <- taxa_type;
-  microSetObj$dataSet$module.type <- module.type;
+  mbSetObj$dataSet$read.msg <- current.msg;
+  mbSetObj$dataSet$data.type <- "mothur";
+  mbSetObj$dataSet$taxa.type <- taxa_type;
+  mbSetObj$dataSet$module.type <- module.type;
   
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
 #'Function to read 16S taxonomy table from txt format
 #'@description This function reads in the 16S taxonomy table from txt format
-#'into the microSetObj.
-#'@param microSetObj Input the name of the microSetObj.
+#'into the mbSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-Read16STaxaTable <- function(microSetObj, dataName) {
+Read16STaxaTable <- function(mbSetObj, dataName) {
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   msg <- NULL;
   mydata <- .readDataTable(dataName);
@@ -407,29 +406,29 @@ Read16STaxaTable <- function(microSetObj, dataName) {
   colnames(mydata) <- tax_rank;
   current.msg <<- paste("Taxonomy file has total of ",nrow(mydata),"features and",ncol(mydata), "taxonomic rank. Additional features which are not present in abundance table has been removed if present.");
     
-  microSetObj$dataSet$taxa_table <- mydata;
+  mbSetObj$dataSet$taxa_table <- mydata;
   
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
 #'Function to create a summary of a sample using a piechart at different tax level.
 #'@description This function creates a piechart summary of a sample at a specific
 #'taxonomic level. Used by PPD and MDP modules.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import reshape
-PlotSelectedSample <-function(microSetObj, imgNm, smplID, idtype, OtuIdType, rel_perct,
+PlotSelectedSample <-function(mbSetObj, imgNm, smplID, idtype, OtuIdType, rel_perct,
                               format="png", dpi=72){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
     load_reshape();
@@ -442,9 +441,9 @@ PlotSelectedSample <-function(microSetObj, imgNm, smplID, idtype, OtuIdType, rel
   }
 
   if(idtype=="16S"){
-    data <- microSetObj$dataSet$norm.phyobj;
-    microSetObj$dataSet$taxa_table <- tax_table(microSetObj$dataSet$proc.phyobj);
-    data <- merge_phyloslim(data, microSetObj$dataSet$taxa_table);
+    data <- mbSetObj$dataSet$norm.phyobj;
+    mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
+    data <- merge_phyloslim(data, mbSetObj$dataSet$taxa_table);
   }else{
     data <- userrefdata;
   }
@@ -493,16 +492,16 @@ PlotSelectedSample <-function(microSetObj, imgNm, smplID, idtype, OtuIdType, rel
   dev.off();
   
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
 #'Utility function to exract data for piechart.
 #'@description This function extracts necessary data to create a piechart.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)

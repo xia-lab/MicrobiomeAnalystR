@@ -4,10 +4,10 @@
 \alias{UpdateListInput}
 \title{Function to filter list data based on a minimum count}
 \usage{
-UpdateListInput(microSetObj, minL, maxL = Inf)
+UpdateListInput(mbSetObj, minL, maxL = Inf)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function filters the inputted list data

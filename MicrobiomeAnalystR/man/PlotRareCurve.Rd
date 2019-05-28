@@ -4,10 +4,10 @@
 \alias{PlotRareCurve}
 \title{Function to plot rarefraction curves}
 \usage{
-PlotRareCurve(microSetObj, graphName, variable)
+PlotRareCurve(mbSetObj, graphName, variable)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function plots rarefraction curves from the uploaded

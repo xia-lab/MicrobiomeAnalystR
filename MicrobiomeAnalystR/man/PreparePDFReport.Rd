@@ -4,10 +4,10 @@
 \alias{PreparePDFReport}
 \title{Function to create PDF report}
 \usage{
-PreparePDFReport(microSetObj, usrName)
+PreparePDFReport(mbSetObj, usrName)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function creates a PDF report.

@@ -4,11 +4,11 @@
 \alias{PreparePhylogeneticTreePlot}
 \title{Function to prepare data for phylogenetic tree.}
 \usage{
-PreparePhylogeneticTreePlot(microSetObj, color, shape, taxa, treeshape,
+PreparePhylogeneticTreePlot(mbSetObj, color, shape, taxa, treeshape,
   imgName, format = "png", dpi = 72)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions prepares the data to plot the phylogenetic tree.

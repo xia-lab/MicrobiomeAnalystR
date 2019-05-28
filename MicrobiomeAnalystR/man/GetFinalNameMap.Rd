@@ -4,10 +4,10 @@
 \alias{GetFinalNameMap}
 \title{Getter to return final map}
 \usage{
-GetFinalNameMap(microSetObj)
+GetFinalNameMap(mbSetObj)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function returns the final (after user selection) map as a dataframe.

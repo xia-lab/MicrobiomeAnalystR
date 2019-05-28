@@ -7,7 +7,7 @@
 PlotEnrichNet.Overview(hits, pvals)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function creates the plot

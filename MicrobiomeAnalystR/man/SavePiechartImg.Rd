@@ -4,11 +4,10 @@
 \alias{SavePiechartImg}
 \title{Function to save pie-chart}
 \usage{
-SavePiechartImg(microSetObj, taxalvl, pieName, format = "png",
-  dpi = 72)
+SavePiechartImg(mbSetObj, taxalvl, pieName, format = "png", dpi = 72)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions saves created pie chart plot.

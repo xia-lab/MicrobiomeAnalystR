@@ -4,11 +4,11 @@
 \alias{PlotRF.Classify}
 \title{Plot random forest classification}
 \usage{
-PlotRF.Classify(microSetObj, imgName, format = "png", dpi = 72,
+PlotRF.Classify(mbSetObj, imgName, format = "png", dpi = 72,
   width = NA)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions plots the classification of samples

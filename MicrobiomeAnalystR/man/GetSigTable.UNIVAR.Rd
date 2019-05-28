@@ -4,13 +4,13 @@
 \alias{GetSigTable.UNIVAR}
 \title{Getter function}
 \usage{
-GetSigTable.UNIVAR(microSetObj)
+GetSigTable.UNIVAR(mbSetObj)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
-This function retrieves table from microSetObj.
+This function retrieves table from mbSetObj.
 }
 \author{
 Jeff Xia \email{jeff.xia@mcgill.ca}

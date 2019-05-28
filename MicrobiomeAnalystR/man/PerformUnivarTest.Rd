@@ -4,11 +4,11 @@
 \alias{PerformUnivarTest}
 \title{Main function to perform univariate analysis.}
 \usage{
-PerformUnivarTest(microSetObj, variable, p.lvl, datatype, shotgunid,
-  taxrank, statOpt)
+PerformUnivarTest(mbSetObj, variable, p.lvl, datatype, shotgunid, taxrank,
+  statOpt)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions performs univariate analysis on the microbiome data.

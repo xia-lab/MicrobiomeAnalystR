@@ -12,16 +12,16 @@
 #'@description This function performs a sanity check on the uploaded
 #'user data. It checks the grouping of samples, if a phylogenetic tree
 #'was uploaded.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-SanityCheckData <- function(microSetObj, datatype, filetype){
+SanityCheckData <- function(mbSetObj, datatype, filetype){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  feat.sums <- apply(microSetObj$dataSet$data.orig, 1, function(x){sum(x>0, na.rm=T)});
+  feat.sums <- apply(mbSetObj$dataSet$data.orig, 1, function(x){sum(x>0, na.rm=T)});
   #gd.inx <- feat.sums > 0; # occur in at least 1 samples
   gd.inx <- feat.sums > 1; # occur in at least 2 samples
 
@@ -30,7 +30,7 @@ SanityCheckData <- function(microSetObj, datatype, filetype){
     return(0);
   }
 
-  data.proc <- microSetObj$dataSet$data.orig[gd.inx, ]; 
+  data.proc <- mbSetObj$dataSet$data.orig[gd.inx, ]; 
   # filtering the constant features here
   # check for columns with all constant (var=0)
   varCol <- apply(data.proc, 1, var, na.rm=T);
@@ -48,37 +48,37 @@ SanityCheckData <- function(microSetObj, datatype, filetype){
   saveRDS(data.proc, file="data.prefilt"); # save an copy
 
   # now get stats
-  taxa_no <- nrow(microSetObj$dataSet$data.orig);
+  taxa_no <- nrow(mbSetObj$dataSet$data.orig);
 
   # from abundance table
-  sample_no <- ncol(microSetObj$dataSet$data.orig);
+  sample_no <- ncol(mbSetObj$dataSet$data.orig);
    
   if(filetype=="biom"||filetype=="mothur"){
-    samplemeta_no <- nrow(microSetObj$dataSet$sample_data);
+    samplemeta_no <- nrow(mbSetObj$dataSet$sample_data);
   }else{
     samplemeta_no <- sample_no;
   }
 
   if(datatype!="16S_ref"){
-    microSetObj$dataSet$sample_data <- microSetObj$dataSet$sample_data[sapply(microSetObj$dataSet$sample_data, function(col) length(unique(col))) > 1];
+    mbSetObj$dataSet$sample_data <- mbSetObj$dataSet$sample_data[sapply(mbSetObj$dataSet$sample_data, function(col) length(unique(col))) > 1];
   }
 
-  if(ncol(microSetObj$dataSet$sample_data)==0){
+  if(ncol(mbSetObj$dataSet$sample_data)==0){
     current.msg <<-"No sample variable have more than one group. Please provide variables with at least two groups.";
     return(0);
   }
 
   #converting all sample variables to factor type
-  character_vars <- sapply(microSetObj$dataSet$sample_data, is.character);
+  character_vars <- sapply(mbSetObj$dataSet$sample_data, is.character);
    
   if(any(character_vars)=="TRUE"){
-    microSetObj$dataSet$sample_data[, character_vars] <- sapply(microSetObj$dataSet$sample_data[, character_vars], as.factor);
+    mbSetObj$dataSet$sample_data[, character_vars] <- sapply(mbSetObj$dataSet$sample_data[, character_vars], as.factor);
   }
 
-  num_vars <- sapply(microSetObj$dataSet$sample_data, is.numeric);
+  num_vars <- sapply(mbSetObj$dataSet$sample_data, is.numeric);
    
   if(any(num_vars)=="TRUE"){
-    microSetObj$dataSet$sample_data[, num_vars] <- sapply(microSetObj$dataSet$sample_data[, num_vars],as.factor);
+    mbSetObj$dataSet$sample_data[, num_vars] <- sapply(mbSetObj$dataSet$sample_data[, num_vars],as.factor);
   }
 
   if(file.exists("tree.RDS")){
@@ -87,7 +87,7 @@ SanityCheckData <- function(microSetObj, datatype, filetype){
     tree_exist <- 0
   }
 
-   if(identical(sort(row.names(microSetObj$dataSet$sample_data)),
+   if(identical(sort(row.names(mbSetObj$dataSet$sample_data)),
                sort(colnames(data.proc)))){
     samname_same <- 1;
   } else {
@@ -95,16 +95,16 @@ SanityCheckData <- function(microSetObj, datatype, filetype){
   }
    
   sample_no_in_outfile <- ncol(data.proc);
-  samname_same_number <- sum(row.names(microSetObj$dataSet$sample_data) %in% colnames(data.proc));
+  samname_same_number <- sum(row.names(mbSetObj$dataSet$sample_data) %in% colnames(data.proc));
 
   # now store data.orig to RDS
-  saveRDS(microSetObj$dataSet$data.orig, file="data.orig");
+  saveRDS(mbSetObj$dataSet$data.orig, file="data.orig");
   saveRDS(data.proc, file="data.proc");
-  saveRDS(microSetObj$dataSet$sample_data, file = "data.sample_data")
-  microSetObj$dataSet$data.orig <- NULL;
-  microSetObj$dataSet$tree <- tree_exist
+  saveRDS(mbSetObj$dataSet$sample_data, file = "data.sample_data")
+  mbSetObj$dataSet$data.orig <- NULL;
+  mbSetObj$dataSet$tree <- tree_exist
 
-  vari_no <- ncol(microSetObj$dataSet$sample_data);
+  vari_no <- ncol(mbSetObj$dataSet$sample_data);
   smpl.sums <- apply(data.proc, 2, sum);
   tot_size <- sum(smpl.sums);
   smin <- min(smpl.sums)
@@ -113,26 +113,26 @@ SanityCheckData <- function(microSetObj, datatype, filetype){
   gd_feat <- nrow(data.proc);
   
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(c(1,taxa_no,sample_no,vari_no,smin,smean,smax,gd_feat,samplemeta_no,tot_size, tree_exist, samname_same, samname_same_number, sample_no_in_outfile));
   }else{
     print("Sanity check passed!")
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
 #'Function to filter uploaded data
 #'@description This function filters data based on low counts in high percentage samples.
 #'Note, first is abundance, followed by variance.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 
-ApplyAbundanceFilter <- function(microSetObj, filt.opt, count, smpl.perc){
+ApplyAbundanceFilter <- function(mbSetObj, filt.opt, count, smpl.perc){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
 
   data <- readRDS("data.prefilt");
   msg <- NULL;
@@ -156,32 +156,32 @@ ApplyAbundanceFilter <- function(microSetObj, filt.opt, count, smpl.perc){
     }
   }
   
-  microSetObj$dataSet$filt.data <- data[kept.inx, ];
-  saveRDS(microSetObj$dataSet$filt.data, file="filt.data.orig"); # save an copy
+  mbSetObj$dataSet$filt.data <- data[kept.inx, ];
+  saveRDS(mbSetObj$dataSet$filt.data, file="filt.data.orig"); # save an copy
   current.msg <<- paste("A total of ", sum(!kept.inx), " low abundance features were removed based on ", filt.opt, ".", sep="");
   
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
 #'Function to filter uploaded data
 #'@description This function filters data based on low abundace or variance.
 #'Note, this is applied after abundance filter.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 
-ApplyVarianceFilter <- function(microSetObj, filtopt, filtPerct){
+ApplyVarianceFilter <- function(mbSetObj, filtopt, filtPerct){
 
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  data <- microSetObj$dataSet$filt.data;
+  data <- mbSetObj$dataSet$filt.data;
   msg <- NULL;
 
   rmn_feat <- nrow(data);
@@ -210,32 +210,32 @@ ApplyVarianceFilter <- function(microSetObj, filtopt, filtPerct){
   }
 
   data <- data[remain,];
-  microSetObj$dataSet$filt.data <- data;
-  saveRDS(microSetObj$dataSet$filt.data, file="filt.data.orig"); # save an copy
+  mbSetObj$dataSet$filt.data <- data;
+  saveRDS(mbSetObj$dataSet$filt.data, file="filt.data.orig"); # save an copy
   rm.msg1 <- paste("A total of ", sum(!remain), " low variance features were removed based on ", filtopt, ".", sep="");
   rm.msg2 <- paste("The number of features remains after the data filtering step:", nrow(data));
   current.msg <<- paste(c(current.msg, rm.msg1, rm.msg2), collapse=" ");
-  microSetObj$dataSet$filt.msg <- current.msg;
+  mbSetObj$dataSet$filt.msg <- current.msg;
   
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
 #'Function to update samples
 #'@description This function prunes samples to be included 
 #'for downstream analysis.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-UpdateSampleItems <- function(microSetObj){
+UpdateSampleItems <- function(mbSetObj){
 
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(!exists("smpl.nm.vec")){
     current.msg <<- "Cannot find the current sample names!";
@@ -260,51 +260,51 @@ UpdateSampleItems <- function(microSetObj){
   #getting unmatched sample names
   unmhit.indx <- which(hit.inx==FALSE);
   allnm <- colnames(data.proc.orig);
-  microSetObj$dataSet$remsam <- allnm[unmhit.indx];
+  mbSetObj$dataSet$remsam <- allnm[unmhit.indx];
 
-  microSetObj$dataSet$proc.phyobj <- prune_samples(colnames(prefilt.data),proc.phyobj.orig);
+  mbSetObj$dataSet$proc.phyobj <- prune_samples(colnames(prefilt.data),proc.phyobj.orig);
   saveRDS(prefilt.data, file="data.prefilt")
   current.msg <<- "Successfully updated the sample items!";
 
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
 #'Function to perform normalization
 #'@description This function performs normalization on the uploaded
 #'data.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import edgeR
 #'@import metagenomeSeq
-PerformNormalization <- function(microSetObj, rare.opt, scale.opt, transform.opt){
+PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt){
 
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   data <- readRDS("filt.data.orig");
   tax_nm <- rownames(data);
   msg <- NULL;
 
   if(rare.opt != "none"){
-    data <- PerformRarefaction(microSetObj, data, rare.opt);
+    data <- PerformRarefaction(mbSetObj, data, rare.opt);
     tax_nm <- rownames(data);
     msg <- c(msg, paste("Performed data rarefaction."));
 
     ###### note, rarefying (should?) affect filt.data in addition to norm
-    microSetObj$dataSet$filt.data <- data;
+    mbSetObj$dataSet$filt.data <- data;
   }else{
     msg <- c(msg, paste("No data rarefaction was performed."));
   }
 
-  saveRDS(microSetObj$dataSet$proc.phyobj, file="orig.phyobj"); # save original phylo.obj
+  saveRDS(mbSetObj$dataSet$proc.phyobj, file="orig.phyobj"); # save original phylo.obj
   # now proc.phyobj is now filtered data
-  microSetObj$dataSet$proc.phyobj <- merge_phyloslim(otu_table(data,taxa_are_rows =TRUE), microSetObj$dataSet$sample_data, microSetObj$dataSet$taxa_table);
+  mbSetObj$dataSet$proc.phyobj <- merge_phyloslim(otu_table(data,taxa_are_rows =TRUE), mbSetObj$dataSet$sample_data, mbSetObj$dataSet$taxa_table);
 
   if(scale.opt != "none"){
     if(scale.opt=="colsum"){
@@ -366,35 +366,35 @@ PerformNormalization <- function(microSetObj, rare.opt, scale.opt, transform.opt
   # create phyloseq obj
   #after rarefaction the OTU sequences changes automatically
   #random_tree <- phy_tree(createRandomTree(ntaxa(otu.tab),rooted=TRUE,tip.label=taxa_names(otu.tab)));
-  microSetObj$dataSet$sample_data$sample_id <- rownames(microSetObj$dataSet$sample_data);
-  sample_table <- sample_data(microSetObj$dataSet$sample_data, errorIfNULL=TRUE);
+  mbSetObj$dataSet$sample_data$sample_id <- rownames(mbSetObj$dataSet$sample_data);
+  sample_table <- sample_data(mbSetObj$dataSet$sample_data, errorIfNULL=TRUE);
   #phy.obj <- merge_phyloseq(otu.tab,sample_table,random_tree);
   phy.obj <- merge_phyloslim(otu.tab, sample_table);
 
   #using this object for plotting
-  microSetObj$dataSet$norm.phyobj <- phy.obj;
+  mbSetObj$dataSet$norm.phyobj <- phy.obj;
   current.msg <<- paste(msg, collapse=" ");
-  microSetObj$dataSet$norm.msg <- current.msg;
+  mbSetObj$dataSet$norm.msg <- current.msg;
 
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
 #'Utility function to perform rarefraction (used by PerformNormalization)
 #'@description This function performs rarefraction on the uploaded
 #'data.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PerformRarefaction <- function(microSetObj, data, rare.opt){
+PerformRarefaction <- function(mbSetObj, data, rare.opt){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   data <- data.matrix(data);
   tax_nm<-rownames(data);
@@ -407,8 +407,8 @@ PerformRarefaction <- function(microSetObj, data, rare.opt){
   taxa_names(otu.tab)<-tax_nm;
 
   #random_tree<-phy_tree(createRandomTree(ntaxa(otu.tab),rooted=TRUE,tip.label=tax_nm));
-  microSetObj$dataSet$sample_data$sample_id<-rownames(microSetObj$dataSet$sample_data);
-  sample_table<-sample_data(microSetObj$dataSet$sample_data, errorIfNULL=TRUE);
+  mbSetObj$dataSet$sample_data$sample_id<-rownames(mbSetObj$dataSet$sample_data);
+  sample_table<-sample_data(mbSetObj$dataSet$sample_data, errorIfNULL=TRUE);
   #phy.obj<-merge_phyloslim(otu.tab,sample_table,random_tree);
   phy.obj<-merge_phyloslim(otu.tab,sample_table);
   msg<-NULL;
@@ -431,23 +431,23 @@ PerformRarefaction <- function(microSetObj, data, rare.opt){
 #'Function to plot rarefraction curves
 #'@description This function plots rarefraction curves from the uploaded
 #'data for both sample-wise or group-wise
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import vegan
 
-PlotRareCurve <- function(microSetObj, graphName, variable){
+PlotRareCurve <- function(mbSetObj, graphName, variable){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   set.seed(13789);
   
   if(.on.public.web){
     load_vegan();
   }
 
-  data <- data.matrix(microSetObj$dataSet$filt.data);
+  data <- data.matrix(mbSetObj$dataSet$filt.data);
   rarefaction_curve_data<-as.matrix(otu_table(data));
 
   Cairo::Cairo(file=graphName, width=900, height=480, type="png", bg="white");
@@ -504,21 +504,21 @@ PlotRareCurve <- function(microSetObj, graphName, variable){
   legend("bottomright",grp.lvls,lty = rep(1,grp.num),col = dist.cols);
 
   dev.off();
-  return(.set.microSet(microSetObj))
+  return(.set.mbSetObj(mbSetObj))
 }
 
 #'Function to plot library size 
 #'@description This function creates a plot summarizing the library
 #'size of microbiome dataset.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 
-PlotLibSizeView <- function(microSetObj, imgName, format="png", dpi=72){
+PlotLibSizeView <- function(mbSetObj, imgName, format="png", dpi=72){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   data.proc <- readRDS("data.proc");
   data_bef <- data.matrix(data.proc);
@@ -532,7 +532,7 @@ PlotLibSizeView <- function(microSetObj, imgName, format="png", dpi=72){
 
   myH <- ncol(data_bef)*25 + 50;
   imgName = paste(imgName,".", format, sep="");
-  microSetObj$imgSet$lib.size<-imgName;
+  mbSetObj$imgSet$lib.size<-imgName;
   Cairo::Cairo(file=imgName, width=580, height=myH, type=format, bg="white",dpi=dpi);
   xlim.ext <- GetExtendRange(smpl.sums, 10);
   par(mar=c(4,7,2,2));
@@ -541,7 +541,7 @@ PlotLibSizeView <- function(microSetObj, imgName, format="png", dpi=72){
   text(x=smpl.sums,y=1:length(smpl.sums),labels= round(smpl.sums), col="blue", pos=4, xpd=T);
   dev.off();
   
-  return(.set.microSet(microSetObj))
+  return(.set.mbSetObj(mbSetObj))
 }
 
 ################################################
@@ -550,15 +550,15 @@ PlotLibSizeView <- function(microSetObj, imgName, format="png", dpi=72){
 
 #'Function to recreate phyloseq object
 #'@description This function recreates the phyloseq object.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-#'@import phyloslimR
-CreatePhyloseqObj<-function(microSetObj, type, taxa_type, taxalabel, ismetafile){
+#'@import phyloseq
+CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel, ismetafile){
 
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
     load_phyloslim();
@@ -603,14 +603,14 @@ CreatePhyloseqObj<-function(microSetObj, type, taxa_type, taxalabel, ismetafile)
       # if features names are present in specific taxonomy format (greengenes or silva).
         if(taxalabel=="T"){
           feat_nm <- rownames(data.proc);
-          microSetObj$dataSet$feat_nm <- feat_nm;
+          mbSetObj$dataSet$feat_nm <- feat_nm;
 
             if(taxa_type=="SILVA"){
               
               if(.on.public.web){
                 load_splitstackshape();
               }
-              feat_nm<-data.frame(microSetObj$dataSet$feat_nm);
+              feat_nm<-data.frame(mbSetObj$dataSet$feat_nm);
               names(feat_nm)<-"Rank";
               taxonomy<-cSplit(feat_nm,"Rank",";");
               taxmat= data.frame(matrix(NA, ncol = 7, nrow = nrow(taxonomy)));
@@ -647,7 +647,7 @@ CreatePhyloseqObj<-function(microSetObj, type, taxa_type, taxalabel, ismetafile)
                 load_splitstackshape();
               }                  
               
-              feat_nm<-data.frame(microSetObj$dataSet$feat_nm);
+              feat_nm<-data.frame(mbSetObj$dataSet$feat_nm);
               names(feat_nm)<-"Rank";
               taxonomy<-cSplit(feat_nm,"Rank",";");
               taxmat= data.frame(matrix(NA, ncol = 7, nrow = nrow(taxonomy)));
@@ -685,10 +685,10 @@ CreatePhyloseqObj<-function(microSetObj, type, taxa_type, taxalabel, ismetafile)
           mynames <- make.unique(gd.nms, sep="_");
           taxa_names(taxa_table)<-mynames;
           feat_nm<-NULL;
-          microSetObj$dataSet$taxa_table<-taxa_table;
+          mbSetObj$dataSet$taxa_table<-taxa_table;
         }else{
           #sanity check: features name of taxonomy table should match feature names in OTU abundance table,Only features in filtered OTU tables are selected additional are removed.
-          taxa_table <- microSetObj$dataSet$taxa_table;
+          taxa_table <- mbSetObj$dataSet$taxa_table;
           indx<-match(rownames(data.proc), rownames(taxa_table));
 
           if(all(is.na(indx))){
@@ -700,52 +700,52 @@ CreatePhyloseqObj<-function(microSetObj, type, taxa_type, taxalabel, ismetafile)
           taxa_table<-as.matrix(taxa_table[indx,]);
           colnames(taxa_table)<-nm;
           #converting taxonomy file(data frame) to phyloseq taxonomy object;keeping the taxonomy names as it is.
-          microSetObj$dataSet$taxa_table<-tax_table(taxa_table);
-          taxa_names(microSetObj$dataSet$taxa_table)<-rownames(taxa_table);
+          mbSetObj$dataSet$taxa_table<-tax_table(taxa_table);
+          taxa_names(mbSetObj$dataSet$taxa_table)<-rownames(taxa_table);
         }
             
       # creating phyloseq object
       data.proc<-apply(data.proc,2,as.integer);
       data.proc<-otu_table(data.proc,taxa_are_rows =TRUE);
-      taxa_names(data.proc)<-taxa_names(microSetObj$dataSet$taxa_table);
+      taxa_names(data.proc)<-taxa_names(mbSetObj$dataSet$taxa_table);
       # removing constant column and making standard names
-      ind<-apply(microSetObj$dataSet$taxa_table[,1], 2, function(x) which(x %in% c("Root", "root")));
+      ind<-apply(mbSetObj$dataSet$taxa_table[,1], 2, function(x) which(x %in% c("Root", "root")));
             
       if(length(ind)>0){
-        microSetObj$dataSet$taxa_table<-microSetObj$dataSet$taxa_table[,-1];
+        mbSetObj$dataSet$taxa_table<-mbSetObj$dataSet$taxa_table[,-1];
         #dataSet$taxa_table<-dataSet$taxa_table #newnew
       }
       
       # removing first KINGDOM OR DOMAIN column
-      indx<-apply(microSetObj$dataSet$taxa_table[,1], 2, function(x) which(x %in% c("Bacteria","Archaea","k__Bacteria","k__Archea", "D_0__Bacteria","D_0__Archea")));
+      indx<-apply(mbSetObj$dataSet$taxa_table[,1], 2, function(x) which(x %in% c("Bacteria","Archaea","k__Bacteria","k__Archea", "D_0__Bacteria","D_0__Archea")));
       # error thrown here - taxa_type = others/not specific
 
       if(length(indx)>0){
-        microSetObj$dataSet$taxa_table<-microSetObj$dataSet$taxa_table[,-1];
+        mbSetObj$dataSet$taxa_table<-mbSetObj$dataSet$taxa_table[,-1];
         #dataSet$taxa_table<-dataSet$taxa_table #newnew
       }
 
-      colnames(microSetObj$dataSet$taxa_table)<-classi.lvl[1:ncol(microSetObj$dataSet$taxa_table)];
+      colnames(mbSetObj$dataSet$taxa_table)<-classi.lvl[1:ncol(mbSetObj$dataSet$taxa_table)];
       #sanity check: no of sample of both abundance and metadata should match.
-      indx<-match(colnames(data.proc), rownames(microSetObj$dataSet$sample_data));
+      indx<-match(colnames(data.proc), rownames(mbSetObj$dataSet$sample_data));
                 
       if(all(is.na(indx))){
         current.msg <<-"Please make sure that sample names and their number are same in metadata and OTU abundance files.";
         return(0);
       }else{
-        microSetObj$dataSet$sample_data<-microSetObj$dataSet$sample_data[indx, ,drop=FALSE];
+        mbSetObj$dataSet$sample_data<-mbSetObj$dataSet$sample_data[indx, ,drop=FALSE];
       }
             
-      microSetObj$dataSet$sample_data<-sample_data(microSetObj$dataSet$sample_data, errorIfNULL=TRUE);
+      mbSetObj$dataSet$sample_data<-sample_data(mbSetObj$dataSet$sample_data, errorIfNULL=TRUE);
       #cleaning up the names#deleting [] if present; and substituting (space,.,/ with underscore(_))
-      microSetObj$dataSet$taxa_table<- gsub("[[:space:]./_-]", "_",microSetObj$dataSet$taxa_table);
-      microSetObj$dataSet$taxa_table<- gsub("\\[|\\]","",microSetObj$dataSet$taxa_table);
+      mbSetObj$dataSet$taxa_table<- gsub("[[:space:]./_-]", "_",mbSetObj$dataSet$taxa_table);
+      mbSetObj$dataSet$taxa_table<- gsub("\\[|\\]","",mbSetObj$dataSet$taxa_table);
 
       #sometimes after removal of such special characters rownames beacame non unique; so make it unique
-      mynames1<- gsub("[[:space:]./_-]", "_",taxa_names(microSetObj$dataSet$taxa_table));
+      mynames1<- gsub("[[:space:]./_-]", "_",taxa_names(mbSetObj$dataSet$taxa_table));
       mynames1<-gsub("\\[|\\]","",mynames1);
             
-      if(length(unique(mynames1))< length(taxa_names(microSetObj$dataSet$taxa_table))){
+      if(length(unique(mynames1))< length(taxa_names(mbSetObj$dataSet$taxa_table))){
         mynames1 <- make.unique(mynames1, sep="_");
       }
 
@@ -756,66 +756,66 @@ CreatePhyloseqObj<-function(microSetObj, type, taxa_type, taxalabel, ismetafile)
       data.proc<-otu_table(data.proc,taxa_are_rows =TRUE);
       taxa_names(data.proc)<-feat_nm;
       #sanity check: features name of taxonomy table should match feature names in OTU abundance table,Only features in filtered OTU tables are selected additional are removed.
-      indx<-match(taxa_names(data.proc),taxa_names(microSetObj$dataSet$taxa_table));
+      indx<-match(taxa_names(data.proc),taxa_names(mbSetObj$dataSet$taxa_table));
             
       if(all(is.na(indx))){
         current.msg <<-"Please make sure that features name of the taxonomy table match the feature names in the OTU abundance table.";
         return(0);
       }
       
-      microSetObj$dataSet$taxa_table<-microSetObj$dataSet$taxa_table[indx,];
+      mbSetObj$dataSet$taxa_table<-mbSetObj$dataSet$taxa_table[indx,];
             
       # removing constant column (root) if present otherwise just kingdom column from taxonomy table
-      ind<-apply(microSetObj$dataSet$taxa_table[,1], 2, function(x) which(x %in% c("Root", "root")));
+      ind<-apply(mbSetObj$dataSet$taxa_table[,1], 2, function(x) which(x %in% c("Root", "root")));
             
       if(length(ind)>0){
-        microSetObj$dataSet$taxa_table<-microSetObj$dataSet$taxa_table[,-1];
+        mbSetObj$dataSet$taxa_table<-mbSetObj$dataSet$taxa_table[,-1];
         #dataSet$taxa_table<-dataSet$taxa_table #newnew
       }
             
       #removing first KINGDOM OR DOMAIN column
-      indx<-apply(microSetObj$dataSet$taxa_table[,1], 2, function(x) which(x %in% c("Bacteria","Archaea","k__Bacteria","k__Archea")));
+      indx<-apply(mbSetObj$dataSet$taxa_table[,1], 2, function(x) which(x %in% c("Bacteria","Archaea","k__Bacteria","k__Archea")));
             
       if(length(indx)>0){
-        microSetObj$dataSet$taxa_table<-microSetObj$dataSet$taxa_table[,-1];
+        mbSetObj$dataSet$taxa_table<-mbSetObj$dataSet$taxa_table[,-1];
         #dataSet$taxa_table<-dataSet$taxa_table #newnew
       }
 
-      colnames(microSetObj$dataSet$taxa_table)<-classi.lvl[1:ncol(microSetObj$dataSet$taxa_table)];
+      colnames(mbSetObj$dataSet$taxa_table)<-classi.lvl[1:ncol(mbSetObj$dataSet$taxa_table)];
       #sanity check: no of sample of both abundance and metadata should match.
-      indx<-match(colnames(data.proc), rownames(microSetObj$dataSet$sample_data));
+      indx<-match(colnames(data.proc), rownames(mbSetObj$dataSet$sample_data));
             
       if(all(is.na(indx))){
         current.msg <<-"Please make sure that sample names and their number are the same in metadata and OTU abundance files.";
         return(0);
       }else{
-        microSetObj$dataSet$sample_data<-microSetObj$dataSet$sample_data[indx, ,drop=FALSE];
+        mbSetObj$dataSet$sample_data<-mbSetObj$dataSet$sample_data[indx, ,drop=FALSE];
       }
 
       #cleaning up the names#deleting [] if present; and substituting (space,.,/ with underscore(_))
-      microSetObj$dataSet$taxa_table <- gsub("[[:space:]./_-]", "_",microSetObj$dataSet$taxa_table);
-      microSetObj$dataSet$taxa_table<- gsub("\\[|\\]","",microSetObj$dataSet$taxa_table);
+      mbSetObj$dataSet$taxa_table <- gsub("[[:space:]./_-]", "_",mbSetObj$dataSet$taxa_table);
+      mbSetObj$dataSet$taxa_table<- gsub("\\[|\\]","",mbSetObj$dataSet$taxa_table);
 
       #sometimes after removal of such special characters rownames beacame non unique; so make it unique
-      mynames1 <- gsub("[[:space:]./_-]", "_",taxa_names(microSetObj$dataSet$taxa_table));
+      mynames1 <- gsub("[[:space:]./_-]", "_",taxa_names(mbSetObj$dataSet$taxa_table));
       mynames1<-gsub("\\[|\\]","",mynames1);
             
-      if(length(unique(mynames1))< length(taxa_names(microSetObj$dataSet$taxa_table))){
+      if(length(unique(mynames1))< length(taxa_names(mbSetObj$dataSet$taxa_table))){
         mynames1 <- make.unique(mynames1, sep="_");
       }
     }
         
-    taxa_names(microSetObj$dataSet$taxa_table)<-taxa_names(data.proc)<-mynames1;
-    microSetObj$dataSet$sample_data<-sample_data(microSetObj$dataSet$sample_data, errorIfNULL = TRUE);
-    microSetObj$dataSet$proc.phyobj <- merge_phyloslim(data.proc, microSetObj$dataSet$sample_data, microSetObj$dataSet$taxa_table);
+    taxa_names(mbSetObj$dataSet$taxa_table)<-taxa_names(data.proc)<-mynames1;
+    mbSetObj$dataSet$sample_data<-sample_data(mbSetObj$dataSet$sample_data, errorIfNULL = TRUE);
+    mbSetObj$dataSet$proc.phyobj <- merge_phyloslim(data.proc, mbSetObj$dataSet$sample_data, mbSetObj$dataSet$taxa_table);
 
-    if(length(rank_names(microSetObj$dataSet$proc.phyobj)) > 7){
-      tax_table(microSetObj$dataSet$proc.phyobj) <- tax_table(microSetObj$dataSet$proc.phyobj)[, 1:7]
+    if(length(rank_names(mbSetObj$dataSet$proc.phyobj)) > 7){
+      tax_table(mbSetObj$dataSet$proc.phyobj) <- tax_table(mbSetObj$dataSet$proc.phyobj)[, 1:7]
     }
 
     #also using unique names for our further data
     prefilt.data <- readRDS("data.prefilt");
-    rownames(prefilt.data)<-taxa_names(microSetObj$dataSet$taxa_table);
+    rownames(prefilt.data)<-taxa_names(mbSetObj$dataSet$taxa_table);
     saveRDS(prefilt.data, file="data.prefilt")
   }else if(anal.type == "shotgun"){
     #constructing phyloseq object for aplha diversity.
@@ -823,26 +823,26 @@ CreatePhyloseqObj<-function(microSetObj, type, taxa_type, taxalabel, ismetafile)
     taxa_names(data.proc)<-rownames(data.proc);
         
     #sanity check: sample names of both abundance and metadata should match.
-    smpl_var<-colnames(microSetObj$dataSet$sample_data);
-    indx<-match(colnames(data.proc), rownames(microSetObj$dataSet$sample_data));
+    smpl_var<-colnames(mbSetObj$dataSet$sample_data);
+    indx<-match(colnames(data.proc), rownames(mbSetObj$dataSet$sample_data));
         
     if(all(is.na(indx))){
       current.msg <<-"Please make sure that sample names are matched between both files.";
       return(0);
     }
-    microSetObj$dataSet$sample_data<-sample_data(microSetObj$dataSet$sample_data, errorIfNULL=TRUE);
-    microSetObj$dataSet$proc.phyobj <- merge_phyloslim(data.proc, microSetObj$dataSet$sample_data);
+    mbSetObj$dataSet$sample_data<-sample_data(mbSetObj$dataSet$sample_data, errorIfNULL=TRUE);
+    mbSetObj$dataSet$proc.phyobj <- merge_phyloslim(data.proc, mbSetObj$dataSet$sample_data);
   }
 
-  saveRDS(microSetObj$dataSet$proc.phyobj, file="proc.phyobj.orig");
+  saveRDS(mbSetObj$dataSet$proc.phyobj, file="proc.phyobj.orig");
   #do some data cleaning
-  microSetObj$dataSet$data.prefilt <- NULL;
+  mbSetObj$dataSet$data.prefilt <- NULL;
 
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
@@ -884,17 +884,17 @@ GetGroupNames<-function(){
   return(colnames(prefilt.data));
 }
 
-GetSampleNamesaftNorm<-function(microSetObj){
-  microSetObj <- .get.microSet(microSetObj);
-  return(sample_names(microSetObj$dataSet$norm.phyobj));
+GetSampleNamesaftNorm<-function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  return(sample_names(mbSetObj$dataSet$norm.phyobj));
 }
 
-GetRemFeatNames<-function(microSetObj){
-  microSetObj <- .get.microSet(microSetObj);
-  return(microSetObj$dataSet$remfeat);
+GetRemFeatNames<-function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  return(mbSetObj$dataSet$remfeat);
 }
 
-GetRemSamplNames<-function(microSetObj){
-  microSetObj <- .get.microSet(microSetObj);
-  return(microSetObj$dataSet$remsam);
+GetRemSamplNames<-function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  return(mbSetObj$dataSet$remsam);
 }

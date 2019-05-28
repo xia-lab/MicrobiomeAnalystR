@@ -4,15 +4,15 @@
 \alias{Read16SAbundData}
 \title{Main function to read 16S data}
 \usage{
-Read16SAbundData(microSetObj, dataName, type, taxalabel, taxa_type,
+Read16SAbundData(mbSetObj, dataName, type, taxalabel, taxa_type,
   ismetafile, module.type)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This is the main function read in the 16S data
-into the microSetObj.
+into the mbSetObj.
 }
 \author{
 Jeff Xia \email{jeff.xia@mcgill.ca}

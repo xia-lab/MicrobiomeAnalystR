@@ -4,14 +4,14 @@
 \alias{Perform16FunAnot}
 \title{Main function to perform 16S functional annotation}
 \usage{
-Perform16FunAnot(microSetObj, type, pipeline)
+Perform16FunAnot(mbSetObj, type, pipeline)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This is the main function to perform either PICRUSt or
-SILVA for functional annotation on the microSetObj.
+SILVA for functional annotation on the mbSetObj.
 }
 \author{
 Jeff Xia \email{jeff.xia@mcgill.ca}

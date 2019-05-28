@@ -4,11 +4,11 @@
 \alias{PlotGroupPieGraph}
 \title{Main function to plot pie graphs of microbiome data.}
 \usage{
-PlotGroupPieGraph(microSetObj, taxalvl, metadata, clslevel, feat_cnt,
+PlotGroupPieGraph(mbSetObj, taxalvl, metadata, clslevel, feat_cnt,
   calcmeth)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions plots pie graphs of microbiome data.

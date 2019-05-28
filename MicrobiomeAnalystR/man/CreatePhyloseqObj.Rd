@@ -4,10 +4,10 @@
 \alias{CreatePhyloseqObj}
 \title{Function to recreate phyloseq object}
 \usage{
-CreatePhyloseqObj(microSetObj, type, taxa_type, taxalabel, ismetafile)
+CreatePhyloseqObj(mbSetObj, type, taxa_type, taxalabel, ismetafile)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function recreates the phyloseq object.

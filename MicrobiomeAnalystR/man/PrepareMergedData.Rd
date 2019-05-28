@@ -4,10 +4,10 @@
 \alias{PrepareMergedData}
 \title{Function to merge user data with public data.}
 \usage{
-PrepareMergedData(microSetObj, metadata, keepfeat)
+PrepareMergedData(mbSetObj, metadata, keepfeat)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function is used to merge microbiome data.

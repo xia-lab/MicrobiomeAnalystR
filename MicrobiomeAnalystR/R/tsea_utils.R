@@ -4,50 +4,58 @@
 
 #'Function to set up data for TSEA
 #'@description This function sets up data for TSEA.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-Setup.MapData<-function(microSetObj, qvec){
-  microSetObj <- .get.microSet(microSetObj);
-  microSetObj$dataSet$species <- qvec;
-  return(.set.microSet(microSetObj))
+Setup.MapData<-function(mbSetObj, qvec){
+
+  lines <- unlist(strsplit(qvec, "\r|\n|\r\n")[1]);
+  if(substring(lines[1],1,1)=="#"){
+    lines <- lines[-1];
+  }
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  mbSetObj$dataSet$species <- lines;
+  return(.set.mbSetObj(mbSetObj))
 }
 
 #'Perform cross referencing.
 #'@description This function performs cross referencing of user's data
 #'with the MicrobiomeAnalyst database. Given a list of species names or ids, 
 #'it finds matched names or ids from selected internal databases.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 
-CrossReferencing <- function(microSetObj, q.type, module.type){
+CrossReferencing <- function(mbSetObj, q.type, module.type){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   # record all the data
   name.map <<- list();
   
   # distribute job
-  microSetObj$dataSet$q.type <- q.type;
-  microSetObj$dataSet$module.type <- module.type;
+  mbSetObj$dataSet$q.type <- q.type;
+  mbSetObj$dataSet$module.type <- module.type;
   
-  .set.microSet(microSetObj)
+  .set.mbSetObj(mbSetObj)
   
-  microSetObj <- SpeciesMappingExact(microSetObj, q.type);
+  qvec <- mbSetObj$dataSet$species;
+  resTable <- SpeciesMappingExact(qvec, q.type);
+  mbSetObj$analSet$resTable <- resTable;
+  mbSetObj$analSet$mapTable <- cbind(Query=qvec, resTable[,2:ncol(resTable)]);
 
-  # do some sanity check
+  # do some sanity check. note name.map is on global env.
   if(length(which(is.na(name.map$hit.inx)))/length(name.map$hit.inx) > 0.75){
     nmcheck.msg <<- c(1, "Over 3/4 of the IDs could not be matched to our database. Please make 
                         sure that correct taxonomy IDs or common taxa names are used.");        
   }else{
     nmcheck.msg <<- c(1, "Name matching OK, please inspect (and manual correct) the results then proceed.");   
   }  
-  return(.set.microSet(microSetObj))
+  return(.set.mbSetObj(mbSetObj))
 }
 
 # Utility function
@@ -55,11 +63,7 @@ CrossReferencing <- function(microSetObj, q.type, module.type){
 # For compound names to other id, can do exact or approximate match
 # For other IDs, except HMDB ID, all other may return multiple /non-unique hits
 # multiple hits or non-unique hits will all users to manually select
-SpeciesMappingExact<-function(microSetObj, q.type){
-  
-  microSetObj <- .get.microSet(microSetObj);
-  
-  qvec <- microSetObj$dataSet$species;
+SpeciesMappingExact<-function(qvec, q.type){
        
   # local variable to save memory
   species.db <- .read.microbiomeanalyst.lib("microbe_db.rds", "tsea")
@@ -91,7 +95,6 @@ SpeciesMappingExact<-function(microSetObj, q.type){
   name.map$match.state <- match.state;
   name.map <<- name.map;
 
-  qvec <- microSetObj$dataSet$species;
   # style for highlighted background for unmatched names
   pre.style <- NULL;
   post.style <- NULL;
@@ -128,23 +131,21 @@ SpeciesMappingExact<-function(microSetObj, q.type){
                             paste(ifelse(match.state[i]==0 || is.na(hit$GOLDMAPID) ||is.null(hit$GOLDMAPID) || hit$GOLDMAPID=="" || hit$GOLDMAPID=="NA", "-", paste("<a href=https://gold.jgi.doe.gov/project?id=", hit$GOLDMAPID," target='_blank'>", hit$GOLDMAPID,"</a>", sep="")), sep=""))
   }
 
-  microSetObj$analSet$resTable <- data.frame(html.res);
-  microSetObj$analSet$mapTable <- cbind(Query=qvec, microSetObj$analSet$resTable[,2:ncol(microSetObj$analSet$resTable)]);
-  return(.set.microSet(microSetObj))
+  return(data.frame(html.res));
 }
 
 #'Calculate enrichment score.
 #'@description This function calculates the enrichment score for TSEA.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-CalculateHyperScore <- function(microSetObj){
+CalculateHyperScore <- function(mbSetObj){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
 
-  nm.map <- GetFinalNameMap(microSetObj);
+  nm.map <- GetFinalNameMap(mbSetObj);
   valid.inx <- !(is.na(nm.map$Strain)| duplicated(nm.map$Strain));
   ora.vec <- nm.map$Strain[valid.inx];
   q.size <- length(ora.vec);
@@ -169,9 +170,9 @@ CalculateHyperScore <- function(microSetObj){
 
     AddErrMsg("No matches were found in the selected taxon set library!");
 
-    if(microSetObj$dataSet$tset.type=="host_int_species"|microSetObj$dataSet$tset.type=="env_species"|microSetObj$dataSet$tset.type=="host_ext_species"){
+    if(mbSetObj$dataSet$tset.type=="host_int_species"|mbSetObj$dataSet$tset.type=="env_species"|mbSetObj$dataSet$tset.type=="host_ext_species"){
       AddErrMsg("Species-level taxa set was selected: verify that your list contains species names!");
-    }else if(microSetObj$dataSet$tset.type=="host_int_strain"|microSetObj$dataSet$tset.type=="env_strain"|microSetObj$dataSet$tset.type=="mic_int_strain"){
+    }else if(mbSetObj$dataSet$tset.type=="host_int_strain"|mbSetObj$dataSet$tset.type=="env_strain"|mbSetObj$dataSet$tset.type=="mic_int_strain"){
       AddErrMsg("Strain-level taxa set was selected: verify that your list contains strain names!");
     }else{
       AddErrMsg("Mixed-level taxa set was selected!");
@@ -206,32 +207,32 @@ CalculateHyperScore <- function(microSetObj){
   ord.inx<-order(res.mat[,4]);
 
   # download result
-  microSetObj$analSet$ora.mat = signif(res.mat[ord.inx,],3);
-  microSetObj$analSet$ora.hits = hits;
-  write.csv(microSetObj$analSet$ora.mat, file="tsea_ora_result.csv");
+  mbSetObj$analSet$ora.mat = signif(res.mat[ord.inx,],3);
+  mbSetObj$analSet$ora.hits = hits;
+  write.csv(mbSetObj$analSet$ora.mat, file="tsea_ora_result.csv");
 
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
 #'Getter to return final map
 #'@description This function returns the final (after user selection) map as a dataframe.
 #'Consists of two columns, original name and strain.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-GetFinalNameMap<-function(microSetObj){
+GetFinalNameMap<-function(mbSetObj){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  enrtype <- microSetObj$dataSet$q.type;
-  qvec <- microSetObj$dataSet$species;
+  enrtype <- mbSetObj$dataSet$q.type;
+  qvec <- mbSetObj$dataSet$species;
   nm.mat <- matrix(nrow=length(qvec), ncol=2);
   colnames(nm.mat) <- c("query", "Strain");
     
@@ -244,7 +245,7 @@ GetFinalNameMap<-function(microSetObj){
       return(as.data.frame(nm.mat));
     }else{
       print(as.data.frame(nm.mat))
-      return(.set.microSet(microSetObj))
+      return(.set.mbSetObj(mbSetObj))
     }
     
   }else{
@@ -267,44 +268,43 @@ GetFinalNameMap<-function(microSetObj){
       return(as.data.frame(nm.mat));
     }else{
       print(as.data.frame(nm.mat))
-      return(.set.microSet(microSetObj))
+      return(.set.mbSetObj(mbSetObj))
     }
-
   }
 }
 
 #'Function to prepare data for enrichment network.
 #'@description This function prepares data for enrichment network.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PrepareEnrichNet<-function(microSetObj){
+PrepareEnrichNet<-function(mbSetObj){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
     
   #calculate the enrichment fold change
-  folds <- microSetObj$analSet$ora.mat[,3]/microSetObj$analSet$ora.mat[,2];
-  names(folds) <- GetShortNames(rownames(microSetObj$analSet$ora.mat));
-  hits <- microSetObj$analSet$ora.mat[,3];
-  pvals <- microSetObj$analSet$ora.mat[,4];
+  folds <- mbSetObj$analSet$ora.mat[,3]/mbSetObj$analSet$ora.mat[,2];
+  names(folds) <- GetShortNames(rownames(mbSetObj$analSet$ora.mat));
+  hits <- mbSetObj$analSet$ora.mat[,3];
+  pvals <- mbSetObj$analSet$ora.mat[,4];
   PlotEnrichNet.Overview(hits, pvals);
 }
 
 #'Set the microbe set library
 #'@description This function sets the microbe
 #'set library for TSEA.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-SetMsetLib <- function(microSetObj, tset.type){
+SetMsetLib <- function(mbSetObj, tset.type){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
 
-  microSetObj$dataSet$tset.type <- tset.type
+  mbSetObj$dataSet$tset.type <- tset.type
   
   if(.on.public.web){
     if(tset.type=="host_int"){
@@ -362,13 +362,13 @@ SetMsetLib <- function(microSetObj, tset.type){
   current.mset <<- ms.list;
   # total uniq cmpds in the mset lib
   uniq.count <<- length(unique(unlist(current.mset, use.names = FALSE)));
-  return(.set.microSet(microSetObj))
+  return(.set.mbSetObj(mbSetObj))
 }
 
 #'Create network for enrichmnet overview
 #'@description This function creates the plot
 #'for the enrichent network overview.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -454,11 +454,11 @@ PlotEnrichNet.Overview<-function(hits, pvals){
 #################################
 
 # Getter for ORA matrix
-GetORA.rowNames<-function(microSetObj){
+GetORA.rowNames<-function(mbSetObj){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  nms <- rownames(microSetObj$analSet$ora.mat);
+  nms <- rownames(mbSetObj$analSet$ora.mat);
   
   if(is.null(nms)){
     return("NA");
@@ -467,17 +467,17 @@ GetORA.rowNames<-function(microSetObj){
 }
 
 # Getter
-GetORA.mat<-function(microSetObj){
-  microSetObj <- .get.microSet(microSetObj);
-  return(microSetObj$analSet$ora.mat);
+GetORA.mat<-function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  return(mbSetObj$analSet$ora.mat);
 }
 
 # Getter
-GetORA.colorBar<-function(microSetObj){
+GetORA.colorBar<-function(mbSetObj){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  len <- nrow(microSetObj$analSet$ora.mat);
+  len <- nrow(mbSetObj$analSet$ora.mat);
   
   if(len > 50){
     ht.col <- c(substr(heat.colors(50), 0, 7), rep("#FFFFFF", len-50));
@@ -554,11 +554,11 @@ GetCurrentImg <- function(){
 }
 
 # given a metset inx, return hmtl highlighted metset cmpds and references
-GetHTMLMetSet<-function(microSetObj, msetNm){
+GetHTMLMetSet<-function(mbSetObj, msetNm){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  hits <- microSetObj$analSet$ora.hits;
+  hits <- mbSetObj$analSet$ora.hits;
   # highlighting with different colors
   mset <- current.mset[[msetNm]];
   red.inx <- which(mset %in% hits[[msetNm]]);
@@ -572,21 +572,21 @@ GetHTMLMetSet<-function(microSetObj, msetNm){
   return(cbind(msetNm, paste(mset, collapse="; "), current.msetlib$reference[matched.inx]));
 }
 
-GetMsetPval<-function(microSetObj, msetNm){
-  microSetObj <- .get.microSet(microSetObj);
-  return(microSetObj$analSet$ora.mat[msetNm, "Raw p"]);
+GetMsetPval<-function(mbSetObj, msetNm){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  return(mbSetObj$analSet$ora.mat[msetNm, "Raw p"]);
 }
 
 # given a metset inx, return all info
-GetTaxaSet <- function(microSetObj, msetNm){
-  microSetObj <- .get.microSet(microSetObj);
+GetTaxaSet <- function(mbSetObj, msetNm){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   mset <- subset(current.msetlib, name == msetNm)
-  microSetObj$analSet$tseaInfo <- t(rbind(colnames(current.msetlib), mset))
+  mbSetObj$analSet$tseaInfo <- t(rbind(colnames(current.msetlib), mset))
   
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }

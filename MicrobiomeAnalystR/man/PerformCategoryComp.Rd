@@ -4,10 +4,10 @@
 \alias{PerformCategoryComp}
 \title{Function to perform categorical comparison.}
 \usage{
-PerformCategoryComp(microSetObj, method, distnm, variable)
+PerformCategoryComp(mbSetObj, method, distnm, variable)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions performs categorical comparisons.

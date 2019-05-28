@@ -4,10 +4,10 @@
 \alias{PlotCorr}
 \title{Main function to plot correlation matrix}
 \usage{
-PlotCorr(microSetObj, imgName, format = "png", dpi = 72, width = NA)
+PlotCorr(mbSetObj, imgName, format = "png", dpi = 72, width = NA)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions plots the correlation matrix.

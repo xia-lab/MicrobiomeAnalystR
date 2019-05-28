@@ -4,10 +4,10 @@
 \alias{PerformNormalization}
 \title{Function to perform normalization}
 \usage{
-PerformNormalization(microSetObj, rare.opt, scale.opt, transform.opt)
+PerformNormalization(mbSetObj, rare.opt, scale.opt, transform.opt)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function performs normalization on the uploaded

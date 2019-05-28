@@ -4,13 +4,13 @@
 \alias{GetORATable}
 \title{Getter function}
 \usage{
-GetORATable(microSetObj)
+GetORATable(mbSetObj)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
-This function retrieves table from microSetObj.
+This function retrieves table from mbSetObj.
 }
 \author{
 Jeff Xia \email{jeff.xia@mcgill.ca}

@@ -1,0 +1,23 @@
+---
+title: "MicrobiomeAnalystR_dada2_processing_raw_data"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{MicrobiomeAnalystR_dada2_processing_raw_data}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+Hello this is where you type.
+
+```{r}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(MicrobiomeAnalystR)
+
+knitr::include_graphics("peaks_to_paths_0_dpi300.png")
+```

@@ -7,7 +7,7 @@
 GetDataForPie(data_n, datataxa, txlvl, OtuIdType, feat_cnt)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function extracts necessary data to create a piechart.

@@ -4,10 +4,10 @@
 \alias{CalculateHyperScore}
 \title{Calculate enrichment score.}
 \usage{
-CalculateHyperScore(microSetObj)
+CalculateHyperScore(mbSetObj)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function calculates the enrichment score for TSEA.

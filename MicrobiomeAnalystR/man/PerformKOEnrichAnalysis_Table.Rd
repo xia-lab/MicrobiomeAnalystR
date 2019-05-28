@@ -4,10 +4,10 @@
 \alias{PerformKOEnrichAnalysis_Table}
 \title{Perform KO Enrichment Analysis}
 \usage{
-PerformKOEnrichAnalysis_Table(microSetObj, file.nm)
+PerformKOEnrichAnalysis_Table(mbSetObj, file.nm)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions performs KO enrichment analysis

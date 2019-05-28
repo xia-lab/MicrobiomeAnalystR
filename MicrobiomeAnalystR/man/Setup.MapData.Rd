@@ -4,10 +4,10 @@
 \alias{Setup.MapData}
 \title{Function to set up data for TSEA}
 \usage{
-Setup.MapData(microSetObj, qvec)
+Setup.MapData(mbSetObj, qvec)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function sets up data for TSEA.

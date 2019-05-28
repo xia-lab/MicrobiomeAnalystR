@@ -4,14 +4,14 @@
 \alias{Read16STaxaTable}
 \title{Function to read 16S taxonomy table from txt format}
 \usage{
-Read16STaxaTable(microSetObj, dataName)
+Read16STaxaTable(mbSetObj, dataName)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function reads in the 16S taxonomy table from txt format
-into the microSetObj.
+into the mbSetObj.
 }
 \author{
 Jeff Xia \email{jeff.xia@mcgill.ca}

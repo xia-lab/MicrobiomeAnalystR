@@ -4,11 +4,11 @@
 \alias{FeatureCorrelation}
 \title{Main function to calculate correlation of all other feature to a given feature name}
 \usage{
-FeatureCorrelation(microSetObj, dist.name, taxrank, taxa, variable,
-  datatype, shotfeat, shotgunid)
+FeatureCorrelation(mbSetObj, dist.name, taxrank, taxa, variable, datatype,
+  shotfeat, shotgunid)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions calculate correlation of all other feature to a given feature name.

@@ -4,10 +4,10 @@
 \alias{PerformAlphaDiversityComp}
 \title{Perform alpha diversity}
 \usage{
-PerformAlphaDiversityComp(microSetObj, opt, metadata)
+PerformAlphaDiversityComp(mbSetObj, opt, metadata)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions performs alpha diversity.

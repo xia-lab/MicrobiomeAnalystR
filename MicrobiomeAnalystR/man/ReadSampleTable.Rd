@@ -4,10 +4,10 @@
 \alias{ReadSampleTable}
 \title{Function to read in sample data}
 \usage{
-ReadSampleTable(microSetObj, dataName)
+ReadSampleTable(mbSetObj, dataName)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions reads in sample data.

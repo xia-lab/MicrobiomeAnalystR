@@ -4,11 +4,11 @@
 \alias{PlotTaxaAlphaBarSam}
 \title{Function to create bar plots of selected taxa level.}
 \usage{
-PlotTaxaAlphaBarSam(microSetObj, barplotName, taxalvl, samplnm, imgOpt,
+PlotTaxaAlphaBarSam(mbSetObj, barplotName, taxalvl, samplnm, imgOpt,
   feat_cnt, format = "png", dpi = 72)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions creates bar plots of a selected taxa level.

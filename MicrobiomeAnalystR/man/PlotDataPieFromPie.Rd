@@ -4,11 +4,11 @@
 \alias{PlotDataPieFromPie}
 \title{Function to plot pie-chart data.}
 \usage{
-PlotDataPieFromPie(microSetObj, taxalvl, metadata, clslevel, taxaposn,
+PlotDataPieFromPie(mbSetObj, taxalvl, metadata, clslevel, taxaposn,
   lowtaxa)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions plots pie charts of microbiome data.

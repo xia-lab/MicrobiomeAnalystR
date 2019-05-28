@@ -4,10 +4,10 @@
 \alias{PlotLibSizeView}
 \title{Function to plot library size}
 \usage{
-PlotLibSizeView(microSetObj, imgName, format = "png", dpi = 72)
+PlotLibSizeView(mbSetObj, imgName, format = "png", dpi = 72)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function creates a plot summarizing the library

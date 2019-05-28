@@ -4,11 +4,11 @@
 \alias{PlotTaxaAlphaArea}
 \title{Plot functional annotation summary}
 \usage{
-PlotTaxaAlphaArea(microSetObj, barplotName, viewOpt, taxalvl, metadata,
+PlotTaxaAlphaArea(mbSetObj, barplotName, viewOpt, taxalvl, metadata,
   imgOpt, feat_cnt, colpalopt, calcmeth, format = "png", dpi = 72)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions plots the functional annotation summary.

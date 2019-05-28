@@ -4,11 +4,11 @@
 \alias{PCoA3D.Anal}
 \title{Main function to perform PCoA analysis}
 \usage{
-PCoA3D.Anal(microSetObj, ordMeth, distName, datatype, taxrank, colopt,
+PCoA3D.Anal(mbSetObj, ordMeth, distName, datatype, taxrank, colopt,
   variable, taxa, alphaopt, jsonNm)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This functions performs PCoA analysis on the microbiome data.

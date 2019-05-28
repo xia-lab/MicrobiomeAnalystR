@@ -4,11 +4,11 @@
 \alias{PlotUsrRefPCoA3DScore}
 \title{Function to plot 3D score plot.}
 \usage{
-PlotUsrRefPCoA3DScore(microSetObj, imgName, format = "json", inx1, inx2,
+PlotUsrRefPCoA3DScore(mbSetObj, imgName, format = "json", inx1, inx2,
   inx3, variable)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function plots a 3D PCoA score plot.

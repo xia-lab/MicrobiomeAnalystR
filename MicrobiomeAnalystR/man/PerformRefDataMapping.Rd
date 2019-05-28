@@ -4,10 +4,10 @@
 \alias{PerformRefDataMapping}
 \title{Function to perform reference data mapping.}
 \usage{
-PerformRefDataMapping(microSetObj, refdataNm, taxo_type, sample_var, biome)
+PerformRefDataMapping(mbSetObj, refdataNm, taxo_type, sample_var, biome)
 }
 \arguments{
-\item{microSetObj}{Input the name of the microSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj.}
 }
 \description{
 This function performs reference data mapping.
