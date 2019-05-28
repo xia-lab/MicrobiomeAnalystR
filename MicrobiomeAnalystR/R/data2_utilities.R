@@ -280,7 +280,7 @@ constructSeqTab <- function(setParametersRes = setParametersRes, # results from 
                                       multithread = !OS_is_windows,
                                       verbose = TRUE);
   print("write sequence table without chimera");
-  write.table(cbind.data.frame("#Sample" = row.names(seqtab.nochim),
+  write.table(cbind.data.frame("#NAME" = row.names(seqtab.nochim),
                                seqtab.nochim),
               file = file.path("sequence_table", "sequence_abundance_table_without_chimera.txt"),
               sep = "\t",
@@ -392,7 +392,7 @@ assignTax <- function(constructSeqTabRes = constructSeqTabRes, #results from con
   };
 
   print("write taxa table");
-  write.table(data.frame("#ID" = row.names(taxa),
+  write.table(data.frame("#TAXONOMY" = row.names(taxa),
                          taxa),
               file = file.path("tax",
                                paste0("taxa_table_against_", ref_db, ".txt")),
