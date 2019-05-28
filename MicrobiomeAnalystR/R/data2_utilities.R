@@ -52,8 +52,8 @@ setParameters <- function(file_compressed = TRUE, # logic TURE or FALSE, compres
 #check number of paired files and reads quality
 seqSanityCheck <- function(setParametersRes = setParametersRes, # results from setParameters
                            seq_folder = seq_folder, #dir of raw reads
-                           file_pattern_F = file_pattern_F, # without compressed file extension, 1.fq, R1.fastq, L001_R1.fastq, must end with fq or fastq, do not use gz or bz2
-                           file_pattern_R = file_pattern_R, # without compressed file extension, 2.fq, R2.fastq, L001_R2.fastq, must end with fq or fastq, do not use gz or bz2
+                           file_pattern_F = file_pattern_F, # without compressed file extension, .1.fq, R1.fastq, _L001_R1.fastq, must end with fq or fastq, do not use gz or bz2
+                           file_pattern_R = file_pattern_R, # without compressed file extension, .2.fq, R2.fastq, _L001_R2.fastq, must end with fq or fastq, do not use gz or bz2
                            plot_format = "pdf", #pdf, tiff, png, ...
                            ...){
   #tic("seqSanityCheck");
@@ -280,10 +280,11 @@ constructSeqTab <- function(setParametersRes = setParametersRes, # results from 
                                       multithread = !OS_is_windows,
                                       verbose = TRUE);
   print("write sequence table without chimera");
-  write.table(cbind.data.frame("#NAME" = row.names(seqtab.nochim),
+  write.table(cbind.data.frame("#SAMPLE" = row.names(seqtab.nochim),
                                seqtab.nochim),
               file = file.path("sequence_table", "sequence_abundance_table_without_chimera.txt"),
               sep = "\t",
+              row.names = FALSE,
               quote = FALSE);
 
   print("write chimera frequence");
@@ -390,8 +391,8 @@ assignTax <- function(constructSeqTabRes = constructSeqTabRes, #results from con
   } else {
     stop("please specify a database!")
   };
-
-  taxa2[] <- lapply(taxa, as.character);
+  taxa2 <- taxa;
+  taxa2[] <- lapply(taxa2, as.character);
   taxa2 <- within(taxa2,
                  "NAME" <-  paste(Kingdom,
                                   Phylum,
@@ -405,7 +406,7 @@ assignTax <- function(constructSeqTabRes = constructSeqTabRes, #results from con
 
   print("write taxa table");
   write.table(data.frame("#NAME" = taxa2$NAME,
-                         seqtab.nochim),
+                         t(seqtab.nochim)),
               file = file.path("tax",
                                paste0("taxa_table_against_", ref_db,
                                       "_submit_to_MicrobiomeAnalyst.txt")),
