@@ -6,16 +6,16 @@
 
 #'Perform alpha diversity
 #'@description This functions performs alpha diversity.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PerformAlphaDiversityComp<-function(microSetObj, opt, metadata){
+PerformAlphaDiversityComp<-function(mbSetObj, opt, metadata){
   
-  microSetObj <- .get.microSet(microSetObj); 
+  mbSetObj <- .get.mbSetObj(mbSetObj); 
     
-  data <- microSetObj$analSet$alpha;
+  data <- mbSetObj$analSet$alpha;
   cls <- data[,metadata];
   x <- data$value;
   stat.info <- NULL;
@@ -41,14 +41,14 @@ PerformAlphaDiversityComp<-function(microSetObj, opt, metadata){
     }
   }
   
-  microSetObj$analSet$alpha.stat.info <- stat.info;
+  mbSetObj$analSet$alpha.stat.info <- stat.info;
   
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(stat.info);
   }else{
     print(stat.info);
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
@@ -58,25 +58,24 @@ PerformAlphaDiversityComp<-function(microSetObj, opt, metadata){
 
 #'Perform core microbiome analysis
 #'@description This functions performs core microbiome analysis.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import RColorBrewer
-CoreMicrobeAnalysis<-function(microSetObj, imgName, preval, detection, taxrank,
+CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
                               palette, viewOpt, format="png", dpi=72, width=NA){
   
-  microSetObj <- .get.microSet(microSetObj);
-  
-  #library("tidyr");
-  data <- microSetObj$dataSet$proc.phyobj;
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+
+  data <- mbSetObj$dataSet$proc.phyobj;
     
   if(taxrank=="OTU"){
-    data <- otu_table(microSetObj$dataSet$proc.phyobj,taxa_are_rows=T);
+    data <- otu_table(mbSetObj$dataSet$proc.phyobj,taxa_are_rows=T);
   }else{
     #merging at taxonomy levels
-    data <- fast_tax_glom_first(microSetObj$dataSet$proc.phyobj, taxrank);
+    data <- fast_tax_glom_first(mbSetObj$dataSet$proc.phyobj, taxrank);
     tax_table <- tax_table(data);
     nm <- as.character(tax_table(data)[,taxrank]);
     y <- which(is.na(nm)==TRUE);
@@ -97,7 +96,7 @@ CoreMicrobeAnalysis<-function(microSetObj, imgName, preval, detection, taxrank,
   write.csv(core.nm,file=fileName);
   
   imgName = paste(imgName, ".", format, sep="");
-  microSetObj$imgSet$core <- imgName;
+  mbSetObj$imgSet$core <- imgName;
 
   #if more than 1500 features will be present;subset to most abundant=>1500 features.
   #OTUs already in unique names;
@@ -152,15 +151,15 @@ CoreMicrobeAnalysis<-function(microSetObj, imgName, preval, detection, taxrank,
     
   p <- plot_core(data.core,plot.type = "heatmap",colours = colors,prevalences = seq(.05, 1, .05),detections = 10^seq(log10(1e-3), log10(0.2), length = 10)) + xlab("Detection Threshold (Relative Abundance (%))")+guides(fill = guide_legend(keywidth = 1.5, keyheight = 1));
   print(p);
-  microSetObj$analSet$core<-as.matrix(core.nm);
-  microSetObj$analSet$core.taxalvl<-taxrank;
+  mbSetObj$analSet$core<-as.matrix(core.nm);
+  mbSetObj$analSet$core.taxalvl<-taxrank;
   dev.off();
   
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
@@ -349,16 +348,16 @@ prevalence_nsamples <- function(x) {
 
 #'Main function to plot pie graphs of microbiome data.
 #'@description This functions plots pie graphs of microbiome data. 
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import reshape
 
-PlotOverallPieGraph<-function(microSetObj, taxalvl, feat_cnt, calcmeth){
+PlotOverallPieGraph<-function(mbSetObj, taxalvl, feat_cnt, calcmeth){
 
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
     load_reshape();
@@ -367,15 +366,15 @@ PlotOverallPieGraph<-function(microSetObj, taxalvl, feat_cnt, calcmeth){
   set.seed(28053448);
 
   #using filtered data
-  data <- microSetObj$dataSet$filt.data;
+  data <- mbSetObj$dataSet$filt.data;
    
-  if(class(microSetObj$dataSet$filt.data)=="matrix"){
+  if(class(mbSetObj$dataSet$filt.data)=="matrix"){
     data <- otu_table(data, taxa_are_rows =TRUE);
   }
    
   #data <- prune_taxa(taxa_sums(dataSet$filt.data)>feat_cnt,dataSet$filt.data);
-  sample_table <- sample_data(microSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
-  datapie <<- merge_phyloslim(data, tax_table(microSetObj$dataSet$proc.phyobj), sample_table);
+  sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
+  datapie <<- merge_phyloslim(data, tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
    
   #using reduce names
   data <- otu_table(datapie);
@@ -426,25 +425,25 @@ PlotOverallPieGraph<-function(microSetObj, taxalvl, feat_cnt, calcmeth){
   write.csv(piedata, "piechart_abundances.csv")
   
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
 #'Main function to plot pie graphs of microbiome data.
 #'@description This functions plots pie graphs of microbiome data. 
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import reshape
-PlotGroupPieGraph <- function(microSetObj, taxalvl, metadata, clslevel,
+PlotGroupPieGraph <- function(mbSetObj, taxalvl, metadata, clslevel,
                               feat_cnt, calcmeth){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
     load_reshape();
@@ -453,18 +452,18 @@ PlotGroupPieGraph <- function(microSetObj, taxalvl, metadata, clslevel,
   set.seed(28053443);
 
   #using filtered data
-  data <- microSetObj$dataSet$filt.data;
+  data <- mbSetObj$dataSet$filt.data;
     
-  if(class(microSetObj$dataSet$filt.data)=="matrix"){
+  if(class(mbSetObj$dataSet$filt.data)=="matrix"){
     data<-otu_table(data,taxa_are_rows =TRUE);
   }
     
-  smpl <- data.frame(sample_data(microSetObj$dataSet$proc.phyobj));
+  smpl <- data.frame(sample_data(mbSetObj$dataSet$proc.phyobj));
   smpl1 <- sample_data(subset(smpl,smpl[metadata]==clslevel));
   data <- prune_samples(sample_names(smpl1), data);
   data <- merge_phyloslim(data, smpl1);
-  microSetObj$dataSet$taxa_table <- tax_table(microSetObj$dataSet$proc.phyobj);
-  datapie <<- merge_phyloslim(data, microSetObj$dataSet$taxa_table);
+  mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
+  datapie <<- merge_phyloslim(data, mbSetObj$dataSet$taxa_table);
 
   #using reduce names
   data <- t(data.frame(otu_table(datapie)));
@@ -510,25 +509,25 @@ PlotGroupPieGraph <- function(microSetObj, taxalvl, metadata, clslevel,
   piedata <<- piedata[ord.inx,];
   
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
 #'Main function to plot sample-wise pie graphs of microbiome data.
 #'@description This functions plots sample-wise pie graphs of microbiome data. 
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import reshape
 
-PlotSamplePieGraph<-function(microSetObj, taxalvl, smplnm, feat_cnt){
+PlotSamplePieGraph<-function(mbSetObj, taxalvl, smplnm, feat_cnt){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
     load_reshape();
@@ -537,17 +536,17 @@ PlotSamplePieGraph<-function(microSetObj, taxalvl, smplnm, feat_cnt){
   set.seed(28053443);
   
   #using filtered data
-  data <- microSetObj$dataSet$filt.data;
+  data <- mbSetObj$dataSet$filt.data;
    
-  if(class(microSetObj$dataSet$filt.data)=="matrix"){
+  if(class(mbSetObj$dataSet$filt.data)=="matrix"){
     data <- otu_table(data,taxa_are_rows =TRUE);
   }
    
-  sample_table <- sample_data(microSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
-  data <- merge_phyloslim(data, tax_table(microSetObj$dataSet$proc.phyobj), sample_table);
+  sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
+  data <- merge_phyloslim(data, tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
   data <- prune_samples(smplnm, data);
-  microSetObj$dataSet$taxa_table <- tax_table(microSetObj$dataSet$proc.phyobj);
-  datapie <<- merge_phyloslim(data, microSetObj$dataSet$taxa_table);
+  mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
+  datapie <<- merge_phyloslim(data, mbSetObj$dataSet$taxa_table);
 
   #using reduce names
   data <- otu_table(datapie);
@@ -587,26 +586,26 @@ PlotSamplePieGraph<-function(microSetObj, taxalvl, smplnm, feat_cnt){
   piedata <<- piedata[ord.inx,];
   
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
 #'Function to plot pie-chart data.
 #'@description This functions plots pie charts of microbiome data. 
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import reshape
 
-PlotDataPieFromPie<-function(microSetObj, taxalvl, metadata, clslevel,
+PlotDataPieFromPie<-function(mbSetObj, taxalvl, metadata, clslevel,
                              taxaposn, lowtaxa){
 
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
     load_reshape();
@@ -653,24 +652,24 @@ PlotDataPieFromPie<-function(microSetObj, taxalvl, metadata, clslevel,
   piedata2 <<- piedata2[ord.inx,];
   
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
 #'Function to update pie-chart data.
 #'@description This functions updates pie chart data. 
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import reshape
-UpdatePieData<-function(microSetObj, lowtaxa){
+UpdatePieData<-function(mbSetObj, lowtaxa){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
     load_reshape();
@@ -708,23 +707,23 @@ UpdatePieData<-function(microSetObj, lowtaxa){
   piedata2 <<- aggregate(. ~variable , data=data[-1], FUN=sum);
 
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
 #'Function to save pie-chart
 #'@description This functions saves created pie chart plot. 
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-SavePiechartImg <- function(microSetObj, taxalvl, pieName, format="png", dpi=72) {
+SavePiechartImg <- function(mbSetObj, taxalvl, pieName, format="png", dpi=72) {
     
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   set.seed(280);
     
   pieName = paste(pieName,".", format, sep="");
@@ -732,7 +731,7 @@ SavePiechartImg <- function(microSetObj, taxalvl, pieName, format="png", dpi=72)
     
   #rownames are still arranged by decending order
   piedataimg <- piedata;
-  microSetObj$imgSet$pie <- pieName;
+  mbSetObj$imgSet$pie <- pieName;
 
   row.names(piedataimg) <- NULL;
   x.cols <- pie.cols;
@@ -748,22 +747,22 @@ SavePiechartImg <- function(microSetObj, taxalvl, pieName, format="png", dpi=72)
          theme(legend.position="right",axis.text = element_blank(),axis.ticks = element_blank(),panel.grid  = element_blank(), plot.title = element_text(hjust=0.5, face="bold"),legend.text=element_text(color="grey48")) +
          labs(x="", y="",fill="");
   print(box);
-  microSetObj$analSet$pie<-piedataimg;
-  microSetObj$analSet$pie.taxalvl<-taxalvl;
+  mbSetObj$analSet$pie<-piedataimg;
+  mbSetObj$analSet$pie.taxalvl<-taxalvl;
   dev.off();
-  return(.set.microSet(microSetObj))
+  return(.set.mbSetObj(mbSetObj))
 }
 
 #'Function to create pie-chart plot.
 #'@description This functions creates the pie chart plot. 
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotPiechart <- function(microSetObj, rel_perct, pieName, format="png", dpi=72) {
+PlotPiechart <- function(mbSetObj, rel_perct, pieName, format="png", dpi=72) {
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   set.seed(28056188); 
   pieName = paste(pieName,".", format, sep="");
@@ -800,10 +799,10 @@ PlotPiechart <- function(microSetObj, rel_perct, pieName, format="png", dpi=72) 
   dev.off();
   
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
@@ -813,22 +812,22 @@ PlotPiechart <- function(microSetObj, rel_perct, pieName, format="png", dpi=72) 
 
 #'Function to plot alpha-diversity analysis.
 #'@description This functions creates a plot for alpha-diversity. 
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotAlphaData<-function(microSetObj, data.src, bargraphName, distName,
+PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName,
                         metadata, taxrank, format="png", dpi=72){
   
-  microSetObj <- .get.microSet(microSetObj);  
+  mbSetObj <- .get.mbSetObj(mbSetObj);  
   
   set.seed(13133);
     
   if(data.src == "orig"){
     data <- readRDS("orig.phyobj");
   }else{
-    data <- microSetObj$dataSet$proc.phyobj;
+    data <- mbSetObj$dataSet$proc.phyobj;
   }
 
   if(taxrank!="OTU"){
@@ -837,7 +836,7 @@ PlotAlphaData<-function(microSetObj, data.src, bargraphName, distName,
   }
 
   bargraphName = paste(bargraphName, ".", format, sep="");
-  microSetObj$imgSet$alpha <- bargraphName;
+  mbSetObj$imgSet$alpha <- bargraphName;
 
   Cairo::Cairo(file=bargraphName, width=900, height=450, type=format, bg="white",dpi=dpi);
     
@@ -847,8 +846,8 @@ PlotAlphaData<-function(microSetObj, data.src, bargraphName, distName,
   smplord <- rownames(sam);
 
   box = plot_richness(data,color=metadata,measures = distName)+scale_x_discrete(limits=c(smplord));
-  microSetObj$analSet$alpha<-box$data;
-  write.csv(microSetObj$analSet$alpha, file="alphadiversity.csv");
+  mbSetObj$analSet$alpha<-box$data;
+  write.csv(mbSetObj$analSet$alpha, file="alphadiversity.csv");
   box = box + theme_bw() + theme(axis.text.x = element_text(angle = 45, hjust = 1,vjust= 1));
   box$layers <- box$layers[-1];
   box <- box + geom_point(size=2);
@@ -857,38 +856,38 @@ PlotAlphaData<-function(microSetObj, data.src, bargraphName, distName,
   print(box);
     
   dev.off();
-  microSetObj$analSet$alpha.meth <- distName;
-  microSetObj$analSet$alpha.metadata <- metadata;
-  microSetObj$analSet$alpha.taxalvl <- taxrank;
-  return(.set.microSet(microSetObj))
+  mbSetObj$analSet$alpha.meth <- distName;
+  mbSetObj$analSet$alpha.metadata <- metadata;
+  mbSetObj$analSet$alpha.taxalvl <- taxrank;
+  return(.set.mbSetObj(mbSetObj))
 }
 
 #'Function to create bar plots of selected taxa level.
 #'@description This functions creates bar plots of a selected taxa level. 
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import reshape
-PlotTaxaAlphaBarSam<-function(microSetObj, barplotName, taxalvl, samplnm,
+PlotTaxaAlphaBarSam<-function(mbSetObj, barplotName, taxalvl, samplnm,
                               imgOpt, feat_cnt, format="png", dpi=72){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
     load_reshape();
   }
 
   #using filtered data
-  data <- microSetObj$dataSet$filt.data;
+  data <- mbSetObj$dataSet$filt.data;
     
-  if(class(microSetObj$dataSet$filt.data)=="matrix"){
+  if(class(mbSetObj$dataSet$filt.data)=="matrix"){
     data<-otu_table(data, taxa_are_rows =TRUE);
   }
     
-  sample_table <- sample_data(microSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
-  data1 <- merge_phyloslim(data, tax_table(microSetObj$dataSet$proc.phyobj), sample_table);
+  sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
+  data1 <- merge_phyloslim(data, tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
 
   yLbl <- "Actual Abundance";
 
@@ -963,7 +962,7 @@ PlotTaxaAlphaBarSam<-function(microSetObj, barplotName, taxalvl, samplnm,
     
   #sorting by descending
   barplotName = paste(barplotName, ".",format, sep="");
-  microSetObj$imgSet$stack<-barplotName;
+  mbSetObj$imgSet$stack<-barplotName;
 
   Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
   box <- ggplot(data, aes(x=reorder(variable,value),y=value))+geom_bar(stat="identity",width=0.6,fill="steelblue")+theme_bw()+
@@ -973,15 +972,15 @@ PlotTaxaAlphaBarSam<-function(microSetObj, barplotName, taxalvl, samplnm,
          panel.grid.major = element_blank(), panel.grid.minor = element_blank(),legend.position="none");
   print(box);
   dev.off();
-  microSetObj$analSet$stack<-data;
-  microSetObj$analSet$stack.taxalvl<-taxalvl;
-  microSetObj$analSet$plot<-"Stacked Bar";
+  mbSetObj$analSet$stack<-data;
+  mbSetObj$analSet$stack.taxalvl<-taxalvl;
+  mbSetObj$analSet$plot<-"Stacked Bar";
 
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
@@ -991,17 +990,17 @@ PlotTaxaAlphaBarSam<-function(microSetObj, barplotName, taxalvl, samplnm,
 
 #'Function to plot beta diversity.
 #'@description This functions creates beta diversity plots.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import data.table
 #'@import ape
-PlotBetaDiversity<-function(microSetObj, plotNm, ordmeth, distName, colopt, metadata, 
+PlotBetaDiversity<-function(mbSetObj, plotNm, ordmeth, distName, colopt, metadata, 
                             showlabel, taxrank, taxa, alphaopt, ellopt, format="png", dpi=72){
 
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
     load_datatable();
@@ -1012,11 +1011,11 @@ PlotBetaDiversity<-function(microSetObj, plotNm, ordmeth, distName, colopt, meta
     
   #using normalized data
   if(taxrank=="OTU"){
-    taxa_table <- tax_table(microSetObj$dataSet$proc.phyobj);
-    data <- merge_phyloslim(microSetObj$dataSet$norm.phyobj, taxa_table);
+    taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
+    data <- merge_phyloslim(mbSetObj$dataSet$norm.phyobj, taxa_table);
   }else{
-    taxa_table <- tax_table(microSetObj$dataSet$proc.phyobj);
-    data <- merge_phyloslim(microSetObj$dataSet$norm.phyobj, taxa_table);
+    taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
+    data <- merge_phyloslim(mbSetObj$dataSet$norm.phyobj, taxa_table);
     #merging at taxonomy levels
     data <- fast_tax_glom_first(data,taxrank);
   }
@@ -1046,7 +1045,7 @@ PlotBetaDiversity<-function(microSetObj, plotNm, ordmeth, distName, colopt, meta
       taxa <- paste("X",taxa, sep = "", collapse = NULL);
     }
   }else if(colopt=="alphadiv") {
-    data1 <- microSetObj$dataSet$proc.phyobj;
+    data1 <- mbSetObj$dataSet$proc.phyobj;
     box <- plot_richness(data1,measures = alphaopt);
     alphaboxdata <- box$data;
     sam_nm <- sample_names(data);
@@ -1087,7 +1086,7 @@ PlotBetaDiversity<-function(microSetObj, plotNm, ordmeth, distName, colopt, meta
       }
         
     saveRDS(data, "data_unifra.RDS");
-    ord <- phyloslimR::ordinate(data,method = ordmeth,"unifrac",weighted=TRUE);
+    ord <- ordinate(data,method = ordmeth,"unifrac",weighted=TRUE);
 
   } else if (distName=="unifrac") {
       
@@ -1117,23 +1116,23 @@ PlotBetaDiversity<-function(microSetObj, plotNm, ordmeth, distName, colopt, meta
     }
     
     saveRDS(data, "data_unifra.RDS");
-    ord<-phyloslimR::ordinate(data,method = ordmeth,"unifrac");
+    ord<-ordinate(data,method = ordmeth,"unifrac");
 
   }else{
-    ord<-phyloslimR::ordinate(data,method = ordmeth,distName);
+    ord<-ordinate(data,method = ordmeth,distName);
   }
   
   plotNm = paste(plotNm, ".", format, sep="");
-  microSetObj$imgSet$beta2d<-plotNm;
+  mbSetObj$imgSet$beta2d<-plotNm;
 
   Cairo::Cairo(file=plotNm, width=720, height=500, type=format, bg="white",dpi=dpi);
     
   if(colopt=="taxa"){
-    box = phyloslimR::plot_ordination(data,ord,color=taxa)+ labs(aesthetic=taxaorig)+scale_colour_gradient(low="green", high="red");
+    box = plot_ordination(data,ord,color=taxa)+ labs(aesthetic=taxaorig)+scale_colour_gradient(low="green", high="red");
   }else if(colopt=="alphadiv") {
-    box = phyloslimR::plot_ordination(data,ord,color=alphaopt)+ scale_colour_gradient(low="green", high="red");
+    box = plot_ordination(data,ord,color=alphaopt)+ scale_colour_gradient(low="green", high="red");
   }else{
-    box = phyloslimR::plot_ordination(data,ord,color=metadata);
+    box = plot_ordination(data,ord,color=metadata);
   }
     
   box$layers <- box$layers[-1];
@@ -1164,74 +1163,74 @@ PlotBetaDiversity<-function(microSetObj, plotNm, ordmeth, distName, colopt, meta
   dev.off();
 
   #saving info for report generation
-  microSetObj$analSet$beta <- data;
-  microSetObj$analSet$beta.meth <- ordmeth;
-  microSetObj$analSet$beta.dist <- distName;
-  microSetObj$analSet$beta.taxalvl <- taxrank;
+  mbSetObj$analSet$beta <- data;
+  mbSetObj$analSet$beta.meth <- ordmeth;
+  mbSetObj$analSet$beta.dist <- distName;
+  mbSetObj$analSet$beta.taxalvl <- taxrank;
 
   # if it is NMDS, show stress value in the plot
   if(ordmeth == "NMDS"){
-    microSetObj$analSet$beta.stress <- paste("[NMDS] Stress =", signif(ord$stress, 5));
+    mbSetObj$analSet$beta.stress <- paste("[NMDS] Stress =", signif(ord$stress, 5));
   }
-  return(.set.microSet(microSetObj))
+  return(.set.mbSetObj(mbSetObj))
 }
 
 #'Plot functional annotation summary
 #'@description This functions plots the functional annotation summary.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotFunAnotSummary<-function(microSetObj, imgName, format="png", dpi=72){
+PlotFunAnotSummary<-function(mbSetObj, imgName, format="png", dpi=72){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   set.seed(280561499);
     
-  if(is.null(microSetObj$analSet$func.pred)){
+  if(is.null(mbSetObj$analSet$func.pred)){
     result <- readRDS("func.pred");
   }else{
-    result <- microSetObj$analSet$func.pred;
-    saveRDS(microSetObj$analSet$func.pred, file="func.pred");
-    microSetObj$analSet$func.pred <- NULL;
+    result <- mbSetObj$analSet$func.pred;
+    saveRDS(mbSetObj$analSet$func.pred, file="func.pred");
+    mbSetObj$analSet$func.pred <- NULL;
   }
     
   imgName = paste(imgName, ".",format, sep="");
-  microSetObj$imgSet$func.pred <- imgName;
+  mbSetObj$imgSet$func.pred <- imgName;
   Cairo::Cairo(file=imgName, width=900, height=480, type=format, bg="white",dpi=dpi);
   box <- ggplot(stack(log(result)), aes(x = factor(ind, levels = names(result)), y=values)) + labs(x=NULL, y="log (KO Counts)") + geom_boxplot() + theme(axis.text.x = element_text(angle = 90, hjust = 1))
   print(box);
   dev.off();
   
-  return(.set.microSet(microSetObj))
+  return(.set.mbSetObj(mbSetObj))
 }
 
 #'Plot functional annotation summary
 #'@description This functions plots the functional annotation summary.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotTaxaAlphaArea<-function(microSetObj, barplotName, viewOpt, taxalvl, metadata,
+PlotTaxaAlphaArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadata,
                             imgOpt, feat_cnt, colpalopt, calcmeth, format="png", dpi=72){
 
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
     load_reshape();
   }
 
   #using filtered data
-  data <- microSetObj$dataSet$filt.data;
+  data <- mbSetObj$dataSet$filt.data;
 
-  if(class(microSetObj$dataSet$filt.data)=="matrix"){
+  if(class(mbSetObj$dataSet$filt.data)=="matrix"){
     data <- otu_table(data,taxa_are_rows =TRUE);
   }
 
-  sample_table <- sample_data(microSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
-  data1 <- merge_phyloslim(data, tax_table(microSetObj$dataSet$proc.phyobj), sample_table);
+  sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
+  data1 <- merge_phyloslim(data, tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
 
   if(viewOpt=="smpl_grp"){
     data <- as.data.frame(t(otu_table(data1)));
@@ -1355,7 +1354,7 @@ PlotTaxaAlphaArea<-function(microSetObj, barplotName, viewOpt, taxalvl, metadata
   }
 
   barplotName = paste(barplotName, ".",format, sep="");
-  microSetObj$imgSet$stack <- barplotName;
+  mbSetObj$imgSet$stack <- barplotName;
   
   Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
   box <- ggplot(data,aes(x=step,y=value)) + theme_bw() +
@@ -1384,44 +1383,44 @@ PlotTaxaAlphaArea<-function(microSetObj, barplotName, viewOpt, taxalvl, metadata
 
   print(box);
   dev.off();
-  microSetObj$analSet$stack<-data;
-  microSetObj$analSet$stack.taxalvl<-taxalvl;
-  microSetObj$analSet$plot<-"Stacked Area";
+  mbSetObj$analSet$stack<-data;
+  mbSetObj$analSet$stack.taxalvl<-taxalvl;
+  mbSetObj$analSet$plot<-"Stacked Area";
   
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
 #'Function to plot bar charts for alpha diversity
 #'@description This functions plots bar charts of different taxonomic levels
 #'for alpha diversity.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotTaxaAlphaBar<-function(microSetObj, barplotName, taxalvl, metadata, facet, imgOpt, 
+PlotTaxaAlphaBar<-function(mbSetObj, barplotName, taxalvl, metadata, facet, imgOpt, 
                            feat_cnt, colpalopt, calcmeth, format="png", dpi=72){
 
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
     load_reshape();
     load_ggplot();
   }
 
-  data <- microSetObj$dataSet$filt.data;
+  data <- mbSetObj$dataSet$filt.data;
   
-  if(class(microSetObj$dataSet$filt.data)=="matrix"){
+  if(class(mbSetObj$dataSet$filt.data)=="matrix"){
     data <- otu_table(data, taxa_are_rows =TRUE);
   }
   
-  sample_table <- sample_data(microSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
-  data1 <- merge_phyloslim(data, tax_table(microSetObj$dataSet$proc.phyobj), sample_table);
+  sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
+  data1 <- merge_phyloslim(data, tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
 
   data <- as.data.frame(otu_table(data1));
   data_tax <- tax_table(data1);
@@ -1552,7 +1551,7 @@ PlotTaxaAlphaBar<-function(microSetObj, barplotName, taxalvl, metadata, facet, i
   }
 
   barplotName = paste(barplotName, ".",format, sep="");
-  microSetObj$imgSet$stack <- barplotName;
+  mbSetObj$imgSet$stack <- barplotName;
 
   Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
 
@@ -1590,28 +1589,28 @@ PlotTaxaAlphaBar<-function(microSetObj, barplotName, taxalvl, metadata, facet, i
 
   print(box);
   dev.off();
-  microSetObj$analSet$stack <- data;
-  microSetObj$analSet$stack.taxalvl <- taxalvl;
-  microSetObj$analSet$plot <- "Stacked Bar";
+  mbSetObj$analSet$stack <- data;
+  mbSetObj$analSet$stack.taxalvl <- taxalvl;
+  mbSetObj$analSet$plot <- "Stacked Bar";
   
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
 #'Function to perform categorical comparison.
 #'@description This functions performs categorical comparisons.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PerformCategoryComp <- function(microSetObj, method, distnm, variable){
+PerformCategoryComp <- function(mbSetObj, method, distnm, variable){
 
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
     load_vegan();
@@ -1620,12 +1619,12 @@ PerformCategoryComp <- function(microSetObj, method, distnm, variable){
   if(distnm %in% c("wunifrac", "unifrac")) {
     data <- readRDS("data_unifra.RDS");
   } else {
-    data <- microSetObj$dataSet$proc.phyobj;
+    data <- mbSetObj$dataSet$proc.phyobj;
     data <- merge_phyloslim(data);
   }
 
   data <- transform_sample_counts(data, function(x) x/sum(x));
-  data.dist <- phyloslimR::distance(data, method=distnm);
+  data.dist <- distance(data, method=distnm);
   group <- get_variable(data,variable);
   stat.info <- "";
   resTab <- list();
@@ -1646,13 +1645,13 @@ PerformCategoryComp <- function(microSetObj, method, distnm, variable){
     stat.info <- paste("[PERMDISP] F-value: ", signif(resTab$"F value"[1], 5), "; p-value: ", signif(resTab$"Pr(>F)"[1], 5), sep="");
   }
 
-  microSetObj$analSet$stat.info <- stat.info;
+  mbSetObj$analSet$stat.info <- stat.info;
   
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
@@ -1662,30 +1661,30 @@ PerformCategoryComp <- function(microSetObj, method, distnm, variable){
 #'Function to plot group-wise bar charts.
 #'@description This functions plots group-wise bar charts of a specified 
 #'taxa for alpha diversity analysis.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 
-PlotTaxaAlphaBarSamGrp<-function(microSetObj, barplotName, taxalvl, metadata, imgOpt,
+PlotTaxaAlphaBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, imgOpt,
                                  feat_cnt, colpalopt, calcmeth, format="png", dpi=72){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
     load_reshape();
   }
   
   #using filtered data
-  data <- microSetObj$dataSet$filt.data;
+  data <- mbSetObj$dataSet$filt.data;
     
-  if(class(microSetObj$dataSet$filt.data)=="matrix"){
+  if(class(mbSetObj$dataSet$filt.data)=="matrix"){
     data<-otu_table(data,taxa_are_rows =TRUE);
   }
     
-  sample_table <- sample_data(microSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
-  data1 <- merge_phyloslim(data, tax_table(microSetObj$dataSet$proc.phyobj), sample_table);
+  sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
+  data1 <- merge_phyloslim(data, tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
 
   yLbl <- "Actual Abundance";
 
@@ -1788,7 +1787,7 @@ PlotTaxaAlphaBarSamGrp<-function(microSetObj, barplotName, taxalvl, metadata, im
   h<-length(clsLbl)*100;
 
   barplotName = paste(barplotName, ".",format, sep="");
-  microSetObj$imgSet$stack<-barplotName;
+  mbSetObj$imgSet$stack<-barplotName;
 
   Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
   box <- ggplot(data,aes(x = step, y = value, fill = variable))+
@@ -1821,15 +1820,15 @@ PlotTaxaAlphaBarSamGrp<-function(microSetObj, barplotName, taxalvl, metadata, im
     
   print(box);
   dev.off();
-  microSetObj$analSet$stack<-data;
-  microSetObj$analSet$stack.taxalvl<-taxalvl;
-  microSetObj$analSet$plot<-"Stacked Bar";
+  mbSetObj$analSet$stack<-data;
+  mbSetObj$analSet$stack.taxalvl<-taxalvl;
+  mbSetObj$analSet$plot<-"Stacked Bar";
   
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
@@ -1839,20 +1838,20 @@ PlotTaxaAlphaBarSamGrp<-function(microSetObj, barplotName, taxalvl, metadata, im
 
 #'Function to create box plots for alpha diversity analysis
 #'@description This functions performs metagenome seq analysis on the microbiome data.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotAlphaBoxData<-function(microSetObj, boxplotName, distName, metadata, format="png", dpi=72){
+PlotAlphaBoxData<-function(mbSetObj, boxplotName, distName, metadata, format="png", dpi=72){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   set.seed(1313397);
-  data <- microSetObj$analSet$alpha;
+  data <- mbSetObj$analSet$alpha;
   CLASS <- data[,metadata];
   boxplotName = paste(boxplotName, ".", format, sep="");
-  microSetObj$imgSet$alpha.box<-boxplotName;
+  mbSetObj$imgSet$alpha.box<-boxplotName;
 
   Cairo::Cairo(file=boxplotName,width=500, height=400, type=format, bg="white",dpi=dpi);
   
@@ -1877,26 +1876,26 @@ PlotAlphaBoxData<-function(microSetObj, boxplotName, distName, metadata, format=
     coord_cartesian(ylim = c(ylimits[1],ylimits[2]));
   print(box1);
   dev.off();
-  return(.set.microSet(microSetObj))
+  return(.set.mbSetObj(mbSetObj))
 }
 
 #'Function to create rarefraction curves of microbiome data
 #'@description This functions plots rarefraction curves.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotRarefactionCurve <- function(microSetObj, data.src, linecolor, linetype, facet, step, 
+PlotRarefactionCurve <- function(mbSetObj, data.src, linecolor, linetype, facet, step, 
                                  imgName, format="png",dpi=72){
 
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
     
   # should use unfiltered data
   if(data.src == "orig"){
     data_rare <- readRDS("orig.phyobj");
   }else{
-    data_rare <- microSetObj$dataSet$proc.phyobj;
+    data_rare <- mbSetObj$dataSet$proc.phyobj;
   }
 
   #get good's coverage index
@@ -1940,28 +1939,28 @@ PlotRarefactionCurve <- function(microSetObj, data.src, linecolor, linetype, fac
   }
   print(box);
   dev.off();
-  return(.set.microSet(microSetObj))
+  return(.set.mbSetObj(mbSetObj))
 }
 
 #'Function to prepare data for phylogenetic tree.
 #'@description This functions prepares the data to plot the phylogenetic tree.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PreparePhylogeneticTreePlot <-function(microSetObj, color, shape, taxa, treeshape, imgName, format="png", dpi=72){
+PreparePhylogeneticTreePlot <-function(mbSetObj, color, shape, taxa, treeshape, imgName, format="png", dpi=72){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  data <- microSetObj$dataSet$filt.data;
+  data <- mbSetObj$dataSet$filt.data;
   
-  if(class(microSetObj$dataSet$filt.data)=="matrix"){
+  if(class(mbSetObj$dataSet$filt.data)=="matrix"){
     data <- otu_table(data,taxa_are_rows =TRUE);
   }
   
-  sample_table <- sample_data(microSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
-  data1 <- merge_phyloslim(data,tax_table(microSetObj$dataSet$proc.phyobj), sample_table);
+  sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
+  data1 <- merge_phyloslim(data,tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
   pg_tree <- readRDS("tree.RDS");
   pg_tb <- tax_table(data1);
   pg_ot <- otu_table(data1);
@@ -2015,7 +2014,7 @@ PreparePhylogeneticTreePlot <-function(microSetObj, color, shape, taxa, treeshap
     print(box);
     dev.off();
   }
-  return(.set.microSet(microSetObj))
+  return(.set.mbSetObj(mbSetObj))
 }
 
 #######################################
@@ -2024,27 +2023,25 @@ PreparePhylogeneticTreePlot <-function(microSetObj, color, shape, taxa, treeshap
 
 #'Main function to perform 16S functional annotation
 #'@description This is the main function to perform either PICRUSt or
-#'SILVA for functional annotation on the microSetObj.
-#'@param microSetObj Input the name of the microSetObj.
+#'SILVA for functional annotation on the mbSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import Tax4Fun
-Perform16FunAnot<-function(microSetObj, type, pipeline) {
+Perform16FunAnot<-function(mbSetObj, type, pipeline) {
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  microSetObj$dataSet$type <- type;
+  mbSetObj$dataSet$type <- type;
   merge.otu <- readRDS("data.orig");
   merge.otu <- apply(merge.otu, 2, as.numeric);
-  rownames(merge.otu) <- microSetObj$dataSet$comp_taxnm;
+  rownames(merge.otu) <- mbSetObj$dataSet$comp_taxnm;
 
   #getting whole taxa labels back
   if(type=="SILVA"){
-    
     func.meth<-"Tax4Fun";
-
     if(.on.public.web){
       load_tax4fun();
     }
@@ -2194,18 +2191,22 @@ Perform16FunAnot<-function(microSetObj, type, pipeline) {
   }
     
   result <- round(result, digits =0);
-  write.csv(result, file="functionalprof_output.csv");
+  if(func.meth == "Tax4Fun"){
+    write.csv(result, file="functionalprof_tax4fun.csv");
+  }else{
+    write.csv(result, file="functionalprof_picrust.csv");
+  }
   result <- result[!apply(result==0,1,all), ]; #filtering zero counts across all
 
   # save as RDS for memory saving
-  microSetObj$analSet$func.pred<-result;
-  microSetObj$analSet$func.meth<-func.meth;
+  mbSetObj$analSet$func.pred<-result;
+  mbSetObj$analSet$func.meth<-func.meth;
     
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
@@ -2213,14 +2214,14 @@ Perform16FunAnot<-function(microSetObj, type, pipeline) {
 ########## Getter Functions ##########
 ######################################
 
-GetBetaDiversityStats<-function(microSetObj){
-  microSetObj <- .get.microSet(microSetObj);
-  return(microSetObj$analSet$stat.info);
+GetBetaDiversityStats<-function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  return(mbSetObj$analSet$stat.info);
 }
 
-GetStressNMDS<-function(microSetObj){
-  microSetObj <- .get.microSet(microSetObj);
-  return(microSetObj$analSet$beta.stress);
+GetStressNMDS<-function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  return(mbSetObj$analSet$beta.stress);
 }
 
 # getter
@@ -2255,9 +2256,9 @@ ComputeGoods <-function(physeq_object){
 # Utility function that performs rarefaction
 ggrare2 <- function(physeq_object, data.src, label = NULL, color = NULL, plot = TRUE, linetype = NULL, se = FALSE, step=5) {
   
-  x <- methods::as(phyloslimR::otu_table(physeq_object), "matrix")
+  x <- methods::as(otu_table(physeq_object), "matrix")
   
-  if (phyloslimR::taxa_are_rows(physeq_object)) { x <- t(x) }
+  if (taxa_are_rows(physeq_object)) { x <- t(x) }
   
   ## This script is adapted from vegan `rarecurve` function
   tot <- rowSums(x)
@@ -2290,8 +2291,8 @@ ggrare2 <- function(physeq_object, data.src, label = NULL, color = NULL, plot = 
   }
   
   # Get sample data
-  if (!is.null(phyloslimR::sample_data(physeq_object, FALSE))) {
-    sdf <- methods::as(phyloslimR::sample_data(physeq_object), "data.frame")
+  if (!is.null(sample_data(physeq_object, FALSE))) {
+    sdf <- methods::as(sample_data(physeq_object), "data.frame")
     sdf$Sample <- rownames(sdf)
     data <- merge(df, sdf, by = "Sample")
     labels <- data.frame(x = tot, y = S, Sample = rownames(x))

@@ -14,46 +14,46 @@ SetCurrentSelectedTaxLevel<-function(taxLvl){
 
 #'Performs Random Forest Analysis
 #'@description This functions performs the random forest analysis.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import randomForest
-RF.Anal <- function(microSetObj, treeNum, tryNum, randomOn, variable, taxrank, datatype){
+RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank, datatype){
     
   if(.on.public.web){
     load_randomforest();
   }
 
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   # set up random numbers
-  if(is.null(microSetObj$analSet$random.seeds)){
-    microSetObj$analSet$random.seeds <- GetRandomNumbers();
-    microSetObj$analSet$cur.inx <- 0;
-    microSetObj$analSet$rn.seed <- microSetObj$analSet$random.seeds[1];
+  if(is.null(mbSetObj$analSet$random.seeds)){
+    mbSetObj$analSet$random.seeds <- GetRandomNumbers();
+    mbSetObj$analSet$cur.inx <- 0;
+    mbSetObj$analSet$rn.seed <- mbSetObj$analSet$random.seeds[1];
   }
 
   if(randomOn == -1){
     rn.sd <- 123456;
   }else if(randomOn == 0){ # keep current
-    rn.sd <- microSetObj$analSet$rn.seed;
+    rn.sd <- mbSetObj$analSet$rn.seed;
   }else{ # random on
-    cur.inx <- microSetObj$analSet$cur.inx + 1;
-    rn.sd <- microSetObj$analSet$random.seeds[cur.inx];
-    microSetObj$analSet$cur.inx <- cur.inx;
+    cur.inx <- mbSetObj$analSet$cur.inx + 1;
+    rn.sd <- mbSetObj$analSet$random.seeds[cur.inx];
+    mbSetObj$analSet$cur.inx <- cur.inx;
   }
   
   set.seed(rn.sd);
   # save the seed
-  microSetObj$analSet$rn.seed <- rn.sd;
+  mbSetObj$analSet$rn.seed <- rn.sd;
 
   if(datatype=="16S"){
-    microSetObj$dataSet$taxa_table <- tax_table(microSetObj$dataSet$proc.phyobj);
-    data <- merge_phyloslim(microSetObj$dataSet$norm.phyobj,tax_table(microSetObj$dataSet$proc.phyobj));
+    mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
+    data <- merge_phyloslim(mbSetObj$dataSet$norm.phyobj,tax_table(mbSetObj$dataSet$proc.phyobj));
   }else{
-    data <- microSetObj$dataSet$norm.phyobj;
+    data <- mbSetObj$dataSet$norm.phyobj;
   }
   
   #using by default names for shotgun data
@@ -77,7 +77,7 @@ RF.Anal <- function(microSetObj, treeNum, tryNum, randomOn, variable, taxrank, d
   }
 
   data.impfeat <<- data1;
-  cls <- sample_data(microSetObj$dataSet$norm.phyobj)[[variable]];
+  cls <- sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]];
   variable <<- variable;
   rf_out <- randomForest(data1,cls, ntree = treeNum, mtry = tryNum, importance = TRUE, proximity = TRUE);
   # set up named sig table for display
@@ -87,27 +87,27 @@ RF.Anal <- function(microSetObj, treeNum, tryNum, randomOn, variable, taxrank, d
   sigmat <- signif(sigmat, 5);
   write.csv(sigmat,file="randomforests_sigfeatures.csv");
   
-  microSetObj$analSet$cls <- cls;
-  microSetObj$analSet$rf <- rf_out;
-  microSetObj$analSet$rf.sigmat <- sigmat;
-  return(.set.microSet(microSetObj))
+  mbSetObj$analSet$cls <- cls;
+  mbSetObj$analSet$rf <- rf_out;
+  mbSetObj$analSet$rf.sigmat <- sigmat;
+  return(.set.mbSetObj(mbSetObj))
 }
 
 #'Plot random forest classification
 #'@description This functions plots the classification of samples
 #'from the random forest analysis.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotRF.Classify<-function(microSetObj, imgName,format="png", dpi=72, width=NA){
+PlotRF.Classify<-function(mbSetObj, imgName,format="png", dpi=72, width=NA){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   imgName = paste(imgName,".", format, sep="");
   
-  microSetObj$imgSet$rf.cls <- imgName;
+  mbSetObj$imgSet$rf.cls <- imgName;
   
   if(is.na(width)){
     w <- 9;
@@ -120,28 +120,28 @@ PlotRF.Classify<-function(microSetObj, imgName,format="png", dpi=72, width=NA){
 
   Cairo::Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
   par(mar=c(4,4,3,2));
-  cols <- grDevices::rainbow(length(levels(microSetObj$analSet$cls))+1);
-  plot(microSetObj$analSet$rf, main="Random Forest classification", col=cols);
-  legend("topright", legend = c("Overall", levels(microSetObj$analSet$cls)), lty=2, lwd=1, col=cols);
+  cols <- grDevices::rainbow(length(levels(mbSetObj$analSet$cls))+1);
+  plot(mbSetObj$analSet$rf, main="Random Forest classification", col=cols);
+  legend("topright", legend = c("Overall", levels(mbSetObj$analSet$cls)), lty=2, lwd=1, col=cols);
   dev.off();
-  return(.set.microSet(microSetObj))
+  return(.set.mbSetObj(mbSetObj))
 }
 
 #'Plot variable importance ranked by MeanDecreaseAccuracy
 #'@description This functions plot variable importance ranked by MeanDecreaseAccuracy
 #'from the random forest analysis.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotRF.VIP<-function(microSetObj, imgName,format="png", dpi=72, width=NA){
+PlotRF.VIP<-function(mbSetObj, imgName,format="png", dpi=72, width=NA){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   imgName = paste(imgName, ".", format, sep="");
-  microSetObj$imgSet$rf.imp <- imgName;
-  vip.score <- rev(sort(microSetObj$analSet$rf$importance[,"MeanDecreaseAccuracy"]));
+  mbSetObj$imgSet$rf.imp <- imgName;
+  vip.score <- rev(sort(mbSetObj$analSet$rf$importance[,"MeanDecreaseAccuracy"]));
   
   if(is.na(width)){
     w <- 9;
@@ -154,23 +154,23 @@ PlotRF.VIP<-function(microSetObj, imgName,format="png", dpi=72, width=NA){
   h <- w*7/8;
 
   Cairo::Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
-  PlotImpVar(microSetObj, vip.score,"MeanDecreaseAccuracy");
+  PlotImpVar(mbSetObj, vip.score,"MeanDecreaseAccuracy");
   dev.off();
-  return(.set.microSet(microSetObj))
+  return(.set.mbSetObj(mbSetObj))
 }
 
 #'Helper function to plot variable importance 
 #'@description This functions plots the variable importance 
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotImpVar <- function(microSetObj, imp.vec, xlbl, feat.num=15, color.BW=FALSE){
+PlotImpVar <- function(mbSetObj, imp.vec, xlbl, feat.num=15, color.BW=FALSE){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  cls.len <- length(levels(microSetObj$analSet$cls));
+  cls.len <- length(levels(mbSetObj$analSet$cls));
   
   if(cls.len == 2){
     rt.mrg <- 5;
@@ -205,7 +205,7 @@ PlotImpVar <- function(microSetObj, imp.vec, xlbl, feat.num=15, color.BW=FALSE){
   # mns is a list contains means of all vars at each level
   # conver the list into a matrix with each row contains var averages across different lvls
   data1 <- data.impfeat;
-  mns <- by(data1[, names(imp.vec)], microSetObj$analSet$cls,
+  mns <- by(data1[, names(imp.vec)], mbSetObj$analSet$cls,
                     function(x){ # inner function note, by send a subset of dataframe
                         apply(x, 2, mean, trim=0.1)
                     });
@@ -247,7 +247,7 @@ PlotImpVar <- function(microSetObj, imp.vec, xlbl, feat.num=15, color.BW=FALSE){
     bg[m,] <- (col[nc:1])[rank(mns[m,])];
   }
 
-  cls.lbl <- levels(microSetObj$analSet$cls);
+  cls.lbl <- levels(mbSetObj$analSet$cls);
     
   for (n in 1:ncol(mns)){
     points(x,y, bty="n", pch=22, bg=bg[,n], cex=3);
@@ -284,27 +284,27 @@ PlotImpVar <- function(microSetObj, imp.vec, xlbl, feat.num=15, color.BW=FALSE){
 
 #'Main function to perform univariate analysis.
 #'@description This functions performs univariate analysis on the microbiome data.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import MASS
 
-PerformUnivarTest <- function(microSetObj, variable, p.lvl, datatype, shotgunid, taxrank, statOpt){
+PerformUnivarTest <- function(mbSetObj, variable, p.lvl, datatype, shotgunid, taxrank, statOpt){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   #rather than whole name from taxonomy just last name.
-  cls <- as.factor(sample_data(microSetObj$dataSet$norm.phyobj)[[variable]]);
+  cls <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   lvl <- length(levels(cls));
-  data <- microSetObj$dataSet$norm.phyobj;
+  data <- mbSetObj$dataSet$norm.phyobj;
 
   #using just  normalized abundant data
   if(datatype=="16S"){
     # dynamically add taxa table to norm.phyobj
-    microSetObj$dataSet$taxa_table <- tax_table(microSetObj$dataSet$proc.phyobj);
-    data <- merge_phyloslim(data, microSetObj$dataSet$taxa_table);
+    mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
+    data <- merge_phyloslim(data, mbSetObj$dataSet$taxa_table);
     
   }else{
     data<-data;
@@ -373,21 +373,21 @@ PerformUnivarTest <- function(microSetObj, variable, p.lvl, datatype, shotgunid,
   box_data <- as.data.frame(data1[ ,sigfeat]);
   colnames(box_data) <- sigfeat;
   box_data$class <- cls;
-  microSetObj$analSet$boxdata <- box_data;
-  write.csv(box_data, "uni_abund_data.csv")
+  mbSetObj$analSet$boxdata <- box_data;
+  write.csv(t(box_data), "uni_abund_data.csv")
   
-  microSetObj$analSet$datatype <- datatype;
-  microSetObj$analSet$anal.type <- "tt";
-  microSetObj$analSet$sig.count <- de.Num;
-  microSetObj$analSet$id.type <- shotgunid;
-  microSetObj$analSet$Univar$resTable <- microSetObj$analSet$resTable <- resTable;
-  microSetObj$analSet$univar.taxalvl <- taxrank;
+  mbSetObj$analSet$datatype <- datatype;
+  mbSetObj$analSet$anal.type <- "tt";
+  mbSetObj$analSet$sig.count <- de.Num;
+  mbSetObj$analSet$id.type <- shotgunid;
+  mbSetObj$analSet$Univar$resTable <- mbSetObj$analSet$resTable <- resTable;
+  mbSetObj$analSet$univar.taxalvl <- taxrank;
   
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
@@ -398,27 +398,27 @@ PerformUnivarTest <- function(microSetObj, variable, p.lvl, datatype, shotgunid,
 
 #'Main function to perform metagenome seq analysis
 #'@description This functions performs metagenome seq analysis on the microbiome data.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import metagenomeSeq
 
-PerformMetagenomeSeqAnal<-function(microSetObj, variable, p.lvl, datatype, shotgunid, taxrank, model){
+PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, datatype, shotgunid, taxrank, model){
     
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
     load_metagenomeseq();
   }
   
-  filt.dataphy <- microSetObj$dataSet$filt.data;
+  filt.dataphy <- mbSetObj$dataSet$filt.data;
   filt.dataphy <- apply(filt.dataphy,2,as.integer);
   filt.dataphy <- otu_table(filt.dataphy,taxa_are_rows =TRUE);
-  sample_table <- sample_data(microSetObj$dataSet$norm.phyobj, errorIfNULL=TRUE);
+  sample_table <- sample_data(mbSetObj$dataSet$norm.phyobj, errorIfNULL=TRUE);
   filt.dataphy <- merge_phyloslim(filt.dataphy, sample_table);
-  taxa_names(filt.dataphy) <- rownames(microSetObj$dataSet$filt.data);
+  taxa_names(filt.dataphy) <- rownames(mbSetObj$dataSet$filt.data);
   data <- filt.dataphy;
     
   #data<-dataSet$norm.phyobj;
@@ -426,8 +426,8 @@ PerformMetagenomeSeqAnal<-function(microSetObj, variable, p.lvl, datatype, shotg
   lvl <- length(levels(cls));
     
   if(datatype=="16S"){
-    microSetObj$dataSet$taxa_table <- tax_table(microSetObj$dataSet$proc.phyobj);
-    data <- merge_phyloslim(data, microSetObj$dataSet$taxa_table);
+    mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
+    data <- merge_phyloslim(data, mbSetObj$dataSet$taxa_table);
   }else{
     data <- data;
   }
@@ -514,7 +514,7 @@ PerformMetagenomeSeqAnal<-function(microSetObj, variable, p.lvl, datatype, shotg
     resTable <- resTable[1:500, ];
   }
     
-  microSetObj$analSet$metagenoseq$resTable <- microSetObj$analSet$resTable <- data.frame(resTable);
+  mbSetObj$analSet$metagenoseq$resTable <- mbSetObj$analSet$resTable <- data.frame(resTable);
     
   #only getting the names of DE features
   diff_ft <<- rownames(resTable)[1:de.Num];
@@ -533,18 +533,18 @@ PerformMetagenomeSeqAnal<-function(microSetObj, variable, p.lvl, datatype, shotg
   claslbl <- pData(data)[ ,variable];
   box_data$class <- unlist(claslbl);
 
-  microSetObj$analSet$boxdata <- box_data;
-  microSetObj$analSet$sig.count <- de.Num;
-  microSetObj$analSet$datatype <- datatype;
-  microSetObj$analSet$anal.type <- "metagseq";
-  microSetObj$analSet$metageno.taxalvl <- taxrank;
-  microSetObj$analSet$id.type <- shotgunid;
+  mbSetObj$analSet$boxdata <- box_data;
+  mbSetObj$analSet$sig.count <- de.Num;
+  mbSetObj$analSet$datatype <- datatype;
+  mbSetObj$analSet$anal.type <- "metagseq";
+  mbSetObj$analSet$metageno.taxalvl <- taxrank;
+  mbSetObj$analSet$id.type <- shotgunid;
     
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
@@ -554,28 +554,28 @@ PerformMetagenomeSeqAnal<-function(microSetObj, variable, p.lvl, datatype, shotg
 
 #'Main function to perform LEfSe analysis
 #'@description This functions performs LEfSe analysis on the microbiome data.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import MASS
 
-PerformLefseAnal <- function(microSetObj, p.lvl, lda.lvl, variable, isfunc, datatype, shotgunid, taxrank){
+PerformLefseAnal <- function(mbSetObj, p.lvl, lda.lvl, variable, isfunc, datatype, shotgunid, taxrank){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
     load_mass();
   }
     
-  claslbl <<- as.factor(sample_data(microSetObj$dataSet$norm.phyobj)[[variable]]);
+  claslbl <<- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
     
   #normalized data
-  data <- microSetObj$dataSet$norm.phyobj;
+  data <- mbSetObj$dataSet$norm.phyobj;
     
   if(datatype=="16S"){
-    taxa_table <- tax_table(microSetObj$dataSet$proc.phyobj);
+    taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
     data <- merge_phyloslim(data, taxa_table);
   }else{
     data <- data;
@@ -649,6 +649,10 @@ PerformLefseAnal <- function(microSetObj, p.lvl, lda.lvl, variable, isfunc, data
   #p-values column to appear first; then FDR and then others
   resTable <- resTable[,c(ncol(resTable),1:(ncol(resTable)-1))];
   resTable <- resTable[,c(ncol(resTable),1:(ncol(resTable)-1))];
+
+  # need to control digits
+  resTable <- signif(resTable, 5);
+
   #only getting the names of DE features
   diff_ft <<- rownames(resTable)[1:de.Num];
   resTable$max <- resTable$min <- NULL;
@@ -663,7 +667,7 @@ PerformLefseAnal <- function(microSetObj, p.lvl, lda.lvl, variable, isfunc, data
   }
     
   write.csv(resTable, file="lefse_de_output.csv");
-  microSetObj$analSet$lefse$resTable <- microSetObj$analSet$resTable <- resTable;
+  mbSetObj$analSet$lefse$resTable <- mbSetObj$analSet$resTable <- resTable;
     
   #subset dataset for bar plot visualization (LDA Score)
   ldabar <- as.data.frame(rownames(resTable));
@@ -683,31 +687,31 @@ PerformLefseAnal <- function(microSetObj, p.lvl, lda.lvl, variable, isfunc, data
   colnames(box_data) <- sigfeat;
   box_data$class <- claslbl;
     
-  microSetObj$analSet$boxdata <- box_data;
-  microSetObj$analSet$sig.count <- de.Num;
-  microSetObj$analSet$datatype <- datatype;
-  microSetObj$analSet$anal.type <- "lefse";
-  microSetObj$analSet$lefse.taxalvl <- taxrank;
-  microSetObj$analSet$id.type <- shotgunid;
+  mbSetObj$analSet$boxdata <- box_data;
+  mbSetObj$analSet$sig.count <- de.Num;
+  mbSetObj$analSet$datatype <- datatype;
+  mbSetObj$analSet$anal.type <- "lefse";
+  mbSetObj$analSet$lefse.taxalvl <- taxrank;
+  mbSetObj$analSet$id.type <- shotgunid;
   
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
 #'Plot LEfSe summary
 #'@description This functions graphically summarizes the LEfSe results
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotLEfSeSummary <- function(microSetObj, imgName, format="png", dpi=72) {
+PlotLEfSeSummary <- function(mbSetObj, imgName, format="png", dpi=72) {
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   set.seed(280561493);
   imgName = paste(imgName, ".", format, sep="");
@@ -719,7 +723,7 @@ PlotLEfSeSummary <- function(microSetObj, imgName, format="png", dpi=72) {
   print(box);
   dev.off();
   
-  return(.set.microSet(microSetObj))
+  return(.set.mbSetObj(mbSetObj))
 }
 
 #######################################
@@ -728,31 +732,31 @@ PlotLEfSeSummary <- function(microSetObj, imgName, format="png", dpi=72) {
 
 #'Main function to perform RNAseq analysis
 #'@description This functions performs RNAseq analysis on the microbiome data.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import DESeq2
 
-PerformRNAseqDE<-function(microSetObj, opts, p.lvl, variable, datatype, shotgunid, taxrank){
+PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, datatype, shotgunid, taxrank){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
 
-  claslbl <- as.factor(sample_data(microSetObj$dataSet$norm.phyobj)[[variable]]);
+  claslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
 
   # build phyloslim obj in fly
-  filt.dataphy <- microSetObj$dataSet$filt.data;
+  filt.dataphy <- mbSetObj$dataSet$filt.data;
   filt.dataphy <- apply(filt.dataphy, 2, as.integer);
   filt.dataphy <- otu_table(filt.dataphy, taxa_are_rows =TRUE);
-  sample_table <- sample_data(microSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
+  sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
   filt.dataphy <- merge_phyloslim(filt.dataphy, sample_table);
-  taxa_names(filt.dataphy) <- rownames(microSetObj$dataSet$filt.data);
+  taxa_names(filt.dataphy) <- rownames(mbSetObj$dataSet$filt.data);
   data <- filt.dataphy;
 
   if(datatype=="16S"){
-    microSetObj$dataSet$taxa_table <- tax_table(microSetObj$dataSet$proc.phyobj);
-    data <- merge_phyloslim(data, microSetObj$dataSet$taxa_table);
+    mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
+    data <- merge_phyloslim(data, mbSetObj$dataSet$taxa_table);
   }else{
     data <- data;
   }
@@ -816,7 +820,7 @@ PerformRNAseqDE<-function(microSetObj, opts, p.lvl, variable, datatype, shotguni
       resTable <- res[,c("log2FoldChange" ,"lfcSE","pvalue","padj")];
       resTable <- signif(data.matrix(resTable), digits=5);
       colnames(resTable) <- c("log2FC","lfcSE","Pvalues","FDR");
-      microSetObj$analSet$anal.type <- "deseq";
+      mbSetObj$analSet$anal.type <- "deseq";
     }
   }else{
     #using by filtered data ,RLE normalization within it.
@@ -835,7 +839,7 @@ PerformRNAseqDE<-function(microSetObj, opts, p.lvl, variable, datatype, shotguni
     resTable <- res[,c("logFC","logCPM","PValue","FDR")];
     resTable <- signif(data.matrix(resTable), digits = 5);
     colnames(resTable) <- c("log2FC","logCPM","Pvalues","FDR");
-    microSetObj$analSet$anal.type <- "edgr";
+    mbSetObj$analSet$anal.type <- "edgr";
   }
     
   resTable <- as.data.frame(resTable);
@@ -847,7 +851,7 @@ PerformRNAseqDE<-function(microSetObj, opts, p.lvl, variable, datatype, shotguni
     resTable<-resTable[1:500, ];
   }
     
-  microSetObj$analSet$rnaseq$resTable <- microSetObj$analSet$resTable <- as.data.frame(resTable);
+  mbSetObj$analSet$rnaseq$resTable <- mbSetObj$analSet$resTable <- as.data.frame(resTable);
     
   #only getting the names of DE features
   diff_ft <<- rownames(resTable)[1:de.Num];
@@ -859,20 +863,20 @@ PerformRNAseqDE<-function(microSetObj, opts, p.lvl, variable, datatype, shotguni
   colnames(box_data) <- sigfeat;
   box_data$class <- claslbl;
     
-  microSetObj$analSet$boxdata <- box_data;
-  microSetObj$analSet$sig.count <- de.Num;
-  microSetObj$analSet$datatype <- datatype;
-  microSetObj$analSet$id.type <- shotgunid;
-  microSetObj$analSet$rnaseq.taxalvl <- taxrank;
-  microSetObj$analSet$rnaseq.meth <- opts;
+  mbSetObj$analSet$boxdata <- box_data;
+  mbSetObj$analSet$sig.count <- de.Num;
+  mbSetObj$analSet$datatype <- datatype;
+  mbSetObj$analSet$id.type <- shotgunid;
+  mbSetObj$analSet$rnaseq.taxalvl <- taxrank;
+  mbSetObj$analSet$rnaseq.meth <- opts;
   
   tree_data <<- data;
 
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
@@ -882,7 +886,7 @@ PerformRNAseqDE<-function(microSetObj, opts, p.lvl, variable, datatype, shotguni
 
 #'Main function to perform PCoA analysis
 #'@description This functions performs PCoA analysis on the microbiome data.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -890,9 +894,9 @@ PerformRNAseqDE<-function(microSetObj, opts, p.lvl, variable, datatype, shotguni
 #'@import vegan
 #'@import RJSONIO
 
-PCoA3D.Anal <- function(microSetObj, ordMeth, distName, datatype, taxrank, colopt, variable, taxa, alphaopt, jsonNm){
+PCoA3D.Anal <- function(mbSetObj, ordMeth, distName, datatype, taxrank, colopt, variable, taxa, alphaopt, jsonNm){
 
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
     load_vegan();
@@ -901,11 +905,11 @@ PCoA3D.Anal <- function(microSetObj, ordMeth, distName, datatype, taxrank, colop
   variable <<- variable;
 
   if(taxrank=="OTU"){
-    taxa_table <- tax_table(microSetObj$dataSet$proc.phyobj);
-    data <- merge_phyloslim(microSetObj$dataSet$norm.phyobj, taxa_table);
+    taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
+    data <- merge_phyloslim(mbSetObj$dataSet$norm.phyobj, taxa_table);
   }else{
-    taxa_table <- tax_table(microSetObj$dataSet$proc.phyobj);
-    data <- merge_phyloslim(microSetObj$dataSet$norm.phyobj, taxa_table);
+    taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
+    data <- merge_phyloslim(mbSetObj$dataSet$norm.phyobj, taxa_table);
     #merging at taxonomy levels
     data <- fast_tax_glom_first(data, taxrank)
   }
@@ -928,7 +932,7 @@ PCoA3D.Anal <- function(microSetObj, ordMeth, distName, datatype, taxrank, colop
     indx <- which(colnames(sample_data(data))=="taxa");
     colnames(sample_data(data))[indx] <- taxa;
   }else if(colopt=="alphadiv"){
-    data1 <- microSetObj$dataSet$proc.phyobj;
+    data1 <- mbSetObj$dataSet$proc.phyobj;
     box <- plot_richness(data1, measures = alphaopt);
     alphaboxdata <- box$data;
     sam_nm <- sample_names(data);
@@ -1014,7 +1018,7 @@ PCoA3D.Anal <- function(microSetObj, ordMeth, distName, datatype, taxrank, colop
     
   colnames(coords) <- NULL;
   pca3d$score$xyz <- coords;
-  pca3d$score$name <- sample_names(microSetObj$dataSet$norm.phyobj);
+  pca3d$score$name <- sample_names(mbSetObj$dataSet$norm.phyobj);
   col.type <- "factor";
     
   if(colopt=="taxa"){
@@ -1026,7 +1030,7 @@ PCoA3D.Anal <- function(microSetObj, ordMeth, distName, datatype, taxrank, colop
     col.type <- "gradient";
     cols <- ComputeColorGradient(cls);
   }else{
-    cls <- factor(sample_data(microSetObj$dataSet$norm.phyobj)[[variable]]);
+    cls <- factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
     # now set color for each group
     cols <- unique(as.numeric(cls)) + 1;
   }
@@ -1047,10 +1051,10 @@ PCoA3D.Anal <- function(microSetObj, ordMeth, distName, datatype, taxrank, colop
   sink();
 
   if(.on.public.web){
-    .set.microSet(microSetObj) #may need to delete?
+    .set.mbSetObj(mbSetObj) #may need to delete?
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
@@ -1060,29 +1064,29 @@ PCoA3D.Anal <- function(microSetObj, ordMeth, distName, datatype, taxrank, colop
 
 #'Main function to calculate correlation of all other feature to a given feature name
 #'@description This functions calculate correlation of all other feature to a given feature name.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 
-FeatureCorrelation <- function(microSetObj, dist.name, taxrank, taxa, variable, 
+FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, taxa, variable, 
                                datatype, shotfeat, shotgunid){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(datatype=="16S"){
-    microSetObj$dataSet$taxa_table <- tax_table(microSetObj$dataSet$proc.phyobj);
-    data <- merge_phyloslim(data, microSetObj$dataSet$taxa_table);
+    mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
+    data <- merge_phyloslim(data, mbSetObj$dataSet$taxa_table);
         
     if(taxrank=="OTU"){
-      taxa_table <- tax_table(microSetObj$dataSet$proc.phyobj);
-      data <- merge_phyloslim(microSetObj$dataSet$norm.phyobj, taxa_table);
+      taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
+      data <- merge_phyloslim(mbSetObj$dataSet$norm.phyobj, taxa_table);
       data1 <- as.matrix(otu_table(data));
       feat_data <- as.numeric(data1[taxa,]);
     }else{
-      taxa_table <- tax_table(microSetObj$dataSet$proc.phyobj);
-      data <- merge_phyloslim(microSetObj$dataSet$norm.phyobj, taxa_table);
+      taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
+      data <- merge_phyloslim(mbSetObj$dataSet$norm.phyobj, taxa_table);
       #merging at taxonomy levels
       data <- fast_tax_glom_first(data, taxrank);
       nm <- as.character(tax_table(data)[,taxrank]);
@@ -1095,7 +1099,7 @@ FeatureCorrelation <- function(microSetObj, dist.name, taxrank, taxa, variable,
       feat_data <- data1[taxa,];
     }
   }else{
-    data <- microSetObj$dataSet$norm.phyobj;
+    data <- mbSetObj$dataSet$norm.phyobj;
   }
     
   if(datatype=="metageno"){
@@ -1105,12 +1109,12 @@ FeatureCorrelation <- function(microSetObj, dist.name, taxrank, taxa, variable,
   }
     
   data1 <- t(data1);
-  clslbl <- as.factor(sample_data(microSetObj$dataSet$norm.phyobj)[[variable]]);
+  clslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   
   #making boxplot data
   boxdata <- as.data.frame(data1);
   boxdata$class <- clslbl;
-  microSetObj$analSet$boxdata <- boxdata;
+  mbSetObj$analSet$boxdata <- boxdata;
   cbtempl.results <- apply(data1, 2, template.match, feat_data, dist.name);
   cor.res <- t(cbtempl.results);
   fdr.col <- p.adjust(cor.res[,3], "fdr");
@@ -1120,47 +1124,47 @@ FeatureCorrelation <- function(microSetObj, dist.name, taxrank, taxa, variable,
   sig.mat <-signif(cor.res[ord.inx,],5);
   fileName <- "correlation_feature.csv";
   write.csv(sig.mat,file=fileName);
-  microSetObj$analSet$resTable <- as.data.frame(sig.mat);
+  mbSetObj$analSet$resTable <- as.data.frame(sig.mat);
   #removing Inf values from table
-  is.na(microSetObj$analSet$resTable) <- sapply(microSetObj$analSet$resTable, is.infinite);
-  microSetObj$analSet$resTable[is.na(microSetObj$analSet$resTable)]<-0;
+  is.na(mbSetObj$analSet$resTable) <- sapply(mbSetObj$analSet$resTable, is.infinite);
+  mbSetObj$analSet$resTable[is.na(mbSetObj$analSet$resTable)]<-0;
   
   if(datatype=="metageno"){
-    microSetObj$analSet$pattern <- shotfeat;
+    mbSetObj$analSet$pattern <- shotfeat;
   }else{
-    microSetObj$analSet$pattern <- taxa;
-    microSetObj$analSet$taxrank <- taxrank;
+    mbSetObj$analSet$pattern <- taxa;
+    mbSetObj$analSet$taxrank <- taxrank;
   }
   
   sig.nm <<- fileName;
-  microSetObj$analSet$cor.mat <- sig.mat;
-  microSetObj$analSet$corph.taxalvl <- taxrank;
-  microSetObj$analSet$corph.meth <- dist.name;
-  microSetObj$analSet$sig.count <- 0; # note, not a DE analysis here
+  mbSetObj$analSet$cor.mat <- sig.mat;
+  mbSetObj$analSet$corph.taxalvl <- taxrank;
+  mbSetObj$analSet$corph.meth <- dist.name;
+  mbSetObj$analSet$sig.count <- 0; # note, not a DE analysis here
 
   if(.on.public.web){
-    .set.microSet(microSetObj) 
+    .set.mbSetObj(mbSetObj) 
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
 #'Main function to plot correlation matrix
 #'@description This functions plots the correlation matrix.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 
-PlotCorr <- function(microSetObj, imgName, format="png", dpi=72, width=NA){
+PlotCorr <- function(mbSetObj, imgName, format="png", dpi=72, width=NA){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  cor.res <- microSetObj$analSet$cor.mat;
-  pattern <- microSetObj$analSet$pattern;
-  title <- paste(microSetObj$analSet$taxrank, "correlated with the", pattern);
+  cor.res <- mbSetObj$analSet$cor.mat;
+  pattern <- mbSetObj$analSet$pattern;
+  title <- paste(mbSetObj$analSet$taxrank, "correlated with the", pattern);
     
   if(nrow(cor.res) > 25){
     cor.res <- cor.res[1:25, ];
@@ -1177,9 +1181,9 @@ PlotCorr <- function(microSetObj, imgName, format="png", dpi=72, width=NA){
   }
     
   cor.res <- cor.res[ord.inx, ];
-  title <- paste("Top",nrow(cor.res), tolower(microSetObj$analSet$taxrank), "correlated with the", pattern);
+  title <- paste("Top",nrow(cor.res), tolower(mbSetObj$analSet$taxrank), "correlated with the", pattern);
   imgName = paste(imgName, ".", format, sep="");
-  microSetObj$imgSet$cor.ph <- imgName;
+  mbSetObj$imgSet$cor.ph <- imgName;
   
   if(is.na(width)){
     w <- h <- 7.2;
@@ -1198,21 +1202,21 @@ PlotCorr <- function(microSetObj, imgName, format="png", dpi=72, width=NA){
   barplot(cor.res[,1], space=c(0.5, rep(0, nrow(cor.res)-1)), xlim=c(-1,1), xaxt="n", col = cols, add=T,horiz=T);
   dev.off();
   
-  return(.set.microSet(microSetObj))
+  return(.set.mbSetObj(mbSetObj))
 }
 
 #'Function to match patterns
 #'@description This functions matches patterns
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 
-Match.Pattern <- function(microSetObj, dist.name="pearson", pattern=NULL, taxrank, 
+Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, 
                           taxa, variable, datatype, shotfeat, shotgunid){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
     
   if(is.null(pattern)){
     pattern <- paste(1:length(levels(clslbl)), collapse="-");
@@ -1240,18 +1244,18 @@ Match.Pattern <- function(microSetObj, dist.name="pearson", pattern=NULL, taxran
   }
 
   if(datatype=="16S"){
-    microSetObj$dataSet$taxa_table <- tax_table(microSetObj$dataSet$proc.phyobj);
-    data <- merge_phyloslim(data, microSetObj$dataSet$taxa_table);
+    mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
+    data <- merge_phyloslim(data, mbSetObj$dataSet$taxa_table);
         
     if(taxrank=="OTU"){
-      taxa_table <- tax_table(microSetObj$dataSet$proc.phyobj);
-      data <- merge_phyloslim(microSetObj$dataSet$norm.phyobj, taxa_table);
+      taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
+      data <- merge_phyloslim(mbSetObj$dataSet$norm.phyobj, taxa_table);
       data1 <- as.matrix(otu_table(data));
       feat_data <- as.numeric(data1[taxa,]);
         
     }else{
-      taxa_table <- tax_table(microSetObj$dataSet$proc.phyobj);
-      data <- merge_phyloslim(microSetObj$dataSet$norm.phyobj, taxa_table);
+      taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
+      data <- merge_phyloslim(mbSetObj$dataSet$norm.phyobj, taxa_table);
       #merging at taxonomy levels
       data <- fast_tax_glom_first(data, taxrank);
       nm <- as.character(tax_table(data)[,taxrank]);
@@ -1264,7 +1268,7 @@ Match.Pattern <- function(microSetObj, dist.name="pearson", pattern=NULL, taxran
       feat_data<-data1[taxa,];
     }
   }else{
-    data <- microSetObj$dataSet$norm.phyobj;
+    data <- mbSetObj$dataSet$norm.phyobj;
   }
     
   if(datatype=="metageno"){
@@ -1274,10 +1278,10 @@ Match.Pattern <- function(microSetObj, dist.name="pearson", pattern=NULL, taxran
   }
     
   data1 <- t(data1);
-  clslbl <- as.factor(sample_data(microSetObj$dataSet$norm.phyobj)[[variable]]);
+  clslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   boxdata <- as.data.frame(data1);
   boxdata$class <- clslbl;
-  microSetObj$analSet$boxdata <- boxdata;
+  mbSetObj$analSet$boxdata <- boxdata;
   cbtempl.results <- apply(data1, 2, template.match, new.template, dist.name);
   cor.res <- t(cbtempl.results);
   fdr.col <- p.adjust(cor.res[,3], "fdr");
@@ -1287,42 +1291,42 @@ Match.Pattern <- function(microSetObj, dist.name="pearson", pattern=NULL, taxran
   sig.mat <- signif(cor.res[ord.inx,],5);
   fileName <- "correlation_feature.csv";
   write.csv(sig.mat, file=fileName);
-  microSetObj$analSet$resTable <- as.data.frame(sig.mat);
+  mbSetObj$analSet$resTable <- as.data.frame(sig.mat);
   #removing Inf values from table
-  is.na(microSetObj$analSet$resTable) <- sapply(microSetObj$analSet$resTable, is.infinite);
-  microSetObj$analSet$resTable[is.na(microSetObj$analSet$resTable)]<-0;
+  is.na(mbSetObj$analSet$resTable) <- sapply(mbSetObj$analSet$resTable, is.infinite);
+  mbSetObj$analSet$resTable[is.na(mbSetObj$analSet$resTable)]<-0;
     
   if(datatype=="metageno"){
-    microSetObj$analSet$pattern<-shotfeat;
+    mbSetObj$analSet$pattern<-shotfeat;
   }else{
-    microSetObj$analSet$pattern<-taxa;
-    microSetObj$analSet$taxrank<-taxrank;
+    mbSetObj$analSet$pattern<-taxa;
+    mbSetObj$analSet$taxrank<-taxrank;
   }
   
   sig.nm <<- fileName;
-  microSetObj$analSet$cor.mat<-sig.mat;
+  mbSetObj$analSet$cor.mat<-sig.mat;
   
   if(.on.public.web){
-    .set.microSet(microSetObj) 
+    .set.mbSetObj(mbSetObj) 
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
 #'Function to generate templates
 #'@description This functions generate templates
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 
-GenerateTemplates <- function(microSetObj, variable){
+GenerateTemplates <- function(mbSetObj, variable){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
     
-  clslbl <- as.factor(sample_data(microSetObj$dataSet$norm.phyobj)[[variable]]);
+  clslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   level.len <- length(levels(clslbl));
   # only specify 4: increasing, decreasing, mid high, mid low, constant
   incs <- 1:level.len;
@@ -1348,7 +1352,7 @@ GenerateTemplates <- function(microSetObj, variable){
 
 #'Function to create correlation heat map
 #'@description This function creates the correlation heat map
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -1357,27 +1361,27 @@ GenerateTemplates <- function(microSetObj, variable){
 #'@import gplots
 #'@import pheatmap
 
-PlotCorrHeatMap <- function(microSetObj, imgName, format="png", width=NA, cor.method,
+PlotCorrHeatMap <- function(mbSetObj, imgName, format="png", width=NA, cor.method,
                             colors_cntrst, viewOpt,taxrank,fix.col, no.clst, top, topNum,datatype){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   main <- xlab <- ylab <- NULL;
     
   if(datatype=="metageno"){
-    data <- microSetObj$dataSet$norm.phyobj;
+    data <- mbSetObj$dataSet$norm.phyobj;
     data1 <- as.matrix(otu_table(data));
     taxrank <- "OTU";
   }
     
   if(datatype=="16S"){
     if(taxrank=="OTU"){
-      taxa_table <- tax_table(microSetObj$dataSet$proc.phyobj);
-      data <- merge_phyloslim(microSetObj$dataSet$norm.phyobj, taxa_table);
+      taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
+      data <- merge_phyloslim(mbSetObj$dataSet$norm.phyobj, taxa_table);
       data1 <- as.matrix(otu_table(data));
     }else{
-      taxa_table <- tax_table(microSetObj$dataSet$proc.phyobj);
-      data <- merge_phyloslim(microSetObj$dataSet$norm.phyobj, taxa_table);
+      taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
+      data <- merge_phyloslim(mbSetObj$dataSet$norm.phyobj, taxa_table);
       #merging at taxonomy levels
       data <- fast_tax_glom_first(data,taxrank);
       nm <- as.character(tax_table(data)[,taxrank]);
@@ -1391,7 +1395,7 @@ PlotCorrHeatMap <- function(microSetObj, imgName, format="png", width=NA, cor.me
   }
 
   data <- t(data1);
-  microSetObj$analSet$abund_data<-data;
+  mbSetObj$analSet$abund_data<-data;
     
   if(ncol(data) > 1000){
     filter.val <- apply(data.matrix(data), 2, IQR, na.rm=T);
@@ -1439,7 +1443,7 @@ PlotCorrHeatMap <- function(microSetObj, imgName, format="png", width=NA, cor.me
       w <- 9;
     }else if(width == 0){
       w <- 7.2;
-      microSetObj$imgSet$heatmap <-imgName;
+      mbSetObj$imgSet$heatmap <-imgName;
     }else{
       w <- 7.2;
     }
@@ -1458,7 +1462,7 @@ PlotCorrHeatMap <- function(microSetObj, imgName, format="png", width=NA, cor.me
       w <- h;
     }else if(width == 0){
       w <- h <- 7.2;
-      microSetObj$imgSet$corr.heatmap <-imgName;
+      mbSetObj$imgSet$corr.heatmap <-imgName;
     }else{
       w <- h <- 7.2;
     }
@@ -1478,7 +1482,7 @@ PlotCorrHeatMap <- function(microSetObj, imgName, format="png", width=NA, cor.me
     Cairo::Cairo(file = imgName, unit="in", dpi=72, width=w, height=h, type=format, bg="white");
   }
   
-  microSetObj$imgSet$cor.heat<-imgName;
+  mbSetObj$imgSet$cor.heat<-imgName;
     
   if(no.clst){
     rowv = FALSE;
@@ -1505,15 +1509,15 @@ PlotCorrHeatMap <- function(microSetObj, imgName, format="png", width=NA, cor.me
     
   dev.off();
   
-  microSetObj$analSet$cor.heatmat<-corr.mat;
-  microSetObj$analSet$colors_cntrst<-colors_cntrst;
-  microSetObj$analSet$edge_col_low<-first_color;
-  microSetObj$analSet$edge_col_high<-last_color;
-  microSetObj$analSet$colors<-colors;
-  microSetObj$analSet$corheat.taxalvl<-taxrank;
-  microSetObj$analSet$corheat.meth<-cor.method;
+  mbSetObj$analSet$cor.heatmat<-corr.mat;
+  mbSetObj$analSet$colors_cntrst<-colors_cntrst;
+  mbSetObj$analSet$edge_col_low<-first_color;
+  mbSetObj$analSet$edge_col_high<-last_color;
+  mbSetObj$analSet$colors<-colors;
+  mbSetObj$analSet$corheat.taxalvl<-taxrank;
+  mbSetObj$analSet$corheat.meth<-cor.method;
   write.csv(signif(corr.mat,5), file="correlation_table.csv");
-  return(.set.microSet(microSetObj))
+  return(.set.mbSetObj(mbSetObj))
 }
 
 ###################################
@@ -1528,8 +1532,12 @@ gm_mean = function(x, na.rm=TRUE){
 
 # helper function
 phyloslim_to_edgeR = function(physeq, group, method="RLE", ...){
-  library("edgeR")
-  library("phyloslimR")
+  
+  if(.on.public.web){
+    load_edgeR();
+    load_phyloslim();
+  }
+
   # Enforce orientation.
   if( !taxa_are_rows(physeq) ){ physeq <- t(physeq) }
   x = as(otu_table(physeq), "matrix")
@@ -1565,112 +1573,112 @@ template.match <- function(x, template, dist.name) {
 ####################################
 
 #'Getter function
-#'@description This function retrieves table from microSetObj.
-#'@param microSetObj Input the name of the microSetObj.
+#'@description This function retrieves table from mbSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-GetSigTable.UNIVAR<-function(microSetObj){
-  microSetObj <- .get.microSet(microSetObj);
-  GetSigTable(microSetObj$analSet$Univar$resTable, "Univariate analysis");
+GetSigTable.UNIVAR<-function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  GetSigTable(mbSetObj$analSet$Univar$resTable, "Univariate analysis");
 }
 
 #'Getter function
-#'@description This function retrieves table from microSetObj.
-#'@param microSetObj Input the name of the microSetObj.
+#'@description This function retrieves table from mbSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-GetSigTable.Corr<-function(microSetObj){
-  microSetObj <- .get.microSet(microSetObj);
-  GetSigTable(microSetObj$analSet$cor.mat, "Pattern search using correlation analysis");
+GetSigTable.Corr<-function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  GetSigTable(mbSetObj$analSet$cor.mat, "Pattern search using correlation analysis");
 }
 
 #'Getter function
-#'@description This function retrieves table from microSetObj.
-#'@param microSetObj Input the name of the microSetObj.
+#'@description This function retrieves table from mbSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-GetSigTable.METAGENOSEQ<-function(microSetObj){
-  microSetObj <- .get.microSet(microSetObj);  
-  GetSigTable(microSetObj$analSet$metagenoseq$resTable, "metagenomeSeq");
+GetSigTable.METAGENOSEQ<-function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);  
+  GetSigTable(mbSetObj$analSet$metagenoseq$resTable, "metagenomeSeq");
 }
 
 #'Getter function
-#'@description This function retrieves table from microSetObj.
-#'@param microSetObj Input the name of the microSetObj.
+#'@description This function retrieves table from mbSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-GetSigTable.RNASeq<-function(microSetObj){
-  microSetObj <- .get.microSet(microSetObj);  
-  GetSigTable(microSetObj$analSet$rnaseq$resTable, "RNAseq method");
+GetSigTable.RNASeq<-function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);  
+  GetSigTable(mbSetObj$analSet$rnaseq$resTable, "RNAseq method");
 }
 
 #'Getter function
-#'@description This function retrieves table from microSetObj.
-#'@param microSetObj Input the name of the microSetObj.
+#'@description This function retrieves table from mbSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-GetSigTable.LEFSE<-function(microSetObj){
-  microSetObj <- .get.microSet(microSetObj);  
-  GetSigTable(microSetObj$analSet$lefse$resTable, "LEfSe");
+GetSigTable.LEFSE<-function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);  
+  GetSigTable(mbSetObj$analSet$lefse$resTable, "LEfSe");
 }
 
 #'Getter function
-#'@description This function retrieves table from microSetObj.
-#'@param microSetObj Input the name of the microSetObj.
+#'@description This function retrieves table from mbSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import xtable
-GetRFConf.Table<-function(microSetObj){
-  microSetObj <- .get.microSet(microSetObj);  
+GetRFConf.Table<-function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);  
   if(.on.public.web){
     load_xtable();
   }
-  print(xtable::xtable(microSetObj$analSet$rf$confusion, caption="Random Forest Classification Performance"), size="\\scriptsize");
+  print(xtable::xtable(mbSetObj$analSet$rf$confusion, caption="Random Forest Classification Performance"), size="\\scriptsize");
 }
 
 #'Getter function
-#'@description This function retrieves table from microSetObj.
-#'@param microSetObj Input the name of the microSetObj.
+#'@description This function retrieves table from mbSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import xtable
-GetMapTable<-function(){
-  microSetObj <- .get.microSet(microSetObj);  
+GetMapTable<-function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);  
   if(.on.public.web){
     load_xtable();
   }
-  print(xtable::xtable(microSetObj$analSet$mapTable, caption="Result from Taxa Name Mapping"),
+  print(xtable::xtable(mbSetObj$analSet$mapTable, caption="Result from Taxa Name Mapping"),
         tabular.environment = "longtable", caption.placement="top", size="\\scriptsize");
 }
 
 #'Getter function
-#'@description This function retrieves table from microSetObj.
-#'@param microSetObj Input the name of the microSetObj.
+#'@description This function retrieves table from mbSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import xtable
-GetORATable<-function(microSetObj){
-  microSetObj <- .get.microSet(microSetObj);  
+GetORATable<-function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);  
   if(.on.public.web){
     load_xtable();
   }    
-  res <- microSetObj$analSet$ora.mat;
+  res <- mbSetObj$analSet$ora.mat;
   print(xtable::xtable(res, caption="Result from Over Representation Analysis"),
         tabular.environment = "longtable", caption.placement="top", size="\\scriptsize");
 }
@@ -1737,41 +1745,41 @@ GetTtestRes<- function(cls, data, paired=FALSE, equal.var=TRUE, nonpar=F){
 ####
 
 # get the OOB error for the last signif
-GetRFOOB<-function(microSetObj){
-  microSetObj <- .get.microSet(microSetObj);
-  errors = microSetObj$analSet$rf$err.rate;
+GetRFOOB<-function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  errors = mbSetObj$analSet$rf$err.rate;
   nrow = dim(errors)[1];
   signif(errors[nrow, 1],3);
 }
 
 # significance measure, double[][]
-GetRFSigMat<-function(microSetObj){
-  microSetObj <- .get.microSet(microSetObj);
-  return(CleanNumber(microSetObj$analSet$rf.sigmat))
+GetRFSigMat<-function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  return(CleanNumber(mbSetObj$analSet$rf.sigmat))
 }
 
-GetRFSigRowNames<-function(microSetObj){
-  microSetObj <- .get.microSet(microSetObj);
-  return(rownames(microSetObj$analSet$rf.sigmat));
+GetRFSigRowNames<-function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  return(rownames(mbSetObj$analSet$rf.sigmat));
 }
 
-GetRFSigColNames<-function(microSetObj){
-  microSetObj <- .get.microSet(microSetObj);
-  return(colnames(microSetObj$analSet$rf.sigmat));
+GetRFSigColNames<-function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  return(colnames(mbSetObj$analSet$rf.sigmat));
 }
 
 # return double[][] confusion matrix
-GetRFConfMat<-function(microSetObj){
-  microSetObj <- .get.microSet(microSetObj);
-  return(signif(microSetObj$analSet$rf$confusion,3));
+GetRFConfMat<-function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  return(signif(mbSetObj$analSet$rf$confusion,3));
 }
 
-GetRFConfRowNames<-function(microSetObj){
-  microSetObj <- .get.microSet(microSetObj);
-  return(rownames(microSetObj$analSet$rf$confusion));
+GetRFConfRowNames<-function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  return(rownames(mbSetObj$analSet$rf$confusion));
 }
 
-GetRFConfColNames<-function(microSetObj){
-  microSetObj <- .get.microSet(microSetObj);
-  return(colnames(microSetObj$analSet$rf$confusion));
+GetRFConfColNames<-function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  return(colnames(mbSetObj$analSet$rf$confusion));
 }

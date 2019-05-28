@@ -14,14 +14,14 @@
 
 #'Function to create PDF report
 #'@description This function creates a PDF report.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PreparePDFReport <- function(microSetObj, usrName){
+PreparePDFReport <- function(mbSetObj, usrName){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
 
   # create the Rnw file
   file.create("Analysis_Report.Rnw");
@@ -32,14 +32,14 @@ PreparePDFReport <- function(microSetObj, usrName){
   fig.count <<- 0;
   table.count <<- 0;
 
-  if(microSetObj$dataSet$module.type == "16S" ){
-    CreateMDPRnwReport(usrName);
-  }else if(microSetObj$dataSet$module.type == "metageno"){
-    CreateSDPRnwReport(usrName);
-  }else if(microSetObj$dataSet$module.type == "16S_ref"){
-    CreatePPDRnwReport(usrName);
+  if(mbSetObj$dataSet$module.type == "16S" ){
+    CreateMDPRnwReport(mbSetObj, usrName);
+  }else if(mbSetObj$dataSet$module.type == "metageno"){
+    CreateSDPRnwReport(mbSetObj, usrName);
+  }else if(mbSetObj$dataSet$module.type == "16S_ref"){
+    CreatePPDRnwReport(mbSetObj, usrName);
   }else{
-    CreateTaxaEnrichRnwReport(usrName);
+    CreateTaxaEnrichRnwReport(mbSetObj, usrName);
   }
     
   # close opened files
@@ -52,10 +52,10 @@ PreparePDFReport <- function(microSetObj, usrName){
   }
 
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
@@ -72,14 +72,14 @@ SaveCurrentSession <- function(){
 #'Function to create PDF report for MDP module
 #'@description This function creates a PDF report
 #'for the MDP module - writes .Rnw file template.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-CreateMDPRnwReport<-function(microSetObj, usrName){
+CreateMDPRnwReport<-function(mbSetObj, usrName){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   CreateHeader(usrName);
   CreateIntr();
@@ -87,57 +87,57 @@ CreateMDPRnwReport<-function(microSetObj, usrName){
   CreateNORMdoc();
   Init16SAnalMode();
     
-  if(is.null(microSetObj[["analSet"]]) & (length(microSetObj$analSet)>0)){
-    CreateVISEXPLRdoc(microSetObj);
-    CreateALPHDIVdoc(microSetObj);
-    CreateBETADIVdoc(microSetObj);
-    CreateHCdoc(microSetObj);
-    CreateCOREdoc(microSetObj);
-    CreateCORRdoc(microSetObj);
-    CreateFUNCPREDdoc(microSetObj);
-    CreateUNIVARdoc(microSetObj);
-    CreateRNASEQdoc(microSetObj);
+  if(!is.null(mbSetObj[["analSet"]]) & (length(mbSetObj$analSet)>0)){
+    CreateVISEXPLRdoc(mbSetObj);
+    CreateALPHDIVdoc(mbSetObj);
+    CreateBETADIVdoc(mbSetObj);
+    CreateHCdoc(mbSetObj);
+    CreateCOREdoc(mbSetObj);
+    CreateCORRdoc(mbSetObj);
+    CreateFUNCPREDdoc(mbSetObj);
+    CreateUNIVARdoc(mbSetObj);
+    CreateRNASEQdoc(mbSetObj);
     CreateMETAGENOSEQdoc();
-    CreateLEFSEdoc(microSetObj);
-    CreateRFdoc(microSetObj);
+    CreateLEFSEdoc(mbSetObj);
+    CreateRFdoc(mbSetObj);
   } else {
     CreateAnalNullMsg();
     }
-  CreateFooter(microSetObj);
+  CreateFooter(mbSetObj);
 }
 
 #'Function to create PDF report for SDP module
 #'@description This function creates a PDF report
 #'for the SDP module - writes .Rnw file template.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-CreateSDPRnwReport<-function(microSetObj, usrName){
+CreateSDPRnwReport<-function(mbSetObj, usrName){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
     
   CreateHeader(usrName);
   CreateIntr();
-  CreateIOdoc(microSetObj);
-  CreateNORMdoc(microSetObj);
+  CreateIOdoc(mbSetObj);
+  CreateNORMdoc(mbSetObj);
   InitShotAnalMode();
     
-  if(is.null(microSetObj[["analSet"]]) & (length(microSetObj$analSet)>0)){
-    CreateFUNCPROFdoc(microSetObj);
-    CreateHCdoc(microSetObj);
-    CreateCORRdoc(microSetObj);
-    CreatePCAdoc(microSetObj);
-    CreateUNIVARdoc(microSetObj);
-    CreateRNASEQdoc(microSetObj);
-    CreateMETAGENOSEQdoc(microSetObj);
-    CreateLEFSEdoc(microSetObj);
-    CreateRFdoc(microSetObj);
+  if(!is.null(mbSetObj[["analSet"]]) & (length(mbSetObj$analSet)>0)){
+    CreateFUNCPROFdoc(mbSetObj);
+    CreateHCdoc(mbSetObj);
+    CreateCORRdoc(mbSetObj);
+    CreatePCAdoc(mbSetObj);
+    CreateUNIVARdoc(mbSetObj);
+    CreateRNASEQdoc(mbSetObj);
+    CreateMETAGENOSEQdoc(mbSetObj);
+    CreateLEFSEdoc(mbSetObj);
+    CreateRFdoc(mbSetObj);
   } else {
     CreateAnalNullMsg();
   }
-  CreateFooter(microSetObj);
+  CreateFooter(mbSetObj);
 }
 
 # create header
@@ -161,11 +161,11 @@ CreateIntr <- function(){
 }
 
 # read and process the raw data
-CreateIOdoc <- function(microSetObj){
+CreateIOdoc <- function(mbSetObj){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(microSetObj$dataSet$module.type == "metageno"){
+  if(mbSetObj$dataSet$module.type == "metageno"){
     descr <- c("\\subsection{Reading and Processing the Raw Data}\n",
               "MicrobiomeAnalyst accepts gene abundance profile in two formats generated from shotgun metagenomics or",
               "metatranscriptomics studies including plain text table and biom format.",
@@ -189,14 +189,14 @@ CreateIOdoc <- function(microSetObj){
         
   cat(descr, file=rnwFile, append=TRUE);
 
-  if(microSetObj$dataSet$data.type=="text"){
+  if(mbSetObj$dataSet$data.type=="text"){
     descr<-c("\\subsubsection{Reading abundance count data table}\n",
             "The abundance count data should be uploaded in tab-delimited text (.txt) or comma separated values (.csv)",
             "format. Samples are represented in columns, while rows contains the information about the features.",
             "Metadata file contains additional information about samples such as experimental factors or sample", 
             "grouping.\n");
 
-  }else if(microSetObj$dataSet$data.type=="biom"){
+  }else if(mbSetObj$dataSet$data.type=="biom"){
     descr<-c("\\subsubsection{Reading BIOM data}\n",
             "BIOM format is the standard for representing the taxa abundance profiles.",
             "The BIOM file is supported in both sparse or dense (without zeros) format.",
@@ -204,7 +204,7 @@ CreateIOdoc <- function(microSetObj){
             "Metadata file contains additional information about samples such as experimental factors or sample",
             "grouping.\n");
 
-  }else if(microSetObj$dataSet$data.type=="mothur"){
+  }else if(mbSetObj$dataSet$data.type=="mothur"){
     descr<-c("\\subsubsection{Reading mothur data}\n",
             "The mothur pipeline generate abundance and annotation information in its unique format.",
             "It contains these data in two separate plain text files (.shared and .taxonomy).",
@@ -216,13 +216,13 @@ CreateIOdoc <- function(microSetObj){
   cat("\n\n", file=rnwFile, append=TRUE);
         
   #user data info
-  cat(microSetObj$dataSet$read.msg, file=rnwFile, append=TRUE, sep="\n");
-  cat(microSetObj$dataSet$smpl.msg, file=rnwFile, append=TRUE, sep=" ");
+  cat(mbSetObj$dataSet$read.msg, file=rnwFile, append=TRUE, sep="\n");
+  cat(mbSetObj$dataSet$smpl.msg, file=rnwFile, append=TRUE, sep=" ");
         
-  if(microSetObj$dataSet$module.type == "metageno"){
-    cat("The genes are annotated as ", microSetObj$dataSet$gene.id,"label.", file=rnwFile, append=TRUE, sep=" ");
+  if(mbSetObj$dataSet$module.type == "metageno"){
+    cat("The genes are annotated as ", mbSetObj$dataSet$gene.id,"label.", file=rnwFile, append=TRUE, sep=" ");
   } else {
-    cat("The OTUs are annotated as ", microSetObj$dataSet$taxa.type,"label.", file=rnwFile, append=TRUE, sep=" ");
+    cat("The OTUs are annotated as ", mbSetObj$dataSet$taxa.type,"label.", file=rnwFile, append=TRUE, sep=" ");
   }
 
   # the last step is sanity check
@@ -238,19 +238,19 @@ CreateIOdoc <- function(microSetObj){
         
   cmdhist<-c("\\begin{figure}[htp]",
             "\\begin{center}",
-            paste("\\includegraphics[width=1.0\\textwidth]{", microSetObj$imgSet$lib.size,"}", sep=""),
+            paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$lib.size,"}", sep=""),
             "\\caption{Library size Overview}",      
             "\\end{center}",
-            paste("\\label{",microSetObj$imgSet$lib.size,"}", sep=""),
+            paste("\\label{",mbSetObj$imgSet$lib.size,"}", sep=""),
             "\\end{figure}");
         
   cat(cmdhist, file=rnwFile, append=TRUE);
   cat("\\clearpage", file=rnwFile, append=TRUE);
         
-  if(!microSetObj$dataSet$module.type == "16S_ref"){
+  if(!mbSetObj$dataSet$module.type == "16S_ref"){
     # the data filtering
     # need to check if this process is executed
-      if(is.null(microSetObj$dataSet$filt.data)){
+      if(is.null(mbSetObj$dataSet$filt.data)){
           errorMsg<- c("Error occured during filtering of your data ....",
                       "Fail to proceed. Please check if the data format you uploaded is correct.",
                       "Please visit our FAQs, Data Formats, and TroubleShooting pages for more information!");
@@ -274,7 +274,7 @@ CreateIOdoc <- function(microSetObj){
     cat(descr, file=rnwFile, append=TRUE);
     cat("\n\n", file=rnwFile, append=TRUE);
 
-    filt.msg <- microSetObj$dataSet$filt.msg;
+    filt.msg <- mbSetObj$dataSet$filt.msg;
             
     if(is.null(filt.msg)){
       filt.msg <- "No data filtering was performed.";
@@ -285,12 +285,12 @@ CreateIOdoc <- function(microSetObj){
 }
 
 # create normalization doc 
-CreateNORMdoc<-function(microSetObj){
+CreateNORMdoc <- function(mbSetObj){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
 
   # need to check if this process is executed
-  if(is.null(microSetObj$dataSet$norm.phyobj)){
+  if(is.null(mbSetObj$dataSet$norm.phyobj)){
     errorMsg<- c("Error occured during normalization of your data ....",
                  "Fail to proceed. Please check if the data format you uploaded is correct.",
                 "Please visit our FAQs and Data Format pages for more information!");
@@ -334,7 +334,7 @@ CreateNORMdoc<-function(microSetObj){
   cat(descr2, file=rnwFile, append=TRUE, sep="\n");
   cat("\n\n", file=rnwFile, append=TRUE);
 
-  norm.msg <- microSetObj$dataSet$norm.msg;
+  norm.msg <- mbSetObj$dataSet$norm.msg;
         
   if(is.null(norm.msg)){
     norm.msg <- "No data normalization was performed.";
@@ -403,8 +403,8 @@ InitShotAnalMode<-function(){
   descr2 <- c("\\begin{enumerate}",
               "\\item{Overall functional profiling: }",
               "\\begin{itemize}",
-              "\\item{Functional diversity overview }",
-              "\\item{Functional association  analysis}",
+              "\\item{Diversity overview }",
+              "\\item{Association  analysis}",
               "\\end{itemize}",
               "\\item{Clustering analysis: }",
               "\\begin{itemize}",
@@ -436,12 +436,12 @@ CreateAnalNullMsg<-function(){
 }
 
 # create Stacked Area/Bar plot/Piechart doc
-CreateVISEXPLRdoc <- function(microSetObj){
+CreateVISEXPLRdoc <- function(mbSetObj){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
 
   # need to check if this process is executed
-  if(is.null(microSetObj$analSet$stack) & is.null(microSetObj$analSet$pie)){
+  if(is.null(mbSetObj$analSet$stack) & is.null(mbSetObj$analSet$pie)){
     return();
   }
         
@@ -460,7 +460,7 @@ CreateVISEXPLRdoc <- function(microSetObj){
   cat(descr, file=rnwFile, append=TRUE);
 
   # STACKPLOT
-  if(!is.null(microSetObj$analSet$stack)){
+  if(!is.null(mbSetObj$analSet$stack)){
             
     descr<- paste("Figure", fig.count<<-fig.count+1,"shows the taxonomic composition using Stacked bar/area plot.");
             
@@ -468,28 +468,28 @@ CreateVISEXPLRdoc <- function(microSetObj){
             
     cmdhist<-c("\\begin{figure}[htp]",
                "\\begin{center}",
-               paste("\\includegraphics[width=1.0\\textwidth]{", microSetObj$imgSet$stack,"}", sep=""),
+               paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$stack,"}", sep=""),
                paste("\\caption{Taxonomic composition of", 
-               " community at ", "\\texttt{", microSetObj$analSet$stack.taxalvl, "} level using ", "\\texttt{", microSetObj$analSet$plot, "} plot}", sep=""),      
+               " community at ", "\\texttt{", mbSetObj$analSet$stack.taxalvl, "} level using ", "\\texttt{", mbSetObj$analSet$plot, "} plot}", sep=""),      
                "\\end{center}",
-               paste("\\label{",microSetObj$imgSet$stack,"}", sep=""),
+               paste("\\label{",mbSetObj$imgSet$stack,"}", sep=""),
                "\\end{figure}");
             
     cat(cmdhist, file=rnwFile, append=TRUE);
   }
 
   # PIECHART  
-  if(!is.null(microSetObj$analSet$pie)){ 
+  if(!is.null(mbSetObj$analSet$pie)){ 
     descr <- paste("Figure", fig.count<<-fig.count+1,"shows the taxonomic composition using piechart.");
     cat(descr, file=rnwFile, append=TRUE);
             
     cmdhist<-c("\\begin{figure}[htp]",
                "\\begin{center}",
-               paste("\\includegraphics[width=1.0\\textwidth]{", microSetObj$imgSet$pie,"}", sep=""),
+               paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$pie,"}", sep=""),
                paste("\\caption{Taxonomic composition of", 
-               " community at ", "\\texttt{", microSetObj$analSet$pie.taxalvl, "} level using piechart}", sep=""),      
+               " community at ", "\\texttt{", mbSetObj$analSet$pie.taxalvl, "} level using piechart}", sep=""),      
                "\\end{center}",
-               paste("\\label{",microSetObj$imgSet$pie,"}", sep=""),
+               paste("\\label{",mbSetObj$imgSet$pie,"}", sep=""),
                "\\end{figure}");
             cat(cmdhist, file=rnwFile, append=TRUE);
   }
@@ -497,12 +497,12 @@ CreateVISEXPLRdoc <- function(microSetObj){
 }
 
 # Alpha-diversity
-CreateALPHDIVdoc <- function(microSetObj){
+CreateALPHDIVdoc <- function(mbSetObj){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   # need to check if this process is executed
-  if(is.null(microSetObj$analSet$alpha)){
+  if(is.null(mbSetObj$analSet$alpha)){
     return();
   }
   
@@ -531,24 +531,24 @@ CreateALPHDIVdoc <- function(microSetObj){
   cmdhist<-c(
     "\\begin{figure}[htp]",
     "\\begin{center}",
-    paste("\\includegraphics[width=1.0\\textwidth]{", microSetObj$imgSet$alpha,"}", sep=""),
-    "\\caption{Alpha-diversity measure using","\\texttt{",microSetObj$analSet$alpha.meth, "} at","\\texttt{",microSetObj$analSet$alpha.taxalvl, "} level across all the samples.",
+    paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$alpha,"}", sep=""),
+    "\\caption{Alpha-diversity measure using","\\texttt{",mbSetObj$analSet$alpha.meth, "} at","\\texttt{",mbSetObj$analSet$alpha.taxalvl, "} level across all the samples.",
                     "The samples are represented on X-axis and their estimated diversity on Y-axis. Each sample
-                     is colored based on","\\texttt{",microSetObj$analSet$alpha.metadata, "} class}",
+                     is colored based on","\\texttt{",mbSetObj$analSet$alpha.metadata, "} class}",
     "\\end{center}",
-    paste("\\label{",microSetObj$imgSet$alpha,"}", sep=""),
+    paste("\\label{",mbSetObj$imgSet$alpha,"}", sep=""),
     "\\end{figure}"
     );
     cat(cmdhist, file=rnwFile, append=TRUE);
   cmdhist2<-c( 
     "\\begin{figure}[htp]",
     "\\begin{center}",
-    paste("\\includegraphics[width=1.0\\textwidth]{", microSetObj$imgSet$alpha.box,"}", sep=""),
-    "\\caption{Alpha-diversity measure using","\\texttt{",microSetObj$analSet$alpha.meth, "} at","\\texttt{", microSetObj$analSet$alpha.taxalvl, "} level represented as boxplot.",
-             "Each boxplot represents the diversity distribution of a group present within", "\\texttt{",microSetObj$analSet$alpha.metadata, "} class
-              [Statistical significance:" ,"\\texttt{", microSetObj$analSet$alpha.stat.info,"}]}",
+    paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$alpha.box,"}", sep=""),
+    "\\caption{Alpha-diversity measure using","\\texttt{",mbSetObj$analSet$alpha.meth, "} at","\\texttt{", mbSetObj$analSet$alpha.taxalvl, "} level represented as boxplot.",
+             "Each boxplot represents the diversity distribution of a group present within", "\\texttt{",mbSetObj$analSet$alpha.metadata, "} class
+              [Statistical significance:" ,"\\texttt{", mbSetObj$analSet$alpha.stat.info,"}]}",
     "\\end{center}",
-    paste("\\label{",microSetObj$imgSet$alpha.box,"}", sep=""),
+    paste("\\label{",mbSetObj$imgSet$alpha.box,"}", sep=""),
     "\\end{figure}"
   );
   cat(cmdhist2, file=rnwFile, append=TRUE, sep="\n");
@@ -556,12 +556,12 @@ CreateALPHDIVdoc <- function(microSetObj){
 }
 
 # Beta-diversity
-CreateBETADIVdoc<-function(microSetObj){
+CreateBETADIVdoc<-function(mbSetObj){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   # need to check if this process is executed
-  if(is.null(microSetObj$analSet$beta)){
+  if(is.null(mbSetObj$analSet$beta)){
     return();
   }
   
@@ -584,18 +584,18 @@ CreateBETADIVdoc<-function(microSetObj){
              "Beta diversity analysis is performed using the \\texttt{phyloseq} package\\footnote{Paul J. McMurdie",
              "\\textit{phyloseq: An R package for reproducible interactive analysis and graphics of microbiome census data.}, 2013, R package version 1.19}.",
              paste("Figure", fig.count<<-fig.count+1,"shows the ordination plot represented in 2-D;"),
-             paste("Statistical significance is found out using","\\texttt{", microSetObj$analSet$stat.info, "}."));
+             paste("Statistical significance is found out using","\\texttt{", mbSetObj$analSet$stat.info, "}."));
   
   cat(descr, file=rnwFile, append=TRUE,sep="\n");
   
   cmdhist<-c(
     "\\begin{figure}[htp]",
     "\\begin{center}",
-    paste("\\includegraphics[width=1.0\\textwidth]{", microSetObj$imgSet$beta2d,"}", sep=""),
-    "\\caption{2-D","\\texttt{", microSetObj$analSet$beta.meth, "} plot using \\texttt{", microSetObj$analSet$beta.dist, "} distance. The explained",
+    paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$beta2d,"}", sep=""),
+    "\\caption{2-D","\\texttt{", mbSetObj$analSet$beta.meth, "} plot using \\texttt{", mbSetObj$analSet$beta.dist, "} distance. The explained",
                           "variances are shown in brackets.}",
     "\\end{center}",
-    paste("\\label{",microSetObj$imgSet$beta2d,"}", sep=""),
+    paste("\\label{",mbSetObj$imgSet$beta2d,"}", sep=""),
     "\\end{figure}"
   );
   cat(cmdhist, file=rnwFile, append=TRUE, sep="\n");
@@ -603,12 +603,12 @@ CreateBETADIVdoc<-function(microSetObj){
 }
 
 # Hierarchical clustering
-CreateHCdoc <- function(microSetObj){
+CreateHCdoc <- function(mbSetObj){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   # need to check if this process is executed
-  if(is.null(microSetObj$analSet$tree) & is.null(microSetObj$analSet$heatmap)){
+  if(is.null(mbSetObj$analSet$tree) & is.null(mbSetObj$analSet$heatmap)){
     return();
   }
   
@@ -628,43 +628,43 @@ CreateHCdoc <- function(microSetObj){
     
   cat(descr, file=rnwFile, append=TRUE,sep="\n");
   
-  if(!is.null(microSetObj$analSet$tree)){
+  if(!is.null(mbSetObj$analSet$tree)){
     descr<-paste("Figure", fig.count<<-fig.count+1,"shows the clustering result in the form of a dendrogram.");
     cat(descr, file=rnwFile, append=TRUE);
     #taxonomic class will be replaced with gene id in SDP
     
-    if(microSetObj$dataSet$module.type == "metageno"){
-      microSetObj$analSet$tree.taxalvl <- microSetObj$dataSet$gene.id;
+    if(mbSetObj$dataSet$module.type == "metageno"){
+      mbSetObj$analSet$tree.taxalvl <- mbSetObj$dataSet$gene.id;
     }
     
     cmdhist<-c(
         "\\begin{figure}[htp]",
         "\\begin{center}",
-        paste("\\includegraphics[width=1.0\\textwidth]{", microSetObj$imgSet$tree,"}", sep=""),
+        paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$tree,"}", sep=""),
         paste("\\caption{Clustering result shown as dendrogram (", 
-            "distance measure using ","\\texttt{",microSetObj$analSet$tree.dist, "} and clustering algorithm using ","\\texttt{", microSetObj$analSet$tree.clust, "} at ","\\texttt{", microSetObj$analSet$tree.taxalvl,"} level)}", sep=""),
+            "distance measure using ","\\texttt{",mbSetObj$analSet$tree.dist, "} and clustering algorithm using ","\\texttt{", mbSetObj$analSet$tree.clust, "} at ","\\texttt{", mbSetObj$analSet$tree.taxalvl,"} level)}", sep=""),
         "\\end{center}",
-        paste("\\label{",microSetObj$imgSet$tree,"}", sep=""),
+        paste("\\label{",mbSetObj$imgSet$tree,"}", sep=""),
         "\\end{figure}"
     );
     cat(cmdhist, file=rnwFile, append=TRUE, sep="\n");
   }
   
-  if(!is.null(microSetObj$analSet$heatmap)){
+  if(!is.null(mbSetObj$analSet$heatmap)){
     descr <- paste("Figure", fig.count<<-fig.count+1,"shows the clustering result in the form of a heatmap.");
     cat(descr, file=rnwFile, append=TRUE);
     #taxonomic class will be replaced with gene id in SDP
-    if(microSetObj$dataSet$module.type == "metageno"){
-      microSetObj$analSet$heat.taxalvl <- microSetObj$dataSet$gene.id;
+    if(mbSetObj$dataSet$module.type == "metageno"){
+      mbSetObj$analSet$heat.taxalvl <- mbSetObj$dataSet$gene.id;
     }
     cmdhist<-c(
         "\\begin{figure}[htp]",
         "\\begin{center}",
-        paste("\\includegraphics[width=1.0\\textwidth]{", microSetObj$imgSet$heatmap,"}", sep=""),
+        paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$heatmap,"}", sep=""),
         paste("\\caption{Clustering result shown as heatmap (", 
-            "distance measure using ","\\texttt{", microSetObj$analSet$heatmap.dist, "} and clustering algorithm using ","\\texttt{", analSet$heatmap.clust, "} at ","\\texttt{", analSet$heat.taxalvl,"} level)}", sep=""),
+            "distance measure using ","\\texttt{", mbSetObj$analSet$heatmap.dist, "} and clustering algorithm using ","\\texttt{", mbSetObj$analSet$heatmap.clust, "} at ","\\texttt{", mbSetObj$analSet$heat.taxalvl,"} level)}", sep=""),
         "\\end{center}",
-        paste("\\label{",microSetObj$imgSet$heatmap,"}", sep=""),
+        paste("\\label{",mbSetObj$imgSet$heatmap,"}", sep=""),
         "\\end{figure}"
     );                    
     cat(cmdhist, file=rnwFile, append=TRUE, sep="\n");
@@ -673,16 +673,16 @@ CreateHCdoc <- function(microSetObj){
 }
 
 # Core microbiome analysis
-CreateCOREdoc <- function(microSetObj){
+CreateCOREdoc <- function(mbSetObj){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   # need to check if this process is executed
-  if(is.null(microSetObj$analSet$core)){
+  if(is.null(mbSetObj$analSet$core)){
     return();
   }
   
-  if(isEmptyMatrix(microSetObj$analSet$core)){
+  if(isEmptyMatrix(mbSetObj$analSet$core)){
       core.tab<-NULL;
   }else{
       core.tab<-paste("Table", table.count<<-table.count+1,"shows the details of these features.");
@@ -705,39 +705,35 @@ CreateCOREdoc <- function(microSetObj){
   
   cat(descr, file=rnwFile, append=TRUE,sep="\n");
   
-  if(!is.null(microSetObj$analSet$core)){
+  if(!is.null(mbSetObj$analSet$core)){
     cmdhist<-c("\\begin{figure}[htp]",
                "\\begin{center}",
-               paste("\\includegraphics[width=1.0\\textwidth]{", microSetObj$imgSet$core,"}", sep=""),
+               paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$core,"}", sep=""),
                paste("\\caption{Heatmap representing the core microbiome ", 
-               "at ","\\texttt{", microSetObj$analSet$core.taxalvl, "} level}", sep=""),
+               "at ","\\texttt{", mbSetObj$analSet$core.taxalvl, "} level}", sep=""),
                "\\end{center}",
-               paste("\\label{",microSetObj$imgSet$core,"}", sep=""),
+               paste("\\label{",mbSetObj$imgSet$core,"}", sep=""),
                "\\end{figure}"); 
         
     cat(cmdhist, file=rnwFile, append=TRUE, sep="\n");
         
-    cmdhist2<-c("<<echo=false, results=tex>>=",
-                "GetSigTable.CORE()",
-                "@");
-    cat(cmdhist2, file=rnwFile, append=TRUE, sep="\n");
   }
   cat("\\clearpage", file=rnwFile, append=TRUE, sep="\n");
 }
 
 
 # create Correlation doc
-CreateCORRdoc <- function(microSetObj){
+CreateCORRdoc <- function(mbSetObj){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
 
   # need to check if this process is executed
-  if(is.null(microSetObj$analSet$cor.mat) & is.null(microSetObj$analSet$cor.heatmat)){
+  if(is.null(mbSetObj$analSet$cor.mat) & is.null(mbSetObj$analSet$cor.heatmat)){
     return();
   }
 
   # need to check if this process is executed
-  if(!is.null(microSetObj$analSet$cor.heatmat)){
+  if(!is.null(mbSetObj$analSet$cor.heatmat)){
     descr <- c("\\subsection{Correlation Analysis}\n",
                "Correlation analysis can be used to visualize the overall correlations between different features",
                "It can also be used to identify which features are correlated with a feature of interest.",
@@ -752,24 +748,24 @@ CreateCORRdoc <- function(microSetObj){
 
     cat(descr, file=rnwFile, append=TRUE);
     #taxonomic class will be replaced with gene id in SDP
-    if(microSetObj$dataSet$module.type == "metageno"){
-      microSetObj$analSet$corheat.taxalvl<-microSetObj$dataSet$gene.id;
+    if(mbSetObj$dataSet$module.type == "metageno"){
+      mbSetObj$analSet$corheat.taxalvl<-mbSetObj$dataSet$gene.id;
     }
             
     cmdhist<-c("\\begin{figure}[htp]",
                "\\begin{center}",
-               paste("\\includegraphics[width=1.0\\textwidth]{", microSetObj$imgSet$cor.heat,"}", sep=""),
-               "\\caption{Correlation Heatmap at","\\texttt{", microSetObj$analSet$corheat.taxalvl, "}level}",
+               paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$cor.heat,"}", sep=""),
+               "\\caption{Correlation Heatmap at","\\texttt{", mbSetObj$analSet$corheat.taxalvl, "}level}",
                "\\end{center}",
-               paste("\\label{",microSetObj$imgSet$cor.heat,"}", sep=""),
+               paste("\\label{",mbSetObj$imgSet$cor.heat,"}", sep=""),
                "\\end{figure}");
 
     cat(cmdhist, file=rnwFile, append=TRUE, sep="\n");
     cat("\n\n", file=rnwFile, append=TRUE, sep="\n");
   }
 
-  if(!is.null(microSetObj$analSet$cor.mat)){
-    if(isEmptyMatrix(microSetObj$analSet$cor.mat)){
+  if(!is.null(mbSetObj$analSet$cor.mat)){
+    if(isEmptyMatrix(mbSetObj$analSet$cor.mat)){
       cor.tab<-NULL;
     }else{
       cor.tab<-paste("Table", table.count<<-table.count+1,"shows the details of these features.");
@@ -791,21 +787,21 @@ CreateCORRdoc <- function(microSetObj){
     cat(descr, file=rnwFile, append=TRUE);
       
     #taxonomic class will be replaced with gene id in SDP
-    if(microSetObj$dataSet$module.type == "metageno"){
-      microSetObj$analSet$corph.taxalvl<-microSetObj$dataSet$gene.id;
+    if(mbSetObj$dataSet$module.type == "metageno"){
+      mbSetObj$analSet$corph.taxalvl<-mbSetObj$dataSet$gene.id;
     }
             
     cmdhist<-c("\\begin{figure}[htp]",
                "\\begin{center}",
-               paste("\\includegraphics[width=1.0\\textwidth]{", microSetObj$imgSet$cor.ph,"}", sep=""),
-               "\\caption{Important features (at","\\texttt{", microSetObj$analSet$corph.taxalvl, "} level) selected by correlation analysis with light",
+               paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$cor.ph,"}", sep=""),
+               "\\caption{Important features (at","\\texttt{", mbSetObj$analSet$corph.taxalvl, "} level) selected by correlation analysis with light",
                "purple indicates positive correlation and blue indicate negative correlations.}",
                "\\end{center}",
-               paste("\\label{",microSetObj$imgSet$cor.ph,"}", sep=""),
+               paste("\\label{",mbSetObj$imgSet$cor.ph,"}", sep=""),
                "\\end{figure}");
             cat(cmdhist, file=rnwFile, append=TRUE,sep="\n");
             cmdhist2<-c("<<echo=false, results=tex>>=",
-                   "GetSigTable.Corr()",
+                   "GetSigTable.Corr(mbSet)",
                    "@");
             cat(cmdhist2, file=rnwFile, append=TRUE,sep="\n");
     }
@@ -814,23 +810,23 @@ CreateCORRdoc <- function(microSetObj){
 
 
 # create Univariate doc
-CreateUNIVARdoc<-function(microSetObj){
+CreateUNIVARdoc<-function(mbSetObj){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
 
   # need to check if this process is executed
-  if(is.null(microSetObj$analSet$Univar$resTable)){
+  if(is.null(mbSetObj$analSet$Univar$resTable)){
     return();
   }
 
-  if(isEmptyMatrix(microSetObj$analSet$Univar$resTable)){
+  if(isEmptyMatrix(mbSetObj$analSet$Univar$resTable)){
     univar.tab<-NULL;
   }else{
     #taxonomic class will be replaced with gene id in SDP
-    if(microSetObj$dataSet$module.type == "metageno"){
-      microSetObj$analSet$univar.taxalvl<-microSetObj$dataSet$gene.id;
+    if(mbSetObj$dataSet$module.type == "metageno"){
+      mbSetObj$analSet$univar.taxalvl<-mbSetObj$dataSet$gene.id;
     }
-    univar.tab<-paste("Table", table.count<<-table.count+1, "shows the important features identified by Univariate analysis at","\\texttt{", microSetObj$analSet$univar.taxalvl, "}level");
+    univar.tab<-paste("Table", table.count<<-table.count+1, "shows the important features identified by Univariate analysis at","\\texttt{", mbSetObj$analSet$univar.taxalvl, "}level");
   }
         
   descr <- c("\\subsection{Univariate analysis}\n",
@@ -851,30 +847,30 @@ CreateUNIVARdoc<-function(microSetObj){
   cat("\n\n", file=rnwFile, append=TRUE);
          
   cmdhist<-c("<<echo=false, results=tex>>=",
-             "GetSigTable.UNIVAR()",
+             "GetSigTable.UNIVAR(mbSet)",
              "@");
   cat(cmdhist, file=rnwFile, append=TRUE, sep="\n");
   cat("\\clearpage", file=rnwFile, append=TRUE);
 }
 
 # create MetagenomeSeq doc
-CreateMETAGENOSEQdoc <- function(microSetObj){
+CreateMETAGENOSEQdoc <- function(mbSetObj){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
 
   # need to check if this process is executed
-  if(is.null(microSetObj$analSet$metagenoseq$resTable)){
+  if(is.null(mbSetObj$analSet$metagenoseq$resTable)){
     return();
   }
 
-  if(isEmptyMatrix(microSetObj$analSet$metagenoseq$resTable)){
+  if(isEmptyMatrix(mbSetObj$analSet$metagenoseq$resTable)){
     metagenoseq.tab<-NULL;
   }else{
     #taxonomic class will be replaced with gene id in SDP
-    if(microSetObj$dataSet$module.type == "metageno"){
-      microSetObj$analSet$metageno.taxalvl<-microSetObj$dataSet$gene.id;
+    if(mbSetObj$dataSet$module.type == "metageno"){
+      mbSetObj$analSet$metageno.taxalvl<-mbSetObj$dataSet$gene.id;
     }
-      metagenoseq.tab<-paste("Table", table.count<<-table.count+1,"shows the important features identified by metagenomeSeq at","\\texttt{", microSetObj$analSet$metageno.taxalvl, "}level");
+      metagenoseq.tab<-paste("Table", table.count<<-table.count+1,"shows the important features identified by metagenomeSeq at","\\texttt{", mbSetObj$analSet$metageno.taxalvl, "}level");
   }
 
   descr <- c("\\subsection{metagenomeSeq}\n",
@@ -899,7 +895,7 @@ CreateMETAGENOSEQdoc <- function(microSetObj){
   cat(descr, file=rnwFile, append=TRUE);
   cat("\n\n", file=rnwFile, append=TRUE);
   cmdhist<-c("<<echo=false, results=tex>>=",
-             "GetSigTable.METAGENOSEQ()",
+             "GetSigTable.METAGENOSEQ(mbSet)",
              "@");
   cat(cmdhist, file=rnwFile, append=TRUE, sep="\n");
   cat("\\clearpage", file=rnwFile, append=TRUE);
@@ -907,18 +903,18 @@ CreateMETAGENOSEQdoc <- function(microSetObj){
 
 
 # RNASeq method
-CreateRNASEQdoc <- function(microSetObj){
+CreateRNASEQdoc <- function(mbSetObj){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
 
   # need to check if this process is executed
-  if(is.null(microSetObj$analSet$rnaseq$resTable)){
+  if(is.null(mbSetObj$analSet$rnaseq$resTable)){
     return();
   };
         
   #taxonomic class will be replaced with gene id in SDP
-  if(microSetObj$dataSet$module.type == "metageno"){
-    microSetObj$analSet$rnaseq.taxalvl<-microSetObj$dataSet$gene.id;
+  if(mbSetObj$dataSet$module.type == "metageno"){
+    mbSetObj$analSet$rnaseq.taxalvl<-mbSetObj$dataSet$gene.id;
   }
         
   descr <- c("\\subsection{RNAseq methods}\n",
@@ -936,12 +932,12 @@ CreateRNASEQdoc <- function(microSetObj){
              "Features are considered to  be significant based on their adjusted p-value. The default is",
              "\\texttt{adj.p-value cutoff} = 0.05.",
              "\n\n",
-             paste("Table", table.count<<-table.count+1,"shows the important features identified by","\\texttt{", microSetObj$analSet$rnaseq.meth, "}method at", "\\texttt{", microSetObj$analSet$rnaseq.taxalvl, "}level" ));
+             paste("Table", table.count<<-table.count+1,"shows the important features identified by","\\texttt{", mbSetObj$analSet$rnaseq.meth, "}method at", "\\texttt{", mbSetObj$analSet$rnaseq.taxalvl, "}level" ));
 
   cat(descr, file=rnwFile, append=TRUE);
   cat("\n\n", file=rnwFile, append=TRUE);
   cmdhist<-c("<<echo=false, results=tex>>=",
-             "GetSigTable.RNASeq()",
+             "GetSigTable.RNASeq(mbSet)",
              "@");
         
   cat(cmdhist, file=rnwFile, append=TRUE, sep="\n");
@@ -949,18 +945,18 @@ CreateRNASEQdoc <- function(microSetObj){
 }
 
 # LEFSE
-CreateLEFSEdoc <- function(microSetObj){
+CreateLEFSEdoc <- function(mbSetObj){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
     
   # need to check if this process is executed
-  if(is.null(microSetObj$analSet$lefse$resTable)){
+  if(is.null(mbSetObj$analSet$lefse$resTable)){
     return();
   };
     
   #taxonomic class will be replaced with gene id in SDP
-  if(microSetObj$dataSet$module.type == "metageno"){
-    microSetObj$analSet$lefse.taxalvl<-microSetObj$dataSet$gene.id;
+  if(mbSetObj$dataSet$module.type == "metageno"){
+    mbSetObj$analSet$lefse.taxalvl<-mbSetObj$dataSet$gene.id;
   }
 
   descr <- c("\\subsection{LDA Effect Size (LEfSe)}\n",
@@ -976,24 +972,24 @@ CreateLEFSEdoc <- function(microSetObj){
              "Features are considered to  be significant based on their adjusted p-value. The default is",
              "\\texttt{adj.p-value cutoff} = 0.05.",
              "\n\n",
-             paste("Table", table.count<<-table.count+1,"shows the important features identified by LEfSe at","\\texttt{", microSetObj$analSet$lefse.taxalvl, "}level"));
+             paste("Table", table.count<<-table.count+1,"shows the important features identified by LEfSe at","\\texttt{", mbSetObj$analSet$lefse.taxalvl, "}level"));
 
   cat(descr, file=rnwFile, append=TRUE);
   cat("\n\n", file=rnwFile, append=TRUE);
   cmdhist<-c("<<echo=false, results=tex>>=",
-             "GetSigTable.LEFSE()",
+             "GetSigTable.LEFSE(mbSet)",
              "@");
   cat(cmdhist, file=rnwFile, append=TRUE, sep="\n");
   cat("\\clearpage", file=rnwFile, append=TRUE);
 }
 
 # random forests
-CreateRFdoc <- function(microSetObj){
+CreateRFdoc <- function(mbSetObj){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
 
   # need to check if this process is executed
-  if(is.null(microSetObj$analSet$rf)){
+  if(is.null(mbSetObj$analSet$rf)){
     return();
   }
 
@@ -1018,30 +1014,30 @@ CreateRFdoc <- function(microSetObj){
 
   cmdhist<-c("\\begin{figure}[htp]",
              "\\begin{center}",
-             paste("\\includegraphics[width=1.0\\textwidth]{", microSetObj$imgSet$rf.cls,"}", sep=""),
+             paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$rf.cls,"}", sep=""),
              "\\caption{Cumulative error rates by Random Forest classification. The overall error rate is shown
              as the black line; the red and green lines represent the error rates for each class.}",
              "\\end{center}",
-             paste("\\label{",microSetObj$imgSet$rf.cls,"}", sep=""),
+             paste("\\label{",mbSetObj$imgSet$rf.cls,"}", sep=""),
              "\\end{figure}");
 
   cat(cmdhist, file=rnwFile, append=TRUE, sep="\n");
 
   cmdhist<-c("<<echo=false, results=tex>>=",
-             "GetRFConf.Table()",
+             "GetRFConf.Table(mbSet)",
              "@",
-             paste("The OOB error is ", GetRFOOB()));
+             paste("The OOB error is ", GetRFOOB(mbSetObj)));
         
   cat(cmdhist, file=rnwFile, append=TRUE, sep="\n");
 
   cmdhist<-c( "\n\n",
               "\\begin{figure}[htp]",
               "\\begin{center}",
-              paste("\\includegraphics[width=1.0\\textwidth]{", microSetObj$imgSet$rf.imp,"}", sep=""),
+              paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$rf.imp,"}", sep=""),
               "\\caption{Significant features identified by Random Forest. The features are ranked by the mean
               decrease in classification accuracy when they are permuted.}",
               "\\end{center}",
-              paste("\\label{",microSetObj$imgSet$rf.imp,"}", sep=""),
+              paste("\\label{",mbSetObj$imgSet$rf.imp,"}", sep=""),
               "\\end{figure}");
         
   cat(cmdhist, file=rnwFile, append=TRUE, sep="\n");
@@ -1049,12 +1045,12 @@ CreateRFdoc <- function(microSetObj){
 }
 
 # Functional Prediction
-CreateFUNCPREDdoc <- function(microSetObj){
+CreateFUNCPREDdoc <- function(mbSetObj){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   # need to check if this process is executed
-  if(is.null(microSetObj$analSet$func.pred)){
+  if(is.null(mbSetObj$analSet$func.pred)){
     return();
   }
   
@@ -1081,10 +1077,10 @@ CreateFUNCPREDdoc <- function(microSetObj){
   cmdhist<-c(
     "\\begin{figure}[htp]",
     "\\begin{center}",
-    paste("\\includegraphics[width=1.0\\textwidth]{", microSetObj$imgSet$func.pred,"}", sep=""),
-    "\\caption{The count distribution (log-scaled) profile of metagenomes (KO) across each sample predicted using","\\texttt{", microSetObj$analSet$func.meth, "}.}",
+    paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$func.pred,"}", sep=""),
+    "\\caption{The count distribution (log-scaled) profile of metagenomes (KO) across each sample predicted using","\\texttt{", mbSetObj$analSet$func.meth, "}.}",
     "\\end{center}",
-    paste("\\label{",microSetObj$imgSet$func.pred,"}", sep=""),
+    paste("\\label{",mbSetObj$imgSet$func.pred,"}", sep=""),
     "\\end{figure}"
   );
   
@@ -1097,12 +1093,12 @@ CreateFUNCPREDdoc <- function(microSetObj){
 ##########################################
 
 # Functional Profiling
-CreateFUNCPROFdoc <- function(microSetObj){
+CreateFUNCPROFdoc <- function(mbSetObj){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   # need to check if this process is executed
-  if(is.null(microSetObj$analSet$func.prof)){
+  if(is.null(mbSetObj$analSet$func.prof)){
     return();
   }
   
@@ -1130,10 +1126,10 @@ CreateFUNCPROFdoc <- function(microSetObj){
   cmdhist<-c(
     "\\begin{figure}[htp]",
     "\\begin{center}",
-    paste("\\includegraphics[width=1.0\\textwidth]{", microSetObj$imgSet$func.prof,"}", sep=""),
-    "\\caption{Functional profiling of gene abundance at ","\\texttt{", microSetObj$analSet$func.lvl, "} level.}",
+    paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$func.prof,"}", sep=""),
+    "\\caption{Functional profiling of gene abundance at ","\\texttt{", mbSetObj$analSet$func.lvl, "} level.}",
     "\\end{center}",
-    paste("\\label{",microSetObj$imgSet$func.prof,"}", sep=""),
+    paste("\\label{",mbSetObj$imgSet$func.prof,"}", sep=""),
     "\\end{figure}"
   );
   
@@ -1142,12 +1138,12 @@ CreateFUNCPROFdoc <- function(microSetObj){
 }
 
 # create PCA doc
-CreatePCAdoc <- function(microSetObj){
+CreatePCAdoc <- function(mbSetObj){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   # need to check if this process is executed
-  if(is.null(microSetObj$analSet$pca)){
+  if(is.null(mbSetObj$analSet$pca)){
     return();
   }
   
@@ -1165,10 +1161,10 @@ CreatePCAdoc <- function(microSetObj){
   cmdhist<-c(
     "\\begin{figure}[htp]",
     "\\begin{center}",
-    paste("\\includegraphics[width=1.0\\textwidth]{", microSetObj$imgSet$pca,"}", sep=""),
+    paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$pca,"}", sep=""),
     "\\caption{Scores plot between the selected PCs. The explained variances are shown in brackets.}",
     "\\end{center}",
-    paste("\\label{",microSetObj$imgSet$pca,"}", sep=""),
+    paste("\\label{",mbSetObj$imgSet$pca,"}", sep=""),
     "\\end{figure}"
   );
   cat(cmdhist, file=rnwFile, append=TRUE, sep="\n");
@@ -1180,14 +1176,14 @@ CreatePCAdoc <- function(microSetObj){
 ##########################################
 
 # write .Rnw file template
-CreateTaxaEnrichRnwReport<-function(usrName){
+CreateTaxaEnrichRnwReport<-function(mbSetObj, usrName){
   CreateHeader(usrName);
   CreateEnrichIntr();
   CreateEnrichOverview();
-  CreateEnrichInputDoc(microSetObj);
+  CreateEnrichInputDoc(mbSetObj);
   CreateEnrichProcessDoc();
   CreateEnrichORAdoc();
-  CreateFooter(microSetObj);
+  CreateFooter(mbSetObj);
 }
 
 CreateEnrichIntr<-function(){
@@ -1228,9 +1224,9 @@ CreateEnrichOverview<-function(){
 }
 
 # create data input doc
-CreateEnrichInputDoc<-function(microSetObj){
+CreateEnrichInputDoc<-function(mbSetObj){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   descr <- c("\\section{Data Input}\n",
              "There are three enrichment analysis algorithms offered by TSEA. Accordingly, three",
@@ -1272,14 +1268,14 @@ CreateEnrichInputDoc<-function(microSetObj){
     "\n\n");
   cat(descr, file=rnwFile, append=TRUE, sep="\n");
   
-  if(microSetObj$dataSet$q.type == "speciestaxa"){
+  if(mbSetObj$dataSet$q.type == "speciestaxa"){
     descr <- c("You have provided a list of microbes annotated at species-level. Species-level",
                "taxon sets will be used for performing enrichment analysis. \n\n");
-  }else if(microSetObj$dataSet$q.type == "straintaxa"){
+  }else if(mbSetObj$dataSet$q.type == "straintaxa"){
     descr <- c("You have provided a list of microbes annotated at strain-level. Strain-level",
                "taxon sets will be used for performing enrichment analysis. \n\n");
   }else{
-    if(microSetObj$dataSet$tset.type=="dis") {
+    if(mbSetObj$dataSet$tset.type=="dis") {
         descr <- c("You have provided a list of microbes annotated at mixed-level. Mixed-level",
                    "taxon sets associated with Human diseases will be used for performing enrichment analysis. \n\n");
     } else {
@@ -1302,7 +1298,7 @@ CreateEnrichProcessDoc<-function(){
   cat(descr, file=rnwFile, append=TRUE, sep="\n");
   
   descr<-c("<<echo=false, results=tex>>=",
-           "GetMapTable()",
+           "GetMapTable(mbSet)",
            "@",
            "\\clearpage\n\n");
   cat(descr, file=rnwFile, append=TRUE, sep="\n");
@@ -1326,19 +1322,19 @@ CreateEnrichORAdoc<-function(){
   cat(descr, file=rnwFile, append=TRUE);
   cat("\n\n", file=rnwFile, append=TRUE); 
   descr<-c("<<echo=false, results=tex>>=",
-           "GetORATable()",
+           "GetORATable(mbSet)",
            "@",
            "\\clearpage\n\n");
   cat(descr, file=rnwFile, append=TRUE, sep="\n");
 }
 
-CreateFooter<-function(microSetObj){
+CreateFooter<-function(mbSetObj){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(microSetObj$dataSet$module.type == "metageno"){
+  if(mbSetObj$dataSet$module.type == "metageno"){
     descr <- c("\\section{Other Features}\n",
-             "Please be advised that Functional association analysis",
+             "Please be advised that association analysis",
              "with its corresponding results are not included in this report.",
              "\n\n");
     cat(descr, file=rnwFile, append=TRUE); 
@@ -1356,14 +1352,14 @@ CreateFooter<-function(microSetObj){
 ##########################################
 
 # write .Rnw file template
-CreatePPDRnwReport<-function(usrName){
+CreatePPDRnwReport<-function(mbSetObj, usrName){
     CreateHeader(usrName);
     CreatePPDIntr();
     CreatePPDOverview();
     CreateIOdoc();
     CreatePPDAnalDoc();
     CreatePPDResultDoc();
-    CreateFooter(microSetObj);
+    CreateFooter(mbSetObj);
 }
 
 CreatePPDIntr<-function(){
@@ -1394,9 +1390,9 @@ CreatePPDOverview<-function(){
   cat(descr, file=rnwFile, append=TRUE);
 }
 
-CreatePPDAnalDoc<-function(microSetObj){
+CreatePPDAnalDoc<-function(mbSetObj){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   descr <- c("\\section{Selection of Reference Dataset}\n",
              "MicrobiomeAnalyst supports large-scale well-annotated 16S public datasets collected from Qiita.",
@@ -1421,7 +1417,7 @@ CreatePPDAnalDoc<-function(microSetObj){
              "(\\textit{currently contains 5 datasets})}",
              "\\end{itemize}",
              "\n\n",
-             microSetObj$dataSet$lib.msg,
+             mbSetObj$dataSet$lib.msg,
              "\n");
         
   cat(descr, file=rnwFile, append=TRUE, sep="\n");
@@ -1443,9 +1439,9 @@ CreatePPDAnalDoc<-function(microSetObj){
   cat(descr, file=rnwFile, append=TRUE, sep="\n");
 }
 
-CreatePPDResultDoc<-function(microSetObj){
+CreatePPDResultDoc<-function(mbSetObj){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   descr <- c("\\section{Meta Analysis Result}\n",
              "The results are represented in an interactive 3D (website) and 2D (report) PCoA plot with node colors based on different",
@@ -1458,17 +1454,17 @@ CreatePPDResultDoc<-function(microSetObj){
              "overall diversity.",
              paste("Figure", fig.count<<-fig.count+1,"shows the 2-D PCoA plot where user uploaded samples are represented as triangular nodes."),
              "\n\n",
-             microSetObj$analSet$topo.msg,
+             mbSetObj$analSet$topo.msg,
              "\n");
         
   cat(descr, file=rnwFile, append=TRUE, sep="\n");
         
   fig <- c("\\begin{figure}[htp]",
            "\\begin{center}",
-           paste("\\includegraphics[width=1.0\\textwidth]{",microSetObj$imgSet$ppd.2d,"}",sep=""),
+           paste("\\includegraphics[width=1.0\\textwidth]{",mbSetObj$imgSet$ppd.2d,"}",sep=""),
            "\\caption{2-D PCoA plot}",
            "\\end{center}",
-           paste("\\label{",microSetObj$imgSet$ppd.2d,"}", sep=""),
+           paste("\\label{",mbSetObj$imgSet$ppd.2d,"}", sep=""),
            "\\end{figure}",
            "\\clearpage\n\n");
         

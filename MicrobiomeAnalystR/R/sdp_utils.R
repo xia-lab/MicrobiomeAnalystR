@@ -10,50 +10,50 @@
 
 #'Function to get gene list statistics
 #'@description This function gets the gene list stats.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 
-GetGeneListStat <- function(microSetObj){
+GetGeneListStat <- function(mbSetObj){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   range <- c(0, 0);
     
-  if(microSetObj$analSet$gene.only){
+  if(mbSetObj$analSet$gene.only){
     val.range <- c(0, 0);
   }else{
-    val.range <- range(microSetObj$analSet$ko.mapped[,1])
+    val.range <- range(mbSetObj$analSet$ko.mapped[,1])
   }
   
-  return(c(nrow(microSetObj$analSet$ko.orig), nrow(microSetObj$analSet$ko.mapped), microSetObj$analSet$gene.only, val.range));
+  return(c(nrow(mbSetObj$analSet$ko.orig), nrow(mbSetObj$analSet$ko.mapped), mbSetObj$analSet$gene.only, val.range));
 }
 
 #'Function to filter list data based on a minimum count
 #'@description This function filters the inputted list data
 #'based on a minimum count.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 
-UpdateListInput <- function(microSetObj, minL, maxL=Inf){
+UpdateListInput <- function(mbSetObj, minL, maxL=Inf){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  hit.inx <- microSetObj$analSet$ko.mapped >= minL & microSetObj$analSet$ko.mapped <= maxL;
+  hit.inx <- mbSetObj$analSet$ko.mapped >= minL & mbSetObj$analSet$ko.mapped <= maxL;
     
   if(sum(hit.inx) > 0){
     current.msg <<- paste("A total of unqiue", sum(hit.inx), "KO genes were selected!");
-    microSetObj$analSet$data <- microSetObj$analSet$ko.mapped[hit.inx, , drop=FALSE];
+    mbSetObj$analSet$data <- mbSetObj$analSet$ko.mapped[hit.inx, , drop=FALSE];
     if(.on.public.web){
-      .set.microSet(microSetObj)
+      .set.mbSetObj(mbSetObj)
       return(1);
     }else{
-      return(.set.microSet(microSetObj))
+      return(.set.mbSetObj(mbSetObj))
     }
   }else{
     current.msg <<- paste("No genes were selected in this range!");
@@ -64,14 +64,14 @@ UpdateListInput <- function(microSetObj, minL, maxL=Inf){
 #'Main function to read in shotgun data
 #'@description This function reads in shotgun data
 #'in a tabular format.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-ReadShotgunTabData <- function(microSetObj, dataName, geneidtype, datatype) {
+ReadShotgunTabData <- function(mbSetObj, dataName, geneidtype, datatype) {
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
 
   mydata <- .readDataTable(dataName);
     
@@ -103,35 +103,35 @@ ReadShotgunTabData <- function(microSetObj, dataName, geneidtype, datatype) {
   
   rownames(mydata) <- dat.nms;
 
-  microSetObj$dataSet$name <- basename(dataName);
-  microSetObj$dataSet$data.orig <- mydata;
-  microSetObj$dataSet$smpl_nm <- smpl_nm;
+  mbSetObj$dataSet$name <- basename(dataName);
+  mbSetObj$dataSet$data.orig <- mydata;
+  mbSetObj$dataSet$smpl_nm <- smpl_nm;
   current.msg <<- paste("A total of ",ncol(mydata) , " samples and ", nrow(mydata), " metagenomic features are present.");
-  microSetObj$dataSet$read.msg<-current.msg;
-  microSetObj$dataSet$data.type<-"text";
-  microSetObj$dataSet$module.type<-datatype;
-  microSetObj$dataSet$gene.id<-geneidtype;
+  mbSetObj$dataSet$read.msg<-current.msg;
+  mbSetObj$dataSet$data.type<-"text";
+  mbSetObj$dataSet$module.type<-datatype;
+  mbSetObj$dataSet$gene.id<-geneidtype;
   
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
 #'Main function to read in shotgun data
 #'@description This function reads in shotgun data
 #'in biom format.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import biomformat
-ReadShotgunBiomData <- function(microSetObj, dataName, geneidtype, module.type, ismetadata) {
+ReadShotgunBiomData <- function(mbSetObj, dataName, geneidtype, module.type, ismetadata) {
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   #to support biom file produced by picrust, (read_biom:phyloseq) function doesn't work
   msg <- NULL;
@@ -155,8 +155,8 @@ ReadShotgunBiomData <- function(microSetObj, dataName, geneidtype, module.type, 
   otu.dat<-as.matrix(otu.dat);
   msg <- c(msg, "Abundance data present.");
 
-  microSetObj$dataSet$name <- basename(dataName);
-  microSetObj$dataSet$data <- otu.dat;
+  mbSetObj$dataSet$name <- basename(dataName);
+  mbSetObj$dataSet$data <- otu.dat;
 
   #sample file if present within
   if(ismetadata=="T"){
@@ -166,39 +166,39 @@ ReadShotgunBiomData <- function(microSetObj, dataName, geneidtype, module.type, 
       ismetafile<-"F";
       return(0);
     }
-    microSetObj$dataSet$sample_data<-as.data.frame(sample_data);
+    mbSetObj$dataSet$sample_data<-as.data.frame(sample_data);
     msg <- c(msg, "Metadata file is also detected in your biom file.");
   }
 
   msg <- c(msg, paste("A total of ",ncol(mydata) , " samples and ", nrow(mydata), " metagenomic features were found."));
   current.msg <<- paste(msg, collapse="; ");
-  microSetObj$dataSet$read.msg<-current.msg;
-  microSetObj$dataSet$data.type<-"biom";
-  microSetObj$dataSet$module.type<-module.type;
-  microSetObj$dataSet$data.orig <- otu.dat;
-  microSetObj$dataSet$gene.id<-geneidtype;
+  mbSetObj$dataSet$read.msg<-current.msg;
+  mbSetObj$dataSet$data.type<-"biom";
+  mbSetObj$dataSet$module.type<-module.type;
+  mbSetObj$dataSet$data.orig <- otu.dat;
+  mbSetObj$dataSet$gene.id<-geneidtype;
   
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
 #'Function to prepare shotgun data for PCA.
 #'@description This function formats shotgun data for PCA.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import RJSONIO
 #'@import ggfortify
-PreparePCA4Shotgun <- function(microSetObj, imgName,imgName2, format="json", inx1, inx2, inx3,
+PreparePCA4Shotgun <- function(mbSetObj, imgName,imgName2, format="json", inx1, inx2, inx3,
                               variable, showlabel, format2d="png", dpi=72){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
     load_rjsonio();
@@ -206,9 +206,9 @@ PreparePCA4Shotgun <- function(microSetObj, imgName,imgName2, format="json", inx
   }
   
   imgName2 = paste(imgName2, ".", format2d, sep="");
-  microSetObj$imgSet$pca<-imgName2;
+  mbSetObj$imgSet$pca<-imgName2;
 
-  dat <- as.matrix(otu_table(microSetObj$dataSet$norm.phyobj));
+  dat <- as.matrix(otu_table(mbSetObj$dataSet$norm.phyobj));
   pca3d <- list();
   pca <- prcomp(t(dat), center=T, scale=T);
   imp.pca <- summary(pca)$importance;
@@ -220,9 +220,9 @@ PreparePCA4Shotgun <- function(microSetObj, imgName,imgName2, format="json", inx
   colnames(coords) <- NULL;
   pca3d$score$type <- "factor";
   pca3d$score$xyz <- coords;
-  pca3d$score$name <- sample_names(microSetObj$dataSet$norm.phyobj);
-  sam_data <- data.frame(sample_data(microSetObj$dataSet$norm.phyobj));
-  cls <- as.character(sample_data(microSetObj$dataSet$norm.phyobj)[[variable]]);
+  pca3d$score$name <- sample_names(mbSetObj$dataSet$norm.phyobj);
+  sam_data <- data.frame(sample_data(mbSetObj$dataSet$norm.phyobj));
+  cls <- as.character(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   clsLbl <- sam_data[[variable]];
   pca3d$score$facA <- cls;
   variable <<- variable;
@@ -260,8 +260,8 @@ PreparePCA4Shotgun <- function(microSetObj, imgName,imgName2, format="json", inx
   }
   print(box);
   dev.off();
-  microSetObj$analSet$pca<-pca;
-  return(.set.microSet(microSetObj))
+  mbSetObj$analSet$pca<-pca;
+  return(.set.mbSetObj(mbSetObj))
 }
 
 #############################################
@@ -270,16 +270,16 @@ PreparePCA4Shotgun <- function(microSetObj, imgName,imgName2, format="json", inx
 
 #'Function to plot stacked bar chart of functional data.
 #'@description This function plots stacked bar charts of functional data.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import reshape
-PlotFunctionStack<-function(microSetObj, summaryplot, functionlvl, abundcal, geneidtype, metadata,
+PlotFunctionStack<-function(mbSetObj, summaryplot, functionlvl, abundcal, geneidtype, metadata,
                             colpalopt, format="png", dpi=72){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
 
   summaryplot <- paste(summaryplot, ".", format, sep="");
   
@@ -287,7 +287,7 @@ PlotFunctionStack<-function(microSetObj, summaryplot, functionlvl, abundcal, gen
     load_reshape();
   }
     
-  data <- microSetObj$dataSet$proc.phyobj;
+  data <- mbSetObj$dataSet$proc.phyobj;
   smpl_nm <- sample_names(data);
   clsLbl <- factor(sample_data(data)[[metadata]]);
 
@@ -410,7 +410,7 @@ PlotFunctionStack<-function(microSetObj, summaryplot, functionlvl, abundcal, gen
   }
     
   Cairo::Cairo(file=summaryplot,width=w, height=600, type=format, bg="white",dpi=dpi);
-  microSetObj$imgSet$func.prof<-summaryplot;
+  mbSetObj$imgSet$func.prof<-summaryplot;
 
   box <- ggplot(data,aes(x=step,y=value)) + theme_bw() +
     theme(axis.text.x = element_text(angle = 90, hjust =1,vjust=0.5)) +
@@ -421,24 +421,24 @@ PlotFunctionStack<-function(microSetObj, summaryplot, functionlvl, abundcal, gen
     
   print(box);
   dev.off();
-  microSetObj$analSet$func.prof<-data;
-  microSetObj$analSet$func.lvl<-functionlvl;
-  return(.set.microSet(microSetObj))
+  mbSetObj$analSet$func.prof<-data;
+  mbSetObj$analSet$func.lvl<-functionlvl;
+  return(.set.mbSetObj(mbSetObj))
 }
 
 #'Function to perform KO mapping.
 #'@description This function performs KO mapping.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PerformKOmapping <- function(microSetObj, geneIDs, type){
+PerformKOmapping <- function(mbSetObj, geneIDs, type){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  microSetObj$analSet <- list();
-  microSetObj$analSet$orig <- geneIDs;
+  mbSetObj$analSet <- list();
+  mbSetObj$analSet$orig <- geneIDs;
   current.msg <<- NULL;
 
   lines <- unlist(strsplit(geneIDs, "\r|\n|\r\n")[1]);
@@ -460,10 +460,10 @@ PerformKOmapping <- function(microSetObj, geneIDs, type){
 
   rownames(gene.mat) <- gene.mat[,1];
   gene.mat <- gene.mat[,-1, drop=F];
-  microSetObj$analSet$ko.orig <- gene.mat;
-  microSetObj$analSet$gene.only <- gene.only;
+  mbSetObj$analSet$ko.orig <- gene.mat;
+  mbSetObj$analSet$gene.only <- gene.only;
   gene.mat <- RemoveDuplicates(gene.mat, "sum", quiet=F);
-  microSetObj$analSet$ko.uniq <- gene.mat;
+  mbSetObj$analSet$ko.uniq <- gene.mat;
 
   # now get input that are in the lib
   kos <-  doKOFiltering(rownames(gene.mat), type);
@@ -476,40 +476,40 @@ PerformKOmapping <- function(microSetObj, geneIDs, type){
     rownames(gene.mat) <- kos;
     gd.inx <- (!is.na(kos)) & gene.mat[,1] > 0;
     gene.mat <- gene.mat[gd.inx, ,drop=F];
-    microSetObj$analSet$ko.mapped <- microSetObj$analSet$data <- gene.mat; # data will be updated, ko.map will keep intact
+    mbSetObj$analSet$ko.mapped <- mbSetObj$analSet$data <- gene.mat; # data will be updated, ko.map will keep intact
     current.msg <<- paste("A total of unqiue", nrow(gene.mat), "KO genes were mapped to KEGG network!");
 
     if(.on.public.web){
-      .set.microSet(microSetObj)
+      .set.mbSetObj(mbSetObj)
       return(1);
     }else{
-      return(.set.microSet(microSetObj))
+      return(.set.mbSetObj(mbSetObj))
     }
   }
 }
 
 #'Function to prepare query for JSON.
 #'@description This function prepares the data for JSON.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import RJSONIO
 
-PrepareQueryJson <- function(microSetObj){
+PrepareQueryJson <- function(mbSetObj){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
     load_rjsonio();
   }
   
   if(enrich.type == "hyper"){
-    exp.vec <- microSetObj$analSet$data[,1]; # drop dim for json
+    exp.vec <- mbSetObj$analSet$data[,1]; # drop dim for json
   }else{
     # for global test, all KO measured should be highlighted
-    genemat <- as.data.frame(t(otu_table(microSetObj$dataSet$norm.phyobj)));
+    genemat <- as.data.frame(t(otu_table(mbSetObj$dataSet$norm.phyobj)));
     exp.vec <- rep(2, ncol(genemat));
     names(exp.vec) <- colnames(genemat);
   }
@@ -527,49 +527,49 @@ PrepareQueryJson <- function(microSetObj){
   sink();
 
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
 #'Function to prepare KO enrichment analysis.
 #'@description This function performs KO enrichment analysis
 #'using the KO01100 map.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PerformKOEnrichAnalysis_KO01100 <- function(microSetObj, category, file.nm){
+PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, file.nm){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   LoadKEGGKO_lib(category);
     
   if(enrich.type == "hyper"){
-    PerformKOEnrichAnalysis_List(microSetObj, file.nm);
+    PerformKOEnrichAnalysis_List(mbSetObj, file.nm);
   }else{
-    PerformKOEnrichAnalysis_Table(microSetObj, file.nm);
+    PerformKOEnrichAnalysis_Table(mbSetObj, file.nm);
   }
-  return(.set.microSet(microSetObj))
+  return(.set.mbSetObj(mbSetObj))
 }
 
 #'Perform KO Enrichment Analysis 
 #'@description This functions performs KO enrichment analysis
 #'on a tabled input.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PerformKOEnrichAnalysis_Table <- function(microSetObj, file.nm){
+PerformKOEnrichAnalysis_Table <- function(mbSetObj, file.nm){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
 
-  phenotype <- as.factor(sample_data(microSetObj$dataSet$norm.phyobj)[[selected.meta.data]]);
-  genemat <- as.data.frame(t(otu_table(microSetObj$dataSet$norm.phyobj)));
+  phenotype <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[selected.meta.data]]);
+  genemat <- as.data.frame(t(otu_table(mbSetObj$dataSet$norm.phyobj)));
 
   # now, perform the enrichment analysis
   if(.on.public.web){
@@ -612,10 +612,10 @@ PerformKOEnrichAnalysis_Table <- function(microSetObj, file.nm){
   Save2KEGGJSON(hits, res.mat, file.nm);
   
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
@@ -665,31 +665,31 @@ LoadKEGGKO_lib<-function(category){
 #'Function to perform KO projection
 #'@description This function projects user-uploaded
 #'KOs onto the KEGG Global Metabolic Network.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 
-PerformKOProjection <- function(microSetObj){
+PerformKOProjection <- function(mbSetObj){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  datatype <- microSetObj$analSet$datatype;
-  de.Num <- microSetObj$analSet$sig.count;
-  resTable <- microSetObj$analSet$resTable[1:de.Num,];
+  datatype <- mbSetObj$analSet$datatype;
+  de.Num <- mbSetObj$analSet$sig.count;
+  resTable <- mbSetObj$analSet$resTable[1:de.Num,];
     
   if(nrow(resTable) > 5000){
     resTable <- resTable[1:5000,];
     current.msg <<- paste(" Due to computational constraints, only top 5000 features will be used. ", collapse="\n");
   }
 
-  microSetObj$analSet$sig.mat <- resTable;
+  mbSetObj$analSet$sig.mat <- resTable;
   gene.mat <- data.matrix(-log10(resTable$Pvalues));
   rownames(gene.mat) <- row.names(resTable);
   gene.mat <- RemoveDuplicates(gene.mat, "sum", quiet=F);
-  microSetObj$analSet$ko.uniq <- gene.mat;
-  id.type <- microSetObj$analSet$id.type;
+  mbSetObj$analSet$ko.uniq <- gene.mat;
+  id.type <- mbSetObj$analSet$id.type;
     
   if(is.na(id.type) || id.type == "NA"){
     id.type <- "ko";
@@ -704,15 +704,15 @@ PerformKOProjection <- function(microSetObj){
     rownames(gene.mat) <- kos;
     gd.inx <- (!is.na(kos)) & gene.mat[,1] > 0;
     gene.mat <- gene.mat[gd.inx, ,drop=F];
-    microSetObj$analSet$ko.mapped <- microSetObj$analSet$data <- gene.mat; # data will be updated, ko.map will keep intact
+    mbSetObj$analSet$ko.mapped <- mbSetObj$analSet$data <- gene.mat; # data will be updated, ko.map will keep intact
     current.msg <<- paste("A total of unqiue", nrow(gene.mat), "KO genes were mapped to KEGG network!");
   }
 
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
@@ -750,9 +750,9 @@ MapKO2KEGGEdges<- function(kos, net="ko01100"){
 
 # Utility function
 # note: only return hits in this map KO01100
-PerformKOEnrichAnalysis_List <- function(microSetObj, file.nm){
+PerformKOEnrichAnalysis_List <- function(mbSetObj, file.nm){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   # prepare for the result table
   set.size <- length(current.geneset);
@@ -762,7 +762,7 @@ PerformKOEnrichAnalysis_List <- function(microSetObj, file.nm){
   
   # prepare query
   ora.vec <- NULL;
-  exp.vec <- microSetObj$analSet$data[,1]; # drop dim for json
+  exp.vec <- mbSetObj$analSet$data[,1]; # drop dim for json
   ora.vec <- names(exp.vec);
   
   # need to cut to the universe covered by the pathways, not all genes
@@ -821,10 +821,10 @@ PerformKOEnrichAnalysis_List <- function(microSetObj, file.nm){
   }
   Save2KEGGJSON(hits.query, res.mat, file.nm);
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 

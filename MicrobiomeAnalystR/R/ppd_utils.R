@@ -1,13 +1,13 @@
 #'Function to merge user data with public data.
 #'@description This function is used to merge microbiome data.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PrepareMergedData <- function(microSetObj, metadata, keepfeat){
+PrepareMergedData <- function(mbSetObj, metadata, keepfeat){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   set.seed(1315);
   metadata <<- metadata;
@@ -27,56 +27,67 @@ PrepareMergedData <- function(microSetObj, metadata, keepfeat){
   feat.perc<<-keepfeat;
   
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(rank_names(userrefdata));
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
 #'Function to perform reference data mapping.
 #'@description This function performs reference data mapping.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PerformRefDataMapping <- function(microSetObj, refdataNm, taxo_type, sample_var, biome){
-  
-  microSetObj <- .get.microSet(microSetObj);
+#'@import phyloseq
+PerformRefDataMapping <- function(mbSetObj, refdataNm, taxo_type, sample_var, biome){
+
+  mbSetObj <- .get.mbSetObj(mbSetObj);
 
   msg <- NULL;
   #reading the reference data: (OTU abundance and tax info) and associated sample data file seperately.
-  refdatafileNm <- paste(refdataNm ,".rds", sep="");
+  refdatafile_otu <- paste(refdataNm ,"_otu.rds", sep="");
+  refdatafile_tax <- paste(refdataNm ,"_tax.rds", sep="");
+  
+  current.refset.otu <- .read.microbiomeanalyst.lib(refdatafile_otu, "ppd", refdataNm);
+  current.refset.tax <- .read.microbiomeanalyst.lib(refdatafile_tax, "ppd", refdataNm);
+  
+  # create phyloseq or phyloslim object
   
   if(.on.public.web){
-    refdataloc <- paste("../../lib/ref_data", refdatafileNm, sep="/");
-  }else{
-    refdataloc <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/ref_data", refdatafileNm, sep="/");
+    load_phyloslim();
+    OTU <- otu_table(current.refset.otu, taxa_are_rows = TRUE)
+    TAX <- tax_table(current.refset.tax)
+    current.refset <- phyloslim(OTU, TAX)
+  }else{ # phyloseq should be loaded locally
+    OTU <- otu_table(current.refset.otu, taxa_are_rows = TRUE)
+    TAX <- tax_table(current.refset.tax)
+    current.refset <- phyloseq(OTU, TAX)
   }
-  current.refset <- readRDS(refdataloc);
     
   #sample data
   refsmpldataNm <- paste(refdataNm ,"_sampledata.csv", sep="");
   
   if(.on.public.web){
-    refsmpldataloc <- paste("../../lib/ref_data",refsmpldataNm,sep="/");
+    refsmpldataloc <- paste("../../lib/ref_data",refdataNm,refsmpldataNm,sep="/");
   }else{
-    refsmpldataloc <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/ref_data", refsmpldataNm, sep="/");
+    refsmpldataloc <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/ref_data", refdataNm, refsmpldataNm, sep="/");
   }
   
   current.sample <- read.csv(refsmpldataloc,sep = "\t",header = T,row.names = 1);
     
   #reading user data
-  data <- microSetObj$dataSet$proc.phyobj;
-  otu_no <- phyloslimR::ntaxa(data);
+  data <- mbSetObj$dataSet$proc.phyobj;
+  otu_no <- ntaxa(data);
     
   #since we use modified name for each OTU(to make it unique and convenient);in order to do mapping we need complete and original mapping label.
   #since our reference data has Greengenes OTU Ids as taxonomy identifier, so if data is already in this format, we will directly merge both of them(reference and users data;kepping all OTU's unique to user data)
   #if taxo_type is SILVA; first we have to map it with Greengenes OTU Ids from mapping file;#then we have to compare Greengenes OTU Ids OTUs between user and reference data
   if(taxo_type=="SILVA"){
-    taxa_names(data) <- microSetObj$dataSet$comp_taxnm;
-    a <- phyloslimR::taxa_names(data);
+    taxa_names(data) <- mbSetObj$dataSet$comp_taxnm;
+    a <- taxa_names(data);
     #taxonomy mapping file
     
     if(.on.public.web){
@@ -102,12 +113,12 @@ PerformRefDataMapping <- function(microSetObj, refdataNm, taxo_type, sample_var,
     match_taxagg <- as.character(match_taxagg);
 
     #getting only matched taxa in user data and then have to prune other taxa;followed by replacing it with Greengenes OTU Ids;
-    data = phyloslimR::prune_taxa(match_taxa,data);
+    data = prune_taxa(match_taxa,data);
     taxa_names(data) <- match_taxagg;
   }
     
   # have to check whether 20% of  OTUs common in user and reference data or not;
-  taxa_ind <- match(phyloslimR::taxa_names(data),phyloslimR::taxa_names(current.refset));
+  taxa_ind <- match(taxa_names(data),taxa_names(current.refset));
     
   if(length(which(taxa_ind != "NA")) < 0.20*otu_no){
     msg <- c(msg,paste("Less than 20 percent OTU  match between user and reference data."));
@@ -117,60 +128,60 @@ PerformRefDataMapping <- function(microSetObj, refdataNm, taxo_type, sample_var,
   }
     
   #pruning reference dataset
-  current.refset = phyloslimR::prune_taxa(phyloslimR::taxa_names(data),current.refset);
+  current.refset = prune_taxa(taxa_names(data), current.refset);
 
   if(taxo_type=="SILVA"){
     #for SILVA id we can compare only between common id that matches between user and reference data;pruning others OTUs in reference data.
-    data <- phyloslimR::prune_taxa(phyloslimR::taxa_names(current.refset),data);
+    data <- prune_taxa(taxa_names(current.refset),data);
   }
     
   #merging both the user and reference phyloslim objects(sample data will be merged seperately)
   #storing taxonomic rank for users data
   #all reference data have kingdom column which can be removed;
-  colnames(phyloslimR::tax_table(current.refset)) <- c("Kingdom","Phylum","Class","Order", "Family", "Genus","Species");
-  phyloslimR::tax_table(current.refset) <- phyloslimR::tax_table(current.refset)[,-1];
-  userdatarank <<- phyloslimR::rank_names(current.refset);
-  current.ref_userdata <- phyloslimR::merge_phyloslim(phyloslimR::otu_table(data),phyloslimR::otu_table(current.refset),phyloslimR::tax_table(data),phyloslimR::tax_table(current.refset));
+  colnames(tax_table(current.refset)) <- c("Kingdom","Phylum","Class","Order", "Family", "Genus","Species");
+  tax_table(current.refset) <- tax_table(current.refset)[,-1];
+  userdatarank <<- rank_names(current.refset);
+  current.ref_userdata <- merge_phyloslim(otu_table(data),otu_table(current.refset),tax_table(data),tax_table(current.refset));
   #dummy variable for showing different shape for user and reference data
-  phyloslimR::sample_data(data)$data <- rep("user",nrow(phyloslimR::sample_data(data)));
+  sample_data(data)$data <- rep("user",nrow(sample_data(data)));
   current.sample$data <- rep("reference",nrow(current.sample));
-  sam_data <- as.data.frame(phyloslimR::sample_data(data));
+  sam_data <- as.data.frame(sample_data(data));
   #selecting primary variable data
   #user_sam<-sam_data[sample_var];
   #making the name of same variable same for reference sample data and then merging them
   colnames(current.sample) <- colnames(sam_data);
   current.ref_usersamdata <- rbind(current.sample,sam_data);
   current.ref_usersamdata$data <- as.factor(current.ref_usersamdata$data);    
-  current.ref_usersamdata <- phyloslimR::sample_data(current.ref_usersamdata);
+  current.ref_usersamdata <- sample_data(current.ref_usersamdata);
   #storing the taxonomy rank from users data
   #final phyloslim object;(taxonomy table after merging will get distorted if taxa_ranks are not same in both user and reference data;but it's of no use)
-  merged.data <- phyloslimR::merge_phyloslim(current.ref_userdata,current.ref_usersamdata);
+  merged.data <- merge_phyloslim(current.ref_userdata,current.ref_usersamdata);
   #data filteration and transformation
-  merged.data <- phyloslimR::transform_sample_counts(merged.data, function(x) x / sum(x) );
+  merged.data <- transform_sample_counts(merged.data, function(x) x / sum(x) );
   merged.data <<- merged.data;
   
-  microSetObj$dataSet$lib.msg <- current.msg <<- paste(msg, collapse=".");
+  mbSetObj$dataSet$lib.msg <- current.msg <<- paste(msg, collapse=".");
     
   if(.on.public.web){
-    .set.microSet(microSetObj)
+    .set.mbSetObj(mbSetObj)
     return(1);
   }else{
-    return(.set.microSet(microSetObj))
+    return(.set.mbSetObj(mbSetObj))
   }
 }
 
 #'Function to create PCoA
 #'@description This function creates data for plotting PCoA.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import vegan
-PCoA3DAnal.16SRef <- function(microSetObj, barplotNm, ordMeth, distName, datatype, taxrank, colopt,
+PCoA3DAnal.16SRef <- function(mbSetObj, barplotNm, ordMeth, distName, datatype, taxrank, colopt,
                              taxa, alphaopt, metadata, format="png", dpi=72){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
     load_vegan();
@@ -180,7 +191,7 @@ PCoA3DAnal.16SRef <- function(microSetObj, barplotNm, ordMeth, distName, datatyp
   GP.ord <- ordinate(data,ordMeth,distName);
   #creating 2D image for Report Generation
   barplotNm = paste(barplotNm, ".", format, sep="");
-  microSetObj$imgSet$ppd.2d<-barplotNm;
+  mbSetObj$imgSet$ppd.2d<-barplotNm;
 
   Cairo::Cairo(file=barplotNm, width=720, height=500, type=format, bg="white",dpi=dpi);
   box = plot_ordination(data,GP.ord,color=metadata,shape="data");
@@ -200,29 +211,29 @@ PCoA3DAnal.16SRef <- function(microSetObj, barplotNm, ordMeth, distName, datatyp
   std.pca<-imp.pca[1,]; # eigen values
   var.pca<-imp.pca[,2]; # variance explained by each PC
   cum.pca<-imp.pca[5,]; # cummulated variance explained
-  microSetObj$analSet$topo.msg<-paste("Beta-diversity is performed using",feat.perc,"and",distName,"distance measure");
-  microSetObj$analSet$sum.pca<-append(sum.pca, list(std=std.pca, variance=var.pca, cum.var=cum.pca));
+  mbSetObj$analSet$topo.msg<-paste("Beta-diversity is performed using",feat.perc,"and",distName,"distance measure");
+  mbSetObj$analSet$sum.pca<-append(sum.pca, list(std=std.pca, variance=var.pca, cum.var=cum.pca));
   
-  return(.set.microSet(microSetObj))
+  return(.set.mbSetObj(mbSetObj))
 }
 
 #'Function to plot 3D score plot.
 #'@description This function plots a 3D PCoA score plot.
-#'@param microSetObj Input the name of the microSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import RJSONIO
-PlotUsrRefPCoA3DScore <- function(microSetObj, imgName, format="json", inx1, inx2, inx3, variable){
+PlotUsrRefPCoA3DScore <- function(mbSetObj, imgName, format="json", inx1, inx2, inx3, variable){
   
-  microSetObj <- .get.microSet(microSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
     load_rjsonio();
   }
   
-  pca <- microSetObj$analSet$sum.pca;
+  pca <- mbSetObj$analSet$sum.pca;
   pca3d <- list();
   pca3d$score$axis <- paste("PC", 1:3, " (", 100*round(pca$variance[1:3], 3), "%)", sep="");
   coords <- data.frame(t(signif(pca$vectors[,c(inx1, inx2, inx3)], 5)));
@@ -247,5 +258,5 @@ PlotUsrRefPCoA3DScore <- function(microSetObj, imgName, format="json", inx1, inx
   sink(imgName);
   cat(json.obj);
   sink();
-  return(.set.microSet(microSetObj))
+  return(.set.mbSetObj(mbSetObj))
 }
