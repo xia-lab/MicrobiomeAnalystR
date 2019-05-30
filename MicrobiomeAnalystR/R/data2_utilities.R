@@ -408,6 +408,13 @@ assignTax <- function(constructSeqTabRes = constructSeqTabRes, #results from con
               row.names = FALSE,
               quote = FALSE,
               sep = "\t");
+  write.table(cbind.data.frame("#NAME" = row.names(taxa),
+                         taxa),
+              file = file.path("tax",
+                               paste0("taxa_table_against_", ref_db, ".txt")),
+              row.names = FALSE,
+              quote = FALSE,
+              sep = "\t");
   write.table(taxa,
               file = file.path("tax",
                                paste0("taxa_table_against_", ref_db, "_without_id.txt")),
