@@ -308,8 +308,8 @@ constructSeqTab <- function(setParametersRes = setParametersRes, # results from 
 
 
   #extact sequences and convert to fasta for submission to Picrust2
-  seq_table <- data.frame("ID" = paste0(">", names(seqtab.nochim)),
-                          "seq" = names(seqtab.nochim));
+  seq_table <- data.frame("ID" = paste0(">", colnames(seqtab.nochim)),
+                          "seq" = colnames(seqtab.nochim));
   seq_table[] <- lapply(seq_table, as.character)
 
   seq_list <- list();
