@@ -277,13 +277,6 @@ constructSeqTab <- function(setParametersRes = setParametersRes, # results from 
   seqtab.nochim <- removeBimeraDenovo(seqtab, method="consensus",
                                       multithread = !OS_is_windows,
                                       verbose = TRUE);
-  print("write sequence table without chimera");
-  write.table(cbind.data.frame("#SAMPLE" = row.names(seqtab.nochim),
-                               seqtab.nochim),
-              file = file.path("sequence_table", "sequence_abundance_table_without_chimera.txt"),
-              sep = "\t",
-              row.names = FALSE,
-              quote = FALSE);
 
   print("write chimera frequence");
   chimaera_table <- as.data.frame((1 - rowSums(seqtab.nochim)/rowSums(seqtab))*100);
@@ -294,6 +287,45 @@ constructSeqTab <- function(setParametersRes = setParametersRes, # results from 
               row.names = FALSE,
               sep = "\t",
               quote = FALSE);
+
+  print("write sequence table without chimera");
+  write.table(cbind.data.frame("#NAME" = row.names(seqtab.nochim),
+                               seqtab.nochim),
+              file = file.path("sequence_table", "sequence_abundance_table_without_chimera.txt"),
+              sep = "\t",
+              row.names = FALSE,
+              quote = FALSE);
+
+
+  #transpose otu table for MicrobiomAnalyst submission
+  seqtab.nochim_t <- as.data.frame(t(seqtab.nochim));
+  write.table(cbind.data.frame("#NAME" = row.names(seqtab.nochim_t),
+                               seqtab.nochim_t),
+              file = file.path("sequence_table", "sequence_abundance_table_without_chimera_for_submission_to_MicrobiomeAnalyst.txt"),
+              sep = "\t",
+              row.names = FALSE,
+              quote = FALSE);
+
+
+  #extact sequences and convert to fasta for submission to Picrust2
+  seq_table <- data.frame("ID" = paste0(">", names(seqtab.nochim)),
+                          "seq" = names(seqtab.nochim));
+  seq_table[] <- lapply(seq_table, as.character)
+
+  seq_list <- list();
+  for(i in 1:nrow(seq_table)){
+    j <- 2*i;
+    seq_list[[(j - 1)]] <- seq_table[i, 1];
+    seq_list[[j]] <- seq_table[i, 2];
+  }
+
+  seq_list <- do.call(rbind.data.frame, seq_list)
+  names(seq_list) <- NULL;
+  write.table(seq_list,
+              file = file.path("sequence_table",
+                               "sequence_without_chimera_for_submission_to_Picrust2.fasta"),
+              quote = FALSE,
+              row.names = FALSE);
 
   #track reads through the pipeline;
   ##################################
@@ -389,26 +421,26 @@ assignTax <- function(constructSeqTabRes = constructSeqTabRes, #results from con
   } else {
     stop("please specify a database!")
   };
-  taxa2 <- as.data.frame(taxa);
-  taxa2 <- within(taxa2,
-                  "NAME" <-  paste(Kingdom,
-                                   Phylum,
-                                   Class,
-                                   Order,
-                                   Family,
-                                   Genus,
-                                   Species,
-                                   sep = "; "));
+  # taxa2 <- as.data.frame(taxa);
+  # taxa2 <- within(taxa2,
+  #                 "NAME" <-  paste(Kingdom,
+  #                                  Phylum,
+  #                                  Class,
+  #                                  Order,
+  #                                  Family,
+  #                                  Genus,
+  #                                  Species,
+  #                                  sep = "; "));
   print("write taxa table");
-  write.table(cbind.data.frame("#NAME" = taxa2$NAME,
-                               t(seqtab.nochim)),
-              file = file.path("tax",
-                               paste0("taxa_table_against_", ref_db,
-                                      "_submit_to_MicrobiomeAnalyst.txt")),
-              row.names = FALSE,
-              quote = FALSE,
-              sep = "\t");
-  write.table(cbind.data.frame("#NAME" = row.names(taxa),
+  # write.table(cbind.data.frame("#NAME" = taxa2$NAME,
+  #                              t(seqtab.nochim)),
+  #             file = file.path("tax",
+  #                              paste0("taxa_table_against_", ref_db,
+  #                                     "_submit_to_MicrobiomeAnalyst.txt")),
+  #             row.names = FALSE,
+  #             quote = FALSE,
+  #             sep = "\t");
+  write.table(cbind.data.frame("#TAXONOMY" = row.names(taxa),
                          taxa),
               file = file.path("tax",
                                paste0("taxa_table_against_", ref_db, ".txt")),
