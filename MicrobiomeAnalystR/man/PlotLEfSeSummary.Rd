@@ -4,7 +4,8 @@
 \alias{PlotLEfSeSummary}
 \title{Plot LEfSe summary}
 \usage{
-PlotLEfSeSummary(mbSetObj, imgName, format = "png", dpi = 72)
+PlotLEfSeSummary(mbSetObj, ldaFeature, imgName, format = "png",
+  width = NA, dpi = 72)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

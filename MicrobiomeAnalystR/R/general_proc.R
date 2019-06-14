@@ -304,7 +304,7 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt){
 
   saveRDS(mbSetObj$dataSet$proc.phyobj, file="orig.phyobj"); # save original phylo.obj
   # now proc.phyobj is now filtered data
-  mbSetObj$dataSet$proc.phyobj <- merge_phyloslim(otu_table(data,taxa_are_rows =TRUE), mbSetObj$dataSet$sample_data, mbSetObj$dataSet$taxa_table);
+  mbSetObj$dataSet$proc.phyobj <- merge_phyloseq(otu_table(data,taxa_are_rows =TRUE), mbSetObj$dataSet$sample_data, mbSetObj$dataSet$taxa_table);
 
   if(scale.opt != "none"){
     if(scale.opt=="colsum"){
@@ -369,7 +369,7 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt){
   mbSetObj$dataSet$sample_data$sample_id <- rownames(mbSetObj$dataSet$sample_data);
   sample_table <- sample_data(mbSetObj$dataSet$sample_data, errorIfNULL=TRUE);
   #phy.obj <- merge_phyloseq(otu.tab,sample_table,random_tree);
-  phy.obj <- merge_phyloslim(otu.tab, sample_table);
+  phy.obj <- merge_phyloseq(otu.tab, sample_table);
 
   #using this object for plotting
   mbSetObj$dataSet$norm.phyobj <- phy.obj;
@@ -402,15 +402,15 @@ PerformRarefaction <- function(mbSetObj, data, rare.opt){
   # data must be count data (not contain fractions)
   data <- round(data);
 
-  # create phyloslim obj
+  # create phyloseq obj
   otu.tab<-otu_table(data,taxa_are_rows =TRUE);
   taxa_names(otu.tab)<-tax_nm;
 
   #random_tree<-phy_tree(createRandomTree(ntaxa(otu.tab),rooted=TRUE,tip.label=tax_nm));
   mbSetObj$dataSet$sample_data$sample_id<-rownames(mbSetObj$dataSet$sample_data);
   sample_table<-sample_data(mbSetObj$dataSet$sample_data, errorIfNULL=TRUE);
-  #phy.obj<-merge_phyloslim(otu.tab,sample_table,random_tree);
-  phy.obj<-merge_phyloslim(otu.tab,sample_table);
+  #phy.obj<-merge_phyloseq(otu.tab,sample_table,random_tree);
+  phy.obj<-merge_phyloseq(otu.tab,sample_table);
   msg<-NULL;
 
   # first doing rarefaction, this is on integer or count data
@@ -561,7 +561,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel, ismetafile){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
-    load_phyloslim();
+    load_phyloseq();
   }
 
   data.proc <- readRDS("data.proc");
@@ -595,8 +595,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel, ismetafile){
 
   #standard name to be used
   classi.lvl<- c("Phylum", "Class", "Order", "Family", "Genus","Species","Strain/OTU-level","Additional_Name");
-  #classi.lvl<- c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus","Species","Strain/OTU-level","Additional_Name");##newnew
-    
+
   if(anal.type == "16S Upload" | anal.type == "dataprojection"){
     if(type=="text"){
       # prepare data for phyloseq visualization.
@@ -659,12 +658,6 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel, ismetafile){
               #phyloseq taxonomy object
               taxa_table <- tax_table(taxmat);
               taxa_names(taxa_table)<-rownames(taxmat);
-
-              #if no other taxonomic information is present (Ex:Otu0001)
-              #taxa_table<-as.matrix(dataSet$feat_nm);
-              #taxa_names(taxa_table)<-rownames(taxa_table);
-              #colnames(taxa_table)<-"Strain/OTU-level";
-              #taxa_table<-tax_table(taxa_table);
             }
 
           # making unique id for each OTU consist of lowest taxonomy level present followed by row number
@@ -807,7 +800,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel, ismetafile){
         
     taxa_names(mbSetObj$dataSet$taxa_table)<-taxa_names(data.proc)<-mynames1;
     mbSetObj$dataSet$sample_data<-sample_data(mbSetObj$dataSet$sample_data, errorIfNULL = TRUE);
-    mbSetObj$dataSet$proc.phyobj <- merge_phyloslim(data.proc, mbSetObj$dataSet$sample_data, mbSetObj$dataSet$taxa_table);
+    mbSetObj$dataSet$proc.phyobj <- merge_phyloseq(data.proc, mbSetObj$dataSet$sample_data, mbSetObj$dataSet$taxa_table);
 
     if(length(rank_names(mbSetObj$dataSet$proc.phyobj)) > 7){
       tax_table(mbSetObj$dataSet$proc.phyobj) <- tax_table(mbSetObj$dataSet$proc.phyobj)[, 1:7]
@@ -831,7 +824,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel, ismetafile){
       return(0);
     }
     mbSetObj$dataSet$sample_data<-sample_data(mbSetObj$dataSet$sample_data, errorIfNULL=TRUE);
-    mbSetObj$dataSet$proc.phyobj <- merge_phyloslim(data.proc, mbSetObj$dataSet$sample_data);
+    mbSetObj$dataSet$proc.phyobj <- merge_phyloseq(data.proc, mbSetObj$dataSet$sample_data);
   }
 
   saveRDS(mbSetObj$dataSet$proc.phyobj, file="proc.phyobj.orig");

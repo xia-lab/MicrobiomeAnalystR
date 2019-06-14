@@ -89,6 +89,9 @@ CreateMDPRnwReport<-function(mbSetObj, usrName){
     
   if(!is.null(mbSetObj[["analSet"]]) & (length(mbSetObj$analSet)>0)){
     CreateVISEXPLRdoc(mbSetObj);
+    CreateRAREFCTIONCURVEdoc(mbSetObj);
+    CreatePHYLOGENETICTREEdoc(mbSetObj);
+    CreateHEATTREEdoc(mbSetObj);
     CreateALPHDIVdoc(mbSetObj);
     CreateBETADIVdoc(mbSetObj);
     CreateHCdoc(mbSetObj);
@@ -345,17 +348,19 @@ CreateNORMdoc <- function(mbSetObj){
 
 Init16SAnalMode<-function(){
         
-  descr <- c("\\section{Marker gene data Analysis}",
+  descr <- c("\\section{Marker Gene Analysis}",
              "MicrobiomeAnalyst offers a variety of methods commonly used in microbiome data analysis.",
              "They include:\n");
         
   cat(descr, file=rnwFile, append=TRUE, sep="\n");
 
   descr2 <- c("\\begin{enumerate}",
-              "\\item{Visual Exploration: }",
+              "\\item{Visual exploration: }",
               "\\begin{itemize}",
               "\\item{Stacked bar/area plot }",
-              "\\item{Interactive piechart}",
+              "\\item{Rarefaction curve }",
+              "\\item{Phylogenetic tree }",
+              "\\item{Heat tree }",
               "\\end{itemize}",
               "\\item{Community profiling: }",
               "\\begin{itemize}",
@@ -381,7 +386,7 @@ Init16SAnalMode<-function(){
               "\\item{LEfSe}",
               "\\item{Random Forests}",
               "\\end{itemize}",
-              "\\item{Functional potentials: }",
+              "\\item{Predictive functional profiling: }",
               "\\begin{itemize}",
               "\\item{PICRUSt}",
               "\\item{Tax4Fun}",
@@ -496,6 +501,126 @@ CreateVISEXPLRdoc <- function(mbSetObj){
   cat("\\clearpage", file=rnwFile, append=TRUE);
 }
 
+###################################
+# Rarefaction curve analysis#######
+####################################
+
+
+CreateRAREFCTIONCURVEdoc <- function(mbSetObj){
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  
+  # need to check if this process is executed
+  if(is.null(mbSetObj$analSet$rarefaction_curve)){
+    return();
+  }
+  
+  descr <- c("\\subsection{Rarefaction curve analysis }\n",
+             "This method is used to present relationship between number of OTUs and number of sequences",
+             "It can infer if the reads of a sample is enough to reach plateau, which means that with increasing of sequences, the gain of newly discovered OTUs is limited.",
+             "If sequence depth of some samples are not enough, you may consider to resequence these samples or removed from downstream analysis.",
+             "User can choose different metadata variables as group, line colors and line types.",
+             "Rarefaction curve analysis is performed using the modified function ggrare originated from \\texttt{ranacapa} package\\footnote{Gaurav S. Kandlikar",
+             "\\textit{ranacapa: An R package and Shiny web app to explore environmental DNA data with exploratory statistics and interactive visualizations.}, 2018.}\n",
+             paste("Figure", fig.count<<-fig.count+1,"shows the rarefaction curve."),
+             "\n "
+  );
+  cat(descr, file=rnwFile, append=TRUE,sep="\n");
+
+   cmdhist<-c("\\begin{figure}[htp]",
+               "\\begin{center}",
+               paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$analSet$rarefaction_curve,"}", sep=""),
+               paste("\\caption{Rarefaction curve", 
+                     " using ", "\\texttt{", mbSetObj$analSet$rarefaction_curve_data.src, "} dataset }", sep=""),      
+               "\\end{center}",
+               paste("\\label{", mbSetObj$analSet$rarefaction_curve,"}", sep=""),
+               "\\end{figure}");
+    cat(cmdhist, file=rnwFile, append=TRUE);
+
+  cat("\\clearpage", file=rnwFile, append=TRUE);
+}
+
+
+###################################
+# Phylogenetic tree analysis#######
+####################################
+
+
+CreatePHYLOGENETICTREEdoc <- function(mbSetObj){
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  
+  # need to check if this process is executed
+  if(is.null(mbSetObj$analSet$phylogenetic_tree_curve)){
+    return();
+  }
+  
+  descr <- c("\\subsection{Phylogenetic tree }\n",
+             "This method is used to determine the evolutionary relationship among taxonomic groups",
+             "A phylogenetic tree is a diagram which represents evolutionary relationships among species.",
+             "It reflects how they evolved from common ancestors. If two organisms share a more recent common ancestor, they are more related.",
+             "Therefore, phylogenetic tree can be used to represent distances between them, which will be used for UniFrac distance based analysis, such as phylogenetic beta diversity.",
+             "Phylogenetic tree analysis is performed using R package \\texttt{phyloseq} package\\footnote{McMurdie",
+             "\\textit{ phyloseq: An R Package for Reproducible Interactive Analysis and Graphics of Microbiome Census Data.}, 2013.}\n",
+             paste("Figure", fig.count<<-fig.count+1,"shows the phylogenetic tree."),
+             "\n ");
+  cat(descr, file=rnwFile, append=TRUE,sep="\n");
+
+   cmdhist<-c("\\begin{figure}[htp]",
+               "\\begin{center}",
+               paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$analSet$phylogenetic_tree_curve,"}", sep=""),
+               paste("\\caption{Phylogenetic tree", 
+                     " at ", "\\texttt{", mbSetObj$analSet$phylogenetic_tree_curve_tax_level, "} level }", sep=""),      
+               "\\end{center}",
+               paste("\\label{", mbSetObj$analSet$phylogenetic_tree_curve,"}", sep=""),
+               "\\end{figure}");
+    cat(cmdhist, file=rnwFile, append=TRUE);
+
+  cat("\\clearpage", file=rnwFile, append=TRUE);
+}
+
+###################################
+# Heat tree analysis#######
+####################################
+
+
+CreateHEATTREEdoc <- function(mbSetObj){
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  
+  # need to check if this process is executed
+  if(is.null(mbSetObj$analSet$heat_tree_plot)){
+    return();
+  }
+  print(mbSetObj$analSet$heat_tree_tax);print(mbSetObj$analSet$heat_tree_meta);print(mbSetObj$analSet$heat_tree_comparison);
+descr <- c("\\subsection{Heat tree }\n",
+           "This method is used to compare abundance of different taxonomic levels for each pair of factors in a metadata variable.",
+           "Heat Tree uses hierarchical structure of taxonomic classifications to quantitatively (median abundance) and statistically (non-parameter Wilcoxon Rank Sum test ) depict taxon differences among communities.",
+           "It generates a differential heat tree to show which taxa are more abundance in each treatment.",
+           "User can choose different taxonomic levels from phylum to species.",
+           "User can also select the metadata variable and subsequently determined which pair of factors in that metadata variable they want to compare.",
+           "Heat tree analysis is performed using R package \\texttt{metacoder} package\\footnote{Zachary S. L. Foster",
+           "\\textit{ metacoder: An R package for visualization and manipulation of community taxonomic diversity data.}, 2017, R package version 0.3.2.}\n",
+           paste("Figure", fig.count<<-fig.count+1,"shows the heat tree for pair-wise comparison."),
+           "\n ");
+
+  cat(descr, file=rnwFile, append=TRUE,sep="\n");
+
+cmdhist<-c("\\begin{figure}[htp]",
+           "\\begin{center}",
+           paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$analSet$heat_tree_plot,"}", sep=""),
+           paste("\\caption{Phylogenetic tree", 
+                 " at ", "\\texttt{", mbSetObj$analSet$heat_tree_tax, "} level ",
+                 "in group ", "\\texttt{", mbSetObj$analSet$heat_tree_meta, "}", " }", sep=""),      
+           "\\end{center}",
+           paste("\\label{", mbSetObj$analSet$heat_tree_plot,"}", sep=""),
+           "\\end{figure}");
+
+  cat(cmdhist, file=rnwFile, append=TRUE);
+
+  cat("\\clearpage", file=rnwFile, append=TRUE);
+}
+
 # Alpha-diversity
 CreateALPHDIVdoc <- function(mbSetObj){
   
@@ -601,6 +726,8 @@ CreateBETADIVdoc<-function(mbSetObj){
   cat(cmdhist, file=rnwFile, append=TRUE, sep="\n");
   cat("\n\n", file=rnwFile, append=TRUE, sep="\n");
 }
+
+
 
 # Hierarchical clustering
 CreateHCdoc <- function(mbSetObj){

@@ -93,7 +93,7 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
   core.nm <- data.frame(prevalence(data.compositional, detection = detection, sort = TRUE));
   colnames(core.nm)[1] <- "Prevelance";
   fileName <- "core_microbiome.csv";
-  write.csv(core.nm,file=fileName);
+  write.csv(core.nm, file=fileName);
   
   imgName = paste(imgName, ".", format, sep="");
   mbSetObj$imgSet$core <- imgName;
@@ -191,7 +191,7 @@ core_members<-function(x, detection=detection, prevalence=prevalence,
 
 abundances<-function(x, transform="identity") {
   # Pick the OTU data
-    if (class(x) == "phyloslim") {
+    if (class(x) == "phyloseq") {
     # Pick OTU matrix
         otu <- get_taxa(x)
     # Ensure that taxa are on the rows
@@ -306,7 +306,7 @@ prevalence <- function(x, detection=0, sort=FALSE, count=FALSE,
         return(NULL)
     }
     # Convert phyloslim to matrix
-    if (class(x) == "phyloslim") {
+    if (class(x) == "phyloseq") {
         x <- abundances(x)
     }
     if (is.vector(x)) {
@@ -374,7 +374,7 @@ PlotOverallPieGraph<-function(mbSetObj, taxalvl, feat_cnt, calcmeth){
    
   #data <- prune_taxa(taxa_sums(dataSet$filt.data)>feat_cnt,dataSet$filt.data);
   sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
-  datapie <<- merge_phyloslim(data, tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
+  datapie <<- merge_phyloseq(data, tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
    
   #using reduce names
   data <- otu_table(datapie);
@@ -461,9 +461,9 @@ PlotGroupPieGraph <- function(mbSetObj, taxalvl, metadata, clslevel,
   smpl <- data.frame(sample_data(mbSetObj$dataSet$proc.phyobj));
   smpl1 <- sample_data(subset(smpl,smpl[metadata]==clslevel));
   data <- prune_samples(sample_names(smpl1), data);
-  data <- merge_phyloslim(data, smpl1);
+  data <- merge_phyloseq(data, smpl1);
   mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
-  datapie <<- merge_phyloslim(data, mbSetObj$dataSet$taxa_table);
+  datapie <<- merge_phyloseq(data, mbSetObj$dataSet$taxa_table);
 
   #using reduce names
   data <- t(data.frame(otu_table(datapie)));
@@ -543,10 +543,10 @@ PlotSamplePieGraph<-function(mbSetObj, taxalvl, smplnm, feat_cnt){
   }
    
   sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
-  data <- merge_phyloslim(data, tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
+  data <- merge_phyloseq(data, tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
   data <- prune_samples(smplnm, data);
   mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
-  datapie <<- merge_phyloslim(data, mbSetObj$dataSet$taxa_table);
+  datapie <<- merge_phyloseq(data, mbSetObj$dataSet$taxa_table);
 
   #using reduce names
   data <- otu_table(datapie);
@@ -887,7 +887,7 @@ PlotTaxaAlphaBarSam<-function(mbSetObj, barplotName, taxalvl, samplnm,
   }
     
   sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
-  data1 <- merge_phyloslim(data, tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
+  data1 <- merge_phyloseq(data, tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
 
   yLbl <- "Actual Abundance";
 
@@ -1012,10 +1012,10 @@ PlotBetaDiversity<-function(mbSetObj, plotNm, ordmeth, distName, colopt, metadat
   #using normalized data
   if(taxrank=="OTU"){
     taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
-    data <- merge_phyloslim(mbSetObj$dataSet$norm.phyobj, taxa_table);
+    data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj, taxa_table);
   }else{
     taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
-    data <- merge_phyloslim(mbSetObj$dataSet$norm.phyobj, taxa_table);
+    data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj, taxa_table);
     #merging at taxonomy levels
     data <- fast_tax_glom_first(data,taxrank);
   }
@@ -1069,21 +1069,7 @@ PlotBetaDiversity<-function(mbSetObj, plotNm, ordmeth, distName, colopt, metadat
     pg_ot <- otu_table(data);
     pg_sd <- sample_data(data);
     pg_tree <- prune_taxa(taxa_names(pg_ot), pg_tree);
-    data <- merge_phyloslim(pg_tb, pg_ot, pg_sd, pg_tree);
-
-    if(!ape::is.rooted(phy_tree(data))){
-      pick_new_outgroup <- function(tree.unrooted){
-        treeDT <- cbind(cbind(data.table(tree.unrooted$edge),
-                  data.table(length = tree.unrooted$edge.length))[1:Ntip(tree.unrooted)],
-                  data.table(id = tree.unrooted$tip.label));
-                  new.outgroup <- treeDT[which.max(treeDT$length), ]$id
-                  return(new.outgroup);
-      }
-      new.outgroup <- pick_new_outgroup(phy_tree(data));
-      phy_tree(data) <- ape::root(phy_tree(data),
-                        outgroup = new.outgroup,
-                        resolve.root=TRUE)
-      }
+    data <- merge_phyloseq(pg_tb, pg_ot, pg_sd, pg_tree);
         
     saveRDS(data, "data_unifra.RDS");
     ord <- ordinate(data,method = ordmeth,"unifrac",weighted=TRUE);
@@ -1099,21 +1085,7 @@ PlotBetaDiversity<-function(mbSetObj, plotNm, ordmeth, distName, colopt, metadat
     pg_ot <- otu_table(data);
     pg_sd <- sample_data(data);
     pg_tree <- prune_taxa(taxa_names(pg_ot), pg_tree);
-    data <- merge_phyloslim(pg_tb, pg_ot, pg_sd, pg_tree);
-
-    if(!ape::is.rooted(phy_tree(data))){
-        pick_new_outgroup <- function(tree.unrooted){
-        treeDT <- cbind(cbind(data.table(tree.unrooted$edge),
-        data.table(length = tree.unrooted$edge.length))[1:Ntip(tree.unrooted)],
-        data.table(id = tree.unrooted$tip.label));
-        new.outgroup <- treeDT[which.max(treeDT$length), ]$id
-        return(new.outgroup);}
-
-        new.outgroup <- pick_new_outgroup(phy_tree(data));
-        phy_tree(data) <- ape::root(phy_tree(data),
-                          outgroup = new.outgroup,
-                          resolve.root=TRUE);
-    }
+    data <- merge_phyloseq(pg_tb, pg_ot, pg_sd, pg_tree);
     
     saveRDS(data, "data_unifra.RDS");
     ord<-ordinate(data,method = ordmeth,"unifrac");
@@ -1172,6 +1144,7 @@ PlotBetaDiversity<-function(mbSetObj, plotNm, ordmeth, distName, colopt, metadat
   if(ordmeth == "NMDS"){
     mbSetObj$analSet$beta.stress <- paste("[NMDS] Stress =", signif(ord$stress, 5));
   }
+  
   return(.set.mbSetObj(mbSetObj))
 }
 
@@ -1185,7 +1158,7 @@ PlotBetaDiversity<-function(mbSetObj, plotNm, ordmeth, distName, colopt, metadat
 PlotFunAnotSummary<-function(mbSetObj, imgName, format="png", dpi=72){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
+
   set.seed(280561499);
     
   if(is.null(mbSetObj$analSet$func.pred)){
@@ -1213,6 +1186,7 @@ PlotFunAnotSummary<-function(mbSetObj, imgName, format="png", dpi=72){
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
+#'@import reshape
 PlotTaxaAlphaArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadata,
                             imgOpt, feat_cnt, colpalopt, calcmeth, format="png", dpi=72){
 
@@ -1230,7 +1204,7 @@ PlotTaxaAlphaArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadata,
   }
 
   sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
-  data1 <- merge_phyloslim(data, tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
+  data1 <- merge_phyloseq(data, tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
 
   if(viewOpt=="smpl_grp"){
     data <- as.data.frame(t(otu_table(data1)));
@@ -1324,6 +1298,7 @@ PlotTaxaAlphaArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadata,
   data$step <- as.numeric(data$step);
   data <- data[order(data[,2]),];
   data <- data[,-1];
+  
   if(viewOpt=="smpl_grp"){
     data$step <- rep(1:length(gp_nm),feat_no);
     lbl <- gp_nm;
@@ -1403,6 +1378,8 @@ PlotTaxaAlphaArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadata,
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
+#'@import reshape
+#'@import ggplot2
 PlotTaxaAlphaBar<-function(mbSetObj, barplotName, taxalvl, metadata, facet, imgOpt, 
                            feat_cnt, colpalopt, calcmeth, format="png", dpi=72){
 
@@ -1420,7 +1397,7 @@ PlotTaxaAlphaBar<-function(mbSetObj, barplotName, taxalvl, metadata, facet, imgO
   }
   
   sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
-  data1 <- merge_phyloslim(data, tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
+  data1 <- merge_phyloseq(data, tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
 
   data <- as.data.frame(otu_table(data1));
   data_tax <- tax_table(data1);
@@ -1441,7 +1418,7 @@ PlotTaxaAlphaBar<-function(mbSetObj, barplotName, taxalvl, metadata, facet, imgO
   clsLbl <- factor(sam[[facet]]);
   
   if(min(table(clsLbl)) < 2){
-    current.msg<<-"Too many facets to be displayed - please select a more meaninful facet option with at least 3 samples per group.";
+    current.msg<<-"Too many facets to be displayed - please select a more meaningful facet option with at least 3 samples per group.";
     return(0);
   }
 
@@ -1608,6 +1585,7 @@ PlotTaxaAlphaBar<-function(mbSetObj, barplotName, taxalvl, metadata, facet, imgO
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
+#'@import vegan
 PerformCategoryComp <- function(mbSetObj, method, distnm, variable){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -1620,7 +1598,7 @@ PerformCategoryComp <- function(mbSetObj, method, distnm, variable){
     data <- readRDS("data_unifra.RDS");
   } else {
     data <- mbSetObj$dataSet$proc.phyobj;
-    data <- merge_phyloslim(data);
+    data <- merge_phyloseq(data);
   }
 
   data <- transform_sample_counts(data, function(x) x/sum(x));
@@ -1666,7 +1644,7 @@ PerformCategoryComp <- function(mbSetObj, method, distnm, variable){
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-
+#'@import reshape
 PlotTaxaAlphaBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, imgOpt,
                                  feat_cnt, colpalopt, calcmeth, format="png", dpi=72){
   
@@ -1684,7 +1662,7 @@ PlotTaxaAlphaBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, imgOp
   }
     
   sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
-  data1 <- merge_phyloslim(data, tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
+  data1 <- merge_phyloseq(data, tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
 
   yLbl <- "Actual Abundance";
 
@@ -1843,6 +1821,7 @@ PlotTaxaAlphaBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, imgOp
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
+#'@import ggplot2
 PlotAlphaBoxData<-function(mbSetObj, boxplotName, distName, metadata, format="png", dpi=72){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -1939,6 +1918,8 @@ PlotRarefactionCurve <- function(mbSetObj, data.src, linecolor, linetype, facet,
   }
   print(box);
   dev.off();
+  mbSetObj$analSet$rarefaction_curve <- imgName;
+  mbSetObj$analSet$rarefaction_curve_data.src = ifelse(data.src == "orig", "original", "filtered");
   return(.set.mbSetObj(mbSetObj))
 }
 
@@ -1960,13 +1941,13 @@ PreparePhylogeneticTreePlot <-function(mbSetObj, color, shape, taxa, treeshape, 
   }
   
   sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
-  data1 <- merge_phyloslim(data,tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
+  data1 <- merge_phyloseq(data,tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
   pg_tree <- readRDS("tree.RDS");
   pg_tb <- tax_table(data1);
   pg_ot <- otu_table(data1);
   pg_sd <- sample_data(data1);
   pg_tree <- prune_taxa(taxa_names(pg_ot), pg_tree);
-  data_tree <- merge_phyloslim(pg_tb, pg_ot, pg_sd, pg_tree);
+  data_tree <- merge_phyloseq(pg_tb, pg_ot, pg_sd, pg_tree);
 
   for (i in sample_variables(data_tree)){
     if(is.integer(sample_data(data_tree)[[i]]) | is.character(sample_data(data_tree)[[i]])){
@@ -2014,6 +1995,219 @@ PreparePhylogeneticTreePlot <-function(mbSetObj, color, shape, taxa, treeshape, 
     print(box);
     dev.off();
   }
+  mbSetObj$analSet$phylogenetic_tree_curve <- imgName;
+  mbSetObj$analSet$phylogenetic_tree_curve_tax_level <- taxa;
+  
+  return(.set.mbSetObj(mbSetObj))
+}
+
+#########################
+#####plot heat tree######
+#########################
+TestMetaOK <- function(mbSetObj, meta){
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+   
+  dm <- mbSetObj$dataSet$proc.phyobj;  
+  dm_samples <- as(sample_data(dm), "data.frame");
+  grp <- dm_samples[[meta]];
+   
+  if(length(grp) / length(unique(grp)) < 3){
+    return(0);
+  }
+  return(1);
+}
+
+GetHtMetaCpInfo <- function(mbSetObj, meta){
+
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  dm <- mbSetObj$dataSet$proc.phyobj;  
+  dm_samples = as(sample_data(dm), "data.frame");
+
+  grp.nms <- as.character(unique(dm_samples[[meta]]));
+  myargs <- list();
+  inx = 0
+  for (m in 1:(length(grp.nms) - 1)) {
+    for (n in (m + 1):length(grp.nms)) {
+        inx <- inx + 1
+        myargs[[inx]] <- paste(grp.nms[m], "_vs_", grp.nms[n], sep = "");
+    }
+  }
+  return(unlist(myargs));
+}
+
+#'Function to plot heat tree
+#'@description This functions plots the heat tree.
+#'@param mbSetObj Input the name of the mbSetObj.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+#'@import metacoder
+PrepareHeatTreePlot <- function(mbSetObj, meta, tax, color, layoutOpt, comparison, imgName, format="png", dpi=72){
+
+  if(.on.public.web){
+    load_metacoder();
+  }
+
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  tax_o <- tax;
+
+  dm <- mbSetObj$dataSet$proc.phyobj;
+  tax_table_new = data.frame("Kingdom" = "Root", as(tax_table(dm), "matrix")[, 1:6]) # add root to tax table
+  tax_table(dm) = as.matrix(tax_table_new);
+  
+  dm_samples = as(sample_data(dm), "data.frame");
+  dm_samples <- cbind.data.frame("sample_id" = row.names(dm_samples), dm_samples); # add sample_id to sample table
+  row.names(dm_samples) <- c();
+  dm_samples[] <- lapply(dm_samples, as.character);
+
+  grp.nms <- strsplit(comparison, "_vs_")[[1]];
+  dm_samples_cmf <- dm_samples[dm_samples[[meta]] %in% grp.nms, ]; #subset sample data by meta variable
+
+  otu_dm <- as.data.frame(as(otu_table(dm), "matrix"));
+  tax_dm <- as.data.frame(as(tax_table(dm), "matrix"));
+  tax_dm[] <- lapply(tax_dm, as.character);#make sure characters in tax_dm;
+  rank_dm <- c("r", "p", "c", "o", "f", "g", "s");
+  names(tax_dm) <- rank_dm;
+    
+  for (i in 1:ncol(tax_dm)){
+    for (j in 1:nrow(tax_dm)){
+      if (is.na(tax_dm[j, i])){
+        tax_dm[j, i] <- "";
+      } else {
+        tax_dm[j, i] <- paste(names(tax_dm)[i],
+                              tax_dm[j, i],
+                              sep = "__");
+      }
+    }
+  } #add __ to tax table
+  
+  if(tax == "Phylum"){
+    tax <- "p";
+  } else if(tax == "Class"){
+    tax <- "c";
+  } else if(tax == "Order"){
+    tax <- "o";
+  } else if(tax == "Family"){
+    tax <- "f";
+  } else if(tax == "Genus"){
+    tax <- "g"
+  } else {
+    tax <- "s";
+  }; # get tax rank for heat tree
+  
+  tax_dm <- tax_dm[, 1:which(names(tax_dm) == tax)]; #suset tax table
+  rank_dm_new <- rank_dm[1:which(rank_dm == tax)];
+  tax_dm$lineage <- apply(tax_dm[, rank_dm_new], 1, paste, collapse = ";"); #collapse all tax ranks
+  dm_otu <- cbind.data.frame("otu_id" = row.names(tax_dm),
+                             "lineage" = tax_dm$lineage,
+                             otu_dm); #make new otu table
+  row.names(dm_otu) <- c();
+  dm_otu$lineage <- gsub(";+$", "", dm_otu$lineage); #remove empty tax names
+  
+  dm_otu_cmf <- dm_otu[, c("otu_id", "lineage", dm_samples_cmf$sample_id)]; #make otu table ready for heat tree  
+
+  PrepareHeatTreePlotDataParse_cmf_res <- PrepareHeatTreePlotDataParse_cmf(dm_otu_cmf, dm_samples_cmf, meta); #parse otu table to heat tree object
+  PrepareHeatTreePlotDataParse_cmf_diff_table_res <- PrepareHeatTreePlotDataParse_cmf_diff_table(PrepareHeatTreePlotDataParse_cmf_res); #generate diff table
+  PrepareHeatTreePlotDataParse_cmf_res <<- PrepareHeatTreePlotDataParse_cmf_res; #generate heat tree
+
+  PrepareHeatTreePlotDataParse_cmf_plot(mbSetObj, color, layoutOpt, comparison, imgName, format, dpi=72);
+    
+  #below is for PDF reporter
+  mbSetObj$analSet$heat_tree_plot <- imgName; 
+  mbSetObj$analSet$heat_tree_meta <- meta;
+  mbSetObj$analSet$heat_tree_tax <- tax_o;
+  mbSetObj$analSet$heat_tree_comparison <- comparison;
+  current.msg<<-"Heat tree analysis successful!";
+  return(.set.mbSetObj(mbSetObj));
+};
+
+PrepareHeatTreePlotDataParse_cmf <- function(dm_otu_cmf,
+                                             dm_samples_cmf,
+                                             meta){
+  dm_obj_cmf <- parse_tax_data(dm_otu_cmf,
+                               class_cols = "lineage",
+                               class_sep = ";",
+                               class_regex = "^(.+)__(.+)$",
+                               class_key = c(tax_rank = "info",
+                                             tax_name = "taxon_name"));
+  dm_obj_cmf$data$tax_data <- calc_obs_props(dm_obj_cmf, "tax_data"); # normalization
+  
+  dm_obj_cmf$data$tax_abund <- calc_taxon_abund(dm_obj_cmf, "tax_data",
+                                                cols = dm_samples_cmf$sample_id); #calculate taxon abundance
+  dm_obj_cmf$data$diff_table <- compare_groups(dm_obj_cmf, dataset = "tax_abund", #make diff table
+                                               cols = dm_samples_cmf$sample_id, # What columns of sample data to use
+                                               groups = dm_samples_cmf[[meta]]); # What category each sample is assigned to;
+  return(dm_obj_cmf);
+};
+
+PrepareHeatTreePlotDataParse_cmf_diff_table <- function(PrepareHeatTreePlotDataParse_cmf_res){#generate diff table for downloading
+  dm_obj_cmf = PrepareHeatTreePlotDataParse_cmf_res;
+  table_tax_dm <- dm_obj_cmf$data$class_data[-2];
+  table_tax_dm <- table_tax_dm[!duplicated(table_tax_dm$taxon_id), ]; #remove redundancy
+  
+  tax_diff_dm <- merge(dm_obj_cmf$data$diff_table, 
+                       table_tax_dm,
+                       by = "taxon_id"); #add tax names
+  tax_diff_dm <- cbind.data.frame("id" = tax_diff_dm[, 1],
+                                  tax_diff_dm[, 8:9],
+                                  tax_diff_dm[, 2:7]);
+
+  write.csv(tax_diff_dm, 
+            "tax_diff_dm.csv", 
+            row.names = FALSE, quote = FALSE);
+
+  return(tax_diff_dm);
+};
+
+PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, comparison, imgName, format, dpi=72){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  dm_obj_cmf = PrepareHeatTreePlotDataParse_cmf_res;
+  if(color == "ggr"){
+    color_new <- c("darkgreen", "gray", "red");
+  } else if(color == "bgr") {
+    color_new <- c("blue", "gray", "red");
+  } else {
+    color_new <- c("purple", "gray", "blue");
+  };
+
+  mbSetObj$analSet$heat_tree_plot <- imgName; # for PDF reporter
+    
+  set.seed(56784);
+  Cairo::Cairo(file=paste0(imgName, ".", format), height = 800, width = 1000, type=format, bg="white", dpi=96);
+  if(layoutOpt == "reda"){# two layouts are provided
+    box <- heat_tree(dm_obj_cmf,
+                     node_label = taxon_names, #taxon names
+                     node_size = n_obs, # n_obs is a function that calculates, in this case, the number of OTUs per taxon
+                     node_color = log2_median_ratio, # A column from `obj$data$diff_table`
+                     node_color_interval = c(-8, 8), # The range of `log2_median_ratio` to display
+                     node_color_range = color_new, # The color palette used
+                     node_size_axis_label = "OTU count",
+                     node_color_axis_label = "Log 2 ratio of median proportions",
+                     layout = "davidson-harel", # The primary layout algorithm
+                     initial_layout = "reingold-tilford",
+                     title = comparison,
+                     title_size = 0.05,
+                     node_label_size_range = c(0.02, 0.05),
+                     output_file = NULL);
+  } else {
+    box <- heat_tree(dm_obj_cmf,
+                     node_label = taxon_names,
+                     node_size = n_obs, # n_obs is a function that calculates, in this case, the number of OTUs per taxon
+                     node_color = log2_median_ratio, # A column from `obj$data$diff_table`
+                     node_color_interval = c(-8, 8), # The range of `log2_median_ratio` to display
+                     node_color_range = color_new, # The color palette used
+                     node_size_axis_label = "OTU count",
+                     node_color_axis_label = "Log 2 ratio of median proportions",
+                     title = comparison,
+                     title_size = 0.05,
+                     node_label_size_range = c(0.02, 0.05),
+                     output_file = NULL);
+  };
+  print(box);
+  dev.off();
+
   return(.set.mbSetObj(mbSetObj))
 }
 
@@ -2192,16 +2386,29 @@ Perform16FunAnot<-function(mbSetObj, type, pipeline) {
     
   result <- round(result, digits =0);
   if(func.meth == "Tax4Fun"){
-    write.csv(result, file="functionalprof_tax4fun.csv");
+    kos <- matrix(rownames(result))
+    colnames(kos) <- "#NAME"
+    tax4_feats <- cbind(kos, result)
+    write.csv(tax4_feats, file="functionalprof_tax4fun.csv", row.names = FALSE);
   }else{
-    write.csv(result, file="functionalprof_picrust.csv");
+    kos <- matrix(rownames(result))
+    colnames(kos) <- "#NAME"
+    picrust_feats <- cbind(kos, result)
+    write.csv(picrust_feats, file="functionalprof_picrust.csv", row.names=FALSE);
   }
   result <- result[!apply(result==0,1,all), ]; #filtering zero counts across all
 
+  # create meta-data file
+  meta <- as.matrix(mbSetObj$dataSet$sample_data)
+  samplenames <- matrix(rownames(meta))
+  colnames(samplenames) <- "#NAME"
+  meta_all <- cbind(samplenames, meta)  
+  write.csv(meta_all, file="metadata.csv", row.names = FALSE)
+  
   # save as RDS for memory saving
   mbSetObj$analSet$func.pred<-result;
   mbSetObj$analSet$func.meth<-func.meth;
-    
+
   if(.on.public.web){
     .set.mbSetObj(mbSetObj)
     return(1);

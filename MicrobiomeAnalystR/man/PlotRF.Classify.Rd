@@ -4,7 +4,7 @@
 \alias{PlotRF.Classify}
 \title{Plot random forest classification}
 \usage{
-PlotRF.Classify(mbSetObj, imgName, format = "png", dpi = 72,
+PlotRF.Classify(mbSetObj, feature, imgName, format = "png", dpi = 72,
   width = NA)
 }
 \arguments{

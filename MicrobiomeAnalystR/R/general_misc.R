@@ -199,9 +199,9 @@ fast_tax_glom_first <- function(physeq, taxrank){
   colnames(otab2)<-sample_names(physeq);
     
   if(length(phy_tree(physeq,errorIfNULL = FALSE))==0){
-    phy_data<-merge_phyloslim(otab2,tax_table(physeq),sample_data(physeq));
+    phy_data<-merge_phyloseq(otab2,tax_table(physeq),sample_data(physeq));
   }else{
-    phy_data<-merge_phyloslim(otab2,tax_table(physeq),sample_data(physeq),phy_tree(physeq));
+    phy_data<-merge_phyloseq(otab2,tax_table(physeq),sample_data(physeq),phy_tree(physeq));
   }
   return(phy_data)
 }

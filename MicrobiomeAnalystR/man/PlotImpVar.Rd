@@ -4,7 +4,7 @@
 \alias{PlotImpVar}
 \title{Helper function to plot variable importance}
 \usage{
-PlotImpVar(mbSetObj, imp.vec, xlbl, feat.num = 15, color.BW = FALSE)
+PlotImpVar(mbSetObj, imp.vec, xlbl, feature, color.BW = FALSE)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

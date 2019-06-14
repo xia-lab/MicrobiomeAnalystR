@@ -25,7 +25,7 @@ PlotTreeGraph<-function(mbSetObj, plotNm, distnm, clstDist, metadata, datatype,
     
   if(datatype=="16S"){
     mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
-    data <- merge_phyloslim(data,mbSetObj$dataSet$taxa_table);
+    data <- merge_phyloseq(data,mbSetObj$dataSet$taxa_table);
   }else{
     data <- data;
   }
@@ -45,14 +45,13 @@ PlotTreeGraph<-function(mbSetObj, plotNm, distnm, clstDist, metadata, datatype,
   hc.cls <-as.factor(sample_data(data)[[variable]]);
 
   # must call distance within the phyloslim package
-  #dist.mat<-phyloslim::distance(data,distnm,type = "samples");
   if(distnm == "unifrac" | distnm == "wunifrac"){
     pg_tree <- readRDS("tree.RDS");
     pg_tb <- tax_table(data);
     pg_ot <- otu_table(data);
     pg_sd <- sample_data(data);
     pg_tree <- prune_taxa(taxa_names(pg_ot), pg_tree);
-    data <- merge_phyloslim(pg_tb, pg_ot, pg_sd, pg_tree);
+    data <- merge_phyloseq(pg_tb, pg_ot, pg_sd, pg_tree);
 
     if(!is.rooted(phy_tree(data))){
       pick_new_outgroup <- function(tree.unrooted){
@@ -157,8 +156,9 @@ PlotBoxData<-function(mbSetObj, boxplotName, feat, format="png", dpi=72){
     
   box=ggplot(data,aes(x=data$class, y = data[,feat])) + stat_boxplot(geom ='errorbar') + geom_boxplot(aes(color=class), outlier.shape = NA) +
       geom_boxplot(aes(fill=class), outlier.shape = NA) + geom_jitter() + theme_bw() + labs(y="Abundance",x="class") +
-      ggtitle("Orignal Count") + theme(plot.title = element_text(hjust=0.5), legend.position="none");
-    
+      #ggtitle("Original Count") + theme(plot.title = element_text(hjust=0.5), legend.position="none");
+      ggtitle("Filtered Count") + theme(plot.title = element_text(hjust=0.5), legend.position="none");
+
   box1=ggplot(data,aes(x=data$class, y = data$log_feat)) + stat_boxplot(geom ='errorbar') + geom_boxplot(aes(color=class), outlier.shape = NA) +
       geom_boxplot(aes(fill=class), outlier.shape = NA) + geom_jitter() + theme_bw() + labs(y="",x="class") +
       ggtitle("Log-transformed Count") + theme(plot.title = element_text(hjust=0.5));
@@ -198,7 +198,7 @@ PlotHeatmap<-function(mbSetObj, plotNm, smplDist, clstDist, palette, metadata,
     
   if(datatype=="16S"){
     mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
-    data <- merge_phyloslim(data, mbSetObj$dataSet$taxa_table);
+    data <- merge_phyloseq(data, mbSetObj$dataSet$taxa_table);
   }else{
     data <- data;
   }

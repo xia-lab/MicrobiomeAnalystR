@@ -5,7 +5,7 @@
 ###################################################
 
 # This is only for web version
-.on.public.web <- TRUE; # only TRUE when on metaboanalyst web server
+.on.public.web <- FALSE; # only TRUE when on metaboanalyst web server
 
 # note, this is usually used at the end of a function
 # for local, return itself; for web, push to global environment
@@ -262,7 +262,7 @@ GetTaxaFeatName<- function(mbSetObj, taxlvl){
     return(taxa_names(mbSetObj$dataSet$norm.phyobj));
   }else{
     taxa_table<-tax_table(mbSetObj$dataSet$proc.phyobj);
-    data<-merge_phyloslim(mbSetObj$dataSet$norm.phyobj,taxa_table);
+    data<-merge_phyloseq(mbSetObj$dataSet$norm.phyobj,taxa_table);
     nm<-unique(as.character(tax_table(data)[,taxlvl]));
     indx<-which(is.na(nm)==TRUE);
     nm[indx]<-"Not_Assigned";
@@ -278,7 +278,7 @@ GetTaxaFeatSize<- function(mbSetObj, taxlvl){
     feat.size <- length(taxa_names(mbSetObj$dataSet$norm.phyobj));
   }else{
     taxa_table<-tax_table(mbSetObj$dataSet$proc.phyobj);
-    data<-merge_phyloslim(mbSetObj$dataSet$norm.phyobj,taxa_table);
+    data<-merge_phyloseq(mbSetObj$dataSet$norm.phyobj,taxa_table);
     feat.size <- length(unique(as.character(tax_table(data)[,taxlvl])));
   }
   return(feat.size);
@@ -292,7 +292,7 @@ ValidateFeatureName<- function(mbSetObj, taxlvl, nm){
     tax.nms <- taxa_names(mbSetObj$dataSet$norm.phyobj);
   }else{
     taxa_table<-tax_table(mbSetObj$dataSet$proc.phyobj);
-    data<-merge_phyloslim(mbSetObj$dataSet$norm.phyobj,taxa_table);
+    data<-merge_phyloseq(mbSetObj$dataSet$norm.phyobj,taxa_table);
     tax.nms<-unique(as.character(tax_table(data)[,taxlvl]));
   }
   
@@ -394,7 +394,7 @@ ReadSampleTable<- function(mbSetObj, dataName) {
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
-    load_phyloslim();
+    load_phyloseq();
   }
 
   msg <- NULL;
@@ -445,9 +445,9 @@ ReadSampleTable<- function(mbSetObj, dataName) {
 }
 
 #'@import phyloseq
-ReadTreeFile<- function(dataName) {
+ReadTreeFile<- function(mbSetObj, dataName) {
   if(.on.public.web){
-    load_phyloslim();
+    load_phyloseq();
   }
   msg <- NULL;
   tree <- read_tree(dataName);

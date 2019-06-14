@@ -16,7 +16,7 @@ Read16SAbundData <- function(mbSetObj, dataName, type, taxalabel, taxa_type,
                              ismetafile, module.type) {
   
   if(.on.public.web){
-    load_phyloslim();
+    load_phyloseq();
   }
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -197,7 +197,7 @@ Read16SBiomData <- function(mbSetObj, dataName, type, taxa_type, ismetadata){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
-    load_phyloslim();
+    load_phyloseq();
     load_biomformat();
   }
   
@@ -278,7 +278,7 @@ ReadMothurData<-function(mbSetObj, dataName, taxdataNm, taxa_type, module.type){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
-    load_phyloslim();
+    load_phyloseq();
     load_datatable();
   }
   
@@ -443,7 +443,7 @@ PlotSelectedSample <-function(mbSetObj, imgNm, smplID, idtype, OtuIdType, rel_pe
   if(idtype=="16S"){
     data <- mbSetObj$dataSet$norm.phyobj;
     mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
-    data <- merge_phyloslim(data, mbSetObj$dataSet$taxa_table);
+    data <- merge_phyloseq(data, mbSetObj$dataSet$taxa_table);
   }else{
     data <- userrefdata;
   }

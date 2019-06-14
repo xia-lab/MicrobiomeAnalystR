@@ -1,6 +1,11 @@
-# Load phyloslimR
-load_phyloslim <- function(){
-  suppressMessages(library(phyloslimR))
+# Load phyloseq (note, the server is slim version)
+load_phyloseq <- function(){
+  suppressMessages(library(phyloseq))
+}
+
+# Load metacoder
+load_metacoder <- function(){
+  suppressMessages(library(metacoder))
 }
 
 # Load pryr
@@ -133,15 +138,9 @@ load_splitstackshape <- function(){
   suppressMessages(library(splitstackshape))
 }
 
-
 # Load edgeR
 load_edgeR <- function(){
   suppressMessages(library(edgeR))
-}
-
-# Load metagenomeSeq
-load_metagenomeSeq <- function(){
-  suppressMessages(library(metagenomeSeq))
 }
 
 # Load globaltest

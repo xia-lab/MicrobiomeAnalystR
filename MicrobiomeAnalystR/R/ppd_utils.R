@@ -22,7 +22,7 @@ PrepareMergedData <- function(mbSetObj, metadata, keepfeat){
     
   otu.tab<-otu_table(data,taxa_are_rows =TRUE);
   taxa_names(otu.tab)->tax_nm;
-  userrefdata <<-merge_phyloslim(data);
+  userrefdata <<-merge_phyloseq(data);
   sampleusrref<<-sample_data(data);
   feat.perc<<-keepfeat;
   
@@ -43,7 +43,6 @@ PrepareMergedData <- function(mbSetObj, metadata, keepfeat){
 #'@export
 #'@import phyloseq
 PerformRefDataMapping <- function(mbSetObj, refdataNm, taxo_type, sample_var, biome){
-
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
   msg <- NULL;
@@ -57,10 +56,10 @@ PerformRefDataMapping <- function(mbSetObj, refdataNm, taxo_type, sample_var, bi
   # create phyloseq or phyloslim object
   
   if(.on.public.web){
-    load_phyloslim();
+    load_phyloseq();
     OTU <- otu_table(current.refset.otu, taxa_are_rows = TRUE)
     TAX <- tax_table(current.refset.tax)
-    current.refset <- phyloslim(OTU, TAX)
+    current.refset <- phyloseq(OTU, TAX)
   }else{ # phyloseq should be loaded locally
     OTU <- otu_table(current.refset.otu, taxa_are_rows = TRUE)
     TAX <- tax_table(current.refset.tax)
@@ -121,7 +120,8 @@ PerformRefDataMapping <- function(mbSetObj, refdataNm, taxo_type, sample_var, bi
   taxa_ind <- match(taxa_names(data),taxa_names(current.refset));
     
   if(length(which(taxa_ind != "NA")) < 0.20*otu_no){
-    msg <- c(msg,paste("Less than 20 percent OTU  match between user and reference data."));
+    msg <- c(msg, paste(c("Less than 20 percent OTU  match between user and reference data.", length(which(taxa_ind != "NA")), "% match!")));
+    print(msg)
     return(0);
   } else {
     msg <- paste("Dataset from",biome,"have been selected for comparison with user's data")
@@ -141,7 +141,7 @@ PerformRefDataMapping <- function(mbSetObj, refdataNm, taxo_type, sample_var, bi
   colnames(tax_table(current.refset)) <- c("Kingdom","Phylum","Class","Order", "Family", "Genus","Species");
   tax_table(current.refset) <- tax_table(current.refset)[,-1];
   userdatarank <<- rank_names(current.refset);
-  current.ref_userdata <- merge_phyloslim(otu_table(data),otu_table(current.refset),tax_table(data),tax_table(current.refset));
+  current.ref_userdata <- merge_phyloseq(otu_table(data),otu_table(current.refset),tax_table(data),tax_table(current.refset));
   #dummy variable for showing different shape for user and reference data
   sample_data(data)$data <- rep("user",nrow(sample_data(data)));
   current.sample$data <- rep("reference",nrow(current.sample));
@@ -155,7 +155,7 @@ PerformRefDataMapping <- function(mbSetObj, refdataNm, taxo_type, sample_var, bi
   current.ref_usersamdata <- sample_data(current.ref_usersamdata);
   #storing the taxonomy rank from users data
   #final phyloslim object;(taxonomy table after merging will get distorted if taxa_ranks are not same in both user and reference data;but it's of no use)
-  merged.data <- merge_phyloslim(current.ref_userdata,current.ref_usersamdata);
+  merged.data <- merge_phyloseq(current.ref_userdata,current.ref_usersamdata);
   #data filteration and transformation
   merged.data <- transform_sample_counts(merged.data, function(x) x / sum(x) );
   merged.data <<- merged.data;
