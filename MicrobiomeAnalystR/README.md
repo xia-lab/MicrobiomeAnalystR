@@ -6,7 +6,7 @@
 
 **MicrobiomeAnalystR** contains the R functions and libraries underlying the popular MicrobiomeAnalyst web server, including > 200 functions for statistical, functional, and visual analysis of microbiome data. The package is synchronized with the MicrobiomeAnalyst web server. After installing and loading the package, users will be able to reproduce the same results from their local computers using the corresponding R command history downloaded from MicrobiomeAnalyst, thereby achieving maximum flexibility and reproducibility. With this R package we also aim to address an important gap left in its web version. Raw sequence data processing. 
 
-To demonstrate this new functionality, we provide the "MicrobiomeAnalystR Workflow: From Raw Sequences to Functional Insights" vignette, available [here]() as a PDF. In this vignette, we perform end-to-end microbiome data analysis on a subset of clinical IBD samples.   
+To demonstrate this new functionality, we provide the "MicrobiomeAnalystR Workflow" vignette. In this vignette, we perform end-to-end microbiome data analysis on a subset of clinical IBD samples.   
 
 ## Getting Started
 
@@ -25,7 +25,7 @@ data.table, reshape, stringr, ape, Tax4Fun, grid, gridExtra, splitstackshape, ed
 ```
 ### Step 2. Install the package
 
-MicrobiomeAnalystR  is freely available from GitHub. The package documentation, including the vignettes for each module and user manual is available within the downloaded R package file. If all package dependencies were installed, you will be able to install the MicrobiomeAnalystR. There are three options, A) using the R package devtools, B) cloning the github, C) manually downloading the .tar.gz file. Note that the MicrobiomeAnalystR github will have the most up-to-date version of the package. 
+MicrobiomeAnalystR is freely available from GitHub. The package documentation, including the vignettes for each module and user manual is available within the downloaded R package file. If all package dependencies were installed, you will be able to install the MicrobiomeAnalystR. There are three options, A) using the R package devtools, B) cloning the github, C) manually downloading the .tar.gz file. Note that the MicrobiomeAnalystR github will have the most up-to-date version of the package. 
 
 #### Option A) Install the package directly from github using the *devtools* package. Open R and enter:
 
