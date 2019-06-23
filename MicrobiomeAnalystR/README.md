@@ -8,7 +8,7 @@
 
 To demonstrate this new functionality, we provide the "MicrobiomeAnalystR Workflow" vignette. In this vignette, we perform end-to-end microbiome data analysis on a subset of clinical IBD samples.   
 
-## Getting Started
+## Getting Started 
 
 ### Step 1. Install package dependencies 
 
@@ -23,9 +23,9 @@ pacman::p_load(phyloseq, metacoder, pryr, biomformat, RColorBrewer, ggplot2, gpl
 BiocParallel, randomForest, metagenomeSeq, MASS, DESeq2, vegan, RJSONIO, ggfortify, pheatmap, xtable, genefilter,
 data.table, reshape, stringr, ape, Tax4Fun, grid, gridExtra, splitstackshape, edgeR, globaltest, R.utils)
 ```
-### Step 2. Install the package
+### Step 2. Install the package 
 
-MicrobiomeAnalystR is freely available from GitHub. The package documentation, including the vignettes for each module and user manual is available within the downloaded R package file. If all package dependencies were installed, you will be able to install the MicrobiomeAnalystR. There are three options, A) using the R package devtools, B) cloning the github, C) manually downloading the .tar.gz file. Note that the MicrobiomeAnalystR github will have the most up-to-date version of the package. 
+MicrobiomeAnalystR is freely available from GitHub. Note that the Rpackage is currently under construction. The package documentation, including the vignettes for each module and user manual is available within the downloaded R package file. If all package dependencies were installed, you will be able to install the MicrobiomeAnalystR. There are three options, A) using the R package devtools, B) cloning the github, C) manually downloading the .tar.gz file. Note that the MicrobiomeAnalystR github will have the most up-to-date version of the package. 
 
 #### Option A) Install the package directly from github using the *devtools* package. Open R and enter:
 
