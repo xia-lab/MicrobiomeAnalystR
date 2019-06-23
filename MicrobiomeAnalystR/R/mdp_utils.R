@@ -1189,23 +1189,22 @@ PlotFunAnotSummary<-function(mbSetObj, imgName, format="png", dpi=72){
 #'@import reshape
 PlotTaxaAlphaArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadata,
                             imgOpt, feat_cnt, colpalopt, calcmeth, format="png", dpi=72){
-
+  
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
     load_reshape();
   }
-
   #using filtered data
   data <- mbSetObj$dataSet$filt.data;
-
   if(class(mbSetObj$dataSet$filt.data)=="matrix"){
     data <- otu_table(data,taxa_are_rows =TRUE);
   }
-
+  
   sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
+  
   data1 <- merge_phyloseq(data, tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
-
+  
   if(viewOpt=="smpl_grp"){
     data <- as.data.frame(t(otu_table(data1)));
     data <- cbind(data,variable=data1@sam_data[[metadata]]);
@@ -1216,25 +1215,35 @@ PlotTaxaAlphaArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadata,
     clsLbl <- sort(unique(factor(data1@sam_data[[metadata]])));
     colvec <- NULL;
   }else {
-    smpl_nm <- sample_names(data1);
+    #smpl_nm <- sample_names(data1);
     data <- data.frame(otu_table(data1));
-
+    
     # reorder data based on groups
     sam <- sample_data(data1);
+    smpl_nm <- row.names(sam);
+
+    if(metadata == "none"){
+    sam$newnewnew <- rep("one", nrow(sam));
+    metadata <- "newnewnew";
+    }
     clsLbl <- factor(sam[[metadata]]);
+    if(min(table(clsLbl)) < 2){
+    current.msg<<-"Too many facets to be displayed - please select a more meaningful facet option with at least 3 samples per group.";
+    return(0);
+    }
     ord.inx <- order(clsLbl);
     smpl_nm <- smpl_nm[ord.inx];
     clsLbl <- clsLbl[ord.inx];
     colvec <- as.numeric(clsLbl)+1;
     data <- t(data[,ord.inx]);
   }
-
+  
   data_tax <- tax_table(data1);
   #reshaping data
   taxa_nm <- as.data.frame(data_tax[,taxalvl]);
   taxa_nm <- as.matrix(taxa_nm);
   y <- which(is.na(taxa_nm)==TRUE);
-
+  
   #converting NA values to unassigned; before order it to last position using ZZZ as its name
   taxa_nm[y] <- "ZZZ";
   colnames(data) <- taxa_nm[,1];
@@ -1245,7 +1254,7 @@ PlotTaxaAlphaArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadata,
   data <- data[ ,order(names(data))];
   indx <- which(colnames(data)=="ZZZ");
   colnames(data)[indx] <- "NA";
-
+  
   if(calcmeth=="sum"){
     ind<-which(colSums(data)>feat_cnt);
     ind1<-which(colSums(data)<feat_cnt);
@@ -1279,9 +1288,10 @@ PlotTaxaAlphaArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadata,
   } else if (feat_no > 100){
     h<-h+500;
   }
-
+  
   # width calculation
-  a <- nsamples(data1);
+  #a <- nsamples(data1);
+  a <- nrow(sample_table);
   min.w <- 540;
   if(length(a)<50){
     w <- a*35;
@@ -1291,12 +1301,14 @@ PlotTaxaAlphaArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadata,
   if(w < min.w){
     w <- min.w;
   }
+  
 
   write.csv(t(data), file="taxa_abund.csv");
-  data$step <- factor(rownames(data));
-  data <- melt(data,id='step');
+  data$facetOpt <- as.character(clsLbl);
+  data$step <- factor(rownames(data), levels = rownames(data));
+  data <- melt(data,id=c('step', 'facetOpt'));
   data$step <- as.numeric(data$step);
-  data <- data[order(data[,2]),];
+  data <- data[order(data[,3]),];
   data <- data[,-1];
   
   if(viewOpt=="smpl_grp"){
@@ -1306,12 +1318,12 @@ PlotTaxaAlphaArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadata,
     data$step <- rep(1:a,feat_no);
     lbl <- smpl_nm;
   }
-
+  
   tmp_df <- aggregate(data$value, by=list(data$variable), FUN=mean)
   var_level <- tmp_df[order(tmp_df$x, decreasing = TRUE), ][[1]]
   data$variable <- factor(data$variable,
                           levels = var_level) # change the factor level of taxa
-
+  
   #color schema
   color_var <- levels(factor(data$variable));
   x <- length(color_var);
@@ -1327,7 +1339,7 @@ PlotTaxaAlphaArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadata,
   }else {
     x.colors <- rep(custom_col42,length.out=x);
   }
-
+  
   barplotName = paste(barplotName, ".",format, sep="");
   mbSetObj$imgSet$stack <- barplotName;
   
@@ -1335,11 +1347,12 @@ PlotTaxaAlphaArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadata,
   box <- ggplot(data,aes(x=step,y=value)) + theme_bw() +
     theme(axis.text.x = element_text(angle = 90, hjust =1,vjust=0.5)) +
     geom_area(aes(fill=variable), position='fill') +
+    facet_grid(~ facetOpt, space = "free", scales = "free") +
     scale_x_continuous(breaks=seq(1,length(unique(data$step)),1),labels=lbl) +
     labs(y="Relative abundance",x="",fill=taxalvl) +
     theme(legend.position="bottom",legend.box = "vertical") +
-    theme(axis.text.x = element_text(colour=colvec),axis.title.x=element_blank());
-
+    theme(axis.text.x = element_text(colour="black"),axis.title.x=element_blank());
+  
   if(colpalopt=="set3"){
     cols.needed <- length(unique(data$variable))
     if(cols.needed > 12){
@@ -1356,6 +1369,10 @@ PlotTaxaAlphaArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadata,
     box <- box + scale_fill_manual(values=c(x.colors))
   }
 
+  if(metadata == "newnewnew"){
+    box <- box + theme(strip.text.x = element_blank())
+  }
+
   print(box);
   dev.off();
   mbSetObj$analSet$stack<-data;
@@ -1369,7 +1386,6 @@ PlotTaxaAlphaArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadata,
     return(.set.mbSetObj(mbSetObj))
   }
 }
-
 #'Function to plot bar charts for alpha diversity
 #'@description This functions plots bar charts of different taxonomic levels
 #'for alpha diversity.
@@ -1877,6 +1893,12 @@ PlotRarefactionCurve <- function(mbSetObj, data.src, linecolor, linetype, facet,
     data_rare <- mbSetObj$dataSet$proc.phyobj;
   }
 
+ sample_table_msg <- sample_data(data_rare, errorIfNULL=TRUE);
+ if(min(table(factor(sample_table_msg [[linecolor]]))) < 3 | min(table(factor(sample_table_msg [[linetype]]))) < 3 | min(table(factor(sample_table_msg [[facet]]))) < 3){
+    current.msg<<-"Too many groups to be displayed - please select a more meaningful group option with at least 3 samples per group.";
+    return(0);
+  }
+
   #get good's coverage index
   goods_coverage <- ComputeGoods(data_rare)
   write.csv(goods_coverage, "goods_coverage.csv", row.names = FALSE, quote = FALSE);
@@ -1941,6 +1963,12 @@ PreparePhylogeneticTreePlot <-function(mbSetObj, color, shape, taxa, treeshape, 
   }
   
   sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
+  
+  if(min(table(factor(sample_table [[color]]))) < 3 | min(table(factor(sample_table [[shape]]))) < 3){
+    current.msg<<-"Too many groups to be displayed - please select a more meaningful group option with at least 3 samples per group.";
+    return(0);
+  }
+
   data1 <- merge_phyloseq(data,tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
   pg_tree <- readRDS("tree.RDS");
   pg_tb <- tax_table(data1);
@@ -2165,11 +2193,17 @@ PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, co
   mbSetObj <- .get.mbSetObj(mbSetObj);
   dm_obj_cmf = PrepareHeatTreePlotDataParse_cmf_res;
   if(color == "ggr"){
-    color_new <- c("darkgreen", "gray", "red");
-  } else if(color == "bgr") {
-    color_new <- c("blue", "gray", "red");
-  } else {
-    color_new <- c("purple", "gray", "blue");
+    color_new <- c("#006B30", "gray", "#E21818");
+  } else if(color == "dbgr") {
+    color_new <- c("#2A4196", "gray", "#F71735");
+  } else if(color == "tgr"){
+    color_new <- c("#007777", "gray", "#F71735");
+  }else if(color == "bgy"){
+    color_new <- c("#2EAA9C", "gray", "#FCB932");
+  }else if(color == "ggg"){
+    color_new <- c("#007777", "gray", "#DAA520");
+  }else{
+    color_new <- c("#764b93", "gray", "#F0C808");
   };
 
   mbSetObj$analSet$heat_tree_plot <- imgName; # for PDF reporter
@@ -2188,7 +2222,7 @@ PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, co
                      layout = "davidson-harel", # The primary layout algorithm
                      initial_layout = "reingold-tilford",
                      title = comparison,
-                     title_size = 0.05,
+                     title_size = 0.04,
                      node_label_size_range = c(0.02, 0.05),
                      output_file = NULL);
   } else {
@@ -2201,7 +2235,7 @@ PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, co
                      node_size_axis_label = "OTU count",
                      node_color_axis_label = "Log 2 ratio of median proportions",
                      title = comparison,
-                     title_size = 0.05,
+                     title_size = 0.04,
                      node_label_size_range = c(0.02, 0.05),
                      output_file = NULL);
   };

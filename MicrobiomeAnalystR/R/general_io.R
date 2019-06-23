@@ -5,7 +5,7 @@
 ###################################################
 
 # This is only for web version
-.on.public.web <- FALSE; # only TRUE when on metaboanalyst web server
+.on.public.web <- TRUE; # only TRUE when on metaboanalyst web server
 
 # note, this is usually used at the end of a function
 # for local, return itself; for web, push to global environment
@@ -433,6 +433,7 @@ ReadSampleTable<- function(mbSetObj, dataName) {
   }
   
   mbSetObj$dataSet$sample_data <- data.frame(mydata);
+print(head(mbSetObj$dataSet$sample_data))
   current.msg <<- paste(na.msg, "The sample data contains a total of ", nrow(mydata), "samples and  ", ncol(mydata), " sample variables.", collapse=" ");
   mbSetObj$dataSet$smpl.msg <- current.msg;
   

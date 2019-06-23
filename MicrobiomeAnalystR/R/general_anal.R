@@ -422,11 +422,63 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, datatype, shotgunid, ta
   #only getting the names of DE features
   diff_ft <<- rownames(resTable)[1:de.Num];
   sigfeat <- rownames(resTable);
+   
+ #for individual box plot, filtered data instead of normalizated data will be used.
+  #following process is just for box plot.
+  ##############################################
+  taxrank_boxplot <- taxrank;
+  claslbl_boxplot <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
+  # build phyloslim obj in fly
+  filt.dataphy <- mbSetObj$dataSet$filt.data;
+  filt.dataphy <- apply(filt.dataphy, 2, as.integer);
+  filt.dataphy <- otu_table(filt.dataphy, taxa_are_rows =TRUE);
+  sample_table_boxplot <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
+  filt.dataphy <- merge_phyloseq(filt.dataphy, sample_table_boxplot);
+  taxa_names(filt.dataphy) <- rownames(mbSetObj$dataSet$filt.data);
+  data_boxplot <- filt.dataphy;
+  
+  if(datatype=="16S"){
+    mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
+    data_boxplot <- merge_phyloseq(data_boxplot, mbSetObj$dataSet$taxa_table);
+  }else{
+    data_boxplot <- data_boxplot;
+  }
+  
+  #using by default names for shotgun data
+  if(datatype=="metageno"){
+    taxrank_boxplot<-"OTU";
+  }
+  
+  if(taxrank_boxplot=="OTU"){
+    data_boxplot <- data_boxplot;
+    nm_boxplot <- taxa_names(data_boxplot);
+  }else{
+    #merging at taxonomy levels
+    data_boxplot <- fast_tax_glom_first(data_boxplot, taxrank_boxplot);
+    nm_boxplot <- as.character(tax_table(data_boxplot)[,taxrank_boxplot]);
+    #converting NA values to unassigned
+    nm_boxplot[is.na(nm_boxplot)] <- "Not_Assigned";
+    data1_boxplot <- as.matrix(otu_table(data_boxplot));
+    rownames(data1_boxplot) <- nm_boxplot;
     
+    #all NA club together
+    data1_boxplot <- as.matrix(t(sapply(by(data1_boxplot, rownames(data1_boxplot), colSums), identity)));
+    data1_boxplot <- otu_table(data1_boxplot,taxa_are_rows=T);
+    data_boxplot <- merge_phyloseq(data1_boxplot, sample_data(data_boxplot));
+    nm_boxplot <- taxa_names(data_boxplot);
+  }
+  
+  dat3t_boxplot <- as.data.frame(t(otu_table(data_boxplot)));
+  colnames(dat3t_boxplot) <- nm_boxplot;
+  
+  #Above process is just for box plot.
+  ########################################
+
+
   #individual boxplot for features
-  box_data <- as.data.frame(data1[ ,sigfeat]);
+  box_data <- as.data.frame(dat3t_boxplot[ ,sigfeat]);
   colnames(box_data) <- sigfeat;
-  box_data$class <- cls;
+  box_data$class <- claslbl_boxplot;
   mbSetObj$analSet$boxdata <- box_data;
   write.csv(t(box_data), "uni_abund_data.csv")
   

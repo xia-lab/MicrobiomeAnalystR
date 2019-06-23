@@ -290,7 +290,10 @@ PlotFunctionStack<-function(mbSetObj, summaryplot, functionlvl, abundcal, geneid
   data <- mbSetObj$dataSet$proc.phyobj;
   smpl_nm <- sample_names(data);
   clsLbl <- factor(sample_data(data)[[metadata]]);
-
+  if(min(table(clsLbl)) < 3){
+    current.msg<<-"Too many facets to be displayed - please select a more meaningful facet option with at least 3 samples per group.";
+    return(0);
+  }
   #reorder data based on groups
   ord.inx <- order(clsLbl);
   clsLbl <- clsLbl[ord.inx];
@@ -311,6 +314,8 @@ PlotFunctionStack<-function(mbSetObj, summaryplot, functionlvl, abundcal, geneid
       ko_higher_path<-.read.microbiomeanalyst.lib("ko_cogfunction.rds", "ko");
     }
   }
+
+  clsLbl_new <- as.character(clsLbl);
 
   #sample,categories name
   samplenm <- colnames(query);
@@ -372,7 +377,6 @@ PlotFunctionStack<-function(mbSetObj, summaryplot, functionlvl, abundcal, geneid
   }else if(nrow(result)>150){
     w<-w+300;
   }
-
   ##selecting 250 samples
   subsmpl <- 250;
     
@@ -388,8 +392,12 @@ PlotFunctionStack<-function(mbSetObj, summaryplot, functionlvl, abundcal, geneid
   nms <- colnames(data);
   data <- data %*% sapply(unique(nms),"==",nms);
   data <- data.frame(data);
-  data$step <- factor(rownames(data));
-  data <- melt(data,id='step');
+
+  data$facetOpt <- as.character(clsLbl_new);
+  data$step <- factor(rownames(data), levels = rownames(data));
+  data <- melt(data,id=c('step', 'facetOpt'));
+
+
   data$step <- as.numeric(data$step);
   data$variable <- gsub("\\.", " ",data$variable); # remove the dot introduced for readability
   #color schema
@@ -412,13 +420,32 @@ PlotFunctionStack<-function(mbSetObj, summaryplot, functionlvl, abundcal, geneid
   Cairo::Cairo(file=summaryplot,width=w, height=600, type=format, bg="white",dpi=dpi);
   mbSetObj$imgSet$func.prof<-summaryplot;
 
-  box <- ggplot(data,aes(x=step,y=value)) + theme_bw() +
+  box <- ggplot(data,aes(x=step,y=value)) + 
+    facet_grid(~ facetOpt, space = "free", scales = "free") +
+    theme_bw() +
     theme(axis.text.x = element_text(angle = 90, hjust =1,vjust=0.5)) +
     geom_area(aes(fill=variable),position='fill') +
     scale_x_continuous(breaks=seq(1,length(unique(data$step)),1),labels=smpl_nm) +
-    scale_fill_manual(values=c(x.colors))+labs(y=" Relative abundance",fill=functionlvl) +
-    theme(axis.text.x = element_text(colour=colvec),axis.title.x=element_blank());
-    
+    #scale_fill_manual(values=c(x.colors))+
+    labs(y=" Relative abundance",fill=functionlvl) +
+    theme(axis.text.x = element_text(colour="black"),axis.title.x=element_blank());
+   
+  if(colpalopt=="set3"){
+    cols.needed <- length(unique(data$variable))
+    if(cols.needed > 12){
+      col.func <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(12, "Set3"))
+      box <- box + scale_fill_manual(values=col.func(cols.needed),
+                                     #guide = guide_legend(direction = "horizontal", ncol = 5)
+                                    )
+    } else {
+      box <- box + scale_fill_brewer(palette = "Set3",
+                                     #guide = guide_legend(direction = "horizontal",ncol = 5)
+                                    )                           
+    }
+  } else {
+    box <- box + scale_fill_manual(values=c(x.colors))
+  }
+
   print(box);
   dev.off();
   mbSetObj$analSet$func.prof<-data;

@@ -18,7 +18,7 @@
 #'License: GNU GPL (>= 2)
 #'@export
 SanityCheckData <- function(mbSetObj, datatype, filetype){
-  
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   feat.sums <- apply(mbSetObj$dataSet$data.orig, 1, function(x){sum(x>0, na.rm=T)});
@@ -320,7 +320,7 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt){
       msg <- c(msg, paste("Performed upper quartile normalization"));
     }else if(scale.opt=="CSS"){
       if(.on.public.web){
-        load_metagenomeSeq();
+        load_metagenomeseq();
       }
       #biom and mothur data also has to be in class(matrix only not in phyloseq:otu_table)
       data1 <- as(data,"matrix");
