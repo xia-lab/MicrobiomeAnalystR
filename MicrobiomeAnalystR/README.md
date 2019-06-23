@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/xia-lab/MicrobiomeAnalystR/blob/master/MicrobiomeAnalystR/docs/microbiomeanalystr_logo.png" width="48>
+  <img src="https://github.com/xia-lab/MicrobiomeAnalystR/blob/master/MicrobiomeAnalystR/docs/microbiomeanalystr_logo.png" width="48">
 </p>
 
 ## Description 
