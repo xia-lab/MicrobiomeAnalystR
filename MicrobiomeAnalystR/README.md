@@ -1,7 +1,7 @@
 # MicrobiomeAnalystR 
 
 <p align="center">
-  <img src="">
+  <img src="https://github.com/xia-lab/MicrobiomeAnalystR/blob/master/MicrobiomeAnalystR/docs/microbiomeanalystr_logo.png">
 </p>
 
 ## Description 
