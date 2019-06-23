@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="https://github.com/xia-lab/MicrobiomeAnalystR/blob/master/MicrobiomeAnalystR/docs/microbiomeanalystr_logo.png" width="1000">
+  <img src="https://github.com/xia-lab/MicrobiomeAnalystR/blob/master/MicrobiomeAnalystR/docs/microbiomeanalystr_logo.png" width="600">
 </p>
 
 ## Description 
 
-**MicrobiomeAnalystR** contains the R functions and libraries underlying the popular MicrobiomeAnalyst web server, including > 500 functions for statistical, functional, and visual analysis of microbiome data. The package is synchronized with the MicrobiomeAnalyst web server. After installing and loading the package, users will be able to reproduce the same results from their local computers using the corresponding R command history downloaded from MicrobiomeAnalyst, thereby achieving maximum flexibility and reproducibility. With this R package we also aim to address an important gap left in its web version. Raw sequence data processing. 
+**MicrobiomeAnalystR** contains the R functions and libraries underlying the popular MicrobiomeAnalyst web server, including > 200 functions for statistical, functional, and visual analysis of microbiome data. The package is synchronized with the MicrobiomeAnalyst web server. After installing and loading the package, users will be able to reproduce the same results from their local computers using the corresponding R command history downloaded from MicrobiomeAnalyst, thereby achieving maximum flexibility and reproducibility. With this R package we also aim to address an important gap left in its web version. Raw sequence data processing. 
 
 To demonstrate this new functionality, we provide the "MicrobiomeAnalystR Workflow: From Raw Sequences to Functional Insights" vignette, available [here]() as a PDF. In this vignette, we perform end-to-end microbiome data analysis on a subset of clinical IBD samples.   
 
@@ -12,7 +12,7 @@ To demonstrate this new functionality, we provide the "MicrobiomeAnalystR Workfl
 
 ### Step 1. Install package dependencies 
 
-To use MicrobiomeAnalystR , first install all package dependencies. Ensure that you are able to download packages from bioconductor. To install package dependencies, use the pacman R package (for those with >R 3.5.1). Note that some of these packages may require additional library dependencies that need to be installed prior to their own successful installation. 
+To use MicrobiomeAnalystR , first install all package dependencies. Ensure that you are able to download packages from bioconductor. To install package dependencies, use the pacman R package (for those with >R 3.5.1). Note that some of these packages may require additional library dependencies that need to be installed prior to their own successful installation. For users who wish to perform raw sequence data processing, dada2 will also need to be installed.
 
 ```R
 install.packages("pacman")
@@ -21,7 +21,7 @@ library(pacman)
 
 pacman::p_load(phyloseq, metacoder, pryr, biomformat, RColorBrewer, ggplot2, gplots, Cairo, igraph, 
 BiocParallel, randomForest, metagenomeSeq, MASS, DESeq2, vegan, RJSONIO, ggfortify, pheatmap, xtable, genefilter,
-data.table, reshape, stringr, ape, Tax4Fun, grid, gridExtra, splitstackshape, edgeR, globaltest, dada2, R.utils)
+data.table, reshape, stringr, ape, Tax4Fun, grid, gridExtra, splitstackshape, edgeR, globaltest, R.utils)
 ```
 ### Step 2. Install the package
 
