@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1557772476158.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3597133814",
+    "id" : "33642E8D",
+    "lastKnownWriteTime" : 1557778539,
+    "last_content_update" : 1557778539722,
+    "path" : "~/Desktop/MicrobiomeAnalyst/MicrobiomeAnalystR/MicrobiomeAnalystR/R/mdp_utils.R",
+    "project_path" : "MicrobiomeAnalystR/R/mdp_utils.R",
+    "properties" : {
+        "cursorPosition" : "1000,3",
+        "scrollLine" : "0"
+    },
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
