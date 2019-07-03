@@ -8,6 +8,8 @@ GetColorSchema(mbSetObj, grayscale = F)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{grayscale}{Logical, default set to F.}
 }
 \description{
 This function is called to create a color palette

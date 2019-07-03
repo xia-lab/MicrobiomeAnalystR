@@ -1,19 +1,34 @@
-##################################################
-## R script for MicrobiomeAnalyst
-## Description: generating different graphics output
-## Authors: Achal Dhariwal(achal.dhariwal@mail.mcgill.ca), Jeff Xia (jeff.xia@mcgillca)
-## Last updated: 09/01/2017
-###################################################
-
-#'Main function to plot tree graphics
-#'@description This functions creates tree plots from the microbiome data.
+#'Function to plot tree graphics for dendogram.
+#'@description This functions creates dendogram tree plots.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param plotNm Character, input the name of the plot.
+#'@param distnm Character, input the name of the selected
+#'distance measure. "bray" for Bray-Curtis Index, "jsd" for
+#'Jensen-Shannon Divergence, "jaccard" for Jaccard Index, 
+#'"unifrac" for Unweighted Unifrac Distance, and "wunifrac" for weighted
+#'unifrac distance.
+#'@param clstDist Character, input the name of the
+#'selected clustering algorithm. "ward" for Ward, "average" for Average, 
+#'"complete" for Complete, and "single" for Single.
+#'@param metadata Character, input the name of the experimental factor.
+#'@param datatype Character, "16S" if marker gene data and 
+#'"metageno" if shotgun metagenomic data.
+#'@param taxrank Character, input the taxonomic level to perform
+#'classification. For instance, "OTU-level" to use OTUs.
+#'@param format Character, by default the plot is .png format.
+#'@param dpi The dots per inch. Numeric, by default it is set to 72.
+#'@param width Width of the plot. Numeric, by default it is set to NA.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotTreeGraph<-function(mbSetObj, plotNm, distnm, clstDist, metadata, datatype,
-                        taxrank, format="png", dpi=72, width=NA){
+#'@import ape
+PlotTreeGraph <- function(mbSetObj, plotNm, distnm, clstDist, metadata, datatype,
+                          taxrank, format="png", dpi=72, width=NA){
+  
+  if(.on.public.web){
+    load_ape()
+  }
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -90,7 +105,7 @@ PlotTreeGraph<-function(mbSetObj, plotNm, distnm, clstDist, metadata, datatype,
     
   Cairo::Cairo(file=plotNm, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
   par(mar=c(4,2,2,10));
-  clusDendro<-as.dendrogram(hc_tree);
+  clusDendro <- as.dendrogram(hc_tree);
   cols <- GetColorSchema();
   names(cols) <- sample_names(data);
   labelColors <- cols[hc_tree$order];
@@ -130,6 +145,14 @@ PlotTreeGraph<-function(mbSetObj, plotNm, distnm, clstDist, metadata, datatype,
 #'Function to create box plots of important features
 #'@description This functions plots box plots of a selected feature.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param boxplotName Character, input the name of the 
+#'box plot.
+#'@param feat Character, input the name of the selected 
+#'feature.
+#'@param format Character, by default the plot format
+#'is "png".
+#'@param dpi Dots per inch. Numeric, by default
+#'it is set to 72.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -175,6 +198,39 @@ PlotBoxData<-function(mbSetObj, boxplotName, feat, format="png", dpi=72){
 #'Main function to plot heatmap.
 #'@description This functions plots a heatmap from the mbSetObj.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param plotNm Character, input the name
+#'of the plot.
+#'@param smplDist Input the distance measure. "euclidean" for
+#'Euclidean distance, "correlation" for Pearson, and "minkowski"
+#'for Minkowski.
+#'@param clstDist Character, input the name of the
+#'selected clustering algorithm. "ward" for Ward, "average" for Average, 
+#'"complete" for Complete, and "single" for Single.
+#'@param palette Set the colors of the heatmap. By default it 
+#'is set to "bwm", blue, white, to red. Use "gbr" for green, black, red, use
+#'"heat" for red to yellow, "topo" for blue to yellow, "gray" for 
+#'white to black, and "byr" for blue, yellow, red.
+#'@param metadata Character, input the name of the experimental factor 
+#'to cluster samples by.
+#'@param taxrank Character, input the taxonomic level to perform
+#'classification. For instance, "OTU-level" to use OTUs.
+#'@param viewOpt Character, "overview" to view an overview
+#'of the heatmap, and "detail" to iew a detailed view of the
+#'heatmap (< 1500 features).
+#'@param doclust Logicial, default set to "F".
+#'@param format Character, input the preferred
+#'format of the plot. By default it is set to "png".
+#'@param showfeatname Logical, "T" to show feature names and 
+#'"F" to not.
+#'@param appendnm Logical, "T" to prepend higher taxon names.
+#'@param rowV Logical, default set to "F".
+#'@param colV Logical, default set to "T".
+#'@param var.inx Default set to NA.
+#'@param border Logical, show cell borders, default set to "T".
+#'@param width Numeric, input the width of the plot. By
+#'default it is set to NA.
+#'@param dpi Numeric, input the dots per inch. By default
+#'it is set to 72.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -189,6 +245,7 @@ PlotHeatmap<-function(mbSetObj, plotNm, smplDist, clstDist, palette, metadata,
   
   if(.on.public.web){
     load_pheatmap();
+    load_rcolorbrewer();
   }
   
   set.seed(2805614);
@@ -277,11 +334,9 @@ PlotHeatmap<-function(mbSetObj, plotNm, smplDist, clstDist, palette, metadata,
     colors <- grDevices::topo.colors(256);
   }else if(palette == "gray"){
     colors <- grDevices::colorRampPalette(c("grey90", "grey10"), space="rgb")(256);
+  }else if(palette == "byr"){
+    colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdYlBu"))(256));
   }else{
-    
-    if(.on.public.web){
-      load_rcolorbrewer();
-    }
     colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdBu"))(256));
   }
 
@@ -373,6 +428,7 @@ PlotHeatmap<-function(mbSetObj, plotNm, smplDist, clstDist, palette, metadata,
 #'based on the number of groups. It returns a vector of color
 #'hex codes based on the number of groups.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param grayscale Logical, default set to F.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)

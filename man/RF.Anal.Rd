@@ -7,10 +7,25 @@
 RF.Anal(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank, datatype)
 }
 \arguments{
-\item{mbSetObj}{Input the name of the mbSetObj.}
+\item{mbSetObj}{Input the name of the mbSetObj. By default,
+the name should be mbSet.}
+
+\item{treeNum}{Numeric, input the number of trees to grow.}
+
+\item{tryNum}{Numeric, input the number of predictors to try.}
+
+\item{randomOn}{Randomness setting. 1 is on, 0 is off.}
+
+\item{variable}{Character, input the experimental factor for classification.}
+
+\item{taxrank}{Character, input the taxonomic level to perform
+classification. For instance, "OTU-level" to use OTUs.}
+
+\item{datatype}{Character, "16S" if performing RF on 16S rRNA
+marker gene data and "metageno" if performing RF on shotgun metagenomic data.}
 }
 \description{
-This functions performs the random forest analysis.
+This functions performs the Random Forest (RF) analysis.
 }
 \author{
 Jeff Xia \email{jeff.xia@mcgill.ca}

@@ -423,12 +423,14 @@ PlotFunctionStack<-function(mbSetObj, summaryplot, functionlvl, abundcal, geneid
   box <- ggplot(data,aes(x=step,y=value)) + 
     facet_grid(~ facetOpt, space = "free", scales = "free") +
     theme_bw() +
-    theme(axis.text.x = element_text(angle = 90, hjust =1,vjust=0.5)) +
+    theme(axis.text.x = element_text(angle = 90, hjust =1, vjust=0.5)) +
     geom_area(aes(fill=variable),position='fill') +
     scale_x_continuous(breaks=seq(1,length(unique(data$step)),1),labels=smpl_nm) +
     #scale_fill_manual(values=c(x.colors))+
-    labs(y=" Relative abundance",fill=functionlvl) +
-    theme(axis.text.x = element_text(colour="black"),axis.title.x=element_blank());
+    labs(y=" Relative Abundance",fill=functionlvl) +
+    theme(axis.text.y = element_text(size = 10)) +
+    theme(legend.text=element_text(size=10), strip.text = element_text(size = 12)) +
+    theme(axis.text.x = element_text(colour="black", size = 10), axis.title.x=element_blank()); 
    
   if(colpalopt=="set3"){
     cols.needed <- length(unique(data$variable))

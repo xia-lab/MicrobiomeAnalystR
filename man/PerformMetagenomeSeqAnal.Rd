@@ -9,6 +9,22 @@ PerformMetagenomeSeqAnal(mbSetObj, variable, p.lvl, datatype, shotgunid,
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{variable}{Character, input the name of the experimental factor.}
+
+\item{p.lvl}{Numeric, input the adjusted p-value cutoff.}
+
+\item{datatype}{Character, input whether the data is marker gene
+data ("16S") or metagenomic data ("metageno").}
+
+\item{shotgunid}{Only valid for SDP module, set to "NA".}
+
+\item{taxrank}{Character, input the taxonomic level to perform
+univariate analysis.}
+
+\item{model}{Character, input the name of the statistical
+model to fit the data. Use "zigfit" for zero-inflated Gaussian fit
+and "ffm" for the fitFeatureModel.}
 }
 \description{
 This functions performs metagenome seq analysis on the microbiome data.

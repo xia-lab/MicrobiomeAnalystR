@@ -2,16 +2,38 @@
 % Please edit documentation in R/general_anal.R
 \name{Match.Pattern}
 \alias{Match.Pattern}
-\title{Function to match patterns}
+\title{Match Patterns Function}
 \usage{
 Match.Pattern(mbSetObj, dist.name = "pearson", pattern = NULL, taxrank,
   taxa, variable, datatype, shotfeat, shotgunid)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{dist.name}{Input the distance measure. Input "pearson" for 
+Pearson R, "spearman" for Spearman rank correlation, and "kendall"
+for Kendall rank correlation.}
+
+\item{pattern}{Character, input the specified pattern.}
+
+\item{taxrank}{Character, input the taxonomic level to use.}
+
+\item{taxa}{If the pattern is defined by using a specific taxon, input the name
+of that taxa here.}
+
+\item{variable}{Input the name of the experimental factor.}
+
+\item{datatype}{If the data is marker gene, input "16S". If the
+data is metagenomic, use "metageno".}
+
+\item{shotfeat}{Only valid for SDP module, set to "null".}
+
+\item{shotgunid}{Only valid for SDP module, set to "NA".}
 }
 \description{
-This functions matches patterns
+This functions matches patterns (when
+the defined pattern is set to a predefined profile or custom
+profile) in the Pattern Search analysis.
 }
 \author{
 Jeff Xia \email{jeff.xia@mcgill.ca}

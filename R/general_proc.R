@@ -596,7 +596,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel, ismetafile){
   #standard name to be used
   classi.lvl<- c("Phylum", "Class", "Order", "Family", "Genus","Species","Strain/OTU-level","Additional_Name");
 
-  if(anal.type == "16S Upload" | anal.type == "dataprojection"){
+  if(anal.type == "markergene" | anal.type == "dataprojection"){
     if(type=="text"){
       # prepare data for phyloseq visualization.
       # if features names are present in specific taxonomy format (greengenes or silva).

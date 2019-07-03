@@ -11,6 +11,56 @@ PlotHeatmap(mbSetObj, plotNm, smplDist, clstDist, palette, metadata,
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{plotNm}{Character, input the name
+of the plot.}
+
+\item{smplDist}{Input the distance measure. "euclidean" for
+Euclidean distance, "correlation" for Pearson, and "minkowski"
+for Minkowski.}
+
+\item{clstDist}{Character, input the name of the
+selected clustering algorithm. "ward" for Ward, "average" for Average, 
+"complete" for Complete, and "single" for Single.}
+
+\item{palette}{Set the colors of the heatmap. By default it 
+is set to "bwm", blue, white, to red. Use "gbr" for green, black, red, use
+"heat" for red to yellow, "topo" for blue to yellow, "gray" for 
+white to black, and "byr" for blue, yellow, red.}
+
+\item{metadata}{Character, input the name of the experimental factor 
+to cluster samples by.}
+
+\item{taxrank}{Character, input the taxonomic level to perform
+classification. For instance, "OTU-level" to use OTUs.}
+
+\item{viewOpt}{Character, "overview" to view an overview
+of the heatmap, and "detail" to iew a detailed view of the
+heatmap (< 1500 features).}
+
+\item{doclust}{Logicial, default set to "F".}
+
+\item{format}{Character, input the preferred
+format of the plot. By default it is set to "png".}
+
+\item{showfeatname}{Logical, "T" to show feature names and 
+"F" to not.}
+
+\item{appendnm}{Logical, "T" to prepend higher taxon names.}
+
+\item{rowV}{Logical, default set to "F".}
+
+\item{colV}{Logical, default set to "T".}
+
+\item{var.inx}{Default set to NA.}
+
+\item{border}{Logical, show cell borders, default set to "T".}
+
+\item{width}{Numeric, input the width of the plot. By
+default it is set to NA.}
+
+\item{dpi}{Numeric, input the dots per inch. By default
+it is set to 72.}
 }
 \description{
 This functions plots a heatmap from the mbSetObj.

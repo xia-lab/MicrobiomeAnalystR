@@ -1,8 +1,3 @@
-##################################################
-## R script for MicrobiomeAnalyst
-## Description: statistical analysis of microbiome data
-###################################################
-
 # current.selected.tax
 SetCurrentSelectedTaxLevel<-function(taxLvl){
    current.selected.tax <<- taxLvl;
@@ -13,8 +8,17 @@ SetCurrentSelectedTaxLevel<-function(taxLvl){
 #######################################
 
 #'Performs Random Forest Analysis
-#'@description This functions performs the random forest analysis.
-#'@param mbSetObj Input the name of the mbSetObj.
+#'@description This functions performs the Random Forest (RF) analysis.
+#'@param mbSetObj Input the name of the mbSetObj. By default,
+#'the name should be mbSet.
+#'@param treeNum Numeric, input the number of trees to grow.
+#'@param tryNum Numeric, input the number of predictors to try.
+#'@param randomOn Randomness setting. 1 is on, 0 is off.
+#'@param variable Character, input the experimental factor for classification.
+#'@param taxrank Character, input the taxonomic level to perform
+#'classification. For instance, "OTU-level" to use OTUs.
+#'@param datatype Character, "16S" if performing RF on 16S rRNA
+#'marker gene data and "metageno" if performing RF on shotgun metagenomic data.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -93,15 +97,21 @@ RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank, data
   return(.set.mbSetObj(mbSetObj))
 }
 
-#'Plot random forest classification
+#'Plot Random Forest Classification
 #'@description This functions plots the classification of samples
-#'from the random forest analysis.
+#'from the Random Forest analysis.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param feature Numeric, input the number of important features. 
+#'This is more for RF.VIP to make the sizes of the plot consistent.
+#'@param imgName Character, input the name of the plot.
+#'@param format Character, by default the plot is .png format.
+#'@param dpi The dots per inch. Numeric, by default it is set to 72.
+#'@param width Width of the plot. Numeric, by default it is set to NA.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotRF.Classify<-function(mbSetObj, feature, imgName,format="png", dpi=72, width=NA){
+PlotRF.Classify<-function(mbSetObj, feature, imgName, format="png", dpi=72, width=NA){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -109,7 +119,7 @@ PlotRF.Classify<-function(mbSetObj, feature, imgName,format="png", dpi=72, width
   
   mbSetObj$imgSet$rf.cls <- imgName;
 
-if(is.na(width)){
+  if(is.na(width)){
       if(feature < 5 ){
             h <- feature*1.2;
             w <- 9;
@@ -141,16 +151,6 @@ if(is.na(width)){
       w <- width;
   }
 
-  
-  #if(is.na(width)){
-    #w <- 9;
-  #}else if(width == 0){
-    #w <- 9;
-  #}else{
-   # w <- width;
- # }
- #h <- w*6/9;
-
   Cairo::Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
   par(mar=c(4,4,3,2));
   cols <- grDevices::rainbow(length(levels(mbSetObj$analSet$cls))+1);
@@ -164,17 +164,24 @@ if(is.na(width)){
 #'@description This functions plot variable importance ranked by MeanDecreaseAccuracy
 #'from the random forest analysis.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param feature Numeric, input the number of important features. 
+#'This is more for RF.VIP to make the sizes of the plot consistent.
+#'@param imgName Character, input the name of the plot.
+#'@param format Character, by default the plot is .png format.
+#'@param dpi The dots per inch. Numeric, by default it is set to 72.
+#'@param width Width of the plot. Numeric, by default it is set to NA.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotRF.VIP<-function(mbSetObj, feature, imgName,format="png", dpi=72, width=NA){
+PlotRF.VIP<-function(mbSetObj, feature, imgName, format="png", dpi=72, width=NA){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   imgName = paste(imgName, ".", format, sep="");
   mbSetObj$imgSet$rf.imp <- imgName;
   vip.score <- rev(sort(mbSetObj$analSet$rf$importance[,"MeanDecreaseAccuracy"]));
+  
   if(is.na(width)){
       if(feature < 5 ){
             h <- feature*1.2;
@@ -213,13 +220,12 @@ PlotRF.VIP<-function(mbSetObj, feature, imgName,format="png", dpi=72, width=NA){
   return(.set.mbSetObj(mbSetObj))
 }
 
-#'Helper function to plot variable importance 
+#'Helper function to plot variable importance (for RF and LEfSe)
 #'@description This functions plots the variable importance 
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
-#'@export
 PlotImpVar <- function(mbSetObj, imp.vec, xlbl, feature, color.BW=FALSE){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -336,9 +342,21 @@ PlotImpVar <- function(mbSetObj, imp.vec, xlbl, feature, color.BW=FALSE){
 ###########Univariate Analysis ########
 #######################################
 
-#'Main function to perform univariate analysis.
-#'@description This functions performs univariate analysis on the microbiome data.
+#'Main function to perform classical univariate analysis.
+#'@description This functions performs classical univariate analysis
+#' on the normalized microbiome data.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param variable Character, input the name of the experimental factor.
+#'@param p.lvl Numeric, input the adjusted p-value cutoff.
+#'@param datatype Character, input whether the data is marker gene
+#'data ("16S") or metagenomic data ("metageno").
+#'@param shotgunid If 16S, it is set to "NA".
+#'@param taxrank Character, input the taxonomic level to perform
+#'univariate analysis.
+#'@param statOpt Character, input "nonpar" to use non-paramentric tests including
+#'Mann-Whitney for two-group comparisons or Kruskall-Wallis for multiple group comparisons. 
+#'Input "tt" to use parametric tests including T-tests for two-group comparisons and ANOVA
+#'for multiple group comparisons.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -354,12 +372,11 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, datatype, shotgunid, ta
   lvl <- length(levels(cls));
   data <- mbSetObj$dataSet$norm.phyobj;
 
-  #using just  normalized abundant data
+  #using just normalized abundant data
   if(datatype=="16S"){
     # dynamically add taxa table to norm.phyobj
     mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
     data <- merge_phyloseq(data, mbSetObj$dataSet$taxa_table);
-    
   }else{
     data<-data;
   }
@@ -423,7 +440,7 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, datatype, shotgunid, ta
   diff_ft <<- rownames(resTable)[1:de.Num];
   sigfeat <- rownames(resTable);
    
- #for individual box plot, filtered data instead of normalizated data will be used.
+  #for individual box plot, filtered data instead of normalizated data will be used.
   #following process is just for box plot.
   ##############################################
   taxrank_boxplot <- taxrank;
@@ -470,10 +487,6 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, datatype, shotgunid, ta
   
   dat3t_boxplot <- as.data.frame(t(otu_table(data_boxplot)));
   colnames(dat3t_boxplot) <- nm_boxplot;
-  
-  #Above process is just for box plot.
-  ########################################
-
 
   #individual boxplot for features
   box_data <- as.data.frame(dat3t_boxplot[ ,sigfeat]);
@@ -498,13 +511,22 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, datatype, shotgunid, ta
 }
 
 #######################################
-#######################################
 ###########MetagenomeSeq ##############
 #######################################
 
 #'Main function to perform metagenome seq analysis
 #'@description This functions performs metagenome seq analysis on the microbiome data.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param variable Character, input the name of the experimental factor.
+#'@param p.lvl Numeric, input the adjusted p-value cutoff.
+#'@param datatype Character, input whether the data is marker gene
+#'data ("16S") or metagenomic data ("metageno").
+#'@param shotgunid Only valid for SDP module, set to "NA".
+#'@param taxrank Character, input the taxonomic level to perform
+#'univariate analysis.
+#'@param model Character, input the name of the statistical
+#'model to fit the data. Use "zigfit" for zero-inflated Gaussian fit
+#'and "ffm" for the fitFeatureModel.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -513,13 +535,12 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, datatype, shotgunid, ta
 
 PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, datatype, shotgunid, taxrank, model){
 
-variable <<-  variable;
-p.lvl <<-  p.lvl; 
-datatype <<-  datatype; 
-shotgunid <<-  shotgunid; 
-taxrank <<-  taxrank; 
-model <<- model; 
-save.image("TestM.RData");   
+  variable <<-  variable;
+  p.lvl <<-  p.lvl; 
+  datatype <<-  datatype; 
+  shotgunid <<-  shotgunid; 
+  taxrank <<-  taxrank; 
+  model <<- model; 
  
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -662,13 +683,22 @@ save.image("TestM.RData");
   }
 }
 
-#######################################
-###########LEfSe ######################
-#######################################
+####################################
+##############LEfSe ################
+####################################
 
 #'Main function to perform LEfSe analysis
 #'@description This functions performs LEfSe analysis on the microbiome data.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param p.lvl Numeric, input the adjusted p-value cutoff.
+#'@param lda.lvl Numeric, input the Log LDA score cutoff.
+#'@param variable Character, input the name of the experimental factor.
+#'@param isfunc Logical, default set to "F".
+#'@param datatype Character, input whether the data is marker gene
+#'data ("16S") or metagenomic data ("metageno").
+#'@param shotgunid Only valid for SDP module, set to "NA".
+#'@param taxrank Character, input the taxonomic level to perform
+#'univariate analysis.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -676,6 +706,7 @@ save.image("TestM.RData");
 #'@import MASS
 
 PerformLefseAnal <- function(mbSetObj, p.lvl, lda.lvl, variable, isfunc, datatype, shotgunid, taxrank){
+  
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
@@ -817,12 +848,24 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, lda.lvl, variable, isfunc, datatyp
 
 #'Plot LEfSe summary
 #'@description This functions graphically summarizes the LEfSe results
+#'in a VIP plot.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param ldaFeature Numeric, input the number of top
+#'features to include in the plot.
+#'@param imgName Character, input the name
+#'of the plot.
+#'@param format Character, input the preferred
+#'format of the plot. By default it is set to "png".
+#'@param width Numeric, input the width of the plot. By
+#'default it is set to NA.
+#'@param dpi Numeric, input the dots per inch. By default
+#'it is set to 72.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 PlotLEfSeSummary <- function(mbSetObj, ldaFeature, imgName, format="png", width = NA, dpi=72) {
+  
   mbSetObj <- .get.mbSetObj(mbSetObj);
   set.seed(280561493);
   imgName = paste(imgName, ".", format, sep="");
@@ -874,11 +917,19 @@ PlotLEfSeSummary <- function(mbSetObj, ldaFeature, imgName, format="png", width 
   return(.set.mbSetObj(mbSetObj))
 }
 
+#'Plot LEfSe summary
+#'@description This functions graphically summarizes the LEfSe results
+#'using a bargraph.
+#'@param mbSetObj Input the name of the mbSetObj.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+
 PlotImpVarLEfSe <- function(mbSetObj, imp.vec, meta, color.BW=FALSE){
+  
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
   sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
-  
   cls.len <- length(levels(sample_table[[meta]]));
   
   if(cls.len == 2){
@@ -988,9 +1039,6 @@ PlotImpVarLEfSe <- function(mbSetObj, imp.vec, meta, color.BW=FALSE){
   par(op);
 }
 
-
-
-
 #######################################
 ###########EdgeR/DESeq2################
 #######################################
@@ -998,6 +1046,15 @@ PlotImpVarLEfSe <- function(mbSetObj, imp.vec, meta, color.BW=FALSE){
 #'Main function to perform RNAseq analysis
 #'@description This functions performs RNAseq analysis on the microbiome data.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param opts Character, input "EdgeR" to use the edgeR algorithm and
+#'"DESeq2" to use the DESeq2 algorithm.
+#'@param p.lvl Numeric, input the adjusted p-value cutoff.
+#'@param variable Character, input the experimental factor.
+#'@param datatype Character, input "16S" if the data is marker gene
+#'data and "metageno" if it is metagenomic data.
+#'@param shotgunid Only valid for SDP module, set to "NA".
+#'@param taxrank Character, input the taxonomic level
+#'to use for RNAseq analysis.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -1145,13 +1202,31 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, datatype, shotgunid, 
   }
 }
 
-#######################################
-###########3D PCoA/PCA#################
-#######################################
+##################################
+###########3D PCoA/PCA############
+##################################
 
 #'Main function to perform PCoA analysis
 #'@description This functions performs PCoA analysis on the microbiome data.
+#'This is used by Beta-Diversity analysis.
+#'The visualization is on the web.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param ordMeth Character, input the name
+#'of the ordination method. "PCoA" for principal coordinate analysis and "NMDS" for 
+#'non-metric multidimensional scaling.
+#'@param distName Character, input the name of the distance method.
+#'@param datatype Character, input "16S" if the data is marker
+#'gene data and "metageno" if it is metagenomic data.
+#'@param taxrank Character, input the taxonomic
+#'level for beta-diversity analysis.
+#'@param colopt Character, color the data points by the experimental factor,
+#'the taxon abundance of a selected taxa, or alpha diversity.
+#'@param variable Character, input the name of the experimental factor.
+#'@param taxa Character, if the data points are colored by taxon abundance, 
+#'input the name of the selected taxa.
+#'@param alphaopt Character, if the data points are colored by alpha-diversity, 
+#'input the preferred alpha-diversity measure.
+#'@param jsonNm Character, input the name of the json file to output.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -1329,7 +1404,19 @@ PCoA3D.Anal <- function(mbSetObj, ordMeth, distName, datatype, taxrank, colopt, 
 
 #'Main function to calculate correlation of all other feature to a given feature name
 #'@description This functions calculate correlation of all other feature to a given feature name.
+#'This is used in the Pattern Search analysis.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param dist.name Input the distance measure. Input "pearson" for 
+#'Pearson R, "spearman" for Spearman rank correlation, and "kendall"
+#'for Kendall rank correlation.
+#'@param taxrank Character, input the taxonomic level to use.
+#'@param taxa If the pattern is defined by using a specific taxon, input the name
+#'of that taxa here.
+#'@param variable Input the name of the experimental factor.
+#'@param datatype If the data is marker gene, input "16S". If the
+#'data is metagenomic, use "metageno".
+#'@param shotfeat Only valid for SDP module, set to "null".
+#'@param shotgunid Only valid for SDP module, set to "NA".
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -1415,9 +1502,19 @@ FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, taxa, variable,
   }
 }
 
-#'Main function to plot correlation matrix
-#'@description This functions plots the correlation matrix.
+#'Plot Pattern Search
+#'@description This functions plots a bargraph of the
+#' correlation between a specific taxon to other taxa in the Pattern
+#' Search analysis.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param imgName Character, input the name
+#'of the plot.
+#'@param format Character, input the preferred
+#'format of the plot. By default it is set to "png".
+#'@param width Numeric, input the width of the plot. By
+#'default it is set to NA.
+#'@param dpi Numeric, input the dots per inch. By default
+#'it is set to 72.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -1470,9 +1567,23 @@ PlotCorr <- function(mbSetObj, imgName, format="png", dpi=72, width=NA){
   return(.set.mbSetObj(mbSetObj))
 }
 
-#'Function to match patterns
-#'@description This functions matches patterns
+#'Match Patterns Function
+#'@description This functions matches patterns (when
+#'the defined pattern is set to a predefined profile or custom
+#'profile) in the Pattern Search analysis.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param dist.name Input the distance measure. Input "pearson" for 
+#'Pearson R, "spearman" for Spearman rank correlation, and "kendall"
+#'for Kendall rank correlation.
+#'@param pattern Character, input the specified pattern.
+#'@param taxrank Character, input the taxonomic level to use.
+#'@param taxa If the pattern is defined by using a specific taxon, input the name
+#'of that taxa here.
+#'@param variable Input the name of the experimental factor.
+#'@param datatype If the data is marker gene, input "16S". If the
+#'data is metagenomic, use "metageno".
+#'@param shotfeat Only valid for SDP module, set to "null".
+#'@param shotgunid Only valid for SDP module, set to "NA".
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -1579,45 +1690,34 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank,
   }
 }
 
-#'Function to generate templates
-#'@description This functions generate templates
-#'@param mbSetObj Input the name of the mbSetObj.
-#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
-#'McGill University, Canada
-#'License: GNU GPL (>= 2)
-#'@export
-
-GenerateTemplates <- function(mbSetObj, variable){
-  
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-    
-  clslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
-  level.len <- length(levels(clslbl));
-  # only specify 4: increasing, decreasing, mid high, mid low, constant
-  incs <- 1:level.len;
-  desc <- level.len:1;
-    
-  if(level.len > 2){
-    # use ceiling, so that the peak will be right for even length
-    mid.pos <- ceiling((level.len+1)/2);
-    mid.high <- c(1:mid.pos, seq(mid.pos-1,by=-1,length.out=level.len-mid.pos));
-    mid.low <- c(mid.pos:1, seq(2, length.out=level.len-mid.pos));
-    res <- rbind(incs, desc, mid.high, mid.low); # add the constant one
-  }else{
-    res <- rbind(incs, desc);
-  }
-    
-  # turn into string
-  res <- apply(res, 1, paste, collapse="-");
-  # add the legends
-  res <- c(paste(levels(clslbl), collapse="-"), res);
-  clslbl<<-clslbl;
-  return(res);
-}
-
 #'Function to create correlation heat map
 #'@description This function creates the correlation heat map
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param imgName Character, input the name
+#'of the plot.
+#'@param format Character, input the preferred
+#'format of the plot. By default it is set to "png".
+#'@param width Numeric, input the width of the plot. By
+#'default it is set to NA.
+#'@param cor.method Input the distance measure. Input "pearson" for 
+#'Pearson R, "spearman" for Spearman rank correlation, and "kendall"
+#'for Kendall rank correlation.
+#'@param colors_cntrst Set the colors of the heatmap. By default it 
+#'is set to "bwm", blue, white, to red. Use "gbr" for green, black, red, use
+#'"heat" for red to yellow, "topo" for blue to yellow, "gray" for 
+#'white to black, and "byr" for blue, yellow, red.
+#'@param viewOpt Character, "overview" to view an overview
+#'of the heatmap, and "detail" to iew a detailed view of the
+#'heatmap (< 1500 features).
+#'@param taxrank Character, input the taxonomic level to perform
+#'classification. For instance, "OTU-level" to use OTUs.
+#'@param fix.col Logical, default set to FALSE.
+#'@param no.clst Logical, default set to FALSE.
+#'@param top Logical, default set to FALSE.
+#'@param topNum Numeric, set the number of top features
+#'to include.
+#'@param datatype If the data is marker gene, input "16S". If the
+#'data is metagenomic, use "metageno".
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -1627,7 +1727,8 @@ GenerateTemplates <- function(mbSetObj, variable){
 #'@import pheatmap
 
 PlotCorrHeatMap <- function(mbSetObj, imgName, format="png", width=NA, cor.method,
-                            colors_cntrst, viewOpt,taxrank,fix.col, no.clst, top, topNum,datatype){
+                            colors_cntrst, viewOpt, taxrank, fix.col, no.clst, top, 
+                            topNum, datatype){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -1694,6 +1795,8 @@ PlotCorrHeatMap <- function(mbSetObj, imgName, format="png", width=NA, cor.metho
     colors <- grDevices::topo.colors(256);
   }else if(colors_cntrst == "gray"){
     colors <- grDevices::colorRampPalette(c("grey90", "grey10"))(256);
+  }else if(colors_cntrst == "byr"){
+    colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdYlBu"))(256));
   }else{
     colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdBu"))(256));
   }
@@ -1788,6 +1891,42 @@ PlotCorrHeatMap <- function(mbSetObj, imgName, format="png", width=NA, cor.metho
 ###################################
 ########## Util Functions #########
 ###################################
+
+#'Function to generate templates
+#'@description This functions generate templates
+#'@param mbSetObj Input the name of the mbSetObj.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+
+GenerateTemplates <- function(mbSetObj, variable){
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  
+  clslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
+  level.len <- length(levels(clslbl));
+  # only specify 4: increasing, decreasing, mid high, mid low, constant
+  incs <- 1:level.len;
+  desc <- level.len:1;
+  
+  if(level.len > 2){
+    # use ceiling, so that the peak will be right for even length
+    mid.pos <- ceiling((level.len+1)/2);
+    mid.high <- c(1:mid.pos, seq(mid.pos-1,by=-1,length.out=level.len-mid.pos));
+    mid.low <- c(mid.pos:1, seq(2, length.out=level.len-mid.pos));
+    res <- rbind(incs, desc, mid.high, mid.low); # add the constant one
+  }else{
+    res <- rbind(incs, desc);
+  }
+  
+  # turn into string
+  res <- apply(res, 1, paste, collapse="-");
+  # add the legends
+  res <- c(paste(levels(clslbl), collapse="-"), res);
+  clslbl<<-clslbl;
+  return(res);
+}
 
 # helper function
 # calculate geometric means prior to estimate size factors

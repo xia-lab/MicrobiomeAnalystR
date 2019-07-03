@@ -10,6 +10,43 @@ PlotCorrHeatMap(mbSetObj, imgName, format = "png", width = NA,
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{imgName}{Character, input the name
+of the plot.}
+
+\item{format}{Character, input the preferred
+format of the plot. By default it is set to "png".}
+
+\item{width}{Numeric, input the width of the plot. By
+default it is set to NA.}
+
+\item{cor.method}{Input the distance measure. Input "pearson" for 
+Pearson R, "spearman" for Spearman rank correlation, and "kendall"
+for Kendall rank correlation.}
+
+\item{colors_cntrst}{Set the colors of the heatmap. By default it 
+is set to "bwm", blue, white, to red. Use "gbr" for green, black, red, use
+"heat" for red to yellow, "topo" for blue to yellow, "gray" for 
+white to black, and "byr" for blue, yellow, red.}
+
+\item{viewOpt}{Character, "overview" to view an overview
+of the heatmap, and "detail" to iew a detailed view of the
+heatmap (< 1500 features).}
+
+\item{taxrank}{Character, input the taxonomic level to perform
+classification. For instance, "OTU-level" to use OTUs.}
+
+\item{fix.col}{Logical, default set to FALSE.}
+
+\item{no.clst}{Logical, default set to FALSE.}
+
+\item{top}{Logical, default set to FALSE.}
+
+\item{topNum}{Numeric, set the number of top features
+to include.}
+
+\item{datatype}{If the data is marker gene, input "16S". If the
+data is metagenomic, use "metageno".}
 }
 \description{
 This function creates the correlation heat map

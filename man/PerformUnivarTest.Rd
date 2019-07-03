@@ -2,16 +2,34 @@
 % Please edit documentation in R/general_anal.R
 \name{PerformUnivarTest}
 \alias{PerformUnivarTest}
-\title{Main function to perform univariate analysis.}
+\title{Main function to perform classical univariate analysis.}
 \usage{
 PerformUnivarTest(mbSetObj, variable, p.lvl, datatype, shotgunid, taxrank,
   statOpt)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{variable}{Character, input the name of the experimental factor.}
+
+\item{p.lvl}{Numeric, input the adjusted p-value cutoff.}
+
+\item{datatype}{Character, input whether the data is marker gene
+data ("16S") or metagenomic data ("metageno").}
+
+\item{shotgunid}{If 16S, it is set to "NA".}
+
+\item{taxrank}{Character, input the taxonomic level to perform
+univariate analysis.}
+
+\item{statOpt}{Character, input "nonpar" to use non-paramentric tests including
+Mann-Whitney for two-group comparisons or Kruskall-Wallis for multiple group comparisons. 
+Input "tt" to use parametric tests including T-tests for two-group comparisons and ANOVA
+for multiple group comparisons.}
 }
 \description{
-This functions performs univariate analysis on the microbiome data.
+This functions performs classical univariate analysis
+on the normalized microbiome data.
 }
 \author{
 Jeff Xia \email{jeff.xia@mcgill.ca}

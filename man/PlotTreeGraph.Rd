@@ -2,16 +2,42 @@
 % Please edit documentation in R/general_graphics.R
 \name{PlotTreeGraph}
 \alias{PlotTreeGraph}
-\title{Main function to plot tree graphics}
+\title{Function to plot tree graphics for dendogram.}
 \usage{
 PlotTreeGraph(mbSetObj, plotNm, distnm, clstDist, metadata, datatype,
   taxrank, format = "png", dpi = 72, width = NA)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{plotNm}{Character, input the name of the plot.}
+
+\item{distnm}{Character, input the name of the selected
+distance measure. "bray" for Bray-Curtis Index, "jsd" for
+Jensen-Shannon Divergence, "jaccard" for Jaccard Index, 
+"unifrac" for Unweighted Unifrac Distance, and "wunifrac" for weighted
+unifrac distance.}
+
+\item{clstDist}{Character, input the name of the
+selected clustering algorithm. "ward" for Ward, "average" for Average, 
+"complete" for Complete, and "single" for Single.}
+
+\item{metadata}{Character, input the name of the experimental factor.}
+
+\item{datatype}{Character, "16S" if marker gene data and 
+"metageno" if shotgun metagenomic data.}
+
+\item{taxrank}{Character, input the taxonomic level to perform
+classification. For instance, "OTU-level" to use OTUs.}
+
+\item{format}{Character, by default the plot is .png format.}
+
+\item{dpi}{The dots per inch. Numeric, by default it is set to 72.}
+
+\item{width}{Width of the plot. Numeric, by default it is set to NA.}
 }
 \description{
-This functions creates tree plots from the microbiome data.
+This functions creates dendogram tree plots.
 }
 \author{
 Jeff Xia \email{jeff.xia@mcgill.ca}

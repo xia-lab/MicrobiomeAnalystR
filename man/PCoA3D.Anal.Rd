@@ -9,9 +9,36 @@ PCoA3D.Anal(mbSetObj, ordMeth, distName, datatype, taxrank, colopt,
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{ordMeth}{Character, input the name
+of the ordination method. "PCoA" for principal coordinate analysis and "NMDS" for 
+non-metric multidimensional scaling.}
+
+\item{distName}{Character, input the name of the distance method.}
+
+\item{datatype}{Character, input "16S" if the data is marker
+gene data and "metageno" if it is metagenomic data.}
+
+\item{taxrank}{Character, input the taxonomic
+level for beta-diversity analysis.}
+
+\item{colopt}{Character, color the data points by the experimental factor,
+the taxon abundance of a selected taxa, or alpha diversity.}
+
+\item{variable}{Character, input the name of the experimental factor.}
+
+\item{taxa}{Character, if the data points are colored by taxon abundance, 
+input the name of the selected taxa.}
+
+\item{alphaopt}{Character, if the data points are colored by alpha-diversity, 
+input the preferred alpha-diversity measure.}
+
+\item{jsonNm}{Character, input the name of the json file to output.}
 }
 \description{
 This functions performs PCoA analysis on the microbiome data.
+This is used by Beta-Diversity analysis.
+The visualization is on the web.
 }
 \author{
 Jeff Xia \email{jeff.xia@mcgill.ca}

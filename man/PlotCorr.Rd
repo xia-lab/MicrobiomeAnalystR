@@ -2,15 +2,29 @@
 % Please edit documentation in R/general_anal.R
 \name{PlotCorr}
 \alias{PlotCorr}
-\title{Main function to plot correlation matrix}
+\title{Plot Pattern Search}
 \usage{
 PlotCorr(mbSetObj, imgName, format = "png", dpi = 72, width = NA)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{imgName}{Character, input the name
+of the plot.}
+
+\item{format}{Character, input the preferred
+format of the plot. By default it is set to "png".}
+
+\item{dpi}{Numeric, input the dots per inch. By default
+it is set to 72.}
+
+\item{width}{Numeric, input the width of the plot. By
+default it is set to NA.}
 }
 \description{
-This functions plots the correlation matrix.
+This functions plots a bargraph of the
+correlation between a specific taxon to other taxa in the Pattern
+Search analysis.
 }
 \author{
 Jeff Xia \email{jeff.xia@mcgill.ca}

@@ -9,9 +9,25 @@ PlotLEfSeSummary(mbSetObj, ldaFeature, imgName, format = "png",
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{ldaFeature}{Numeric, input the number of top
+features to include in the plot.}
+
+\item{imgName}{Character, input the name
+of the plot.}
+
+\item{format}{Character, input the preferred
+format of the plot. By default it is set to "png".}
+
+\item{width}{Numeric, input the width of the plot. By
+default it is set to NA.}
+
+\item{dpi}{Numeric, input the dots per inch. By default
+it is set to 72.}
 }
 \description{
 This functions graphically summarizes the LEfSe results
+in a VIP plot.
 }
 \author{
 Jeff Xia \email{jeff.xia@mcgill.ca}

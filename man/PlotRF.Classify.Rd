@@ -2,17 +2,28 @@
 % Please edit documentation in R/general_anal.R
 \name{PlotRF.Classify}
 \alias{PlotRF.Classify}
-\title{Plot random forest classification}
+\title{Plot Random Forest Classification}
 \usage{
 PlotRF.Classify(mbSetObj, feature, imgName, format = "png", dpi = 72,
   width = NA)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{feature}{Numeric, input the number of important features. 
+This is more for RF.VIP to make the sizes of the plot consistent.}
+
+\item{imgName}{Character, input the name of the plot.}
+
+\item{format}{Character, by default the plot is .png format.}
+
+\item{dpi}{The dots per inch. Numeric, by default it is set to 72.}
+
+\item{width}{Width of the plot. Numeric, by default it is set to NA.}
 }
 \description{
 This functions plots the classification of samples
-from the random forest analysis.
+from the Random Forest analysis.
 }
 \author{
 Jeff Xia \email{jeff.xia@mcgill.ca}

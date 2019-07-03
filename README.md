@@ -69,7 +69,7 @@ R CMD INSTALL MicrobiomeAnalystR_*.tar.gz
 
 ### MicrobiomeAnalyst Workflow
 
-To showcase how to utilize MicrobiomeAnalystR , we provide a detailed tutorial to perform a comprehensive end-to-end metabolomics data workflow from raw sequence data preprocessing to knowledge-based analysis. The dataset showcased in the tutorial consists of a subset of pediatric IBD stool samples obtained from the Integrative Human Microbiome Project Consortium (https://ibdmdb.org/). The tutorial is available as a PDF [here]() and is also available inside the R package as a vignette.
+To showcase how to utilize MicrobiomeAnalystR , we provide a detailed tutorial to perform a comprehensive end-to-end workflow from raw sequence data preprocessing to knowledge-based analysis. The dataset showcased in the tutorial consists of a subset of pediatric IBD stool samples obtained from the Integrative Human Microbiome Project Consortium (https://ibdmdb.org/). The tutorial is available as a PDF [here]() and is also available inside the R package as a vignette.
 
 ## Tutorials
 
@@ -105,4 +105,9 @@ To inform us of any bugs or requests, please open a new issue or send an email t
 
 ## MicrobiomeAnalystR History & Updates
 
+07-13-2019 - Updating R code + documentation
 06-22-2019 - Prepping R package for stable release
+
+## MicrobiomeAnalystR TO DO
+
+Add 3D visualizations using plotly.

@@ -9,9 +9,28 @@ FeatureCorrelation(mbSetObj, dist.name, taxrank, taxa, variable, datatype,
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{dist.name}{Input the distance measure. Input "pearson" for 
+Pearson R, "spearman" for Spearman rank correlation, and "kendall"
+for Kendall rank correlation.}
+
+\item{taxrank}{Character, input the taxonomic level to use.}
+
+\item{taxa}{If the pattern is defined by using a specific taxon, input the name
+of that taxa here.}
+
+\item{variable}{Input the name of the experimental factor.}
+
+\item{datatype}{If the data is marker gene, input "16S". If the
+data is metagenomic, use "metageno".}
+
+\item{shotfeat}{Only valid for SDP module, set to "null".}
+
+\item{shotgunid}{Only valid for SDP module, set to "NA".}
 }
 \description{
 This functions calculate correlation of all other feature to a given feature name.
+This is used in the Pattern Search analysis.
 }
 \author{
 Jeff Xia \email{jeff.xia@mcgill.ca}

@@ -9,6 +9,17 @@ PlotRF.VIP(mbSetObj, feature, imgName, format = "png", dpi = 72,
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{feature}{Numeric, input the number of important features. 
+This is more for RF.VIP to make the sizes of the plot consistent.}
+
+\item{imgName}{Character, input the name of the plot.}
+
+\item{format}{Character, by default the plot is .png format.}
+
+\item{dpi}{The dots per inch. Numeric, by default it is set to 72.}
+
+\item{width}{Width of the plot. Numeric, by default it is set to NA.}
 }
 \description{
 This functions plot variable importance ranked by MeanDecreaseAccuracy

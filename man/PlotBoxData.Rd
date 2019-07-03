@@ -8,6 +8,18 @@ PlotBoxData(mbSetObj, boxplotName, feat, format = "png", dpi = 72)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{boxplotName}{Character, input the name of the 
+box plot.}
+
+\item{feat}{Character, input the name of the selected 
+feature.}
+
+\item{format}{Character, by default the plot format
+is "png".}
+
+\item{dpi}{Dots per inch. Numeric, by default
+it is set to 72.}
 }
 \description{
 This functions plots box plots of a selected feature.

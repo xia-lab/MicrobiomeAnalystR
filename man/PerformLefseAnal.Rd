@@ -9,6 +9,22 @@ PerformLefseAnal(mbSetObj, p.lvl, lda.lvl, variable, isfunc, datatype,
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{p.lvl}{Numeric, input the adjusted p-value cutoff.}
+
+\item{lda.lvl}{Numeric, input the Log LDA score cutoff.}
+
+\item{variable}{Character, input the name of the experimental factor.}
+
+\item{isfunc}{Logical, default set to "F".}
+
+\item{datatype}{Character, input whether the data is marker gene
+data ("16S") or metagenomic data ("metageno").}
+
+\item{shotgunid}{Only valid for SDP module, set to "NA".}
+
+\item{taxrank}{Character, input the taxonomic level to perform
+univariate analysis.}
 }
 \description{
 This functions performs LEfSe analysis on the microbiome data.
