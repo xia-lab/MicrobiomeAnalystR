@@ -15,6 +15,7 @@
 #'Function to create PDF report
 #'@description This function creates a PDF report.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param usrName Input the preferred user name for the Analysis Report.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -73,6 +74,7 @@ SaveCurrentSession <- function(){
 #'@description This function creates a PDF report
 #'for the MDP module - writes .Rnw file template.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param usrName Input the preferred user name for the Analysis Report.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -113,6 +115,7 @@ CreateMDPRnwReport<-function(mbSetObj, usrName){
 #'@description This function creates a PDF report
 #'for the SDP module - writes .Rnw file template.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param usrName Input the preferred user name for the Analysis Report.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)

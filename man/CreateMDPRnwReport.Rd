@@ -8,6 +8,8 @@ CreateMDPRnwReport(mbSetObj, usrName)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{usrName}{Input the preferred user name for the Analysis Report.}
 }
 \description{
 This function creates a PDF report
