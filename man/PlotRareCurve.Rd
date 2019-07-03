@@ -8,6 +8,10 @@ PlotRareCurve(mbSetObj, graphName, variable)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{graphName}{Input the name of the plot.}
+
+\item{variable}{Input the experimental factor.}
 }
 \description{
 This function plots rarefraction curves from the uploaded

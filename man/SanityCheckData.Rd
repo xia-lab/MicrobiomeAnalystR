@@ -8,6 +8,13 @@ SanityCheckData(mbSetObj, datatype, filetype)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{datatype}{Character, input "16S" if the data is marker gene
+data and "metageno" if it is metagenomic data.}
+
+\item{filetype}{Character, "biom" if the uploaded data
+was .biom format, "mothur" if mothur format, or "txt" if
+as .txt or .csv format.}
 }
 \description{
 This function performs a sanity check on the uploaded

@@ -8,6 +8,17 @@ PerformNormalization(mbSetObj, rare.opt, scale.opt, transform.opt)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{rare.opt}{Character, "rarewi" to rarefy the data and 
+"none" to not.}
+
+\item{scale.opt}{Character, input the name of the data scaling option.
+"colsum" for total sum scaling, "CSS" for cumulative sum scaling,
+"upperquartile" for upper-quartile normalization, and "none" to none.}
+
+\item{transform.opt}{Character, input the name of the data transformation
+to be applied. "rle" for relative log expression, "TMM" for trimmed mean of 
+M-values, "clr" for centered log ratio, and "none" for none.}
 }
 \description{
 This function performs normalization on the uploaded

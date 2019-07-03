@@ -8,6 +8,11 @@ ApplyVarianceFilter(mbSetObj, filtopt, filtPerct)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{filtopt}{Character, input the low variance filter option. "iqr" for 
+inter-quantile range, "sd" for standard deviation, and "cov" for coefficient of variation.}
+
+\item{filtPerct}{Numeric, input the percentage cutoff for low variance.}
 }
 \description{
 This function filters data based on low abundace or variance.

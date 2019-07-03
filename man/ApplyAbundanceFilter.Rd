@@ -8,6 +8,14 @@ ApplyAbundanceFilter(mbSetObj, filt.opt, count, smpl.perc)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{filt.opt}{Character, input the low count filter option. "prevalence" to
+filter based on prevalence in samples, "mean" to filter by the mean abundance value, and
+"median" to filter by median abundance value.}
+
+\item{count}{Numeric, input the minimum count. Set to 0 to disable the low count filter.}
+
+\item{smpl.perc}{Numeric, input the percentage of samples for which to filter low counts.}
 }
 \description{
 This function filters data based on low counts in high percentage samples.

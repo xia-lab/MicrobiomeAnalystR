@@ -8,6 +8,16 @@ CreatePhyloseqObj(mbSetObj, type, taxa_type, taxalabel, ismetafile)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{type}{Input the format of the uploaded files. "text" for 
+.txt or .csv files, "biom" for .biom, and "mothur" for mothur files.}
+
+\item{taxa_type}{Input the taxonomy labels. "SILVA" for SILVA taxonomy,
+"Greengenes" for Greengenes taxonomy, "QIIME" for QIIME taxonomy,
+"GreengenesID" for Greengenes OTU IDs, and "Others/Not_specific" for others.}
+
+\item{taxalabel}{Logical, T if taxonomy labels were already included in
+the OTU table and F if not.}
 }
 \description{
 This function recreates the phyloseq object.

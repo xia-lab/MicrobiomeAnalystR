@@ -7,7 +7,11 @@
 .read.microbiomeanalyst.lib(filenm, opt = "none", ref = NA)
 }
 \arguments{
-\item{filenm}{Input the name of the file to download}
+\item{filenm}{Input the name of the file to download.}
+
+\item{opt}{Default set to "none".}
+
+\item{ref}{Default set to "NA".}
 }
 \description{
 Function downloads the required file and reads it only if not already in working directory.

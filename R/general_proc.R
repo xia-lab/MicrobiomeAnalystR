@@ -13,6 +13,11 @@
 #'user data. It checks the grouping of samples, if a phylogenetic tree
 #'was uploaded.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param datatype Character, input "16S" if the data is marker gene
+#'data and "metageno" if it is metagenomic data.
+#'@param filetype Character, "biom" if the uploaded data
+#'was .biom format, "mothur" if mothur format, or "txt" if
+#'as .txt or .csv format.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -125,6 +130,11 @@ SanityCheckData <- function(mbSetObj, datatype, filetype){
 #'@description This function filters data based on low counts in high percentage samples.
 #'Note, first is abundance, followed by variance.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param filt.opt Character, input the low count filter option. "prevalence" to
+#'filter based on prevalence in samples, "mean" to filter by the mean abundance value, and
+#'"median" to filter by median abundance value.
+#'@param count Numeric, input the minimum count. Set to 0 to disable the low count filter.
+#'@param smpl.perc Numeric, input the percentage of samples for which to filter low counts.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -172,6 +182,9 @@ ApplyAbundanceFilter <- function(mbSetObj, filt.opt, count, smpl.perc){
 #'@description This function filters data based on low abundace or variance.
 #'Note, this is applied after abundance filter.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param filtopt Character, input the low variance filter option. "iqr" for 
+#'inter-quantile range, "sd" for standard deviation, and "cov" for coefficient of variation.
+#'@param filtPerct Numeric, input the percentage cutoff for low variance. 
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -278,6 +291,14 @@ UpdateSampleItems <- function(mbSetObj){
 #'@description This function performs normalization on the uploaded
 #'data.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param rare.opt Character, "rarewi" to rarefy the data and 
+#'"none" to not.
+#'@param scale.opt Character, input the name of the data scaling option.
+#'"colsum" for total sum scaling, "CSS" for cumulative sum scaling,
+#' "upperquartile" for upper-quartile normalization, and "none" to none.
+#'@param transform.opt Character, input the name of the data transformation
+#'to be applied. "rle" for relative log expression, "TMM" for trimmed mean of 
+#'M-values, "clr" for centered log ratio, and "none" for none.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -388,6 +409,10 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt){
 #'@description This function performs rarefraction on the uploaded
 #'data.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param data Input the data.
+#'@param rare.opt Input the option for rarefying the microbiome data.
+#'"rarewi" to rarefy with replacement to the minimum library depth and 
+#'"rarewo" to rarefy without replacemet to the minimum library depth.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -406,10 +431,8 @@ PerformRarefaction <- function(mbSetObj, data, rare.opt){
   otu.tab<-otu_table(data,taxa_are_rows =TRUE);
   taxa_names(otu.tab)<-tax_nm;
 
-  #random_tree<-phy_tree(createRandomTree(ntaxa(otu.tab),rooted=TRUE,tip.label=tax_nm));
   mbSetObj$dataSet$sample_data$sample_id<-rownames(mbSetObj$dataSet$sample_data);
   sample_table<-sample_data(mbSetObj$dataSet$sample_data, errorIfNULL=TRUE);
-  #phy.obj<-merge_phyloseq(otu.tab,sample_table,random_tree);
   phy.obj<-merge_phyloseq(otu.tab,sample_table);
   msg<-NULL;
 
@@ -417,7 +440,6 @@ PerformRarefaction <- function(mbSetObj, data, rare.opt){
   if(rare.opt=="rarewi"){
     phy.obj <- rarefy_even_depth(phy.obj, replace=TRUE,rngseed = T)
     msg <- c(msg, paste("Rarefy with replacement to minimum library depth."));
-
   }else if(rare.opt=="rarewo"){ # this is not shown on web due to computational issue
     phy.obj <- rarefy_even_depth(phy.obj, replace=FALSE,rngseed = T);
     msg <- c(msg, paste("Rarefaction without replacement to minimum library depth."));
@@ -432,6 +454,8 @@ PerformRarefaction <- function(mbSetObj, data, rare.opt){
 #'@description This function plots rarefraction curves from the uploaded
 #'data for both sample-wise or group-wise
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param graphName Input the name of the plot.
+#'@param variable Input the experimental factor.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -511,6 +535,12 @@ PlotRareCurve <- function(mbSetObj, graphName, variable){
 #'@description This function creates a plot summarizing the library
 #'size of microbiome dataset.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param imgName Character, input the name
+#'of the plot.
+#'@param format Character, input the preferred
+#'format of the plot. By default it is set to "png".
+#'@param dpi Numeric, input the dots per inch. By default
+#'it is set to 72.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -551,6 +581,13 @@ PlotLibSizeView <- function(mbSetObj, imgName, format="png", dpi=72){
 #'Function to recreate phyloseq object
 #'@description This function recreates the phyloseq object.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param type Input the format of the uploaded files. "text" for 
+#'.txt or .csv files, "biom" for .biom, and "mothur" for mothur files.
+#'@param taxa_type Input the taxonomy labels. "SILVA" for SILVA taxonomy,
+#'"Greengenes" for Greengenes taxonomy, "QIIME" for QIIME taxonomy,
+#'"GreengenesID" for Greengenes OTU IDs, and "Others/Not_specific" for others.
+#'@param taxalabel Logical, T if taxonomy labels were already included in
+#'the OTU table and F if not.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -594,7 +631,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel, ismetafile){
   }
 
   #standard name to be used
-  classi.lvl<- c("Phylum", "Class", "Order", "Family", "Genus","Species","Strain/OTU-level","Additional_Name");
+  classi.lvl<- c("Phylum", "Class", "Order", "Family", "Genus", "Species", "Strain/OTU-level", "Additional_Name");
 
   if(anal.type == "markergene" | anal.type == "dataprojection"){
     if(type=="text"){

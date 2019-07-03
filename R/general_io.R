@@ -5,7 +5,7 @@
 ###################################################
 
 # This is only for web version
-.on.public.web <- FALSE; # only TRUE when on metaboanalyst web server
+.on.public.web <- FALSE; # only TRUE when on MicrobiomeAnalyst web server
 
 # note, this is usually used at the end of a function
 # for local, return itself; for web, push to global environment
@@ -67,13 +67,14 @@ Init.mbSetObj <- function(){
 #' Read RDS files from the internet
 #' @description Function downloads the required file and reads it only if not already in working directory.
 #' Need to specify the file URL and the destfile. 
-#' @param filenm Input the name of the file to download
+#' @param filenm Input the name of the file to download.
+#' @param opt Default set to "none".
+#' @param ref Default set to "NA".
 
 # read binary RDS files
 .read.microbiomeanalyst.lib <- function(filenm, opt = "none", ref = NA){
   
   if(.on.public.web){
-  
     if(opt=="tsea"){
       lib.path <- paste("../../lib/tsea/", filenm, sep="");
     }else if(opt=="ppd"){
@@ -82,7 +83,6 @@ Init.mbSetObj <- function(){
       lib.path <- paste("../../lib/", filenm, sep="");
     }
     return(readRDS(lib.path));
-    
   }else{
     lib.download <- FALSE;
     if(!file.exists(filenm)){
@@ -181,6 +181,104 @@ Init.mbSetObj <- function(){
 SetAnalType <- function(analType){
   anal.type <<- analType;
 }
+
+#'Function to read in sample data
+#'@description This functions reads in sample data.
+#'@param mbSetObj Input the name of the mbSetObj.
+#'@param dataName Input the sample data file name.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+ReadSampleTable<- function(mbSetObj, dataName) {
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  
+  if(.on.public.web){
+    load_phyloseq();
+  }
+  
+  msg <- NULL;
+  mydata <- .readDataTable(dataName);
+  
+  if(any(is.na(mydata)) || class(mydata) == "try-error"){
+    current.msg <<- "Failed to read in the metadata! Please make sure that the metadata file is in the right format and does not have empty cells or NA.";
+    return(0);
+  }
+  
+  # look for #NAME, store in a list
+  sam.nm <- substr(colnames(mydata[1]),1,5);
+  sam.nm <- tolower(sam.nm);
+  sam.inx <- grep("#name",sam.nm);
+  
+  if(length(sam.inx) > 0){
+    smpl_nm<-mydata[,1];
+    smpl_var<-colnames(mydata[-1]);
+  }else{
+    current.msg <<- "Please make sure you have the label #NAME in your sample data file!";
+    return(0);
+  }
+  
+  # converting to character matrix as duplicate row names not allowed in data frame.
+  mydata <- as.matrix(mydata[,-1]);
+  rownames(mydata) <- smpl_nm;
+  colnames(mydata) <- smpl_var;
+  
+  # empty cell or NA cannot be tolerated in metadata
+  na.inx  <- is.na(mydata);
+  na.msg <- NULL;
+  
+  if(sum(na.inx) > 0){
+    mydata[na.inx] <- "Unknown";
+    na.msg <- paste("A total of", sum(na.inx), "empty or NA values were replaced by 'Unknown'.");
+  }
+  
+  mbSetObj$dataSet$sample_data <- data.frame(mydata);
+  current.msg <<- paste(na.msg, "The sample data contains a total of ", nrow(mydata), "samples and  ", ncol(mydata), " sample variables.", collapse=" ");
+  mbSetObj$dataSet$smpl.msg <- current.msg;
+  
+  if(.on.public.web){
+    .set.mbSetObj(mbSetObj)  
+    return(1);
+  }else{
+    return(.set.mbSetObj(mbSetObj));
+  }
+}
+
+#'Function to read in tree files.
+#'@description This functions reads in tree files.
+#'@param mbSetObj Input the name of the mbSetObj.
+#'@param dataName Input the tree file name.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+#'@import phyloseq
+ReadTreeFile<- function(mbSetObj, dataName) {
+  if(.on.public.web){
+    load_phyloseq();
+  }
+  msg <- NULL;
+  tree <- read_tree(dataName);
+  saveRDS(tree, "tree.RDS");
+  return(1)
+}
+
+RecordRCommand <- function(mbSetObj=NA, cmd){
+  write(cmd, file = "Rhistory.R", append = TRUE);
+  mbSetObj <- .get.mbSetObj(mSetObj); 
+  mbSetObj$cmdSet <- c(mbSetObj$cmdSet, cmd);
+  return(.set.mbSetObj(mbSetObj));
+}
+
+GetRCommandHistory <- function(mbSetObj=NA){
+  mbSetObj <- .get.mbSetObj(mbSetObj); 
+  return(mbSetObj$cmdSet);
+}
+
+####################################
+############ Get Funs ##############
+####################################
 
 GetNameMapCol <-function(mbSetObj, colInx){
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -284,7 +382,34 @@ GetTaxaFeatSize<- function(mbSetObj, taxlvl){
   return(feat.size);
 }
 
-ValidateFeatureName<- function(mbSetObj, taxlvl, nm){
+GetLowerTaxaLvlNm<- function(mbSetObj, taxrank){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  indx <- which(colnames(tax_table(mbSetObj$dataSet$proc.phyobj))==taxrank);
+  rem <- ncol(tax_table(mbSetObj$dataSet$proc.phyobj))-indx;
+  return(colnames(tax_table(mbSetObj$dataSet$proc.phyobj))[indx+1:rem]);
+}
+
+GetHighTaxaLvlNm<- function(mbSetObj, taxrank){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  if(taxrank=="OTU"){
+    return(colnames(tax_table(mbSetObj$dataSet$proc.phyobj))[1:length(colnames(tax_table(mbSetObj$dataSet$proc.phyobj)))]);
+  }else{
+    indx <- which(colnames(tax_table(mbSetObj$dataSet$proc.phyobj))==taxrank);
+    rem <- (indx):1;
+    return(colnames(tax_table(mbSetObj$dataSet$proc.phyobj))[rev(rem)]);
+  }
+}
+
+GetSampleGrpUser <- function(mbSetObj, class){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  return(levels(get_variable(mbSetObj$dataSet$proc.phyobj, class)));
+}
+
+##########################
+######## Checks ##########
+##########################
+
+ValidateFeatureName <- function(mbSetObj, taxlvl, nm){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -311,29 +436,6 @@ ValidateFeatureName<- function(mbSetObj, taxlvl, nm){
   }else{
     return(.set.mbSetObj(mbSetObj));
   }
-}
-
-GetLowerTaxaLvlNm<- function(mbSetObj, taxrank){
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  indx <- which(colnames(tax_table(mbSetObj$dataSet$proc.phyobj))==taxrank);
-  rem <- ncol(tax_table(mbSetObj$dataSet$proc.phyobj))-indx;
-  return(colnames(tax_table(mbSetObj$dataSet$proc.phyobj))[indx+1:rem]);
-}
-
-GetHighTaxaLvlNm<- function(mbSetObj, taxrank){
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  if(taxrank=="OTU"){
-    return(colnames(tax_table(mbSetObj$dataSet$proc.phyobj))[1:length(colnames(tax_table(mbSetObj$dataSet$proc.phyobj)))]);
-  }else{
-    indx <- which(colnames(tax_table(mbSetObj$dataSet$proc.phyobj))==taxrank);
-    rem <- (indx):1;
-    return(colnames(tax_table(mbSetObj$dataSet$proc.phyobj))[rev(rem)]);
-  }
-}
-
-GetSampleGrpUser <- function(mbSetObj, class){
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  return(levels(get_variable(mbSetObj$dataSet$proc.phyobj, class)));
 }
 
 #check whether sample variable is continuous and give warning abt it in metagenomeSeq and LEfSe
@@ -380,90 +482,4 @@ SaveData <- function(mbSetObj, anal.type){
     write.csv(as.data.frame(sample_data(userrefdata)), file="merge_sampletable.csv");
   }
   return(.set.mbSetObj(mbSetObj));
-}
-
-#'Function to read in sample data
-#'@description This functions reads in sample data.
-#'@param mbSetObj Input the name of the mbSetObj.
-#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
-#'McGill University, Canada
-#'License: GNU GPL (>= 2)
-#'@export
-ReadSampleTable<- function(mbSetObj, dataName) {
-  
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  
-  if(.on.public.web){
-    load_phyloseq();
-  }
-
-  msg <- NULL;
-  mydata <- .readDataTable(dataName);
-  
-  if(any(is.na(mydata)) || class(mydata) == "try-error"){
-    current.msg <<- "Failed to read in the metadata! Please make sure that the metadata file is in the right format and does not have empty cells or NA.";
-    return(0);
-  }
-
-  # look for #NAME, store in a list
-  sam.nm <- substr(colnames(mydata[1]),1,5);
-  sam.nm <- tolower(sam.nm);
-  sam.inx <- grep("#name",sam.nm);
-  
-  if(length(sam.inx) > 0){
-    smpl_nm<-mydata[,1];
-    smpl_var<-colnames(mydata[-1]);
-  }else{
-    current.msg <<- "Please make sure you have the label #NAME in your sample data file!";
-    return(0);
-  }
-
-  # converting to character matrix as duplicate row names not allowed in data frame.
-  mydata <- as.matrix(mydata[,-1]);
-  rownames(mydata) <- smpl_nm;
-  colnames(mydata) <- smpl_var;
-
-  # empty cell or NA cannot be tolerated in metadata
-  na.inx  <- is.na(mydata);
-  na.msg <- NULL;
-    
-  if(sum(na.inx) > 0){
-    mydata[na.inx] <- "Unknown";
-    na.msg <- paste("A total of", sum(na.inx), "empty or NA values were replaced by 'Unknown'.");
-  }
-  
-  mbSetObj$dataSet$sample_data <- data.frame(mydata);
-print(head(mbSetObj$dataSet$sample_data))
-  current.msg <<- paste(na.msg, "The sample data contains a total of ", nrow(mydata), "samples and  ", ncol(mydata), " sample variables.", collapse=" ");
-  mbSetObj$dataSet$smpl.msg <- current.msg;
-  
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj)  
-    return(1);
-  }else{
-    return(.set.mbSetObj(mbSetObj));
-  }
-}
-
-#'@import phyloseq
-ReadTreeFile<- function(mbSetObj, dataName) {
-  if(.on.public.web){
-    load_phyloseq();
-  }
-  msg <- NULL;
-  tree <- read_tree(dataName);
-  saveRDS(tree, "tree.RDS");
-  return(1)
-}
-
-RecordRCommand <- function(mbSetObj=NA, cmd){
-  write(cmd, file = "Rhistory.R", append = TRUE);
-  mbSetObj <- .get.mbSetObj(mSetObj); 
-  mbSetObj$cmdSet <- c(mbSetObj$cmdSet, cmd);
-  return(.set.mbSetObj(mbSetObj));
-}
-
-GetRCommandHistory <- function(mbSetObj=NA){
-  mbSetObj <- .get.mbSetObj(mbSetObj); 
-  return(mbSetObj$cmdSet);
 }

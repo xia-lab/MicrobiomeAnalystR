@@ -8,6 +8,12 @@ PerformRarefaction(mbSetObj, data, rare.opt)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{data}{Input the data.}
+
+\item{rare.opt}{Input the option for rarefying the microbiome data.
+"rarewi" to rarefy with replacement to the minimum library depth and 
+"rarewo" to rarefy without replacemet to the minimum library depth.}
 }
 \description{
 This function performs rarefraction on the uploaded
