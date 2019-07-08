@@ -9,6 +9,9 @@ PlotDataPieFromPie(mbSetObj, taxalvl, metadata, clslevel, taxaposn,
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{taxalvl}{Character, input the taxonomic level to perform
+classification. For instance, "Genus" to use the Genus level.}
 }
 \description{
 This functions plots pie charts of microbiome data.

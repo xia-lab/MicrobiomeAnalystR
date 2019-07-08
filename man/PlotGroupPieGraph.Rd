@@ -9,6 +9,19 @@ PlotGroupPieGraph(mbSetObj, taxalvl, metadata, clslevel, feat_cnt,
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{taxalvl}{Character, input the taxonomic level to perform
+classification. For instance, "Genus" to use the Genus level.}
+
+\item{metadata}{Character, select which grouping to use.}
+
+\item{clslevel}{Character, input which group to plot.}
+
+\item{feat_cnt}{Set the minimum feature count that is used to "bin"
+together small taxa.}
+
+\item{calcmeth}{Merge small taxa based on the sum /("sum"/)
+or median /("med"/) counts across all samples or groups.}
 }
 \description{
 This functions plots pie graphs of microbiome data.

@@ -9,6 +9,40 @@ PlotTaxaAlphaBar(mbSetObj, barplotName, taxalvl, metadata, facet, imgOpt,
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{barplotName}{Character, input the name of the barplot.}
+
+\item{taxalvl}{Character, input the taxonomic level to perform
+classification. For instance, "Genus" to use the Genus level.}
+
+\item{metadata}{If users wish to merge samples to groups in the stacked bar plot,
+set this to the preferred grouping.}
+
+\item{facet}{Character, set the group to separate the bar plots.}
+
+\item{imgOpt}{Character, set the graph type. Stacked bar
+using the actual abundance, use "barraw". Stacked bar using
+the percentage abundance, use "barnorm".}
+
+\item{feat_cnt}{Set the minimum feature count that is used to "bin"
+together small taxa.}
+
+\item{colpalopt}{Select the color palette options. "set3", 
+which is the Set3 from the R Color Brewer, "cont21" which is
+a set of 21 colors, "cont28" which is a set of 28 colors, and 
+"cont42" which is a set of 42 colors. For users who wish to use
+a color palette robust to colorblindness 
+/(https://cran.r-project.org/web/packages/viridis/vignettes/intro-to-viridis.html/), 
+use "viridis", "magma", "plasma", or "inferno".}
+
+\item{calcmeth}{Merge small taxa based on the sum /("sum"/)
+or median /("med"/) counts across all samples or groups.}
+
+\item{format}{Character, input the preferred
+format of the plot. By default it is set to "png".}
+
+\item{dpi}{Numeric, input the dots per inch. By default
+it is set to 72.}
 }
 \description{
 This functions plots bar charts of different taxonomic levels

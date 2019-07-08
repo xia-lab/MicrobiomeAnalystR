@@ -42,7 +42,8 @@ Imports:
     splitstackshape,
     edgeR,
     globaltest,
-    R.utils
+    R.utils,
+    viridis
 Suggests: 
     knitr,
     rmarkdown,

@@ -348,7 +348,16 @@ prevalence_nsamples <- function(x) {
 
 #'Main function to plot pie graphs of microbiome data.
 #'@description This functions plots pie graphs of microbiome data. 
+#'In particular, it plots the overall pie chart (all samples). The
+#'data used to calculate the pie-chart is saved in your working 
+#'directory as ""piechart_abundances.csv".
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param taxalvl Character, input the taxonomic level to perform
+#'classification. For instance, "Genus" to use the Genus level.
+#'@param feat_cnt Set the minimum feature count that is used to "bin"
+#'together small taxa. 
+#'@param calcmeth Merge small taxa based on the sum /("sum"/)
+#'or median /("med"/) counts across all samples or groups.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -371,8 +380,7 @@ PlotOverallPieGraph<-function(mbSetObj, taxalvl, feat_cnt, calcmeth){
   if(class(mbSetObj$dataSet$filt.data)=="matrix"){
     data <- otu_table(data, taxa_are_rows =TRUE);
   }
-   
-  #data <- prune_taxa(taxa_sums(dataSet$filt.data)>feat_cnt,dataSet$filt.data);
+  
   sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
   datapie <<- merge_phyloseq(data, tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
    
@@ -435,6 +443,14 @@ PlotOverallPieGraph<-function(mbSetObj, taxalvl, feat_cnt, calcmeth){
 #'Main function to plot pie graphs of microbiome data.
 #'@description This functions plots pie graphs of microbiome data. 
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param taxalvl Character, input the taxonomic level to perform
+#'classification. For instance, "Genus" to use the Genus level.
+#'@param metadata Character, select which grouping to use.
+#'@param clslevel Character, input which group to plot.
+#'@param feat_cnt Set the minimum feature count that is used to "bin"
+#'together small taxa. 
+#'@param calcmeth Merge small taxa based on the sum /("sum"/)
+#'or median /("med"/) counts across all samples or groups.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -519,6 +535,10 @@ PlotGroupPieGraph <- function(mbSetObj, taxalvl, metadata, clslevel,
 #'Main function to plot sample-wise pie graphs of microbiome data.
 #'@description This functions plots sample-wise pie graphs of microbiome data. 
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param taxalvl Character, input the taxonomic level to perform
+#'classification. For instance, "Genus" to use the Genus level.
+#'@param feat_cnt Set the minimum feature count that is used to "bin"
+#'together small taxa. 
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -596,6 +616,8 @@ PlotSamplePieGraph<-function(mbSetObj, taxalvl, smplnm, feat_cnt){
 #'Function to plot pie-chart data.
 #'@description This functions plots pie charts of microbiome data. 
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param taxalvl Character, input the taxonomic level to perform
+#'classification. For instance, "Genus" to use the Genus level.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -717,6 +739,8 @@ UpdatePieData<-function(mbSetObj, lowtaxa){
 #'Function to save pie-chart
 #'@description This functions saves created pie chart plot. 
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param taxalvl Character, input the taxonomic level to perform
+#'classification. For instance, "Genus" to use the Genus level.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -738,7 +762,7 @@ SavePiechartImg <- function(mbSetObj, taxalvl, pieName, format="png", dpi=72) {
     
   # java color code to R color code
   x.cols <- paste("#",x.cols, sep="");
-  Cairo(file=pieName, width=630, height=500, type=format, bg="white", dpi=dpi);
+  Cairo::Cairo(file=pieName, width=630, height=500, type=format, bg="white", dpi=dpi);
     
   box <- ggplot(piedataimg, aes(x="", y = value, fill=reorder(variable,-value))) +
          geom_bar(width = 1, stat = "identity") + theme_bw() +
@@ -865,6 +889,9 @@ PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName,
 #'Function to create bar plots of selected taxa level.
 #'@description This functions creates bar plots of a selected taxa level. 
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param barplotName Character, input the name of the bar plot.
+#'@param taxalvl Character, input the taxonomic level to perform
+#'classification. For instance, "Genus" to use the Genus level.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -1182,19 +1209,41 @@ PlotFunAnotSummary<-function(mbSetObj, imgName, format="png", dpi=72){
 #'Plot functional annotation summary
 #'@description This functions plots the functional annotation summary.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param barplotName Character, input the name of the barplot.
+#'@param viewOpt Character.
+#'@param taxalvl Character, input the taxonomic level to perform
+#'classification. For instance, "Genus" to use the Genus level.
+#'@param metadata If users wish to merge samples to groups in the stacked bar plot,
+#'set this to the preferred grouping.  
+#'@param feat_cnt Set the minimum feature count that is used to "bin"
+#'together small taxa. 
+#'@param colpalopt Select the color palette options. "set3", 
+#'which is the Set3 from the R Color Brewer, "cont21" which is
+#'a set of 21 colors, "cont28" which is a set of 28 colors, and 
+#'"cont42" which is a set of 42 colors. For users who wish to use
+#'a color palette robust to colorblindness 
+#'/(https://cran.r-project.org/web/packages/viridis/vignettes/intro-to-viridis.html/), 
+#'use "viridis", "magma", "plasma", or "inferno".
+#'@param calcmeth Merge small taxa based on the sum /("sum"/)
+#'or median /("med"/) counts across all samples or groups.
+#'@param format Character, input the preferred
+#'format of the plot. By default it is set to "png".
+#'@param dpi Numeric, input the dots per inch. By default
+#'it is set to 72.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import reshape
 PlotTaxaAlphaArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadata,
-                            imgOpt, feat_cnt, colpalopt, calcmeth, format="png", dpi=72){
+                            feat_cnt, colpalopt, calcmeth, format="png", dpi=72){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
+
   if(.on.public.web){
     load_reshape();
   }
+  
   #using filtered data
   data <- mbSetObj$dataSet$filt.data;
   if(class(mbSetObj$dataSet$filt.data)=="matrix"){
@@ -1215,9 +1264,8 @@ PlotTaxaAlphaArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadata,
     clsLbl <- sort(unique(factor(data1@sam_data[[metadata]])));
     colvec <- NULL;
   }else {
-    #smpl_nm <- sample_names(data1);
     data <- data.frame(otu_table(data1));
-    
+  
     # reorder data based on groups
     sam <- sample_data(data1);
     smpl_nm <- row.names(sam);
@@ -1301,7 +1349,6 @@ PlotTaxaAlphaArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadata,
   if(w < min.w){
     w <- min.w;
   }
-  
 
   write.csv(t(data), file="taxa_abund.csv");
   data$facetOpt <- as.character(clsLbl);
@@ -1365,7 +1412,11 @@ PlotTaxaAlphaArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadata,
                                      guide = guide_legend(direction = "horizontal",
                                                           ncol = 5))
     }
-  } else {
+  }else if(colpalopt=="viridis"){
+    box <- box + viridis::scale_fill_viridis(discrete=TRUE)
+  }else if(colpalopt %in% c("magma","plasma","inferno")){
+    box <- box + viridis::scale_fill_viridis(option=colpalopt, discrete=TRUE)
+  }else{
     box <- box + scale_fill_manual(values=c(x.colors))
   }
 
@@ -1390,12 +1441,37 @@ PlotTaxaAlphaArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadata,
 #'@description This functions plots bar charts of different taxonomic levels
 #'for alpha diversity.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param barplotName Character, input the name of the barplot.
+#'@param taxalvl Character, input the taxonomic level to perform
+#'classification. For instance, "Genus" to use the Genus level.
+#'@param metadata If users wish to merge samples to groups in the stacked bar plot,
+#'set this to the preferred grouping.  
+#'@param facet Character, set the group to separate the bar plots.
+#'@param imgOpt Character, set the graph type. Stacked bar
+#'using the actual abundance, use "barraw". Stacked bar using
+#'the percentage abundance, use "barnorm".
+#'@param feat_cnt Set the minimum feature count that is used to "bin"
+#'together small taxa. 
+#'@param colpalopt Select the color palette options. "set3", 
+#'which is the Set3 from the R Color Brewer, "cont21" which is
+#'a set of 21 colors, "cont28" which is a set of 28 colors, and 
+#'"cont42" which is a set of 42 colors. For users who wish to use
+#'a color palette robust to colorblindness 
+#'/(https://cran.r-project.org/web/packages/viridis/vignettes/intro-to-viridis.html/), 
+#'use "viridis", "magma", "plasma", or "inferno".
+#'@param calcmeth Merge small taxa based on the sum /("sum"/)
+#'or median /("med"/) counts across all samples or groups.
+#'@param format Character, input the preferred
+#'format of the plot. By default it is set to "png".
+#'@param dpi Numeric, input the dots per inch. By default
+#'it is set to 72.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import reshape
 #'@import ggplot2
+#'@import viridis
 PlotTaxaAlphaBar<-function(mbSetObj, barplotName, taxalvl, metadata, facet, imgOpt, 
                            feat_cnt, colpalopt, calcmeth, format="png", dpi=72){
 
@@ -1572,6 +1648,10 @@ PlotTaxaAlphaBar<-function(mbSetObj, barplotName, taxalvl, metadata, facet, imgO
       }else{
         box <- box + scale_fill_brewer(palette = "Set3", guide = guide_legend(direction = "horizontal", ncol = 5))
       }
+  }else if(colpalopt=="viridis"){
+    box <- box + viridis::scale_fill_viridis(discrete=TRUE)
+  }else if(colpalopt %in% c("magma","plasma","inferno")){
+    box <- box + viridis::scale_fill_viridis(option=colpalopt, discrete=TRUE)
   }else{
     box <- box + scale_fill_manual(values=c(x.colors))
   }

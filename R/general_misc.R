@@ -231,8 +231,9 @@ condenseOTUs <- function(otutable, splitcol) {
   summeddf[, !colnames(summeddf) %in% c(splitcol)]
 }
 
-# need to return consisten color assignments for the same taxa
-GetSerieColors <- function(taxa=NULL){
+# need to return consistent color assignments for the same taxa
+#'@export
+GetSeriesColors <- function(taxa=NULL){
   if(!exists("pie.cols")){
     InitPieColors();
   }

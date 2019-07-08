@@ -9,6 +9,11 @@ PlotTaxaAlphaBarSam(mbSetObj, barplotName, taxalvl, samplnm, imgOpt,
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{barplotName}{Character, input the name of the bar plot.}
+
+\item{taxalvl}{Character, input the taxonomic level to perform
+classification. For instance, "Genus" to use the Genus level.}
 }
 \description{
 This functions creates bar plots of a selected taxa level.

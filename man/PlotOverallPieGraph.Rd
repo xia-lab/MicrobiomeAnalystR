@@ -8,9 +8,21 @@ PlotOverallPieGraph(mbSetObj, taxalvl, feat_cnt, calcmeth)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{taxalvl}{Character, input the taxonomic level to perform
+classification. For instance, "Genus" to use the Genus level.}
+
+\item{feat_cnt}{Set the minimum feature count that is used to "bin"
+together small taxa.}
+
+\item{calcmeth}{Merge small taxa based on the sum /("sum"/)
+or median /("med"/) counts across all samples or groups.}
 }
 \description{
-This functions plots pie graphs of microbiome data.
+This functions plots pie graphs of microbiome data. 
+In particular, it plots the overall pie chart (all samples). The
+data used to calculate the pie-chart is saved in your working 
+directory as ""piechart_abundances.csv".
 }
 \author{
 Jeff Xia \email{jeff.xia@mcgill.ca}

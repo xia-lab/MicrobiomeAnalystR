@@ -8,6 +8,9 @@ SavePiechartImg(mbSetObj, taxalvl, pieName, format = "png", dpi = 72)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{taxalvl}{Character, input the taxonomic level to perform
+classification. For instance, "Genus" to use the Genus level.}
 }
 \description{
 This functions saves created pie chart plot.

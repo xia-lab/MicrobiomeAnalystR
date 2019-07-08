@@ -8,6 +8,12 @@ PlotSamplePieGraph(mbSetObj, taxalvl, smplnm, feat_cnt)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{taxalvl}{Character, input the taxonomic level to perform
+classification. For instance, "Genus" to use the Genus level.}
+
+\item{feat_cnt}{Set the minimum feature count that is used to "bin"
+together small taxa.}
 }
 \description{
 This functions plots sample-wise pie graphs of microbiome data.

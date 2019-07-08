@@ -7,13 +7,59 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
-)
+## 1.0 Introduction to the Marker Gene Data Profiling Module
+
+Typically, the first question of microbiome data analysis is to determine if there are any patterns within the data. Such exploratory analyses are conducted via commonly used ecological techniques including alpha and beta diversity. Multivariate statistics such as PERMANOVA and ANOSIM can be employed to assess the robustness of such patterns in the microbial community composition. Once global differences are identified, the next logical step is to identify which taxa are responsible for this difference. Identification of important taxa is assessed with univariate statistics. Univariate statistics include classical and model-based approaches, which vary on their assumptions of microbiome data structure but ultimately compare taxa abundance between groups. While it is important to know which taxa are associated with phenotypic differences between samples, users may also wish to know if there are also potential functional differences between groups. MicrobiomeAnalyst implements two popular methods for predictive functional profiling - PICRUSt (1) and Tax4Fun (2), resulting in gene abundance tables that can be inputted in the SDP module.
+
+### 1.1 Visual Exploration
+
+**Stacked bar/area plot**
+
+MicrobiomeAnalystR supports the creation of stacked bar (PlotTaxaAlphaBar) or area plots (PlotTaxaAlphaArea). Further color customization is available using the viridis R package. These color palettes (e.g. "viridis", "magma", "plasma", and "inferno") are robust to color blindness.
+
+```{r, eval=FALSE}
+# Stacked bar plot, percentage abundance, genus level, viridis color palette
+mbSet<-PlotTaxaAlphaBar(mbSet, barplotName="taxa_alpha_1", taxalvl="Genus", metadata="Class", facet="Class", imgOpt="barnorm", feat_cnt=10, colpalopt="viridis", calcmeth="sum", format="png", dpi=300);
+
+# Stacked area plot, class level, viridis color palette
+mbSet<-PlotTaxaAlphaArea(mbSet, barplotName="taxa_alpha_2", viewOpt="overview", taxalvl="Class", metadata="Class", feat_cnt=10, colpalopt="viridis", calcmeth="sum", format="png", dpi=300);
 ```
 
-```{r setup}
-library(MicrobiomeAnalystR)
+**Pie Charts**
+
+MicrobiomeAnalystR provides several functions to create pie charts from microbiome data. First, the *PlotOverallPieGraph* function plots a pie-chart of all samples at the user-specified taxonomic level. Second, the *PlotGroupPieGraph* plots a group-wise pie-chart of all samples within the user-specified group at the user-specified taxonomic level. Finally, the *PlotSamplePieGraph* function creates a pie-chart for a specific sample. To save all pie charts, first use the *GetSeriesColors* function followed by the *SavePiechartImg* function.
+
+```{r, eval=FALSE}
+# Overall pie chart
+mbSet<-PlotOverallPieGraph(mbSet, taxalvl="Phylum", feat_cnt=10, calcmeth="sum");
+GetSeriesColors()
+mbSet<-SavePiechartImg(mbSet, taxalvl="Phylum", pieName="primary_piechart_1", format="png", dpi=300);
+
+# Group-wise pie chart
+mbSet<-PlotGroupPieGraph(mbSet, taxalvl="Family", metadata="Class", clslevel="CD", feat_cnt=10, calcmeth="sum");
+
+# Sample-wise pie chart
+mbSet<-PlotSamplePieGraph(mbSet, taxalvl="Family", smplnm="206700", feat_cnt=10)
 ```
+
+**Phylogenetic Tree**
+
+```{r, eval=FALSE}
+# Create Biomarker Sweave report 
+PreparePDFReport(mSet, "User Name")
+```
+
+**Heat Tree**
+
+```{r, eval=FALSE}
+# Create Biomarker Sweave report 
+PreparePDFReport(mSet, "User Name")
+```
+
+### 1.2 Community Profiling
+
+```{r, eval=FALSE}
+# Create Biomarker Sweave report 
+PreparePDFReport(mSet, "User Name")
+```
+
