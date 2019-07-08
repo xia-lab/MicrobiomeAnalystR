@@ -112,15 +112,15 @@ mbSet<-ApplyVarianceFilter(mbSet, filtopt="iqr", filtPerct=0.1);
 
 Users of MicrobiomeAnalystR can perform data rarefying, scaling, and transformation using the *PerformNormalization* function. The aim of data normalization is to standardize the data to enable accurate comparisons.
 
-*Data rarefying*
+**Data rarefying**
 
 Rarefying is commonly used to account for uneven library sizes. This method works by randomly subsampling read counts of samples without replacement to the lowest read depth of a sample. It has been admonished due to the potential of discarding of useful information. However, rarefying has been shown to be useful for very small (<1000 reads/sample) or very uneven library sizes between groups (>10x) (2), as well as important for community profiling (4). To perform rarefying, set the rare.opt to "rarewi" for rarefying with replacement to the minimum library depth and "rarewo" for rarefying without replacement to the minimum library depth. Use the *PlotRareCurve* to create a plot of rarefraction curves.
 
-*Data scaling*
+**Data scaling**
 
 Scaling involves multiplying feature counts by a sample-specific factor to account for uneven sequence depth, transforming raw reads to relative abundances. The most commonly used method is Total sum scaling (TSS), whereby count data is divided by the total number of reads in a sample. This method has been criticized as the total number of reads can be dominated by a few most abundant features and bias resulting relative abundances (5). Moreover, TSS does for not account for heteroskedasticity of feature variance across measured values (2, 6). Other scaling factors such as the upper quantile (UQ) (7) and cumulative sum (CSS) (8) have been proposed that address such issues. Particularly, when performing differential abundance analysis, CSS has been recommended for controlling the false discovery rate (FDR) in data with large group sizes (>10 samples) (9). However, when performing community-level comparisons such as estimating beta-diversity, TSS is recommended as it most accurately captures the composition of the original communities, whereas UQ and CSS distort communities (2, 3, 4).
 
-*Data transformation*
+**Data transformation**
 
 The aim of data transformation is to stabilize the variance of the data. The centered log-ratio (10) is commonly used and is recommended due to the compositionality of microbiome data (11, 12). Furthermore, its variants, Relative log expression (RLE) and Trimmed mean of M-values (TMM)(13), have consistently demonstrated high performance at identifying differentially abundant features (3-5).
 

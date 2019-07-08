@@ -73,7 +73,7 @@ To showcase how to utilize MicrobiomeAnalystR , we provide a detailed tutorial t
 
 ## Tutorials
 
-For detailed tutorials on how to use MicrobiomeAnalystR, please refer to the R package vignettes. These vignettes include detailed step-by-step workflows with example data for each of the main MetaboAnalytR  modules (4), a case-study showcasing the end-to-end functionality of MicrobiomeAnalystR. Note, the functions below work only if the R package vignettes were built. 
+For detailed tutorials on how to use MicrobiomeAnalystR, please refer to the R package vignettes. These vignettes include a comprehensive tutorial introducing MicrobiomeAnalystR, four detailed step-by-step tutorials with example data for each of the main MetaboAnalytR  modules, and a case-study showcasing the end-to-end functionality of MicrobiomeAnalystR. Note, the functions below work only if the R package vignettes were built. 
 
 Within R:
 ```R
@@ -105,7 +105,8 @@ To inform us of any bugs or requests, please open a new issue or send an email t
 
 ## MicrobiomeAnalystR History & Updates
 
-07-13-2019 - Updating R code + documentation
+07-08-2019 - Testing R code for local use + creating vignettes
+07-03-2019 - Updating R code + documentation
 06-22-2019 - Prepping R package for stable release
 
 ## MicrobiomeAnalystR TO DO
