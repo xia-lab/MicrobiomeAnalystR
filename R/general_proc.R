@@ -291,8 +291,9 @@ UpdateSampleItems <- function(mbSetObj){
 #'@description This function performs normalization on the uploaded
 #'data.
 #'@param mbSetObj Input the name of the mbSetObj.
-#'@param rare.opt Character, "rarewi" to rarefy the data and 
-#'"none" to not.
+#'@param rare.opt Character, default is set to "none".
+#'Use "rarewi" to rarefy with replacement to the minimum library depth and 
+#'"rarewo" to rarefy without replacemet to the minimum library depth.
 #'@param scale.opt Character, input the name of the data scaling option.
 #'"colsum" for total sum scaling, "CSS" for cumulative sum scaling,
 #' "upperquartile" for upper-quartile normalization, and "none" to none.
@@ -488,7 +489,7 @@ PlotRareCurve <- function(mbSetObj, graphName, variable){
     rarefaction_curve_data = rarefaction_curve_data;
   }
     
-  sam_data<-sample_data(data);
+  sam_data<-sample_data(mbSetObj$dataSet$proc.phyobj);
   raremax <- min(rowSums(t(rarefaction_curve_data)));
 
   #getting colors
@@ -510,7 +511,7 @@ PlotRareCurve <- function(mbSetObj, graphName, variable){
   legend("bottomright",lvs,lty = rep(1,grp.num),col = dist.cols);
 
   plot.data <- rarefaction_curve_data;
-  sam_data <- sample_data(data);
+  sam_data <- sample_data(mbSetObj$dataSet$proc.phyobj);
   cls.lbls <- as.factor(sam_data[[variable]]);
   grp.lvls <- levels(cls.lbls);
   grp.num <- length(grp.lvls);

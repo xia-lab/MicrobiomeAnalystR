@@ -1,0 +1,170 @@
+---
+title: "Introduction to MicrobiomeAnalystR"
+author: "Jasmine Chong, Peng Liu and Jeff Xia"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction_to_MicrobiomeAnalystR}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+## 1.0 Overview of MicrobiomeAnalystR
+
+MicrobiomeAnalystR is a R package, synchronized with the popular MicrobiomeAnalyst web server, designed for comprehensive microbiome data analysis, visualization, and interpretation. This R package contains the numerous R functions and libraries underlying the web server necessary to perform microbiome data processing and analysis. This package provides support either amplicon sequencing data - Operational Taxonomic Units (OTU) or Amplicon Sequencing Variants data (ASV), as well as shotgun metagenomics/meta-transcriptomic gene abundance data. Particularly, it supports .txt, .csv, .biom, and .shared file formats.
+
+MicrobiomeAnalystR is comprised of four modules: (i) Marker Data Profiling (MDP) which is dedicated to the analysis of 16S rRNA marker gene survey data, (ii) Shotgun Data Profiling (SDP) for the analysis of metagenomics or metatranscriptomics data, (iii) Projection to Public Data (PPD) for users to visually compare their marker gene data with public datasets available within MicrobiomeAnalyst, and (iv) Taxon Set Enrichment Analysis (TSEA) to identify whether predefined groups of taxa are statistically overrepresented in a list of taxa. All four modules implement the same general workflow - data preparation, followed by data analysis and visual exploration. In the data preparation stage, user’s data is uploaded for filtering and normalization. Following this, a wide variety of statistical and visualization methods can be performed on the processed data to detect overall patterns, significant features, functional insights, etc.
+
+Following installation and loading of MicrobiomeAnalystR, users will be able to reproduce web server results from their local computers using the corresponding R command history downloaded from MicrobiomeAnalyst, thereby achieving maximum flexibility and reproducibility. MicrobiomeAnalystR serves as a platform to enable users to perform high-quality, comprehensive microbiome data analysis, as well as produce computationally and statistically reproducible analytical workflows. The aim of this vignette is to provide an overview of how to use MicrobiomeAnalystR to perform comprehensive microbiome data analysis and visualization. In detail, this vignette will go through the steps of data import, processing, normalization, and filtering.
+
+## 1.1 Loading the package
+
+After following the installation instructions on the MicrobiomeAnalystR Github, you will be ready to use the package. Use the library() function to load the package into R. 
+
+```{r, eval=FALSE}
+# Load MicrobiomeAnalystR
+library(MicrobiomeAnalystR)
+```
+
+## 1.2 Tips for using the MicrobiomeAnalystR package
+
+1) The first function that you will use in every module is the *Init.mbSetObj* function, which constructs the mbSetObj object that stores user's data for further processing and analysis. On the MicrobiomeAnalyst web-server, the suggested name of the mbSetObj, which must be called consistently in your workflow, is *mbSet*. It is not necessary to use this format. Users can use any name they prefer, as long as it is called exactly the same in each step. Note that the object must be called *mbSet* to generate the Analysis Report. 
+
+2) The MicrobiomeAnalystR package directly creates data files/plots/tables/analysis outputs in your current working directory. It is not necessary to call any plotting functions onto the created mbSetObj.
+
+3) Every command must be run in sequence, please do not skip any commands as this will result in errors downstream. 
+
+4) Each main function in MicrobiomeAnalyst is documented. Use the ?Function format to open its documentation. For instance, use ?MicrobiomeAnalystR::CreatePhyloseqObj to find out more about this function.
+
+## 1.3 Data Format
+
+MicrobiomeAnalystR supports the upload of abundance data from several commonly used bioinformatic pipelines including DADA2, QIIME, mothur, BIOM, and UPARSE. These files can be uploaded in a simple text format (.txt or .csv format), or directly as .biom or .shared files. Users must also provide a metadata file containing group information fort the same sample IDs. The following are short descriptors of how to format the abundance, taxonomy, and metadata files for MicrobiomeAnalystR. Note that the sample and feature names must match across all uploaded files.
+
+### Abundance files (.txt/.csv)
+
+The abundance table should be formatted so that features are rows and samples are columns. The first line should start with “#NAME”. If the feature names contain taxon names, ensure that the taxa levels are separated by semicolons (e.g. Bacteria; Firmicutes; Clostridia;). If the features do not contain specific taxon names (e.g. OTU000001), a taxonomy mapping file must also be provided (see below).
+
+### Taxonomy files (.txt/.csv)
+
+The taxonomy file should be formatted so that feature names are in the first column, beginning with “#TAXONOMY”. Each row should then contain the taxonomic classification of all the features under the column subheadings “Phylum”, “Class”, “Order”, “Family”, “Genus”, and “Species”.
+
+### Metadata files (.txt/.csv)
+
+The metadata file should be formatted so that the first column contains the sample names, starting with “#NAME”. Subsequent columns should contain the variables of interest
+
+## 1.4 Reading in Data Files
+
+The first step of any analysis is to read in the data. After initiating the mbSetObj, users will use the *SetAnalType* to specify that which workflow they would like to perform. If their data is marker gene data, use "markergene", if their data is shotgun metagenomics or transcriptomics data, use ""shotgun". If they will be performing the Projection with Public Data module, use "dataprojection". If they will be performing Taxon Set Enrichment Analysis, use "species". Next, use the *Read16SAbundData* function to read in the abundance file. Dependent on the data format, users will need to specify if their file is .txt ("text"), .biom ("biom"), or .shared ("mothur"). If the taxonomy lables are not included in the abundance file, use the *Read16STaxaTable* to read in the taxonomy table. Also, if metadata is not included in the abundance file, use the *ReadSampleTable* to read in the metadata file. Use the *ReadTreeFile* to read in your phylogenetic tree (optional). After uploading files, a data integrity check must be performed to verify that the data are suitable for downstream analysis using the *SanityCheckData* function. For instance, it will check that the sample names match (abundance table vs. metadata), that feature reads exist in more than 2 samples, and removes features with 0 variance.
+
+MicrobiomeAnalystR provides multiple example datasets for testing purposes available from the Tutorials page of the MicrobiomeAnalyst web-server (https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/faces/docs/Tutorial.xhtml). For this tutorial, we will use the IBD dataset which consists of 43 stool samples from pediatric Inflammatory Bowel Disease (IBD) patients and healthy controls from the Integrated Human Microbiome Project (iHMP) (https://www.hmpdacc.org/ihmp/). This data was preprocessed using the DADA2 pipeline integrated within the MicrobiomeAnalystR package. After the data integrity check, use the *CreatePhyloseqObj* function to create a phyloseq object from the mbSetObj. phyloseq (3) is the microbiome data analysis workhorse of the R environment, and MicrobiomeAnalystR is built upon this R package. The proc.phyobj contains the OTU table, taxonomy table, and metadata. The object can be found in the mbSetObj and is used downstream in many functions. 
+
+The set of functions below shows how to upload the example IBD data.
+
+```{r, eval=FALSE}
+# Initiate the mbSetObj
+mbSet<-Init.mbSetObj()
+
+# Set the analysis type
+SetAnalType("markergene")
+
+# Read in the phylogenetic tree file
+mbSet<-ReadTreeFile(mbSet, dataName="ibd_tree.tre");
+
+# Read in the metadata file
+mbSet<-ReadSampleTable(mbSet, dataName="ibd_meta.csv");
+
+# Read in the taxonomy table
+mbSet<-Read16STaxaTable(mbSet, dataName="ibd_taxa.txt");
+
+# Read in the abundance file, file format is .txt, taxa labels not included in the abundance file,
+# taxonomy labels are Greengenes, metadata file is included separately, and the selected module is 16S.
+mbSet<-Read16SAbundData(mbSet, dataName="ibd_otu_table.txt", type="text", taxalabel="F", 
+                        taxa_type="Greengenes", ismetafile="T", module.type="16S");
+
+# Data integrity check
+mbSet<-SanityCheckData(mbSet, datatype="16S", filetype="text");
+
+# Create phyloseq object
+mbSet<-CreatePhyloseqObj(mbSet, type="text", taxa_type="Greengenes", taxalabel"F", 
+                         ismetafile="F")
+```
+
+## 2.0 Data Processing
+
+Feature abundance data generated from amplicon sequencing or metagenomic data are affected by various sources of systematic variability (1). The abundance data are plagued by uneven sequence depths between samples. Moreover, systematic variability can arise from technical errors during sequencing. Normalization aims to remove or reduce such systematic variability. These methods can be classified as rarefying, scaling, and transforming. The merits and pitfalls of the most commonly used methods are further discussed below. Note that data normalization is certainly not one-size-fits-all (2). Rather, the choice of normalization method is dependent on the type of analyses to be performed.
+
+## 2.1 Data Filtering
+
+The purpose of data filtering is to allow users to remove low quality and/or uninformative features to improve downstream statistical analysis. MicrobiomeAnalyst contains three data filtering procedures: Minimal data filtering (applied to all analysis) - the procedure will remove features containing all zeros or appearing in only one sample. These extremely rare features should be removed from consideration; Low abundance features (*ApplyAbundanceFilter*) - they may be due to sequencing errors or low-level contaminations; Low variance features (*ApplyVarianceFilter*) - they are unlikely to be associated with the conditions under study; Note, the last two options are not used for within-sample (alpha diversity) profiling but are strongly recommended for comparative analysis. To disable the filtering step, set the count in *ApplyAbundanceFilter* to 0 and in *ApplyVarianceFilter* the filtPerct to 0.
+
+```{r, eval=FALSE}
+# Low abundance filtering, based on the prevalence of features. In this case, by 
+# setting the sample percentage to 0.2, only features with >4 counts in at least 20% of all samples
+# will be retained.
+mbSet<-ApplyAbundanceFilter(mbSet, filt.opt="prevalence", count=4, smpl.perc=0.2);
+
+# Low variance filtering, based on the inter-quantile range. Here, variance is calculated using
+# IQR and 10% of the lowest variance features will be removed.
+mbSet<-ApplyVarianceFilter(mbSet, filtopt="iqr", filtPerct=0.1);
+```
+
+## 2.2 Data Normalization
+
+Users of MicrobiomeAnalystR can perform data rarefying, scaling, and transformation using the *PerformNormalization* function. The aim of data normalization is to standardize the data to enable accurate comparisons.
+
+*Data rarefying*
+
+Rarefying is commonly used to account for uneven library sizes. This method works by randomly subsampling read counts of samples without replacement to the lowest read depth of a sample. It has been admonished due to the potential of discarding of useful information. However, rarefying has been shown to be useful for very small (<1000 reads/sample) or very uneven library sizes between groups (>10x) (2), as well as important for community profiling (4). To perform rarefying, set the rare.opt to "rarewi" for rarefying with replacement to the minimum library depth and "rarewo" for rarefying without replacement to the minimum library depth. Use the *PlotRareCurve* to create a plot of rarefraction curves.
+
+*Data scaling*
+
+Scaling involves multiplying feature counts by a sample-specific factor to account for uneven sequence depth, transforming raw reads to relative abundances. The most commonly used method is Total sum scaling (TSS), whereby count data is divided by the total number of reads in a sample. This method has been criticized as the total number of reads can be dominated by a few most abundant features and bias resulting relative abundances (5). Moreover, TSS does for not account for heteroskedasticity of feature variance across measured values (2, 6). Other scaling factors such as the upper quantile (UQ) (7) and cumulative sum (CSS) (8) have been proposed that address such issues. Particularly, when performing differential abundance analysis, CSS has been recommended for controlling the false discovery rate (FDR) in data with large group sizes (>10 samples) (9). However, when performing community-level comparisons such as estimating beta-diversity, TSS is recommended as it most accurately captures the composition of the original communities, whereas UQ and CSS distort communities (2, 3, 4).
+
+*Data transformation*
+
+The aim of data transformation is to stabilize the variance of the data. The centered log-ratio (10) is commonly used and is recommended due to the compositionality of microbiome data (11, 12). Furthermore, its variants, Relative log expression (RLE) and Trimmed mean of M-values (TMM)(13), have consistently demonstrated high performance at identifying differentially abundant features (3-5).
+
+```{r, eval=FALSE}
+# Option 1: No rarefying, total sum scaling and no transformation
+mbSet<-PerformNormalization(mbSet, rare.opt="none", scale.opt="colsum", transform.opt="none");
+
+# Option 2: Rarefying to the minimum library size + plotting the rarefraction curves
+mbSet<-PerformNormalization(mbSet, rare.opt="rarewi", scale.opt="colsum", transform.opt="none");
+mbSet<-PlotRareCurve(mbSet, graphName="rarefraction_curve.png", variable="X")
+```
+
+## 3. Sweave Report Generation
+
+Following analysis, a comprehensive report can be generated which contains a detailed description of each step performed in the R package, embedded with graphical and tabular outputs. To prepare the sweave report, please use the *CreatePDFReport* function. You must ensure that you have the nexessary LaTeX libraries to generate the report (i.e. texlive and texlive-fonts-extra). The object created *must* be named *mSet*, and specify the user name in quotation marks. 
+```{r, eval=FALSE}
+# Create Biomarker Sweave report 
+PreparePDFReport(mSet, "User Name")
+```
+
+## 4.0 References 
+
+1. Pereira MB, Wallroth M, Jonsson V, Kristiansson E. Comparison of normalization methods for the analysis of metagenomic gene abundance data. BMC Genomics. 2018;19(1):274.
+
+2. Weiss S, Xu ZZ, Peddada S, Amir A, Bittinger K, Gonzalez A, et al. Normalization and microbial differential abundance strategies depend upon data characteristics. Microbiome. 2017;5(1):27.
+
+3. McMurdie PJ, Holmes S. phyloseq: an R package for reproducible interactive analysis and graphics of microbiome census data. PLoS One. 2013;8(4):e61217. 
+
+4. McKnight DT, Huerlimann R, Bower DS, Schwarzkopf L, Alford RA, Zenger KR. Methods for normalizing microbiome data: An ecological perspective. Methods Ecol Evol. 2019;10(3):389-400.
+
+5. Dillies MA, Rau A, Aubert J, Hennequet-Antier C, Jeanmougin M, Servant N, et al. A comprehensive evaluation of normalization methods for Illumina high-throughput RNA sequencing data analysis. Brief Bioinform. 2013;14(6):671-83.
+
+6. Hugerth LW, Andersson AF. Analysing Microbial Community Composition through Amplicon Sequencing: From Sampling to Hypothesis Testing. Front Microbiol. 2017;8:1561.
+
+7. Bullard JH, Purdom E, Hansen KD, Dudoit S. Evaluation of statistical methods for normalization and differential expression in mRNA-Seq experiments. BMC Bioinformatics. 2010;11(1):94.
+
+8. Joseph N, Paulson C, Corrada Bravo H, Pop M. Robust methods for differential abundance analysis in marker gene surveys. Nat Methods. 2013;10:1200-2
+
+9. Pereira MB, Wallroth M, Jonsson V, Kristiansson E. Comparison of normalization methods for the analysis of metagenomic gene abundance data. BMC Genomics. 2018;19(1):274.
+
+10. Aitchison J. The Statistical-Analysis of Compositional Data. J Roy Stat Soc B Met. 1982;44(2):139-77.
+
+11. Gloor GB, Macklaim JM, Pawlowsky-Glahn V, Egozcue JJ. Microbiome datasets are compositional: and this is not optional. Front Microbiol. 2017;8:2224.
+
+12. Badri M, Kurtz Z, Muller C, Bonneau R. Normalization methods for microbial abundance data strongly affect correlation estimates. bioRxiv. 2018:406264.
+
+13. Robinson MD, Oshlack A. A scaling normalization method for differential expression analysis of RNA-seq data. Genome Biol. 2010;11(3):R25.

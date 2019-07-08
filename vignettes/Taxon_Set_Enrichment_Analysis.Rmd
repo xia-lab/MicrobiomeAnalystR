@@ -1,0 +1,19 @@
+---
+title: "Taxon_Set_Enrichment_ANalysis"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Taxon_Set_Enrichment_ANalysis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(MicrobiomeAnalystR)
+```

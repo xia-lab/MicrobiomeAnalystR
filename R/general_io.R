@@ -178,6 +178,16 @@ Init.mbSetObj <- function(){
   load(destfile, .GlobalEnv);  
 }
 
+#'Function to set analysis type
+#'@description This functions sets the analysis mode.
+#'@param analType Input the analysis type. If the data is marker gene data, 
+#'use "markergene", if the data is shotgun metagenomics or transcriptomics data, 
+#'use ""shotgun". If performing the Projection with Public Data module, use "dataprojection". 
+#'If performing Taxon Set Enrichment Analysis, use "species". 
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
 SetAnalType <- function(analType){
   anal.type <<- analType;
 }
@@ -255,13 +265,32 @@ ReadSampleTable<- function(mbSetObj, dataName) {
 #'@export
 #'@import phyloseq
 ReadTreeFile<- function(mbSetObj, dataName) {
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+
   if(.on.public.web){
     load_phyloseq();
   }
+  
   msg <- NULL;
-  tree <- read_tree(dataName);
-  saveRDS(tree, "tree.RDS");
-  return(1)
+  
+  tree <- tryCatch(
+    {read_tree(dataName)}
+  )
+  
+  if(!is.null(tree)){
+    saveRDS(tree, "tree.RDS");
+  }else{
+    return(0)
+  }
+  
+  if(.on.public.web){
+    .set.mbSetObj(mbSetObj)  
+    return(1);
+  }else{
+    print("Tree file successfully uploaded!")
+    return(.set.mbSetObj(mbSetObj));
+  }
 }
 
 RecordRCommand <- function(mbSetObj=NA, cmd){
