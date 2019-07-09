@@ -8,6 +8,17 @@ PerformCategoryComp(mbSetObj, method, distnm, variable)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{method}{Statistical method to calculate
+beta-diversity significance. Use "adonis" for Permutational MANOVA, "anosim" for
+Analysis of Group Similarities and "permdisp" for
+Homogeneity of Group Dispersions.}
+
+\item{distnm}{Character, input the name of the distance method. "bray" for
+Bray-Curtis Index, "jsd" for Jensen-Shannon Divergence, "jaccard" for Jaccard Index,
+"unifrac" for Unweighted Unifrac Distance and "wunifrac" for Weighted Unifrac Distance.}
+
+\item{variable}{Input the name of the experimental factor to group the samples.}
 }
 \description{
 This functions performs categorical comparisons.

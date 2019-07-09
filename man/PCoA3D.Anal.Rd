@@ -36,9 +36,9 @@ input the preferred alpha-diversity measure.}
 \item{jsonNm}{Character, input the name of the json file to output.}
 }
 \description{
-This functions performs PCoA analysis on the microbiome data.
-This is used by Beta-Diversity analysis.
-The visualization is on the web.
+This functions creates a 3D PCoA plot from the microbiome data.
+This is used by the Beta-Diversity analysis.
+The 3D interactive visualization is on the web.
 }
 \author{
 Jeff Xia \email{jeff.xia@mcgill.ca}

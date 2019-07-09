@@ -1207,9 +1207,9 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, datatype, shotgunid, 
 ##################################
 
 #'Main function to perform PCoA analysis
-#'@description This functions performs PCoA analysis on the microbiome data.
-#'This is used by Beta-Diversity analysis.
-#'The visualization is on the web.
+#'@description This functions creates a 3D PCoA plot from the microbiome data.
+#'This is used by the Beta-Diversity analysis.
+#'The 3D interactive visualization is on the web.
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@param ordMeth Character, input the name
 #'of the ordination method. "PCoA" for principal coordinate analysis and "NMDS" for 
@@ -1705,7 +1705,9 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank,
 #'@param colors_cntrst Set the colors of the heatmap. By default it 
 #'is set to "bwm", blue, white, to red. Use "gbr" for green, black, red, use
 #'"heat" for red to yellow, "topo" for blue to yellow, "gray" for 
-#'white to black, and "byr" for blue, yellow, red.
+#'white to black, and "byr" for blue, yellow, red. Use "viridis"
+#'for the viridis color palette and "plasma" for the plasma color palette from
+#'the viridis R package.
 #'@param viewOpt Character, "overview" to view an overview
 #'of the heatmap, and "detail" to iew a detailed view of the
 #'heatmap (< 1500 features).
@@ -1797,6 +1799,10 @@ PlotCorrHeatMap <- function(mbSetObj, imgName, format="png", width=NA, cor.metho
     colors <- grDevices::colorRampPalette(c("grey90", "grey10"))(256);
   }else if(colors_cntrst == "byr"){
     colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdYlBu"))(256));
+  }else if(colors_cntrst == "viridis") {
+    colors <- rev(viridis::viridis(10))
+  }else if(colors_cntrst == "plasma") {
+    colors <- rev(viridis::plasma(10))
   }else{
     colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdBu"))(256));
   }

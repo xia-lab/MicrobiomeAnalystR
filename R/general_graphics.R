@@ -336,7 +336,11 @@ PlotHeatmap<-function(mbSetObj, plotNm, smplDist, clstDist, palette, metadata,
     colors <- grDevices::colorRampPalette(c("grey90", "grey10"), space="rgb")(256);
   }else if(palette == "byr"){
     colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdYlBu"))(256));
-  }else{
+  }else if(palette == "viridis") {
+    colors <- rev(viridis::viridis(10))
+  }else if(palette == "plasma") {
+    colors <- rev(viridis::plasma(10))
+  }else {
     colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdBu"))(256));
   }
 
@@ -382,10 +386,10 @@ PlotHeatmap<-function(mbSetObj, plotNm, smplDist, clstDist, palette, metadata,
     
   # set up color schema for samples
   if(palette== "gray"){
-    cols <- GetColorSchema(T);
+    cols <- GetColorSchema(mbSetObj, T);
     uniq.cols <- unique(cols);
   }else{
-    cols <- GetColorSchema();
+    cols <- GetColorSchema(mbSetObj, F);
     uniq.cols <- unique(cols);
   }
 

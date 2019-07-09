@@ -8,6 +8,12 @@ PlotPiechart(mbSetObj, rel_perct, pieName, format = "png", dpi = 72)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{format}{Character, input the preferred
+format of the plot. By default it is set to "png".}
+
+\item{dpi}{Numeric, input the dots per inch. By default
+it is set to 72.}
 }
 \description{
 This functions creates the pie chart plot.

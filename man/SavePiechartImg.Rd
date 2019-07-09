@@ -11,6 +11,12 @@ SavePiechartImg(mbSetObj, taxalvl, pieName, format = "png", dpi = 72)
 
 \item{taxalvl}{Character, input the taxonomic level to perform
 classification. For instance, "Genus" to use the Genus level.}
+
+\item{format}{Character, input the preferred
+format of the plot. By default it is set to "png".}
+
+\item{dpi}{Numeric, input the dots per inch. By default
+it is set to 72.}
 }
 \description{
 This functions saves created pie chart plot.

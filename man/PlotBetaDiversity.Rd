@@ -5,10 +5,52 @@
 \title{Function to plot beta diversity.}
 \usage{
 PlotBetaDiversity(mbSetObj, plotNm, ordmeth, distName, colopt, metadata,
-  showlabel, taxrank, taxa, alphaopt, ellopt, format = "png", dpi = 72)
+  showlabel, taxrank, taxa, alphaopt, ellopt, format = "png", dpi = 72,
+  custom_col = "none")
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{plotNm}{Character, input the name of the beta-diversity score plot.}
+
+\item{ordmeth}{Ordination method. Character, input "PCoA" to create a PCoA plot and
+"NMDS" to create a NMDS plot.}
+
+\item{distName}{Character, input the name of the distance method. "bray" for
+Bray-Curtis Index, "jsd" for Jensen-Shannon Divergence, "jaccard" for Jaccard Index,
+"unifrac" for Unweighted Unifrac Distance and "wunifrac" for Weighted Unifrac Distance.}
+
+\item{colopt}{Character, input whether the data points should be colored by
+experimental factor with "expfac", taxon abundance with "taxa" or alpha diversity 
+with "alphadiv".}
+
+\item{metadata}{Input the name of the preferred experimental factor, only used if 
+colopt is "expfac".}
+
+\item{showlabel}{Character, input whether or not to label samples in the plot.
+"none" to label no samples, "samnm" to label samples by their name, and "Class" for
+their group classification.}
+
+\item{taxrank}{Character, input the taxonomic level to calculate
+beta-diversity.}
+
+\item{taxa}{Character, input the specific taxon used to color the data points. Only
+used if colopt is set to "taxa".}
+
+\item{alphaopt}{Character, input the name of the alpha-diversity metric. "Chao1",
+"Observed", "ACE", "Shannon", "Simpson", or "Fisher".}
+
+\item{ellopt}{Character, input "yes" to show ellipses and "no" to not.}
+
+\item{format}{Character, input the preferred
+format of the plot. By default it is set to "png".}
+
+\item{dpi}{Numeric, input the dots per inch. By default
+it is set to 72.}
+
+\item{custom_col}{Set to "none" to use the default color palette, "viridis" to use the 
+default viridis color palette, "plasma" to use the plasma viridis color palette and
+"magma" to use the magma color palette.}
 }
 \description{
 This functions creates beta diversity plots.

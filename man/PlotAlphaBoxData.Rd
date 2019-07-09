@@ -5,10 +5,27 @@
 \title{Function to create box plots for alpha diversity analysis}
 \usage{
 PlotAlphaBoxData(mbSetObj, boxplotName, distName, metadata,
-  format = "png", dpi = 72)
+  format = "png", dpi = 72, custom_color = FALSE)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{boxplotName}{Character, input the name of the boxplot.}
+
+\item{distName}{Character, input the diversity measure
+to calculate alpha-diversity. "Chao1", "Observed", "ACE", "Shannon", 
+"Simpson", or "Fisher".}
+
+\item{metadata}{Input the name of the experimental factor to group the samples.}
+
+\item{format}{Character, input the preferred
+format of the plot. By default it is set to "png".}
+
+\item{dpi}{Numeric, input the dots per inch. By default
+it is set to 72.}
+
+\item{custom_color}{Default is set to false. Use "TRUE" to 
+use the viridis color palette.}
 }
 \description{
 This functions performs metagenome seq analysis on the microbiome data.

@@ -43,7 +43,8 @@ Imports:
     edgeR,
     globaltest,
     R.utils,
-    viridis
+    viridis,
+    taxa
 Suggests: 
     knitr,
     rmarkdown,

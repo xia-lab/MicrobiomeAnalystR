@@ -7,6 +7,12 @@
 #'Perform alpha diversity
 #'@description This functions performs alpha diversity.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param opt Character, input the name of the statistical method
+#'used to calculate the significance of the alpha diversity measure.
+#'"tt" for T-test or ANOVA, and "nonpar" for Mann-Whitney or
+#'Kruskall-Wallis.
+#'@param metadata Character, input the name of the experimental factor
+#'to group the samples.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -59,11 +65,26 @@ PerformAlphaDiversityComp<-function(mbSetObj, opt, metadata){
 #'Perform core microbiome analysis
 #'@description This functions performs core microbiome analysis.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param imgName Input the name of the core microbiome analysis plot.
+#'@param preval Numeric, input the sample prevalence cutoff. 
+#'@param detection Numeric, input the relative abundance cutoff.
+#'@param palette Character, input the color palette.
+#'"bwm" for the default color palette /(blue, white, red/), "gbr"
+#'for the red and green color palette, "heat" for the yellow to red color
+#'palette, "topo" for the blue, green, and yellow color palette, 
+#'"gray" for the gray color palette, "byr" for the blue, yellow and red color
+#'palette, "viridis" for the viridis default color palette and "plasma"
+#'for the plasma viridis color palette.
+#'@param format Character, input the preferred
+#'format of the plot. By default it is set to "png".
+#'@param dpi Numeric, input the dots per inch. By default
+#'it is set to 72.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import RColorBrewer
+#'@import viridis
 CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
                               palette, viewOpt, format="png", dpi=72, width=NA){
   
@@ -140,7 +161,11 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
     colors <- topo.colors(10);
   }else if(palette == "gray"){
     colors <- grDevices::colorRampPalette(c("grey90", "grey10"), space="rgb")(10);
-  }else{
+  }else if(palette == "viridis") {
+    colors <- rev(viridis::viridis(10))
+  }else if(palette == "plasma") {
+    colors <- rev(viridis::plasma(10))
+  }else {
     
     if(.on.public.web){
       load_rcolorbrewer();
@@ -149,8 +174,11 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
     colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdBu"))(10));
   }
     
-  p <- plot_core(data.core,plot.type = "heatmap",colours = colors,prevalences = seq(.05, 1, .05),detections = 10^seq(log10(1e-3), log10(0.2), length = 10)) + xlab("Detection Threshold (Relative Abundance (%))")+guides(fill = guide_legend(keywidth = 1.5, keyheight = 1));
+  p <- plot_core(data.core, plot.type = "heatmap",colours = colors, prevalences = seq(.05, 1, .05), detections = 10^seq(log10(1e-3), log10(0.2), length = 10)) + 
+    xlab("Detection Threshold (Relative Abundance (%))") + guides(fill = guide_legend(keywidth = 1.5, keyheight = 1));
+  
   print(p);
+  
   mbSetObj$analSet$core<-as.matrix(core.nm);
   mbSetObj$analSet$core.taxalvl<-taxrank;
   dev.off();
@@ -741,6 +769,10 @@ UpdatePieData<-function(mbSetObj, lowtaxa){
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@param taxalvl Character, input the taxonomic level to perform
 #'classification. For instance, "Genus" to use the Genus level.
+#'@param format Character, input the preferred
+#'format of the plot. By default it is set to "png".
+#'@param dpi Numeric, input the dots per inch. By default
+#'it is set to 72.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -780,6 +812,10 @@ SavePiechartImg <- function(mbSetObj, taxalvl, pieName, format="png", dpi=72) {
 #'Function to create pie-chart plot.
 #'@description This functions creates the pie chart plot. 
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param format Character, input the preferred
+#'format of the plot. By default it is set to "png".
+#'@param dpi Numeric, input the dots per inch. By default
+#'it is set to 72.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -837,12 +873,31 @@ PlotPiechart <- function(mbSetObj, rel_perct, pieName, format="png", dpi=72) {
 #'Function to plot alpha-diversity analysis.
 #'@description This functions creates a plot for alpha-diversity. 
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param data.src Character, input whether alpha diversity 
+#'is calculated using the filtered /("filt"/) or raw data /("orig"/).
+#'@param bargraphName Character, input the name of the plot.
+#'@param distName Character, input the diversity measure
+#'to calculate alpha-diversity. "Chao1", "Observed", "ACE", "Shannon", 
+#'"Simpson", or "Fisher".
+#'@param metadata Character, input the name of the experimental
+#'factor to group the samples.
+#'@param taxrank Character, input the taxonomic level to calculate
+#'alpha-diversity. "Phylum", "Class", "Order",
+#'"Family", "Genus", "Species" or "OTU".   
+#'@param group Boolean, input whether or not to group the samples in the 
+#'dot plot. 0 or 1.
+#'@param colors Character, set to "default" to use the default colors and
+#'"viridis" to use the viridis color palette.
+#'@param format Character, input the preferred
+#'format of the plot. By default it is set to "png".
+#'@param dpi Numeric, input the dots per inch. By default
+#'it is set to 72.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName,
-                        metadata, taxrank, format="png", dpi=72){
+                        metadata, taxrank, group, colors = "default", format="png", dpi=72){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);  
   
@@ -861,20 +916,50 @@ PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName,
 
   bargraphName = paste(bargraphName, ".", format, sep="");
   mbSetObj$imgSet$alpha <- bargraphName;
-
-  Cairo::Cairo(file=bargraphName, width=900, height=450, type=format, bg="white",dpi=dpi);
     
   #reordering the sample (getting reordered rownames)
   sam <- sample_data(data);
   sam <- sam[order(sam[[metadata]])];
   smplord <- rownames(sam);
-
-  box = plot_richness(data,color=metadata,measures = distName)+scale_x_discrete(limits=c(smplord));
-  mbSetObj$analSet$alpha<-box$data;
+  
+  smpl.num <- length(smplord)
+  
+  if(smpl.num < 25){
+    width <- 600
+  }else if(smpl.num >= 25 & smpl.num <= 50){
+    width <- 750
+  }else{
+    width <- 900
+  }
+  
+  if(group==1){
+    
+    grp_size <- length(levels(unlist(sam@.Data)))
+    
+    if(grp_size <= 2){
+      width <- 250
+    }else if(grp_size >= 3 & grp_size <= 5){
+      width <- 350
+    }else{
+      width <- 500
+    }
+    
+    Cairo::Cairo(file=bargraphName, width, height=450, type=format, bg="white", dpi=dpi);
+    box = plot_richness(data, x = metadata, color = metadata, measures = distName) 
+  }else{
+    Cairo::Cairo(file=bargraphName, width, height=450, type=format, bg="white", dpi=dpi);
+    box = plot_richness(data, color = metadata, measures = distName) + scale_x_discrete(limits=c(smplord));
+  }
+  
+  if(colors == "viridis"){
+    box = box + scale_color_viridis(discrete=TRUE)
+  }
+  
+  mbSetObj$analSet$alpha <- box$data;
   write.csv(mbSetObj$analSet$alpha, file="alphadiversity.csv");
   box = box + theme_bw() + theme(axis.text.x = element_text(angle = 45, hjust = 1,vjust= 1));
   box$layers <- box$layers[-1];
-  box <- box + geom_point(size=2);
+  box <- box + geom_point(size=3, alpha=0.7);
   #getting scale for plot (using same for boxplot also)
   ylimits <<- layer_scales(box)$y$range$range;
   print(box);
@@ -892,6 +977,10 @@ PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName,
 #'@param barplotName Character, input the name of the bar plot.
 #'@param taxalvl Character, input the taxonomic level to perform
 #'classification. For instance, "Genus" to use the Genus level.
+#'@param format Character, input the preferred
+#'format of the plot. By default it is set to "png".
+#'@param dpi Numeric, input the dots per inch. By default
+#'it is set to 72.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -1018,6 +1107,34 @@ PlotTaxaAlphaBarSam<-function(mbSetObj, barplotName, taxalvl, samplnm,
 #'Function to plot beta diversity.
 #'@description This functions creates beta diversity plots.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param plotNm Character, input the name of the beta-diversity score plot.
+#'@param ordmeth Ordination method. Character, input "PCoA" to create a PCoA plot and
+#'"NMDS" to create a NMDS plot.
+#'@param distName Character, input the name of the distance method. "bray" for
+#'Bray-Curtis Index, "jsd" for Jensen-Shannon Divergence, "jaccard" for Jaccard Index,
+#'"unifrac" for Unweighted Unifrac Distance and "wunifrac" for Weighted Unifrac Distance.
+#'@param colopt Character, input whether the data points should be colored by
+#'experimental factor with "expfac", taxon abundance with "taxa" or alpha diversity 
+#'with "alphadiv".
+#'@param metadata Input the name of the preferred experimental factor, only used if 
+#'colopt is "expfac".
+#'@param showlabel Character, input whether or not to label samples in the plot.
+#'"none" to label no samples, "samnm" to label samples by their name, and "Class" for
+#'their group classification.
+#'@param taxrank Character, input the taxonomic level to calculate
+#'beta-diversity.
+#'@param taxa Character, input the specific taxon used to color the data points. Only
+#'used if colopt is set to "taxa".
+#'@param alphaopt Character, input the name of the alpha-diversity metric. "Chao1",
+#' "Observed", "ACE", "Shannon", "Simpson", or "Fisher".
+#'@param ellopt Character, input "yes" to show ellipses and "no" to not.
+#'@param format Character, input the preferred
+#'format of the plot. By default it is set to "png".
+#'@param dpi Numeric, input the dots per inch. By default
+#'it is set to 72.
+#'@param custom_col Set to "none" to use the default color palette, "viridis" to use the 
+#'default viridis color palette, "plasma" to use the plasma viridis color palette and
+#'"magma" to use the magma color palette.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -1025,7 +1142,8 @@ PlotTaxaAlphaBarSam<-function(mbSetObj, barplotName, taxalvl, samplnm,
 #'@import data.table
 #'@import ape
 PlotBetaDiversity<-function(mbSetObj, plotNm, ordmeth, distName, colopt, metadata, 
-                            showlabel, taxrank, taxa, alphaopt, ellopt, format="png", dpi=72){
+                            showlabel, taxrank, taxa, alphaopt, ellopt, format="png", dpi=72,
+                            custom_col = "none"){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -1073,7 +1191,7 @@ PlotBetaDiversity<-function(mbSetObj, plotNm, ordmeth, distName, colopt, metadat
     }
   }else if(colopt=="alphadiv") {
     data1 <- mbSetObj$dataSet$proc.phyobj;
-    box <- plot_richness(data1,measures = alphaopt);
+    box <- plot_richness(data1, measures = alphaopt);
     alphaboxdata <- box$data;
     sam_nm <- sample_names(data);
     alphaboxdata <- alphaboxdata[alphaboxdata$samples %in% sam_nm,];
@@ -1127,11 +1245,11 @@ PlotBetaDiversity<-function(mbSetObj, plotNm, ordmeth, distName, colopt, metadat
   Cairo::Cairo(file=plotNm, width=720, height=500, type=format, bg="white",dpi=dpi);
     
   if(colopt=="taxa"){
-    box = plot_ordination(data,ord,color=taxa)+ labs(aesthetic=taxaorig)+scale_colour_gradient(low="green", high="red");
+    box = plot_ordination(data, ord, color=taxa) + labs(aesthetic=taxaorig) + scale_colour_gradient(low="green", high="red");
   }else if(colopt=="alphadiv") {
-    box = plot_ordination(data,ord,color=alphaopt)+ scale_colour_gradient(low="green", high="red");
+    box = plot_ordination(data, ord, color=alphaopt)+ scale_colour_gradient(low="green", high="red");
   }else{
-    box = plot_ordination(data,ord,color=metadata);
+    box = plot_ordination(data, ord, color=metadata);
   }
     
   box$layers <- box$layers[-1];
@@ -1157,6 +1275,14 @@ PlotBetaDiversity<-function(mbSetObj, plotNm, ordmeth, distName, colopt, metadat
       box = box + stat_ellipse(type="norm", linetype=2, geom = "polygon", alpha = 0.2, aes_string(fill = clsLbl), show.legend=FALSE);
     }
   }
+  
+  if(custom_col == "viridis"){
+    box = box + scale_color_viridis(discrete = TRUE) + scale_fill_viridis(discrete = TRUE)
+  }else if(custom_col == "plasma"){
+    box = box + scale_color_viridis(option="plasma", discrete = TRUE) + scale_fill_viridis(option="plasma", discrete = TRUE)
+  }else if(custom_col == "magma"){
+    box = box + scale_color_viridis(option="magma", discrete = TRUE) + scale_fill_viridis(option="magma", discrete = TRUE)
+  }
 
   print(box);
   dev.off();
@@ -1178,6 +1304,10 @@ PlotBetaDiversity<-function(mbSetObj, plotNm, ordmeth, distName, colopt, metadat
 #'Plot functional annotation summary
 #'@description This functions plots the functional annotation summary.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param format Character, input the preferred
+#'format of the plot. By default it is set to "png".
+#'@param dpi Numeric, input the dots per inch. By default
+#'it is set to 72.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -1677,6 +1807,14 @@ PlotTaxaAlphaBar<-function(mbSetObj, barplotName, taxalvl, metadata, facet, imgO
 #'Function to perform categorical comparison.
 #'@description This functions performs categorical comparisons.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param method Statistical method to calculate
+#'beta-diversity significance. Use "adonis" for Permutational MANOVA, "anosim" for
+#'Analysis of Group Similarities and "permdisp" for
+#'Homogeneity of Group Dispersions.
+#'@param distnm Character, input the name of the distance method. "bray" for
+#'Bray-Curtis Index, "jsd" for Jensen-Shannon Divergence, "jaccard" for Jaccard Index,
+#'"unifrac" for Unweighted Unifrac Distance and "wunifrac" for Weighted Unifrac Distance.
+#'@param variable Input the name of the experimental factor to group the samples.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -1913,12 +2051,23 @@ PlotTaxaAlphaBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, imgOp
 #'Function to create box plots for alpha diversity analysis
 #'@description This functions performs metagenome seq analysis on the microbiome data.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param boxplotName Character, input the name of the boxplot.
+#'@param distName Character, input the diversity measure
+#'to calculate alpha-diversity. "Chao1", "Observed", "ACE", "Shannon", 
+#'"Simpson", or "Fisher".
+#'@param metadata Input the name of the experimental factor to group the samples.
+#'@param format Character, input the preferred
+#'format of the plot. By default it is set to "png".
+#'@param dpi Numeric, input the dots per inch. By default
+#'it is set to 72.
+#'@param custom_color Default is set to false. Use "TRUE" to 
+#'use the viridis color palette.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import ggplot2
-PlotAlphaBoxData<-function(mbSetObj, boxplotName, distName, metadata, format="png", dpi=72){
+PlotAlphaBoxData<-function(mbSetObj, boxplotName, distName, metadata, format="png", dpi=72, custom_color=FALSE){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -1927,28 +2076,48 @@ PlotAlphaBoxData<-function(mbSetObj, boxplotName, distName, metadata, format="pn
   CLASS <- data[,metadata];
   boxplotName = paste(boxplotName, ".", format, sep="");
   mbSetObj$imgSet$alpha.box<-boxplotName;
-
-  Cairo::Cairo(file=boxplotName,width=500, height=400, type=format, bg="white",dpi=dpi);
   
-  box1 = ggplot(data,
-              aes(data[,metadata],data$value,
-                  color = CLASS))+#change fill to color
-    stat_boxplot(geom ='errorbar',width=0.2)+
-    geom_boxplot(aes(outlier.shape=1),
-                 position = position_dodge(width = 0),width=0.3)+
+  grp_size <- length(levels(CLASS))
+  
+  if(grp_size <= 2){
+    width <- 300
+  }else if(grp_size >= 3 & grp_size < 6){
+    width <- 400
+  }else{
+    width <- 500
+  }
+
+  Cairo::Cairo(file=boxplotName, width, height=400, type=format, bg="white", dpi=dpi);
+
+  if(custom_color==TRUE){
+    box1 = ggplot(data, aes(data[,metadata], data$value, fill = CLASS))
+  }else{
+    box1 = ggplot(data, aes(data[,metadata], data$value, color = CLASS))
+  }
+  
+  box1 = box1 + stat_boxplot(geom ='errorbar', width=0.2) +
+    geom_boxplot(alpha=0.7, aes(outlier.shape=1),
+                 position = position_dodge(width = 0), width=0.3) +
     geom_jitter(width = 0.1) + #reduce the width of jitter
     stat_summary(fun.y=mean, #add mean point
                  geom = "point",
                  shape = 18,
                  size = 4,
-                 color = "black")+
-    theme_bw()+
-    theme(axis.text.x = element_text(angle = 45,vjust = 1, hjust = 1),
-          plot.title = element_text(color="black", face="bold", hjust = 0.5)) + #ajust title
+                 color = "black") +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 11),
+          axis.text.y = element_text(size = 11),
+          legend.text = element_text(size = 11)) + #adjust titles
     labs(title = "",
-         y= paste("Alpha-diversity index", as.character(data$variable[[1]]), sep = " "),
+         y= paste("Alpha-diversity Index:", as.character(data$variable[[1]]), sep = " "),
          x="") + #remove x = CLASS, add title name, change y name
-    coord_cartesian(ylim = c(ylimits[1],ylimits[2]));
+    theme(axis.title.y = element_text(size=14)) + 
+    coord_cartesian(ylim = c(ylimits[1], ylimits[2]));
+  
+  if(custom_color == TRUE){
+    box1 = box1 + scale_fill_viridis(discrete = TRUE);
+  }
+  
   print(box1);
   dev.off();
   return(.set.mbSetObj(mbSetObj))
@@ -2028,6 +2197,10 @@ PlotRarefactionCurve <- function(mbSetObj, data.src, linecolor, linetype, facet,
 #'Function to prepare data for phylogenetic tree.
 #'@description This functions prepares the data to plot the phylogenetic tree.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param format Character, input the preferred
+#'format of the plot. By default it is set to "png".
+#'@param dpi Numeric, input the dots per inch. By default
+#'it is set to 72.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -2147,19 +2320,40 @@ GetHtMetaCpInfo <- function(mbSetObj, meta){
 #'Function to plot heat tree
 #'@description This functions plots the heat tree.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param meta Input the name of the group.
+#'@param taxalvl Character, input the taxonomic level to perform
+#'classification. For instance, "Genus" to use the Genus level.
+#'@param color Character, input the color palette code. "dbgr"
+#'for dark blue, grey and red. "bgy" for greenblue, grey and yellow.
+#'"ggr" for green, grey and red. "pgy" for purple, gray and yellow. 
+#'"tgr" for teal, grey and red. "ggg" for green, grey and gold. Additionally,
+#'the viridis R package can be used to generate color schemes. "plasma" for 
+#'the plasma color scheme, "viridis" for the default viridis color scheme and
+#'"cividis" for the cividis color scheme.
+#'@param layoutOpt Character, input the layout of the heat tree. "dft"
+#'for the default layout and "reda" for reingold-tilford.
+#'@param comparison Character, input the group comparisons.
+#'@param wilcox.cutoff Numeric, input the Wilcoxan p-value cutoff
+#'for significant node labels.
+#'@param imgName Character, input the name of the heat tree plot.
+#'@param format Character, input the preferred
+#'format of the plot. By default it is set to "png".
+#'@param dpi Numeric, input the dots per inch. By default
+#'it is set to 72.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import metacoder
-PrepareHeatTreePlot <- function(mbSetObj, meta, tax, color, layoutOpt, comparison, imgName, format="png", dpi=72){
+PrepareHeatTreePlot <- function(mbSetObj, meta, taxalvl, color, layoutOpt, comparison, 
+                                wilcox.cutoff, imgName, format="png", dpi=72){
 
   if(.on.public.web){
     load_metacoder();
   }
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  tax_o <- tax;
+  tax_o <- taxalvl;
 
   dm <- mbSetObj$dataSet$proc.phyobj;
   tax_table_new = data.frame("Kingdom" = "Root", as(tax_table(dm), "matrix")[, 1:6]) # add root to tax table
@@ -2191,21 +2385,21 @@ PrepareHeatTreePlot <- function(mbSetObj, meta, tax, color, layoutOpt, compariso
     }
   } #add __ to tax table
   
-  if(tax == "Phylum"){
+  if(taxalvl == "Phylum"){
     tax <- "p";
-  } else if(tax == "Class"){
+  } else if(taxalvl == "Class"){
     tax <- "c";
-  } else if(tax == "Order"){
+  } else if(taxalvl == "Order"){
     tax <- "o";
-  } else if(tax == "Family"){
+  } else if(taxalvl == "Family"){
     tax <- "f";
-  } else if(tax == "Genus"){
+  } else if(taxalvl == "Genus"){
     tax <- "g"
   } else {
     tax <- "s";
   }; # get tax rank for heat tree
   
-  tax_dm <- tax_dm[, 1:which(names(tax_dm) == tax)]; #suset tax table
+  tax_dm <- tax_dm[, 1:which(names(tax_dm) == tax)]; #subset tax table
   rank_dm_new <- rank_dm[1:which(rank_dm == tax)];
   tax_dm$lineage <- apply(tax_dm[, rank_dm_new], 1, paste, collapse = ";"); #collapse all tax ranks
   dm_otu <- cbind.data.frame("otu_id" = row.names(tax_dm),
@@ -2220,7 +2414,7 @@ PrepareHeatTreePlot <- function(mbSetObj, meta, tax, color, layoutOpt, compariso
   PrepareHeatTreePlotDataParse_cmf_diff_table_res <- PrepareHeatTreePlotDataParse_cmf_diff_table(PrepareHeatTreePlotDataParse_cmf_res); #generate diff table
   PrepareHeatTreePlotDataParse_cmf_res <<- PrepareHeatTreePlotDataParse_cmf_res; #generate heat tree
 
-  PrepareHeatTreePlotDataParse_cmf_plot(mbSetObj, color, layoutOpt, comparison, imgName, format, dpi=72);
+  PrepareHeatTreePlotDataParse_cmf_plot(mbSetObj, color, layoutOpt, comparison, wilcox.cutoff, imgName, format, dpi=72);
     
   #below is for PDF reporter
   mbSetObj$analSet$heat_tree_plot <- imgName; 
@@ -2231,15 +2425,25 @@ PrepareHeatTreePlot <- function(mbSetObj, meta, tax, color, layoutOpt, compariso
   return(.set.mbSetObj(mbSetObj));
 };
 
+#'Function to prepare heat tree data
+#'@description This functions plots the heat tree.
+#'@param meta Input the name of the group.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+#'@import metacoder
+#'@import taxa
 PrepareHeatTreePlotDataParse_cmf <- function(dm_otu_cmf,
                                              dm_samples_cmf,
                                              meta){
-  dm_obj_cmf <- parse_tax_data(dm_otu_cmf,
+  dm_obj_cmf <- taxa::parse_tax_data(dm_otu_cmf,
                                class_cols = "lineage",
                                class_sep = ";",
                                class_regex = "^(.+)__(.+)$",
                                class_key = c(tax_rank = "info",
                                              tax_name = "taxon_name"));
+  
   dm_obj_cmf$data$tax_data <- calc_obs_props(dm_obj_cmf, "tax_data"); # normalization
   
   dm_obj_cmf$data$tax_abund <- calc_taxon_abund(dm_obj_cmf, "tax_data",
@@ -2250,7 +2454,15 @@ PrepareHeatTreePlotDataParse_cmf <- function(dm_otu_cmf,
   return(dm_obj_cmf);
 };
 
+#'Function to prepare heat tree data
+#'@description This functions plots the heat tree.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+#'@import metacoder
 PrepareHeatTreePlotDataParse_cmf_diff_table <- function(PrepareHeatTreePlotDataParse_cmf_res){#generate diff table for downloading
+  
   dm_obj_cmf = PrepareHeatTreePlotDataParse_cmf_res;
   table_tax_dm <- dm_obj_cmf$data$class_data[-2];
   table_tax_dm <- table_tax_dm[!duplicated(table_tax_dm$taxon_id), ]; #remove redundancy
@@ -2269,9 +2481,37 @@ PrepareHeatTreePlotDataParse_cmf_diff_table <- function(PrepareHeatTreePlotDataP
   return(tax_diff_dm);
 };
 
-PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, comparison, imgName, format, dpi=72){
+#'Function to prepare heat tree data
+#'@description This functions plots the heat tree.
+#'@param mbSetObj Input the name of the mbSetObj.
+#'@param color Character, input the color palette code. "dbgr"
+#'for dark blue, grey and red. "bgy" for greenblue, grey and yellow.
+#'"ggr" for green, grey and red. "pgy" for purple, gray and yellow. 
+#'"tgr" for teal, grey and red. "ggg" for green, grey and gold. Additionally,
+#'the viridis R package can be used to generate color schemes. "plasma" for 
+#'the plasma color scheme, "viridis" for the default viridis color scheme and
+#'"cividis" for the cividis color scheme.
+#'@param layoutOpt Character, input the layout of the heat tree. "dft"
+#'for the default layout and "reda" for reingold-tilford.
+#'@param comparison Character, input the group comparisons.
+#'@param wilcox.cutoff Numeric, input the Wilcoxan p-value cutoff
+#'for significant node labels.
+#'@param imgName Character, input the name of the heat tree plot.
+#'@param format Character, input the preferred
+#'format of the plot. By default it is set to "png".
+#'@param dpi Numeric, input the dots per inch. By default
+#'it is set to 72.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+#'@import metacoder
+PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, comparison, wilcox.cutoff, imgName, format, dpi=72){
+  
   mbSetObj <- .get.mbSetObj(mbSetObj);
+  
   dm_obj_cmf = PrepareHeatTreePlotDataParse_cmf_res;
+  
   if(color == "ggr"){
     color_new <- c("#006B30", "gray", "#E21818");
   } else if(color == "dbgr") {
@@ -2282,22 +2522,30 @@ PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, co
     color_new <- c("#2EAA9C", "gray", "#FCB932");
   }else if(color == "ggg"){
     color_new <- c("#007777", "gray", "#DAA520");
-  }else{
+  }else if(color == "plasma") {
+    color_new <- rev(c(viridis::plasma(10)[4:9], "lightgrey"))
+  }else if(color == "viridis") {
+    color_new <- rev(c(viridis::viridis(10)[4:9], "lightgrey"))
+  }else if(color == "cividis") {
+    color_new <- rev(c(viridis::cividis(10)[4:9], "lightgrey"))
+  }else {
     color_new <- c("#764b93", "gray", "#F0C808");
   };
 
   mbSetObj$analSet$heat_tree_plot <- imgName; # for PDF reporter
     
   set.seed(56784);
-  Cairo::Cairo(file=paste0(imgName, ".", format), height = 800, width = 1000, type=format, bg="white", dpi=96);
+  
+  Cairo::Cairo(file=paste0(imgName, ".", format), height = 875, width = 1000, type=format, bg="white", dpi=96);
+  
   if(layoutOpt == "reda"){# two layouts are provided
     box <- heat_tree(dm_obj_cmf,
-                     node_label = taxon_names, #taxon names
+                     node_label = ifelse(wilcox_p_value < wilcox.cutoff, taxon_names, NA),  #taxon names
                      node_size = n_obs, # n_obs is a function that calculates, in this case, the number of OTUs per taxon
                      node_color = log2_median_ratio, # A column from `obj$data$diff_table`
                      node_color_interval = c(-8, 8), # The range of `log2_median_ratio` to display
                      node_color_range = color_new, # The color palette used
-                     node_size_axis_label = "OTU count",
+                     node_size_axis_label = "OTU Count",
                      node_color_axis_label = "Log 2 ratio of median proportions",
                      layout = "davidson-harel", # The primary layout algorithm
                      initial_layout = "reingold-tilford",
@@ -2307,12 +2555,12 @@ PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, co
                      output_file = NULL);
   } else {
     box <- heat_tree(dm_obj_cmf,
-                     node_label = taxon_names,
+                     node_label = ifelse(wilcox_p_value < wilcox.cutoff, taxon_names, NA),
                      node_size = n_obs, # n_obs is a function that calculates, in this case, the number of OTUs per taxon
                      node_color = log2_median_ratio, # A column from `obj$data$diff_table`
                      node_color_interval = c(-8, 8), # The range of `log2_median_ratio` to display
                      node_color_range = color_new, # The color palette used
-                     node_size_axis_label = "OTU count",
+                     node_size_axis_label = "OTU Count",
                      node_color_axis_label = "Log 2 ratio of median proportions",
                      title = comparison,
                      title_size = 0.04,

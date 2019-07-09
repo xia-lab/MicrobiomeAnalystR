@@ -27,7 +27,9 @@ for Kendall rank correlation.}
 \item{colors_cntrst}{Set the colors of the heatmap. By default it 
 is set to "bwm", blue, white, to red. Use "gbr" for green, black, red, use
 "heat" for red to yellow, "topo" for blue to yellow, "gray" for 
-white to black, and "byr" for blue, yellow, red.}
+white to black, and "byr" for blue, yellow, red. Use "viridis"
+for the viridis color palette and "plasma" for the plasma color palette from
+the viridis R package.}
 
 \item{viewOpt}{Character, "overview" to view an overview
 of the heatmap, and "detail" to iew a detailed view of the

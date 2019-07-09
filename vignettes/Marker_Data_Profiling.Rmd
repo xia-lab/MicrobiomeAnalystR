@@ -37,29 +37,120 @@ mbSet<-SavePiechartImg(mbSet, taxalvl="Phylum", pieName="primary_piechart_1", fo
 
 # Group-wise pie chart
 mbSet<-PlotGroupPieGraph(mbSet, taxalvl="Family", metadata="Class", clslevel="CD", feat_cnt=10, calcmeth="sum");
+GetSeriesColors()
+mbSet<-SavePiechartImg(mbSet, taxalvl="Phylum", pieName="primary_piechart_1", format="png", dpi=300);
 
 # Sample-wise pie chart
 mbSet<-PlotSamplePieGraph(mbSet, taxalvl="Family", smplnm="206700", feat_cnt=10)
-```
-
-**Phylogenetic Tree**
-
-```{r, eval=FALSE}
-# Create Biomarker Sweave report 
-PreparePDFReport(mSet, "User Name")
+GetSeriesColors()
+mbSet<-SavePiechartImg(mbSet, taxalvl="Phylum", pieName="primary_piechart_1", format="png", dpi=300);
 ```
 
 **Heat Tree**
 
+The heat tree analysis (*PrepareHeatTreePlot*) uses the hierarchical structure of taxonomic classifications to quantitatively (using the median abundance) and statistically (using the non-parametric Wilcoxon Rank Sum test) depict taxonomic differences between microbial communities. It generates a differential heat tree using the metacoder R package that shows which taxa are more/less abundant in each group. The statistical comparison can be obtained from the "tax_diff_dm.csv" file outputted in your working directory. Please refer to the paper by Foster et al. for more details (PMID 28222096). The *PrepareHeatTreePlot* also incorporates the viridis R package for additional color palettes. 
+
 ```{r, eval=FALSE}
-# Create Biomarker Sweave report 
-PreparePDFReport(mSet, "User Name")
+# Heat tree at the genus level comparing pediatric CD vs healthy controls. Only
+# significant taxon (p < 0.05) are labelled. 
+mbSet<-PrepareHeatTreePlot(mbSet, meta="Class", taxalvl="Genus", color="plasma", layoutOpt="reda", comparison="CD_vs_Control", 
+                          wilcox.cutoff = 0.05, imgName="heat_tree_0", format="png", dpi=300)
 ```
 
 ### 1.2 Community Profiling
 
+Alpha-diversity is a measure of within sample diversity, while beta-diversity is a measure of between/among samples diversity. Alpha-diversity measures can be considered summary statistics of the diversity of single samples, while beta-diversity estimates can be considered similarity scores between pairs of samples. For the latter, these measures permit further analyses via clustering or dimension reduction techniques. Various statistical tests can be applied to the sample clusters to evaluate significant differences. More details are available below.
+
+#### 1.21 Alpha Diversity
+
+Alpha-diversity summarizes both the species richness (feature variety) and/or evenness (feature distribution) within a sample (59, 60). Six alpha-diversity measures are currently supported in MicrobiomeAnalyst, each assessing different aspects of the community. Observed calculates the total number of features per sample, while ACE and Chao1 estimates taxa richness by accounting for undetected features due to low abundance. Meanwhile, Shannon and Simpson take species richness and evenness into account, with varying weight given to evenness. Finally, Fisher models the community abundance structure as a logarithmic series distribution.
+
 ```{r, eval=FALSE}
-# Create Biomarker Sweave report 
-PreparePDFReport(mSet, "User Name")
+# Create a dot plot of alpha diversity measures. Samples are grouped by the "Class" experimental factor and colored
+# using the viridis color palette.
+mbSet<-PlotAlphaData(mbSet, data.src="filt", bargraphName="alpha_diver_0", distName="Chao1", metadata="Class",
+                     taxrank="OTU", group = T, colors = "viridis", format="png");
+
+# Create summary box plot of alpha diversity measures using the viridis color palette.
+mbSet<-PlotAlphaBoxData(mbSet, boxplotName="alpha_diverbox_0", distName="Chao1", metadata="Class", format="png", dpi=72, TRUE);
+
+# Calculate alpha-diversity significance using the parametric t-test (two groups).
+mbSet<-PerformAlphaDiversityComp(mbSet, opt="tt", metadata="Class")
 ```
+
+#### 1.22 Beta Diversity
+
+Beta-diversity evaluates differences in the community composition between samples (i.e. distance). Resulting beta-diversity estimates can be combined into a distance matrix and used for ordination to visualize how the microbial diversity of samples between groups have changed. MicrobiomeAnalyst supports the five most commonly used beta-diversity measures. Bray-Curtis dissimilarity uses abundance data and calculates differences in feature abundance. Jensen-Shannon divergence assess the distance between two probability distributions that account for the presence and abundance of microbial features. Jaccard distance instead uses just the presence or absence of features to calculate differences in microbial composition. Unweighted and weighted UniFrac uses the phylogenetic distance between features. The former is based purely on phylogenetic distance, while the latter is weighted by the relative abundance of features.
+
+Beta-diversity measures can be visualized using either principal coordinates analysis (PCoA) or nonmetric multidimensional scaling (NMDS). Both methods take the distance matrix as input, where PCoA maximizes the linear correlation between samples and NMDS maximizes the rank order correlation between samples (61). Note that NMDS is iterative and may return different results for the same dataset. Furthermore, MicrobiomeAnalyst calculates a stress value for the NMDS plot, which is a measure of goodness-of-fit. Generally, values greater than 0.2 suggest a poor fit while values less than 0.1 are good. Users should use PCoA if distances between samples are so close that a linear transformation would suffice. Also, NMDS is suggested if users wish to highlight the gradient structure within their data (61, 62).
+
+Ordination measures between the groups are assessed for statistical significance using either permutational MANOVA (PERMANOVA), Analysis of group similarities (ANOSIM) (63), or Homogeneity of group dispersions (PERMDISP). Generally, these tests evaluate global differences in microbiome composition between groups. PERMANOVA tests if the centroids of all groups are equivalent, or rather that the sample clusters are in the same location. It uses the distances (or dissimilarity) between samples of the same group and compares it to the distances between groups (64, 65). This method is sensitive to multivariate dispersions, therefore PERMDISP should also be used to evaluate if the dispersion (or variation) between samples differs from the dispersion between groups (64, 65). Meanwhile, ANOSIM tests whether within-group distances are greater or equal to between-group distances, using the ranks of all pair-wise sample distances. In other words, it evaluates whether samples within a group are as clustered as samples belonging to different groups.
+
+```{r, eval=FALSE}
+# Create a PCoA score plot using the viridis custom color palette, data points are colored
+# by their group label.
+mbSet<-PlotBetaDiversity(mbSet, plotNm="beta_diver_0", ordmeth="PCoA", distName="bray", colopt="expfac", metadata="Class",
+                         showlabel="none", taxrank="OTU", taxa="null", alphaopt="Chao1", ellopt="yes", format="png",
+                         dpi=72, custom_col="viridis");
+
+# Creates a json file for 3D PCoA, use the web to view the interactive 3D PCoA plot
+mbSet<-PCoA3D.Anal(mbSet, ordMeth="PCoA", distName="bray", datatype="16S", taxrank="OTU", colopt="expfac", variable="Class",
+                   taxa="null", alphaopt="Chao1", jsonNm="beta_diver3d_0.json")
+
+# Calculate the beta-diversity significance
+mbSet<-PerformCategoryComp(mbSet, method="adonis", distnm="bray", variable="Class")
+```
+
+#### 1.23 Core Microbiome
+
+The core microbiome refers to the set of taxa that are detected in a high fraction of the population above a given abundance threshold. The count data is transformed to compositional (relative) abundances in order to perform such analysis. Use the *CoreMicrobeAnalysis* to calculate and plot the core microbiome analysis. The function also outputs a "core_microbiome.csv" file in your working directory.
+
+```{r, eval=FALSE}
+# Create a core microbiome plot using the viridis color palette
+mbSet<-CoreMicrobeAnalysis(mbSet, imgName="core_micro_1", preval=0.2, detection=0.002, taxrank="Genus", palette="viridis",
+                           viewOpt="overview", format="png")
+```
+
+### 1.3 Clustering Analysis 
+
+#### 1.31 Heatmap Clustering
+
+Use the *PlotHeatmap* to create a heatmap of microbiome data at a preferred taxonomic level. The function supports various clustering algorithms and distance measures for performing hierarchical clustering.
+
+```{r, eval=FALSE}
+# Create a heatmap at the genus level using the plasma color palette
+mbSet<-PlotHeatmap(mbSet, plotNm="heatmap_1", smplDist="euclidean", clstDist="ward.D", palette="bwm", metadata="Class",
+                   taxrank="Genus", datatype="16S", viewOpt="overview", doclust="F", format="png", showfeatname="T", appendnm="F")
+```
+
+#### 1.32 Dendogram Analysis
+
+```{r, eval=FALSE}
+# Create a dendogram of the microbiome data at the OTU level.
+mbSet<-PlotTreeGraph(mbSet, plotNm="plot_tree_0", distnm="bray", clstDist="ward.D", metadata="Class",
+                     datatype="16S", taxrank="OTU", format="png")
+```
+
+#### 1.33 Correlation Analysis
+
+```{r, eval=FALSE}
+# Create a heatmap of the correlation between taxon at the Genus level.
+mbSet<-PlotCorrHeatMap(mbSet, imgName="corr_1", format="png", width=NA, cor.method="pearson", colors_cntrst="bwm", viewOpt="overview", 
+                       taxrank="Genus", fix.col=F, no.clst=F, top=F, topNum=999, datatype="16S")
+
+```
+
+#### 1.34 Pattern Search
+
+MicrobiomeAnalystR supports the identification of patterns in user's data. Users can define the pattern using a specific taxa, a predefined profile, or a custom profile. First, use the *FeatureCorrelation* function to identify the patterns. This will output the "correlation_feature.csv" file in your working directory. Next, use the *PlotCorr* function to plot the results.
+
+```{r, eval=FALSE}
+# Identify the pattern 
+mbSet<-FeatureCorrelation(mbSet, dist.name="pearson", taxrank="Genus", taxa="g__Bacteroides", variable="Class", datatype="16S", 
+                          shotfeat="null", shotgunid="NA")
+# Plot the pattern
+mbSet<-PlotCorr(mbSet, imgName="ptn_1", format="png", width=NA)
+```
+
+## References
 

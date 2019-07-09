@@ -9,6 +9,26 @@ CoreMicrobeAnalysis(mbSetObj, imgName, preval, detection, taxrank, palette,
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{imgName}{Input the name of the core microbiome analysis plot.}
+
+\item{preval}{Numeric, input the sample prevalence cutoff.}
+
+\item{detection}{Numeric, input the relative abundance cutoff.}
+
+\item{palette}{Character, input the color palette.
+"bwm" for the default color palette /(blue, white, red/), "gbr"
+for the red and green color palette, "heat" for the yellow to red color
+palette, "topo" for the blue, green, and yellow color palette, 
+"gray" for the gray color palette, "byr" for the blue, yellow and red color
+palette, "viridis" for the viridis default color palette and "plasma"
+for the plasma viridis color palette.}
+
+\item{format}{Character, input the preferred
+format of the plot. By default it is set to "png".}
+
+\item{dpi}{Numeric, input the dots per inch. By default
+it is set to 72.}
 }
 \description{
 This functions performs core microbiome analysis.

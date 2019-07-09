@@ -5,10 +5,38 @@
 \title{Function to plot alpha-diversity analysis.}
 \usage{
 PlotAlphaData(mbSetObj, data.src, bargraphName, distName, metadata,
-  taxrank, format = "png", dpi = 72)
+  taxrank, group, colors = "default", format = "png", dpi = 72)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{data.src}{Character, input whether alpha diversity 
+is calculated using the filtered /("filt"/) or raw data /("orig"/).}
+
+\item{bargraphName}{Character, input the name of the plot.}
+
+\item{distName}{Character, input the diversity measure
+to calculate alpha-diversity. "Chao1", "Observed", "ACE", "Shannon", 
+"Simpson", or "Fisher".}
+
+\item{metadata}{Character, input the name of the experimental
+factor to group the samples.}
+
+\item{taxrank}{Character, input the taxonomic level to calculate
+alpha-diversity. "Phylum", "Class", "Order",
+"Family", "Genus", "Species" or "OTU".}
+
+\item{group}{Boolean, input whether or not to group the samples in the 
+dot plot. 0 or 1.}
+
+\item{colors}{Character, set to "default" to use the default colors and
+"viridis" to use the viridis color palette.}
+
+\item{format}{Character, input the preferred
+format of the plot. By default it is set to "png".}
+
+\item{dpi}{Numeric, input the dots per inch. By default
+it is set to 72.}
 }
 \description{
 This functions creates a plot for alpha-diversity.
