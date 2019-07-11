@@ -28,6 +28,10 @@ load_ggplot <- function(){
   suppressMessages(library(ggplot2))
 }
 
+load_ggrepel <- function(){
+  suppressMessages(library(ggrepel))
+}
+
 # Load gplots
 load_gplots <- function(){
   suppressMessages(library(gplots))
@@ -146,4 +150,9 @@ load_edgeR <- function(){
 # Load globaltest
 load_globaltest <- function(){
   suppressMessages(library(globaltest))
+}
+
+# Load viridis
+load_viridis <- function(){
+  suppressMessages(library(viridis))
 }

@@ -29,8 +29,10 @@ alpha-diversity. "Phylum", "Class", "Order",
 \item{group}{Boolean, input whether or not to group the samples in the 
 dot plot. 0 or 1.}
 
-\item{colors}{Character, set to "default" to use the default colors and
-"viridis" to use the viridis color palette.}
+\item{colors}{Character, set to "default" to use the default colors, 
+"viridis" to use the viridis color palette, "plasma" to use the plasma
+color palette, "magma" to use the magma color palette, or
+"magma" to use the magma color palette.}
 
 \item{format}{Character, input the preferred
 format of the plot. By default it is set to "png".}

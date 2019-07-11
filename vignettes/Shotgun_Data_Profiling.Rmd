@@ -7,13 +7,21 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
-)
+MicrobiomeAnalyst offers a similar set of methods for comparative analysis and visualization for gene-level data (gene list or gene abundance table) produced from either predictive functional profiling or outputs from shotgun metagenomics or meta-transcriptomics. It also implements methods to obtain a functional overview based on different functional annotations based on KEGG pathways or modules (25), functional enrichment analysis (26), and interactive network-based visual exploration of the result.
+
+Of the available methods for profiling the microbiome, marker-gene surveys are the most common for its low cost and ability to taxonomically sample an entire microbial community. Despite these advantages, marker-gene data does not provide any functional information. Meanwhile, shotgun metagenomics does quantify all functional genes from samples, but its high cost, obscenely high requisite read-coverage, and lack of complete genomes is a deterrent (78, 79). Inferring potential function directly from 16S rRNA sequencing data is thus greatly appealing. Two commonly used methods for predictive functional profiling are available in MicrobiomeAnalyst, PICRUSt (23) and Tax4Fun (24). PICRUSt was the first tool that popularized the method of inferring microbiome function from 16S rRNA data. It leverages the idea that phylogenetically related organisms likely share a similar set of functional genes (23, 80). From 16S rRNA data, the PICRUSt algorithm searches for the most closely related organisms with sequenced genomes and assumes that their functional information is also present in the data. Apart from within MicrobiomeAnalyst, PICRUSt is available from the command line as a python package or online as a Galaxy implementation. On the other hand, Tax4Fun is an R package that combines precomputed functional profiles from KEGG prokaryotic organisms and normalized taxonomic abundances. To use Tax4Fun, the input 16S rRNA sequencing data must be annotated using the SILVA (81) reference database while for PICRUSt the Greengenes database must be used (82). The limitations to these methods are that only organisms that are related to reference organisms will be included in the functional prediction. Despite this, predictive functional profiling is an important strategy to gain further mechanistic insights from amplicon sequencing data.
+
+```{r, eval=FALSE}
+# Create a dendogram of the microbiome data at the OTU level.
+
 ```
 
-```{r setup}
-library(MicrobiomeAnalystR)
+```{r, eval=FALSE}
+# Create a dendogram of the microbiome data at the OTU level.
+
+```
+
+```{r, eval=FALSE}
+# Create a dendogram of the microbiome data at the OTU level.
+
 ```

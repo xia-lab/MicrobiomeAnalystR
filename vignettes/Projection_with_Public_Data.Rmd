@@ -7,13 +7,4 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
-)
-```
-
-```{r setup}
-library(MicrobiomeAnalystR)
-```
+With the increasing number of public data sets, meta-analysis has become a powerful approach for hypothesis generation and validation (27-30). The PPD module is therefore intended for users to visually explore their own 16S rRNA dataset within the context of public datasets. These public datasets are mainly obtained from Qiita (31). Datasets selected by users for meta-analysis must share at least 20% taxonomic similarity for meaningful comparisons. In this module, user’s and public data are co-projected into an interactive 3D PCoA plot. Several distance measures are available to calculate dissimilarity between samples. With this visualization, users can contextualize their own dataset and compare the taxonomic compositions of samples with pie-charts to explore which taxa are driving group separations. This enables users to gain a global perspective of their data, such as identifying compositional differences across different countries (32) and environments (33).

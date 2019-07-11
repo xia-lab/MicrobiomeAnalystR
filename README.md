@@ -21,7 +21,7 @@ library(pacman)
 
 pacman::p_load(phyloseq, metacoder, pryr, biomformat, RColorBrewer, ggplot2, gplots, Cairo, igraph, 
 BiocParallel, randomForest, metagenomeSeq, MASS, DESeq2, vegan, RJSONIO, ggfortify, pheatmap, xtable, genefilter,
-data.table, reshape, stringr, ape, Tax4Fun, grid, gridExtra, splitstackshape, edgeR, globaltest, R.utils, viridis)
+data.table, reshape, stringr, ape, Tax4Fun, grid, gridExtra, splitstackshape, edgeR, globaltest, R.utils, viridis, ggrepel)
 ```
 ### Step 2. Install the package 
 
@@ -105,10 +105,18 @@ To inform us of any bugs or requests, please open a new issue or send an email t
 
 ## MicrobiomeAnalystR History & Updates
 
+07-11-2019 - Added volcano + dot plots for RNAseq analysis
 07-08-2019 - Testing R code for local use + creating vignettes
 07-03-2019 - Updating R code + documentation
 06-22-2019 - Prepping R package for stable release
 
 ## MicrobiomeAnalystR TO DO
 
-Add 3D visualizations using plotly.
+Add 3D visualizations using plotly
+
+Add back bar plots for LEfSe/RF
+
+Add function to make multiple feature box plots
+
+Add volcano plot for DESeq2 - added, cut ASV names
+

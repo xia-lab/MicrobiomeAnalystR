@@ -7,13 +7,4 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
-)
-```
-
-```{r setup}
-library(MicrobiomeAnalystR)
-```
+Following comparative analysis, users will produce a list of differentially abundant microbes associated with their phenotype of interest. However, such a list lacks context and structure. Enrichment analysis, a popular method already used for the interpretation of lists of genes (34) and metabolites (35), can be applied to provide valuable insight into a list of taxa. Here, the list of taxa is evaluated for the enrichment of taxon sets, which are groups of microbes/taxa that share certain characteristics such as phenotypic traits (e.g. shape, motility), or are associated with same factors (diets, diseases, genetic variations, etc.). MicrobiomeAnalyst currently contains 2393 manually curated taxon sets categorized into the following categories: (i) Host genetics which contains taxon sets associated with host SNP variations, (ii) Host-intrinsic which consists of taxon sets associated with host-intrinsic factors (e.g. diseases), (iii) Host-extrinsic which contains taxon sets associated with host-extrinsic factors (e.g. diet and lifestyle), (iv) Environmental taxon sets which is comprised of taxon sets associated with environmental factors (e.g. chemical exposures), and (v) Microbiome-intrinsic which is made of taxon sets associated with microbiome-intrinsic factors (e.g. mobility and shape).

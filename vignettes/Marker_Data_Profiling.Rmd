@@ -146,10 +146,82 @@ MicrobiomeAnalystR supports the identification of patterns in user's data. Users
 
 ```{r, eval=FALSE}
 # Identify the pattern 
-mbSet<-FeatureCorrelation(mbSet, dist.name="pearson", taxrank="Genus", taxa="g__Bacteroides", variable="Class", datatype="16S", 
-                          shotfeat="null", shotgunid="NA")
+mbSet<-FeatureCorrelation(mbSet, dist.name="pearson", taxrank="Genus", taxa="g__Bacteroides", variable="Class", datatype="16S", shotfeat="null", shotgunid="NA")
+
 # Plot the pattern
 mbSet<-PlotCorr(mbSet, imgName="ptn_1", format="png", width=NA)
+```
+
+### 1.4 Univariate Analysis
+
+MicrobiomeAnalystR supports both classical and model-based methods for differential abundance analysis. All methods test if each taxon is associated with a dichotomous outcome (e.g. case vs. control). As many methods are available, the choice of differential abundance analysis depends on the quality and stricture of a user’s data. Further, it is advisable for users to compare the results from multiple methods and visualize the features with boxplots to increase one’s confidence.
+
+### 1.41 Classical Univariate Analysis
+
+Both parametric (T-test/ANOVA) and non-parametric (Mann-Whitney/Kruskall-Wallis) algorithms are available, their use dependent on whether microbiome features are normally distributed. The null hypothesis of the T-test and ANOVA is that the means of two or more populations are equal, whereas for Mann-Whitney and Kruskall-Wallis, the null hypothesis is that the mean ranks of the groups are the same (63). As microbiome data is typically skewed from the norm, Mann-Whitney is recommended and widely used (7). However, classical methods do not account for the compositionality of the data which can result in spurious correlations (7).
+
+```{r, eval=FALSE}
+# Classical non-parametric univariate analysis: Mann-Whitney/Kruskall Wallis
+mbSet<-PerformUnivarTest(mbSet, variable="Class", p.lvl=0.05, datatype="16S", shotgunid="NA", taxrank="Genus",
+                         statOpt="nonpar")
+
+# Classical parametric univariate analysis: T-test/ANOVA
+mbSet<-PerformUnivarTest(mbSet, variable="Class", p.lvl=0.05, datatype="16S", shotgunid="NA", taxrank="Genus",
+                         statOpt="tt")
+```
+
+### 1.42 Model-based Univariate Analysis
+
+For RNA-seq data, differential analysis is applied to identify differentially expressed genes, paralleling the aim of identifying differentially abundant taxa from microbiome data. RNA-seq based methods, including DESeq2 (19) and edgeR (50), have since been readily applied to the microbiome (42). Both methods are parametric, based on generalized linear models (GLMs), and assume read counts follow a Negative Binomial distribution (7). Where they differ is in the way they normalize the data. DESeq2 uses size factors to account for varying library sizes and shrinkage to correct for high dispersion (7). Meanwhile, edgeR can use different normalization methods, the most common being TMM (trimmed mean of M-values). Compared to transcriptomics data however, microbiome data are sparse and RNA-seq methods may not be appropriate as these models cannot account for excess zeros at lower taxonomic resolutions (i.e. OTU level) (64). To overcome such issues, a Zero-inflated Gaussian (ZIG) mixture model, implemented in the metagenomeSeq R package, was proposed (65). Several comparisons of model-based methods have demonstrated that metagenomeSeq tends to have a higher false positive rate as compared to DESeq2 and edgeR (42, 66). However, a large-scale benchmarking study recommended its use as it showed greater retrieval power (67). Moreover, another study found that DESeq2 showed higher sensitivity for small datasets (<20 samples/group) and is more conservative than edgeR, however it has a high FDR with large or uneven library sizes (7). Finally, another benchmarking of differential abundance algorithms on metagenomics data deemed DESeq2 and edgeR were most suitable (66).
+
+#### 1.43 RNAseq Methods
+
+```{r, eval=FALSE}
+# edgeR at the genus level
+mbSet<-PerformRNAseqDE(mbSet, opts="EdgeR", p.lvl=0.05, variable="Class", datatype="16S", shotgunid="NA", taxrank="Genus");
+
+# DESeq2 at the genus level
+mbSet<-PerformRNAseqDE(mbSet, opts="DESeq2", p.lvl=0.05, variable="Class", datatype="16S", shotgunid="NA", taxrank="Genus");
+```
+
+#### 1.44 metagenomeSeq 
+
+```{r, eval=FALSE}
+# metegenomeSeq using the zero-inflated Gaussian fit model
+mbSet<-PerformMetagenomeSeqAnal(mbSet, variable="Class", p.lvl=0.05, datatype="16S", shotgunid="NA",
+                                taxrank="Genus", model="zigfit");
+```
+
+### 1.5 Biomarker Analysis
+
+Two commonly used methods to select important features are available in MicrobiomeAnalyst. LEfSe is a biomarker discovery method that was first developed for metagenomics data while Random Forest is an ensemble machine-learning method. More details are available below.
+
+#### 1.51 LEfSe
+
+Linear discriminant analysis effect size (LEfSe) is a non-parametric statistical method to identify microbial taxa that are significantly different between groups. LEfSe first utilizes the Kruskal-Wallis test to identify taxon abundances that are significantly different between groups. Linear discriminant analysis (LDA) is then applied to taxa that meet the significance threshold (i.e. P < 0.05) to estimate their effect size (70, 71). This approach considers all taxonomic levels simultaneously and outputs a ranked list of taxa (by LDA score) in order of taxa most likely to explain group differences. A significance level of P < 0.05 and LDA score of 2 is often used to determine taxa that best characterize each phenotype.
+
+```{r, eval=FALSE}
+# First perform LefSe analysis
+mbSet<-PerformLefseAnal(mbSet, p.lvl=0.05, lda.lvl=2.0, variable="Class", isfunc="F", datatype="16S",
+                        datatype="NA", taxrank="Genus");
+
+# Plot LefSe results
+mbSet<-PlotLEfSeSummary(mbSet, ldaFeature=15, imgName="bar_graph_1", format="png")
+```
+
+#### 1.52 Random Forest
+
+Random Forest (RF) is a supervised machine-learning algorithm that has been applied to microbiome data to identify microbial taxa that differentiate between phenotypes (72, 73). RF is well-suited for large and noisy data such as from the microbiome as it is able to identify non-linear relationships, deal with variable interactions, and is hard to overfit (74). RF works by constructing multiple decisions trees using a randomly selected subset (i.e. bootstrapped) of the training data. In the end, all trees are merged (i.e. ensemble method) via a majority vote for a more accurate prediction. To evaluate classification accuracy, the “out-of-bag (OOB) error rate” is also calculated. During decision tree construction, 1/3 of samples are omitted from the training samples and are subsequently classified using the models. The OOB error rate is assessed by cross-validating results between the predictions and true groups. Additionally, RF calculates variable importance of all features for classification which is useful for users to identify biomarkers, or variables relevant to groups. Variable importance is calculated as the mean decrease in accuracy when a variable is excluded (74)
+
+```{r, eval=FALSE}
+# First perform RF analysis
+mbSet<-RF.Anal(mbSet, treeNum=500, tryNum=7, randomOn=1, variable="Class", taxrank="OTU", datatype="16S")
+
+# Plot the RF classification results
+mbSet<-PlotRF.Classify(mbSet, feature=15, imgName="rf_cls_0", format="png", width=NA)
+
+# Plot the RF Variable Importance Plot
+mbSet<-PlotRF.VIP(mbSet, feature=15, imgName="rf_imp_0", format="png", width=NA)
 ```
 
 ## References

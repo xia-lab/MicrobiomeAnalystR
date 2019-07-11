@@ -1202,6 +1202,193 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, datatype, shotgunid, 
   }
 }
 
+#'Function to plot volacano analysis results from RNAseq analysis
+#'@description This functions plots the RNAseq analysis 
+#'results from the microbiome data.
+#'@param mbSetObj Input the name of the mbSetObj.
+#'@param fc.cutoff Numeric, input the fold-change cutoff.
+#'@param p.cutoff Numeric, input the p-value cutoff.
+#'@param colpal Character, "default" for a blue and red color
+#'palette, "pog" for the purple and orange color palette, "bog"
+#'for the blue and orange color palette, and "rgg" for the red and 
+#'green color palette.
+#'@param imgName Character, input the name of the plot.
+#'@param format Character, input the preferred
+#'format of the plot. By default it is set to "png".
+#'@param dpi Numeric, input the dots per inch. By default
+#'it is set to 72.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@import ggplot2
+#'@import ggrepel
+#'@import viridis
+PlotRNAseqVolcano <- function(mbSetObj, fc.cutoff = 2, p.cutoff = 0.05, colpal = "default", imgName="volcano",
+                              format = "png", dpi=72){
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  
+  if(.on.public.web){
+    load_ggplot();
+    load_ggrepel();
+  }
+  
+  rna_results <- mbSetObj$analSet$rnaseq$resTable
+  
+  pvals <- rna_results$Pvalues
+  inx.p <- pvals <= p.cutoff
+  pvals[pvals == 0] <- .Machine$double.xmin
+  logpvals <- -log10(pvals)
+  
+  df <- data.frame(id = rownames(rna_results), logfc = rna_results$log2FC, logp = logpvals, inx.p = inx.p)
+  df$sig <- ifelse(df$logfc >= fc.cutoff,"A", ifelse(df$logfc<=-fc.cutoff , "B", "C"))
+  
+  # label significant features
+  imp.inx <- (df$sig == "A" | df$sig == "B") & df$inx.p;
+  
+  sig.inx <- imp.inx;
+  p.topInx <- GetTopInx(df$logp, 5, T) & (df$sig == "A");
+  fc.leftInx <- GetTopInx(df$logfc, 5, F);
+  lblInx.up <-  sig.inx & (p.topInx | fc.leftInx);
+  text.lbls.up <- rownames(rna_results)[lblInx.up]
+  
+  p.topInx <- GetTopInx(df$logp, 5, T) & (df$sig == "B");
+  fc.rtInx <- GetTopInx(df$logfc, 5, T);
+  lblInx.down <- sig.inx & (p.topInx | fc.rtInx);
+  text.lbls.dwn <- rownames(rna_results)[lblInx.down]
+  
+  text.lbls.all <- c(text.lbls.dwn, text.lbls.up)
+  indices <- which(df$id %in% text.lbls.all)
+  
+  df$siglabels <- ifelse(df$id %in% text.lbls.all, "TRUE", "FALSE")
+  
+  if(colpal=="default"){
+    cols <- c("red", "blue", "lightgrey")
+  }else if(colpal=="pog"){ # orange, purple, grey
+    cols <- c("#FA9E3BFF", "#47039FFF", "lightgrey")
+  }else if(colpal=="bog"){ # orange, blue, grey
+    cols <- c("#ED7953FF", "#1F9E89FF", "lightgrey")
+  }else if(colpal=="rgg"){ # red, green, grey
+    cols <- c("#F04C3BFF", "#1D9A6CFF", "lightgrey")
+  }
+  
+  plotname <- paste(imgName, ".", format, sep="")
+  Cairo::Cairo(file=plotname, width=550, height=550, type=format, bg="white", dpi=dpi);
+  mbSetObj$imgSet$volcano <- plotname;
+  
+  # plot volcano
+  p <- ggplot(df, aes(x = logfc, y = logp)) + geom_point(aes(color=sig), size = 3.5, alpha=0.75) + 
+    scale_color_manual(values = c("A" = cols[1], "B" = cols[2], "C" = cols[3])) +
+    theme_bw() + labs(x = "\nLog2 Fold Change", y = "-Log10 P-Value") + theme(legend.position = "none") + 
+    theme(axis.title = element_text(size = 13), axis.text = element_text(size = 11)) +
+    geom_text_repel(data = subset(df, siglabels == TRUE), aes(label = subset(df, siglabels == TRUE)[,'id']))
+
+  print(p);
+  dev.off();
+  
+  return(.set.mbSetObj(mbSetObj))
+  
+}
+
+#'Plot fold-change dot plot
+#'@description This functions creates a dot plot of the RNAseq analysis 
+#'results from the microbiome data.
+#'@param mbSetObj Input the name of the mbSetObj.
+#'@param top.inx Numeric, input the number of features to include in the dot plot.
+#'@param colpal Character, "default", "viridis" for the 
+#'default viridis color palette, "plasma"
+#'for the plasma color palette, and "cividis" for the  
+#'cividis color palette.
+#'@param imgName Character, input the name of the plot.
+#'@param format Character, input the preferred
+#'format of the plot. By default it is set to "png".
+#'@param dpi Numeric, input the dots per inch. By default
+#'it is set to 72.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@import ggplot2
+#'@import viridis
+PlotRNASeqDotPlot <- function(mbSetObj, top.inx = 15, colpal = "plasma", imgName="rnaseq_dot",
+                              format = "png", dpi=72){
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  
+  anal.type <- anal.type
+  print(anal.type)
+    
+  if(anal.type == "shotgun"){
+    return(0)
+  }
+  
+  taxrank <- taxrank
+  rna_results <- mbSetObj$analSet$rnaseq$resTable
+  
+  # results to plot
+  feats <- rna_results[1:top.inx,]
+  cols <- colnames(feats)
+  feats <- cbind(rownames(feats), feats)
+  colnames(feats) <- c(taxrank, cols) 
+  
+  # create taxonomy table
+  if(taxrank != "OTU"){
+    # dirty fix to deal w. multiple matching taxa showing up
+    glom <- MicrobiomeAnalystR:::fast_tax_glom_first(mbSetObj$dataSet$proc.phyobj, taxrank);
+    taxa_table <- as(tax_table(glom), "matrix")
+    t.first <- taxa_table[match(unique(taxa_table[,taxrank]), taxa_table[,taxrank]),]
+    
+    matches <- which(t.first[,taxrank] %in% rownames(feats))
+    taxa_table_sub <- t.first[matches,]
+    merged_table <- merge(feats, taxa_table_sub, taxrank)
+  }else{
+    glom <- mbSetObj$dataSet$proc.phyobj
+    t.first <- as(tax_table(glom), "matrix")
+    taxa <- rownames(t.first)
+    oldcolnames <- colnames(t.first)
+    t.first.merged <- cbind(taxa, t.first)
+    colnames(t.first.merged) <- c("OTU", oldcolnames)
+    merged_table <- merge(feats, t.first.merged, "OTU")
+  }
+  
+  merged_table[,1] <- factor(merged_table[,1], levels = merged_table[,1])
+  merged_table <- merged_table[order(merged_table$FDR),]
+  
+  size <- length(rownames(feats))
+  
+  if(size <= 20){
+    h <- 550
+    w <- 500
+  }else if(size <= 35){
+    h <- 650
+    w <- 500
+  }else{
+    h <- 800
+    w <- 500
+  }
+  
+  plotname <- paste(imgName, ".", format, sep="")
+  Cairo::Cairo(file=plotname, width=w, height=h, type=format, bg="white", dpi=dpi);
+  mbSetObj$imgSet$dotplot <- plotname;
+  
+  p <- ggplot(merged_table, aes(x = merged_table[,1], y = log2FC, color = Phylum)) + geom_point(size = 6, alpha = 0.75) +
+    theme_bw() + theme(axis.text.x = element_text(angle = -90, hjust = 0, vjust = 0.5, size = 11), axis.text.y = element_text(size = 11)) +
+    labs(y = "\nLog2 Fold Change", x = paste(taxrank)) + coord_flip() + 
+    theme(legend.text = element_text(size = 11), axis.title = element_text(size = 13), legend.title = element_text(size = 13));
+  
+  if(colpal == "viridis"){
+    p <- p + viridis::scale_color_viridis(discrete = TRUE);
+  }else if(colpal == "plasma"){
+    p <- p + viridis::scale_color_viridis(discrete = TRUE, option="C");
+  }else if(colpal == "cividis"){
+    p <- p + viridis::scale_color_viridis(discrete = TRUE, option="E");
+  }
+  
+  print(p)
+  dev.off()
+  
+  return(.set.mbSetObj(mbSetObj))
+}
+
 ##################################
 ###########3D PCoA/PCA############
 ##################################
@@ -2011,6 +2198,14 @@ phyloseq_to_metagenomeSeq = function (physeq, ...)
 template.match <- function(x, template, dist.name) {
   k<-cor.test(x,template, method=dist.name);
   c(k$estimate, k$stat, k$p.value)
+}
+
+# Helper function for volcano plot
+GetTopInx <- function (vec, n, dec = T) {
+  inx <- order(vec, decreasing = dec)[1:n]
+  vec <- rep(F, length = length(vec))
+  vec[inx] <- T
+  return(vec)
 }
 
 ####################################

@@ -44,7 +44,8 @@ Imports:
     globaltest,
     R.utils,
     viridis,
-    taxa
+    taxa,
+    ggrepel
 Suggests: 
     knitr,
     rmarkdown,

@@ -236,6 +236,7 @@ PlotBoxData<-function(mbSetObj, boxplotName, feat, format="png", dpi=72){
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import pheatmap
+#'@import viridis
 
 PlotHeatmap<-function(mbSetObj, plotNm, smplDist, clstDist, palette, metadata,
                       taxrank, datatype, viewOpt, doclust, format="png", showfeatname,
@@ -246,6 +247,7 @@ PlotHeatmap<-function(mbSetObj, plotNm, smplDist, clstDist, palette, metadata,
   if(.on.public.web){
     load_pheatmap();
     load_rcolorbrewer();
+    load_viridis();
   }
   
   set.seed(2805614);
