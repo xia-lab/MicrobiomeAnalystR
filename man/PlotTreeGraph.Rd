@@ -5,7 +5,7 @@
 \title{Function to plot tree graphics for dendogram.}
 \usage{
 PlotTreeGraph(mbSetObj, plotNm, distnm, clstDist, metadata, datatype,
-  taxrank, format = "png", dpi = 72, width = NA)
+  taxrank, colorOpts, format = "png", dpi = 72, width = NA)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
@@ -29,6 +29,8 @@ selected clustering algorithm. "ward" for Ward, "average" for Average,
 
 \item{taxrank}{Character, input the taxonomic level to perform
 classification. For instance, "OTU-level" to use OTUs.}
+
+\item{colorOpts}{Character, "default" or "viridis".}
 
 \item{format}{Character, by default the plot is .png format.}
 

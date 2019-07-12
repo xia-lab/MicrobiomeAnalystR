@@ -13,6 +13,7 @@
 #'@param metadata Character, input the name of the experimental factor.
 #'@param datatype Character, "16S" if marker gene data and 
 #'"metageno" if shotgun metagenomic data.
+#'@param colorOpts Character, "default" or "viridis".
 #'@param taxrank Character, input the taxonomic level to perform
 #'classification. For instance, "OTU-level" to use OTUs.
 #'@param format Character, by default the plot is .png format.
@@ -23,11 +24,13 @@
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import ape
+#'@import viridis
 PlotTreeGraph <- function(mbSetObj, plotNm, distnm, clstDist, metadata, datatype,
-                          taxrank, format="png", dpi=72, width=NA){
+                          taxrank, colorOpts, format="png", dpi=72, width=NA){
   
   if(.on.public.web){
     load_ape()
+    load_viridis()
   }
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -106,7 +109,32 @@ PlotTreeGraph <- function(mbSetObj, plotNm, distnm, clstDist, metadata, datatype
   Cairo::Cairo(file=plotNm, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
   par(mar=c(4,2,2,10));
   clusDendro <- as.dendrogram(hc_tree);
-  cols <- GetColorSchema();
+  
+  if(colorOpts == "default"){
+    cols <- GetColorSchema(mbSetObj);
+  }else{
+    
+    claslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
+    grp.num <- length(levels(claslbl));
+    
+    if(colorOpts == "viridis"){
+      cols <- viridis::viridis(grp.num)
+    }else if(colorOpts == "plasma"){
+      cols <- viridis::plasma(grp.num)
+    }else if(colorOpts == "cividis"){
+      cols <- viridis::cividis(grp.num)
+    }
+    
+    lvs <- levels(claslbl);
+    colors <- vector(mode="character", length=length(mbSetObj$analSet$cls));
+    
+    for(i in 1:length(lvs)){
+      colors[claslbl == lvs[i]] <- cols[i];
+    }
+    
+    cols <- colors
+  }
+  
   names(cols) <- sample_names(data);
   labelColors <- cols[hc_tree$order];
     
@@ -482,3 +510,167 @@ GetColorSchema <- function(mbSetObj, grayscale=F){
   }
   return (colors);
 }
+
+#' Function to perform and plot
+#' partial correlations between a selected feature,
+#' the outcome, and selected confounders.
+#' NOTE: All metadata must be numeric
+#' @param test Character, input the analysis used to determine
+#' the set of important features.
+#' @param confounders Vector containing list of confounders
+#' to control for.
+#' @param alg Use "kendall" or "spearman" for non-parametric and 
+#' "pearson" for parametric.
+#' @param colOpt Five options are available. "magma" (or "A"), "inferno" (or "B"), 
+#' "plasma" (or "C"), "viridis" (or "D", the default option) and "cividis" (or "E")
+#' @export
+#' @import ppcor
+PlotPartialCorrelationConfounders <- function(mbSetObj, test="lefse", p.cutoff=0.05, lda.cutoff=2, fc.cutoff=2, variable=NA, alg = "pearson", colOpt = "D",
+                                              imgName="partial_corr", format="png", confounder1=NA, confounder2=NA, confounder3=NA, confounders = NA){
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+
+  # retrieve sample info
+  metadata <- as(mbSetObj$dataSet$sample_data, "data.frame")
+  
+  if(test == "classical_univar"){
+    sigFeats <- mbSetObj$analSet$Univar$resTable
+    taxrank <- mbSetObj$analSet$univar.taxalvl
+  }else if(test == "lefse"){
+    sigFeats <- mbSetObj$analSet$lefse$resTable
+    taxrank <- mbSetObj$analSet$lefse.taxalvl 
+  }else if(test == "metagenomeseq"){
+    sigFeats <- mbSetObj$analSet$metagenoseq$resTable
+    taxrank <- mbSetObj$analSet$metageno.taxalvl
+  }else if(test == "rnaseq"){
+    sigFeats <- mbSetObj$analSet$rnaseq$resTable
+    taxrank <- mbSetObj$analSet$rnaseq.taxalvl
+  }
+  
+  # get list of confounders to consider
+  if(.on.public.web){
+    confounders <- na.omit(c(confounder1, confounder2, confounder3))
+    
+    if(length(confounders==0)){
+      AddErrMsg("No confounders!");
+      return(0);
+    }
+    
+  }else{
+    confounders <- confounders
+  }
+  
+  # check if confounders are valid
+  potential.confounders <- colnames(metadata)
+  check <- all(confounders %in% potential.confounders)
+  
+  if(!check){
+    AddErrMsg("Confounder names not valid!");
+    return(0);
+  }
+  
+  # create list of confounders
+  meta.subset <- metadata[, confounders]
+  meta.subset<- data.frame(apply(meta.subset, 2, function(x) as.numeric(as.character(x))))
+  meta.subset <- as.list(meta.subset)
+  
+  var <- metadata[,variable]
+  
+  if(class(levels(var))=="character"){
+    var <- as.numeric(var)
+  }
+  
+  if(test == "lefse"){
+    
+    imp.feats <- subset(sigFeats, FDR < p.cutoff & abs(LDAscore) > lda.cutoff)
+    
+    # sometimes >100 imp feats
+    if(length(row.names(imp.feats) > 25)){
+      imp.feats <- imp.feats[1:25,]
+    }
+    otu.table <- data.impfeat_lefse
+
+  }else if(test == "classical_univar"|"metagenomeseq"){
+    
+    imp.feats <- subset(sigFeats, FDR < p.cutoff)
+    
+    # sometimes >100 imp feats
+    if(length(row.names(imp.feats) > 25)){
+      imp.feats <- imp.feats[1:25,]
+    }
+    
+    if(test == "classical_univar"){
+      otu.table <- data.classical.univar
+    }else{
+      data <- tree_data
+      otu.table <- as.data.frame(t(otu_table(data)));
+    }
+    
+  }else if(test == "rnaseq"){
+    
+    imp.feats <- subset(sigFeats, FDR < p.cutoff & abs(log2FC) > fc.cutoff)
+    
+    # sometimes >100 imp feats
+    if(length(row.names(imp.feats) > 25)){
+      imp.feats <- imp.feats[1:25,]
+    }
+    
+    otu.table <- data.rnaseq
+    
+  }
+  
+  imp.taxa <- rownames(imp.feats)
+  otu.subset <- as.list(otu.table[, imp.taxa])
+  
+  # perform partial correlation
+  
+  pcor.fun <- function(feats){ ppcor::pcor.test(feats, var, meta.subset, method = alg) }
+  pcor.results <- do.call("rbind", lapply(otu.subset, pcor.fun))
+  pcor.results$id = rownames(pcor.results)
+  pcor.results$variable = rep(1)
+  
+  # plot results
+  
+  size = length(row.names(pcor.results))
+  
+  if(size <= 10){
+    h <- 400
+  }else if(size <= 25){
+    h <- 500
+  }else{
+    h <- 800
+  }
+  
+  plotname <- paste(imgName, ".", format, sep="")
+  Cairo::Cairo(file=plotname, width=400, height=h, type=format, bg="white");
+  mbSetObj$imgSet$dotplot <- plotname;
+  
+  p <- ggplot(pcor.results, aes(x=variable, y=id, size = estimate, color = p.value)) + 
+    geom_point(alpha = 0.7) +
+    theme_bw() + 
+    labs(y = paste(taxrank)) + 
+    theme(axis.title.x=element_blank(), 
+          axis.text.x=element_blank(), 
+          axis.ticks.x=element_blank()) +
+    labs(size = "Partial Correlation", color = "FDR P-Value") + 
+    update_geom_defaults("point", list(shape = 19)) +
+    viridis::scale_color_viridis(option = paste(colOpt))
+  
+  print(p)
+  dev.off()
+  
+  return(.set.mbSetObj(mbSetObj))
+}
+
+
+
+
+
+
+
+
+
+
+
+
+

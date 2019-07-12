@@ -403,6 +403,8 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, datatype, shotgunid, ta
     data1 <- t(t(sapply(by(data1,rownames(data1),colSums),identity)));
     nm <- colnames(data1);
   }
+  
+  data.classical.univar <<- data1 
 
   colnames(data1)<-nm;
   isNonPar <- statOpt=="nonpar"
@@ -708,6 +710,7 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, datatype, shotguni
 PerformLefseAnal <- function(mbSetObj, p.lvl, lda.lvl, variable, isfunc, datatype, shotgunid, taxrank){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
+  datatype <- datatype;
   
   if(.on.public.web){
     load_mass();
@@ -736,7 +739,7 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, lda.lvl, variable, isfunc, datatyp
     dat3t <- as.data.frame(t(otu_table(data)));
   }else{
     #merging at taxonomy levels
-    data <- fast_tax_glom_first(data,taxrank);
+    data <- fast_tax_glom_first(data, taxrank);
     tax_orig <<- taxa_names(data);
     nm <- as.character(tax_table(data)[,taxrank]);
     #converting NA values to unassigned
@@ -744,7 +747,7 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, lda.lvl, variable, isfunc, datatyp
     data1 <- as.matrix(otu_table(data));
     rownames(data1) <- nm;
     dat3t <- as.data.frame(t(t(sapply(by(data1, rownames(data1), colSums), identity))));
-    }
+  }
 
   data.impfeat_lefse <<- dat3t;
   
@@ -1109,6 +1112,8 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, datatype, shotgunid, 
     
   dat3t <- as.data.frame(t(otu_table(data)));
   colnames(dat3t) <- nm;
+  
+  data.rnaseq <<- dat3t
 
   if(opts=="DESeq2"){
     # only for small data set (< 100)
@@ -1280,9 +1285,14 @@ PlotRNAseqVolcano <- function(mbSetObj, fc.cutoff = 2, p.cutoff = 0.05, colpal =
   p <- ggplot(df, aes(x = logfc, y = logp)) + geom_point(aes(color=sig), size = 3.5, alpha=0.75) + 
     scale_color_manual(values = c("A" = cols[1], "B" = cols[2], "C" = cols[3])) +
     theme_bw() + labs(x = "\nLog2 Fold Change", y = "-Log10 P-Value") + theme(legend.position = "none") + 
-    theme(axis.title = element_text(size = 13), axis.text = element_text(size = 11)) +
-    geom_text_repel(data = subset(df, siglabels == TRUE), aes(label = subset(df, siglabels == TRUE)[,'id']))
-
+    theme(axis.title = element_text(size = 13), axis.text = element_text(size = 11)) 
+  
+  if(.on.public.web){
+    p <- p + geom_text(data = subset(df, siglabels == TRUE), aes(label = subset(df, siglabels == TRUE)[,'id']), angle = 45, hjust = "inward", vjust="inward", check_overlap = TRUE)
+  }else{
+    p <- p + geom_text_repel(data = subset(df, siglabels == TRUE), aes(label = subset(df, siglabels == TRUE)[,'id']))
+  }
+  
   print(p);
   dev.off();
   
