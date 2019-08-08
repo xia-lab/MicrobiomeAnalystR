@@ -4,14 +4,17 @@
 \alias{PlotLEfSeSummary}
 \title{Plot LEfSe summary}
 \usage{
-PlotLEfSeSummary(mbSetObj, ldaFeature, imgName, format = "png",
-  width = NA, dpi = 72)
+PlotLEfSeSummary(mbSetObj, ldaFeature, layoutOptlf, imgName,
+  format = "png", width = NA, dpi = 72, colOpt = "default")
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
 
 \item{ldaFeature}{Numeric, input the number of top
 features to include in the plot.}
+
+\item{layoutOptlf}{Character, input "dot" to create the VIP plot 
+and "bar" to create the bar graph.}
 
 \item{imgName}{Character, input the name
 of the plot.}
@@ -24,6 +27,9 @@ default it is set to NA.}
 
 \item{dpi}{Numeric, input the dots per inch. By default
 it is set to 72.}
+
+\item{colOpt}{Character, "default", "viridis",
+"cividis", or "plasma".}
 }
 \description{
 This functions graphically summarizes the LEfSe results

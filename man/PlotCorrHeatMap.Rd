@@ -6,7 +6,7 @@
 \usage{
 PlotCorrHeatMap(mbSetObj, imgName, format = "png", width = NA,
   cor.method, colors_cntrst, viewOpt, taxrank, fix.col, no.clst, top,
-  topNum, datatype)
+  topNum, datatype, cor.type = "corr")
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

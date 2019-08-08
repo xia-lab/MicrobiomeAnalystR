@@ -1698,7 +1698,7 @@ PlotTaxaAlphaArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadata,
 #'@import viridis
 PlotTaxaAlphaBar<-function(mbSetObj, barplotName, taxalvl, metadata, facet, imgOpt, 
                            feat_cnt, colpalopt, calcmeth, format="png", dpi=72){
-  
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
@@ -1790,7 +1790,7 @@ PlotTaxaAlphaBar<-function(mbSetObj, barplotName, taxalvl, metadata, facet, imgO
   
   # height according to number of legends
   feat_no <- ncol(data);
-  h <- 540;
+  h <- 550;
   if(feat_no < 10){
     h <- h;
   } else if (feat_no < 20){
@@ -1849,6 +1849,14 @@ PlotTaxaAlphaBar<-function(mbSetObj, barplotName, taxalvl, metadata, facet, imgO
   
   Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
   
+  if(length(unique(data$sample)) <= 10){
+    guide_num = 3
+  }else if (length(unique(data$sample)) <= 20){
+    guide_num = 4
+  }else{
+    guide_num = 5
+  }
+  
   box <- ggplot(data = data,
                 aes(x = sample,
                     y = value,
@@ -1869,16 +1877,16 @@ PlotTaxaAlphaBar<-function(mbSetObj, barplotName, taxalvl, metadata, facet, imgO
     cols.needed <- length(unique(data$variable))
     if(cols.needed > 12){
       col.func <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(12, "Set3"))
-      box <- box + scale_fill_manual(values=col.func(cols.needed), guide = guide_legend(direction = "horizontal", ncol = 5))
+      box <- box + scale_fill_manual(values=col.func(cols.needed), guide = guide_legend(direction = "horizontal", ncol=guide_num))
     }else{
-      box <- box + scale_fill_brewer(palette = "Set3", guide = guide_legend(direction = "horizontal", ncol = 5))
+      box <- box + scale_fill_brewer(palette = "Set3", guide = guide_legend(direction = "horizontal", ncol=guide_num))
     }
   }else if(colpalopt=="viridis"){
-    box <- box + viridis::scale_fill_viridis(discrete=TRUE)
+    box <- box + viridis::scale_fill_viridis(discrete=TRUE) + guides(color=guide_legend(ncol=guide_num)) 
   }else if(colpalopt %in% c("magma","plasma","inferno")){
-    box <- box + viridis::scale_fill_viridis(option=colpalopt, discrete=TRUE)
+    box <- box + viridis::scale_fill_viridis(option=colpalopt, discrete=TRUE) + guides(color=guide_legend(ncol=guide_num))
   }else{
-    box <- box + scale_fill_manual(values=c(x.colors))
+    box <- box + scale_fill_manual(values=c(x.colors)) + guides(color=guide_legend(ncol=guide_num))
   }
   
   if(facet == "newnewnew"){
@@ -1981,6 +1989,7 @@ PlotTaxaAlphaBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, imgOp
   
   if(.on.public.web){
     load_reshape();
+    load_viridis();
   }
   
   #using filtered data
@@ -2047,19 +2056,23 @@ PlotTaxaAlphaBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, imgOp
   
   feat_no <- ncol(data);
   
-  #adjust height according to number of legends
+  #adjust height according to number of taxa
   w <- 600;
   
   if(feat_no < 10){
-    w<-w;
+    h<-w;
   } else if (feat_no < 20){
     w<-w+100;
+    h<-w/2+100;
   } else if (feat_no < 50){
     w<-w+200;
+    h<-w/2+150;
   } else if (feat_no < 100){
-    w<-w+400;
+    w<-w+350
+    h<-w/2+200;
   } else if (feat_no > 100){
-    w<-w+500;
+    w<-w+500
+    h<-w/2+300;
   }
   
   write.csv(t(data), file="taxa_abund.csv");
@@ -2091,7 +2104,13 @@ PlotTaxaAlphaBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, imgOp
     x.colors<-rep(custom_col42,length.out=x);
   }
   
-  h<-length(clsLbl)*100;
+  if(x <= 10){
+    guide_num = 3
+  }else if (x <= 20){
+    guide_num = 4
+  }else{
+    guide_num = 5
+  }
   
   barplotName = paste(barplotName, ".",format, sep="");
   mbSetObj$imgSet$stack<-barplotName;
@@ -2115,14 +2134,16 @@ PlotTaxaAlphaBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, imgOp
       col.func <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(12, "Set3"))
       box <- box + scale_fill_manual(values=col.func(cols.needed),
                                      guide = guide_legend(direction = "horizontal",
-                                                          ncol = 5))
+                                                          ncol = guide_num))
     } else {
       box <- box + scale_fill_brewer(palette = "Set3",
                                      guide = guide_legend(direction = "horizontal",
-                                                          ncol = 5))
+                                                          ncol = guide_num))
     }
-  } else {
-    box <- box + scale_fill_manual(values=c(x.colors))
+  }else if(colpalopt %in% c("magma","plasma","inferno","viridis")){
+    box <- box + viridis::scale_fill_viridis(option=colpalopt, discrete=TRUE) + guides(fill=guide_legend(ncol=guide_num))
+  }else{
+    box <- box + scale_fill_manual(values=c(x.colors)) + guides(fill=guide_legend(ncol=guide_num))
   }
   
   print(box);
@@ -2373,7 +2394,7 @@ PrepareHeatTreePlot <- function(mbSetObj, meta, taxalvl, color, layoutOpt, compa
   
   dm <- mbSetObj$dataSet$proc.phyobj;
   tax_table_new = data.frame("Kingdom" = "Root", as(tax_table(dm), "matrix")[, 1:6]) # add root to tax table
-  tax_table(dm) = as.matrix(tax_table_new);
+  tax_table(dm) <- as.matrix(tax_table_new);
   
   dm_samples = as(sample_data(dm), "data.frame");
   dm_samples <- cbind.data.frame("sample_id" = row.names(dm_samples), dm_samples); # add sample_id to sample table
@@ -2558,6 +2579,8 @@ PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, co
   set.seed(56784);
   
   Cairo::Cairo(file=paste0(imgName, ".", format), height = 875, width = 1000, type=format, bg="white", dpi=96);
+  
+  wilcox.cutoff <- as.numeric(wilcox.cutoff)
   
   if(layoutOpt == "reda"){# two layouts are provided
     box <- heat_tree(dm_obj_cmf,

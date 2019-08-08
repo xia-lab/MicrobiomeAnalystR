@@ -354,6 +354,16 @@ GetMetaInfo <- function(mbSetObj){
   return(colnames(mbSetObj$dataSet$sample_data));
 }
 
+GetConfounderOpts <- function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  metadata <- colnames(mbSetObj$dataSet$sample_data)
+  if(length(metadata)==1){
+    return("NA")
+  }else{
+    return(metadata)
+  }
+}
+
 GetMetaTaxaInfo <- function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   return(rank_names(mbSetObj$dataSet$proc.phyobj));

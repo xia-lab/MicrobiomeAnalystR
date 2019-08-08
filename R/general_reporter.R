@@ -23,16 +23,16 @@
 PreparePDFReport <- function(mbSetObj, usrName){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-
+  
   # create the Rnw file
   file.create("Analysis_Report.Rnw");
   # open for write
   rnwFile <<- file("Analysis_Report.Rnw", "w")
-
+  
   # create a global counter to label figures
   fig.count <<- 0;
   table.count <<- 0;
-
+  
   if(mbSetObj$dataSet$module.type == "16S" ){
     CreateMDPRnwReport(mbSetObj, usrName);
   }else if(mbSetObj$dataSet$module.type == "metageno"){
@@ -42,16 +42,16 @@ PreparePDFReport <- function(mbSetObj, usrName){
   }else{
     CreateTaxaEnrichRnwReport(mbSetObj, usrName);
   }
-    
+  
   # close opened files
   close(rnwFile);
-
+  
   # all call from bash external to get around Sweave Fatigue 
   if(!.on.public.web){
     Sweave("Analysis_Report.Rnw", encoding="utf8");
     res <- try(tools::texi2dvi("Analysis_Report.tex", pdf = TRUE, quiet=TRUE));
   }
-
+  
   if(.on.public.web){
     .set.mbSetObj(mbSetObj)
     return(1);
@@ -88,7 +88,7 @@ CreateMDPRnwReport<-function(mbSetObj, usrName){
   CreateIOdoc();
   CreateNORMdoc();
   Init16SAnalMode();
-    
+  
   if(!is.null(mbSetObj[["analSet"]]) & (length(mbSetObj$analSet)>0)){
     CreateVISEXPLRdoc(mbSetObj);
     CreateRAREFCTIONCURVEdoc(mbSetObj);
@@ -107,7 +107,7 @@ CreateMDPRnwReport<-function(mbSetObj, usrName){
     CreateRFdoc(mbSetObj);
   } else {
     CreateAnalNullMsg();
-    }
+  }
   CreateFooter(mbSetObj);
 }
 
@@ -123,13 +123,13 @@ CreateMDPRnwReport<-function(mbSetObj, usrName){
 CreateSDPRnwReport<-function(mbSetObj, usrName){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-    
+  
   CreateHeader(usrName);
   CreateIntr();
   CreateIOdoc(mbSetObj);
   CreateNORMdoc(mbSetObj);
   InitShotAnalMode();
-    
+  
   if(!is.null(mbSetObj[["analSet"]]) & (length(mbSetObj$analSet)>0)){
     CreateFUNCPROFdoc(mbSetObj);
     CreateHCdoc(mbSetObj);
@@ -148,16 +148,16 @@ CreateSDPRnwReport<-function(mbSetObj, usrName){
 
 # create header
 CreateHeader <- function(usrName){
-    
+  
   header <- c("\\documentclass[a4paper]{article}",
-            "\\usepackage[margin=1.0in]{geometry}",
-            "\\usepackage{longtable}",
-            "\\SweaveOpts{eps=FALSE,pdf=TRUE}",
-            "\\title{Microbiome Data Analysis with MicrobiomeAnalyst}",
-            paste("\\author{ User ID: ", usrName, " }", sep=""),
-            "\\begin{document}",
-            "\\parskip=.3cm",
-            "\\maketitle");
+              "\\usepackage[margin=1.0in]{geometry}",
+              "\\usepackage{longtable}",
+              "\\SweaveOpts{eps=FALSE,pdf=TRUE}",
+              "\\title{Microbiome Data Analysis with MicrobiomeAnalyst}",
+              paste("\\author{ User ID: ", usrName, " }", sep=""),
+              "\\begin{document}",
+              "\\parskip=.3cm",
+              "\\maketitle");
   cat(header, file=rnwFile, sep="\n", append=TRUE);
 }
 
@@ -173,115 +173,115 @@ CreateIOdoc <- function(mbSetObj){
   
   if(mbSetObj$dataSet$module.type == "metageno"){
     descr <- c("\\subsection{Reading and Processing the Raw Data}\n",
-              "MicrobiomeAnalyst accepts gene abundance profile in two formats generated from shotgun metagenomics or",
-              "metatranscriptomics studies including plain text table and biom format.",
-              "Users need to upload data in either of these two formats and specify the gene ID",
-              "when uploading their data in order for MicrobiomeAnalyst to  process the information correctly.",
-              "Currently, genes annotated as KEGG Orthology IDs (KO), Enzyme Commission Numbers (EC),", 
-              "and Cluster of Orthologous Groups (COG) are supported in MicrobiomeAnalyst.\n",
-              "Also, uploading metadata file is required as plain text (.txt or.csv) with both these formats.\n"
-              );
+               "MicrobiomeAnalyst accepts gene abundance profile in two formats generated from shotgun metagenomics or",
+               "metatranscriptomics studies including plain text table and biom format.",
+               "Users need to upload data in either of these two formats and specify the gene ID",
+               "when uploading their data in order for MicrobiomeAnalyst to  process the information correctly.",
+               "Currently, genes annotated as KEGG Orthology IDs (KO), Enzyme Commission Numbers (EC),", 
+               "and Cluster of Orthologous Groups (COG) are supported in MicrobiomeAnalyst.\n",
+               "Also, uploading metadata file is required as plain text (.txt or.csv) with both these formats.\n"
+    );
   } else {
     descr <- c("\\subsection{Reading and Processing the Raw Data}\n",
-              "MicrobiomeAnalyst accepts count data in a variety of formats generated in microbiome studies",
-              "including plain text table, biom format as well as output from mothur pipeline.",
-              "User need to upload their data in one of three available formats and specify the taxonomic labels",
-              "when uploading their data in order for MicrobiomeAnalyst to  process the taxonomic information correctly.",
-              "The hierarchical information for taxa can either be present within abundance data or uploaded as a", 
-              "separate taxonomy table file (.txt or .csv format).\n",
-              "Also, uploading metadata file is required as plain text (.txt or.csv) with all three formats.\n"
-              );
+               "MicrobiomeAnalyst accepts count data in a variety of formats generated in microbiome studies",
+               "including plain text table, biom format as well as output from mothur pipeline.",
+               "User need to upload their data in one of three available formats and specify the taxonomic labels",
+               "when uploading their data in order for MicrobiomeAnalyst to  process the taxonomic information correctly.",
+               "The hierarchical information for taxa can either be present within abundance data or uploaded as a", 
+               "separate taxonomy table file (.txt or .csv format).\n",
+               "Also, uploading metadata file is required as plain text (.txt or.csv) with all three formats.\n"
+    );
   }
-        
+  
   cat(descr, file=rnwFile, append=TRUE);
-
+  
   if(mbSetObj$dataSet$data.type=="text"){
     descr<-c("\\subsubsection{Reading abundance count data table}\n",
-            "The abundance count data should be uploaded in tab-delimited text (.txt) or comma separated values (.csv)",
-            "format. Samples are represented in columns, while rows contains the information about the features.",
-            "Metadata file contains additional information about samples such as experimental factors or sample", 
-            "grouping.\n");
-
+             "The abundance count data should be uploaded in tab-delimited text (.txt) or comma separated values (.csv)",
+             "format. Samples are represented in columns, while rows contains the information about the features.",
+             "Metadata file contains additional information about samples such as experimental factors or sample", 
+             "grouping.\n");
+    
   }else if(mbSetObj$dataSet$data.type=="biom"){
     descr<-c("\\subsubsection{Reading BIOM data}\n",
-            "BIOM format is the standard for representing the taxa abundance profiles.",
-            "The BIOM file is supported in both sparse or dense (without zeros) format.",
-            "The metadata information can be present within a biom file or uploaded separately in plain text format.",
-            "Metadata file contains additional information about samples such as experimental factors or sample",
-            "grouping.\n");
-
+             "BIOM format is the standard for representing the taxa abundance profiles.",
+             "The BIOM file is supported in both sparse or dense (without zeros) format.",
+             "The metadata information can be present within a biom file or uploaded separately in plain text format.",
+             "Metadata file contains additional information about samples such as experimental factors or sample",
+             "grouping.\n");
+    
   }else if(mbSetObj$dataSet$data.type=="mothur"){
     descr<-c("\\subsubsection{Reading mothur data}\n",
-            "The mothur pipeline generate abundance and annotation information in its unique format.",
-            "It contains these data in two separate plain text files (.shared and .taxonomy).",
-            "Metadata file contains additional information about samples such as experimental factors or sample",
-            "grouping.\n");
+             "The mothur pipeline generate abundance and annotation information in its unique format.",
+             "It contains these data in two separate plain text files (.shared and .taxonomy).",
+             "Metadata file contains additional information about samples such as experimental factors or sample",
+             "grouping.\n");
   }
-        
+  
   cat(descr, file=rnwFile, append=TRUE);
   cat("\n\n", file=rnwFile, append=TRUE);
-        
+  
   #user data info
   cat(mbSetObj$dataSet$read.msg, file=rnwFile, append=TRUE, sep="\n");
   cat(mbSetObj$dataSet$smpl.msg, file=rnwFile, append=TRUE, sep=" ");
-        
+  
   if(mbSetObj$dataSet$module.type == "metageno"){
     cat("The genes are annotated as ", mbSetObj$dataSet$gene.id,"label.", file=rnwFile, append=TRUE, sep=" ");
   } else {
     cat("The OTUs are annotated as ", mbSetObj$dataSet$taxa.type,"label.", file=rnwFile, append=TRUE, sep=" ");
   }
-
+  
   # the last step is sanity check
   descr<-c("\\subsubsection{Data Integrity Check}\n",
-          "Before data analysis, a data integrity check is performed to make sure that all the necessary",
-          "information has been collected. The sample variable should contain atleast two groups to perform most ",
-          "of the comparative analysis. \\textit{By default, sample variables which are found to be constant and ",
-          "continuous in nature will be removed from further analysis. Additionally, features just present in",
-          "one sample will also be discarded from the data.\n}",
-          paste("Figure", fig.count<<-fig.count+1,"shows the library size for inspection of each sample."),
-          "\n ");
+           "Before data analysis, a data integrity check is performed to make sure that all the necessary",
+           "information has been collected. The sample variable should contain atleast two groups to perform most ",
+           "of the comparative analysis. \\textit{By default, sample variables which are found to be constant and ",
+           "continuous in nature will be removed from further analysis. Additionally, features just present in",
+           "one sample will also be discarded from the data.\n}",
+           paste("Figure", fig.count<<-fig.count+1,"shows the library size for inspection of each sample."),
+           "\n ");
   cat(descr, file=rnwFile, append=TRUE);
-        
+  
   cmdhist<-c("\\begin{figure}[htp]",
-            "\\begin{center}",
-            paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$lib.size,"}", sep=""),
-            "\\caption{Library size Overview}",      
-            "\\end{center}",
-            paste("\\label{",mbSetObj$imgSet$lib.size,"}", sep=""),
-            "\\end{figure}");
-        
+             "\\begin{center}",
+             paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$lib.size,"}", sep=""),
+             "\\caption{Library size Overview}",      
+             "\\end{center}",
+             paste("\\label{",mbSetObj$imgSet$lib.size,"}", sep=""),
+             "\\end{figure}");
+  
   cat(cmdhist, file=rnwFile, append=TRUE);
   cat("\\clearpage", file=rnwFile, append=TRUE);
-        
+  
   if(!mbSetObj$dataSet$module.type == "16S_ref"){
     # the data filtering
     # need to check if this process is executed
-      if(is.null(mbSetObj$dataSet$filt.data)){
-          errorMsg<- c("Error occured during filtering of your data ....",
-                      "Fail to proceed. Please check if the data format you uploaded is correct.",
-                      "Please visit our FAQs, Data Formats, and TroubleShooting pages for more information!");
-          cat(errorMsg, file=rnwFile, append=TRUE);
-          return();
-      }
-            
+    if(is.null(mbSetObj$dataSet$filt.data)){
+      errorMsg<- c("Error occured during filtering of your data ....",
+                   "Fail to proceed. Please check if the data format you uploaded is correct.",
+                   "Please visit our FAQs, Data Formats, and TroubleShooting pages for more information!");
+      cat(errorMsg, file=rnwFile, append=TRUE);
+      return();
+    }
+    
     descr<-c("\\subsubsection{Data Filtering}\n",
-            "The purpose of the data filtering is to identify and remove features that are unlikely to be of",
-            "use when modeling the data. No phenotype information are used in the filtering process, so the result",
-            "can be used with any downstream analysis. This step can usually improves the results. \n",
-            "Features having low count and variance can be removed during the filtration step.",               
-            "Features having very few counts are filtered based on their abundance levels (minimum counts) across ",
-            "samples (prevalence). Other than sample prevalence, such features can also be detected using minimum",
-            " count cutoff based on their mean and median values.\n",
-            "Features or taxa with constant or less variable abundances are invaluable for comparative analysis.",
-            "Such features are filtered based on their inter-quantile ranges, standard deviations or coefficient of variations.",
-            "\\textit{By default, features having zero counts across all the samples, or only appears in one sample",
-            "will be removed from further analysis.}");
-            
+             "The purpose of the data filtering is to identify and remove features that are unlikely to be of",
+             "use when modeling the data. No phenotype information are used in the filtering process, so the result",
+             "can be used with any downstream analysis. This step can usually improves the results. \n",
+             "Features having low count and variance can be removed during the filtration step.",               
+             "Features having very few counts are filtered based on their abundance levels (minimum counts) across ",
+             "samples (prevalence). Other than sample prevalence, such features can also be detected using minimum",
+             " count cutoff based on their mean and median values.\n",
+             "Features or taxa with constant or less variable abundances are invaluable for comparative analysis.",
+             "Such features are filtered based on their inter-quantile ranges, standard deviations or coefficient of variations.",
+             "\\textit{By default, features having zero counts across all the samples, or only appears in one sample",
+             "will be removed from further analysis.}");
+    
     cat(descr, file=rnwFile, append=TRUE);
     cat("\n\n", file=rnwFile, append=TRUE);
-
+    
     filt.msg <- mbSetObj$dataSet$filt.msg;
-            
+    
     if(is.null(filt.msg)){
       filt.msg <- "No data filtering was performed.";
     }
@@ -294,17 +294,17 @@ CreateIOdoc <- function(mbSetObj){
 CreateNORMdoc <- function(mbSetObj){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-
+  
   # need to check if this process is executed
   if(is.null(mbSetObj$dataSet$norm.phyobj)){
     errorMsg<- c("Error occured during normalization of your data ....",
                  "Fail to proceed. Please check if the data format you uploaded is correct.",
-                "Please visit our FAQs and Data Format pages for more information!");
-            
+                 "Please visit our FAQs and Data Format pages for more information!");
+    
     cat(errorMsg, file=rnwFile, append=TRUE);
     return();
   }
-        
+  
   descr1 <- c("\\subsection{Data Normalization}\n",
               "The data is stored as a table with one sample per column and one variable (taxa or ",
               "OTU) per row. The normalization procedures implemented below are grouped into three categories.",
@@ -317,9 +317,9 @@ CreateNORMdoc <- function(mbSetObj){
               "data characteristics}, Microbiome 2017}",
               "\n",
               "The normalization consists of the following options:");
-
+  
   cat(descr1, file=rnwFile, append=TRUE);
-        
+  
   descr2 <- c("\\begin{enumerate}",
               "\\item{Data rarefying (with or without replacement) }",
               "\\item{Data scaling: }",
@@ -336,12 +336,12 @@ CreateNORMdoc <- function(mbSetObj){
               "\\end{itemize}",
               "\\end{enumerate}",
               "\n\n"
-              );
+  );
   cat(descr2, file=rnwFile, append=TRUE, sep="\n");
   cat("\n\n", file=rnwFile, append=TRUE);
-
+  
   norm.msg <- mbSetObj$dataSet$norm.msg;
-        
+  
   if(is.null(norm.msg)){
     norm.msg <- "No data normalization was performed.";
   }
@@ -350,13 +350,13 @@ CreateNORMdoc <- function(mbSetObj){
 }
 
 Init16SAnalMode<-function(){
-        
+  
   descr <- c("\\section{Marker Gene Analysis}",
              "MicrobiomeAnalyst offers a variety of methods commonly used in microbiome data analysis.",
              "They include:\n");
-        
+  
   cat(descr, file=rnwFile, append=TRUE, sep="\n");
-
+  
   descr2 <- c("\\begin{enumerate}",
               "\\item{Visual exploration: }",
               "\\begin{itemize}",
@@ -395,17 +395,17 @@ Init16SAnalMode<-function(){
               "\\item{Tax4Fun}",
               "\\end{itemize}",
               "\\end{enumerate}");
-        
+  
   cat(descr2, file=rnwFile, append=TRUE, sep="\n");
   cat("\n\n", file=rnwFile, append=TRUE, sep="\n");
 }
 
 InitShotAnalMode<-function(){
-        
+  
   descr <- c("\\section{Shotgun data Profiling}",
              "MicrobiomeAnalyst offers a variety of methods commonly used in shotgun data analysis.",
              "They include:\n");
-        
+  
   cat(descr, file=rnwFile, append=TRUE, sep="\n");
   
   descr2 <- c("\\begin{enumerate}",
@@ -432,8 +432,8 @@ InitShotAnalMode<-function(){
               "\\item{LEfSe}",
               "\\item{Random Forests}",
               "\\end{itemize}",
-             "\\end{enumerate}");
-        
+              "\\end{enumerate}");
+  
   cat(descr2, file=rnwFile, append=TRUE, sep="\n");
   cat("\n\n", file=rnwFile, append=TRUE, sep="\n");
 }
@@ -447,12 +447,12 @@ CreateAnalNullMsg<-function(){
 CreateVISEXPLRdoc <- function(mbSetObj){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-
+  
   # need to check if this process is executed
   if(is.null(mbSetObj$analSet$stack) & is.null(mbSetObj$analSet$pie)){
     return();
   }
-        
+  
   descr <- c("\\subsection{Visual Exploration}\n",
              "These methods are used to visualize the taxonomic composition of community through direct quantitative comparison of abundances.",
              "MicrobiomeAnalyst provides an option to view this composition at various taxonomic levels (phylum, class, order) using either",
@@ -464,42 +464,42 @@ CreateVISEXPLRdoc <- function(mbSetObj){
              "based on either sum or median of their counts across all samples or all groups. Merging such minor",
              "taxa will help in better visualization of significant taxonomic patterns in data.",
              "\n");
-
+  
   cat(descr, file=rnwFile, append=TRUE);
-
+  
   # STACKPLOT
   if(!is.null(mbSetObj$analSet$stack)){
-            
+    
     descr<- paste("Figure", fig.count<<-fig.count+1,"shows the taxonomic composition using Stacked bar/area plot.");
-            
+    
     cat(descr, file=rnwFile, append=TRUE);
-            
+    
     cmdhist<-c("\\begin{figure}[htp]",
                "\\begin{center}",
                paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$stack,"}", sep=""),
                paste("\\caption{Taxonomic composition of", 
-               " community at ", "\\texttt{", mbSetObj$analSet$stack.taxalvl, "} level using ", "\\texttt{", mbSetObj$analSet$plot, "} plot}", sep=""),      
+                     " community at ", "\\texttt{", mbSetObj$analSet$stack.taxalvl, "} level using ", "\\texttt{", mbSetObj$analSet$plot, "} plot}", sep=""),      
                "\\end{center}",
                paste("\\label{",mbSetObj$imgSet$stack,"}", sep=""),
                "\\end{figure}");
-            
+    
     cat(cmdhist, file=rnwFile, append=TRUE);
   }
-
+  
   # PIECHART  
   if(!is.null(mbSetObj$analSet$pie)){ 
     descr <- paste("Figure", fig.count<<-fig.count+1,"shows the taxonomic composition using piechart.");
     cat(descr, file=rnwFile, append=TRUE);
-            
+    
     cmdhist<-c("\\begin{figure}[htp]",
                "\\begin{center}",
                paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$pie,"}", sep=""),
                paste("\\caption{Taxonomic composition of", 
-               " community at ", "\\texttt{", mbSetObj$analSet$pie.taxalvl, "} level using piechart}", sep=""),      
+                     " community at ", "\\texttt{", mbSetObj$analSet$pie.taxalvl, "} level using piechart}", sep=""),      
                "\\end{center}",
                paste("\\label{",mbSetObj$imgSet$pie,"}", sep=""),
                "\\end{figure}");
-            cat(cmdhist, file=rnwFile, append=TRUE);
+    cat(cmdhist, file=rnwFile, append=TRUE);
   }
   cat("\\clearpage", file=rnwFile, append=TRUE);
 }
@@ -529,17 +529,17 @@ CreateRAREFCTIONCURVEdoc <- function(mbSetObj){
              "\n "
   );
   cat(descr, file=rnwFile, append=TRUE,sep="\n");
-
-   cmdhist<-c("\\begin{figure}[htp]",
-               "\\begin{center}",
-               paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$analSet$rarefaction_curve,"}", sep=""),
-               paste("\\caption{Rarefaction curve", 
-                     " using ", "\\texttt{", mbSetObj$analSet$rarefaction_curve_data.src, "} dataset }", sep=""),      
-               "\\end{center}",
-               paste("\\label{", mbSetObj$analSet$rarefaction_curve,"}", sep=""),
-               "\\end{figure}");
-    cat(cmdhist, file=rnwFile, append=TRUE);
-
+  
+  cmdhist<-c("\\begin{figure}[htp]",
+             "\\begin{center}",
+             paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$analSet$rarefaction_curve,"}", sep=""),
+             paste("\\caption{Rarefaction curve", 
+                   " using ", "\\texttt{", mbSetObj$analSet$rarefaction_curve_data.src, "} dataset }", sep=""),      
+             "\\end{center}",
+             paste("\\label{", mbSetObj$analSet$rarefaction_curve,"}", sep=""),
+             "\\end{figure}");
+  cat(cmdhist, file=rnwFile, append=TRUE);
+  
   cat("\\clearpage", file=rnwFile, append=TRUE);
 }
 
@@ -568,17 +568,17 @@ CreatePHYLOGENETICTREEdoc <- function(mbSetObj){
              paste("Figure", fig.count<<-fig.count+1,"shows the phylogenetic tree."),
              "\n ");
   cat(descr, file=rnwFile, append=TRUE,sep="\n");
-
-   cmdhist<-c("\\begin{figure}[htp]",
-               "\\begin{center}",
-               paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$analSet$phylogenetic_tree_curve,"}", sep=""),
-               paste("\\caption{Phylogenetic tree", 
-                     " at ", "\\texttt{", mbSetObj$analSet$phylogenetic_tree_curve_tax_level, "} level }", sep=""),      
-               "\\end{center}",
-               paste("\\label{", mbSetObj$analSet$phylogenetic_tree_curve,"}", sep=""),
-               "\\end{figure}");
-    cat(cmdhist, file=rnwFile, append=TRUE);
-
+  
+  cmdhist<-c("\\begin{figure}[htp]",
+             "\\begin{center}",
+             paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$analSet$phylogenetic_tree_curve,"}", sep=""),
+             paste("\\caption{Phylogenetic tree", 
+                   " at ", "\\texttt{", mbSetObj$analSet$phylogenetic_tree_curve_tax_level, "} level }", sep=""),      
+             "\\end{center}",
+             paste("\\label{", mbSetObj$analSet$phylogenetic_tree_curve,"}", sep=""),
+             "\\end{figure}");
+  cat(cmdhist, file=rnwFile, append=TRUE);
+  
   cat("\\clearpage", file=rnwFile, append=TRUE);
 }
 
@@ -595,32 +595,32 @@ CreateHEATTREEdoc <- function(mbSetObj){
   if(is.null(mbSetObj$analSet$heat_tree_plot)){
     return();
   }
-  print(mbSetObj$analSet$heat_tree_tax);print(mbSetObj$analSet$heat_tree_meta);print(mbSetObj$analSet$heat_tree_comparison);
-descr <- c("\\subsection{Heat tree }\n",
-           "This method is used to compare abundance of different taxonomic levels for each pair of factors in a metadata variable.",
-           "Heat Tree uses hierarchical structure of taxonomic classifications to quantitatively (median abundance) and statistically (non-parameter Wilcoxon Rank Sum test ) depict taxon differences among communities.",
-           "It generates a differential heat tree to show which taxa are more abundance in each treatment.",
-           "User can choose different taxonomic levels from phylum to species.",
-           "User can also select the metadata variable and subsequently determined which pair of factors in that metadata variable they want to compare.",
-           "Heat tree analysis is performed using R package \\texttt{metacoder} package\\footnote{Zachary S. L. Foster",
-           "\\textit{ metacoder: An R package for visualization and manipulation of community taxonomic diversity data.}, 2017, R package version 0.3.2.}\n",
-           paste("Figure", fig.count<<-fig.count+1,"shows the heat tree for pair-wise comparison."),
-           "\n ");
-
+  #print(mbSetObj$analSet$heat_tree_tax);print(mbSetObj$analSet$heat_tree_meta);print(mbSetObj$analSet$heat_tree_comparison);
+  descr <- c("\\subsection{Heat tree }\n",
+             "This method is used to compare abundance of different taxonomic levels for each pair of factors in a metadata variable.",
+             "Heat Tree uses hierarchical structure of taxonomic classifications to quantitatively (median abundance) and statistically (non-parameter Wilcoxon Rank Sum test ) depict taxon differences among communities.",
+             "It generates a differential heat tree to show which taxa are more abundance in each treatment.",
+             "User can choose different taxonomic levels from phylum to species.",
+             "User can also select the metadata variable and subsequently determined which pair of factors in that metadata variable they want to compare.",
+             "Heat tree analysis is performed using R package \\texttt{metacoder} package\\footnote{Zachary S. L. Foster",
+             "\\textit{ metacoder: An R package for visualization and manipulation of community taxonomic diversity data.}, 2017, R package version 0.3.2.}\n",
+             paste("Figure", fig.count<<-fig.count+1,"shows the heat tree for pair-wise comparison."),
+             "\n ");
+  
   cat(descr, file=rnwFile, append=TRUE,sep="\n");
-
-cmdhist<-c("\\begin{figure}[htp]",
-           "\\begin{center}",
-           paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$analSet$heat_tree_plot,"}", sep=""),
-           paste("\\caption{Phylogenetic tree", 
-                 " at ", "\\texttt{", mbSetObj$analSet$heat_tree_tax, "} level ",
-                 "in group ", "\\texttt{", mbSetObj$analSet$heat_tree_meta, "}", " }", sep=""),      
-           "\\end{center}",
-           paste("\\label{", mbSetObj$analSet$heat_tree_plot,"}", sep=""),
-           "\\end{figure}");
-
+  
+  cmdhist<-c("\\begin{figure}[htp]",
+             "\\begin{center}",
+             paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$analSet$heat_tree_plot,"}", sep=""),
+             paste("\\caption{Phylogenetic tree", 
+                   " at ", "\\texttt{", mbSetObj$analSet$heat_tree_tax, "} level ",
+                   "in group ", "\\texttt{", mbSetObj$analSet$heat_tree_meta, "}", " }", sep=""),      
+             "\\end{center}",
+             paste("\\label{", mbSetObj$analSet$heat_tree_plot,"}", sep=""),
+             "\\end{figure}");
+  
   cat(cmdhist, file=rnwFile, append=TRUE);
-
+  
   cat("\\clearpage", file=rnwFile, append=TRUE);
 }
 
@@ -661,20 +661,20 @@ CreateALPHDIVdoc <- function(mbSetObj){
     "\\begin{center}",
     paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$alpha,"}", sep=""),
     "\\caption{Alpha-diversity measure using","\\texttt{",mbSetObj$analSet$alpha.meth, "} at","\\texttt{",mbSetObj$analSet$alpha.taxalvl, "} level across all the samples.",
-                    "The samples are represented on X-axis and their estimated diversity on Y-axis. Each sample
-                     is colored based on","\\texttt{",mbSetObj$analSet$alpha.metadata, "} class}",
+    "The samples are represented on X-axis and their estimated diversity on Y-axis. Each sample
+    is colored based on","\\texttt{",mbSetObj$analSet$alpha.metadata, "} class}",
     "\\end{center}",
     paste("\\label{",mbSetObj$imgSet$alpha,"}", sep=""),
     "\\end{figure}"
-    );
-    cat(cmdhist, file=rnwFile, append=TRUE);
+  );
+  cat(cmdhist, file=rnwFile, append=TRUE);
   cmdhist2<-c( 
     "\\begin{figure}[htp]",
     "\\begin{center}",
     paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$alpha.box,"}", sep=""),
     "\\caption{Alpha-diversity measure using","\\texttt{",mbSetObj$analSet$alpha.meth, "} at","\\texttt{", mbSetObj$analSet$alpha.taxalvl, "} level represented as boxplot.",
-             "Each boxplot represents the diversity distribution of a group present within", "\\texttt{",mbSetObj$analSet$alpha.metadata, "} class
-              [Statistical significance:" ,"\\texttt{", mbSetObj$analSet$alpha.stat.info,"}]}",
+    "Each boxplot represents the diversity distribution of a group present within", "\\texttt{",mbSetObj$analSet$alpha.metadata, "} class
+    [Statistical significance:" ,"\\texttt{", mbSetObj$analSet$alpha.stat.info,"}]}",
     "\\end{center}",
     paste("\\label{",mbSetObj$imgSet$alpha.box,"}", sep=""),
     "\\end{figure}"
@@ -721,7 +721,7 @@ CreateBETADIVdoc<-function(mbSetObj){
     "\\begin{center}",
     paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$beta2d,"}", sep=""),
     "\\caption{2-D","\\texttt{", mbSetObj$analSet$beta.meth, "} plot using \\texttt{", mbSetObj$analSet$beta.dist, "} distance. The explained",
-                          "variances are shown in brackets.}",
+    "variances are shown in brackets.}",
     "\\end{center}",
     paste("\\label{",mbSetObj$imgSet$beta2d,"}", sep=""),
     "\\end{figure}"
@@ -755,7 +755,7 @@ CreateHCdoc <- function(mbSetObj){
              "supported using Heatmap and dendrogram.\n",
              "Hierarchical clustering is performed with the \\texttt{hclust} function in package \\texttt{stat}."
   );
-    
+  
   cat(descr, file=rnwFile, append=TRUE,sep="\n");
   
   if(!is.null(mbSetObj$analSet$tree)){
@@ -768,14 +768,14 @@ CreateHCdoc <- function(mbSetObj){
     }
     
     cmdhist<-c(
-        "\\begin{figure}[htp]",
-        "\\begin{center}",
-        paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$tree,"}", sep=""),
-        paste("\\caption{Clustering result shown as dendrogram (", 
+      "\\begin{figure}[htp]",
+      "\\begin{center}",
+      paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$tree,"}", sep=""),
+      paste("\\caption{Clustering result shown as dendrogram (", 
             "distance measure using ","\\texttt{",mbSetObj$analSet$tree.dist, "} and clustering algorithm using ","\\texttt{", mbSetObj$analSet$tree.clust, "} at ","\\texttt{", mbSetObj$analSet$tree.taxalvl,"} level)}", sep=""),
-        "\\end{center}",
-        paste("\\label{",mbSetObj$imgSet$tree,"}", sep=""),
-        "\\end{figure}"
+      "\\end{center}",
+      paste("\\label{",mbSetObj$imgSet$tree,"}", sep=""),
+      "\\end{figure}"
     );
     cat(cmdhist, file=rnwFile, append=TRUE, sep="\n");
   }
@@ -788,18 +788,18 @@ CreateHCdoc <- function(mbSetObj){
       mbSetObj$analSet$heat.taxalvl <- mbSetObj$dataSet$gene.id;
     }
     cmdhist<-c(
-        "\\begin{figure}[htp]",
-        "\\begin{center}",
-        paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$heatmap,"}", sep=""),
-        paste("\\caption{Clustering result shown as heatmap (", 
+      "\\begin{figure}[htp]",
+      "\\begin{center}",
+      paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$heatmap,"}", sep=""),
+      paste("\\caption{Clustering result shown as heatmap (", 
             "distance measure using ","\\texttt{", mbSetObj$analSet$heatmap.dist, "} and clustering algorithm using ","\\texttt{", mbSetObj$analSet$heatmap.clust, "} at ","\\texttt{", mbSetObj$analSet$heat.taxalvl,"} level)}", sep=""),
-        "\\end{center}",
-        paste("\\label{",mbSetObj$imgSet$heatmap,"}", sep=""),
-        "\\end{figure}"
+      "\\end{center}",
+      paste("\\label{",mbSetObj$imgSet$heatmap,"}", sep=""),
+      "\\end{figure}"
     );                    
     cat(cmdhist, file=rnwFile, append=TRUE, sep="\n");
   }
-   cat("\\clearpage", file=rnwFile, append=TRUE);
+  cat("\\clearpage", file=rnwFile, append=TRUE);
 }
 
 # Core microbiome analysis
@@ -813,9 +813,9 @@ CreateCOREdoc <- function(mbSetObj){
   }
   
   if(isEmptyMatrix(mbSetObj$analSet$core)){
-      core.tab<-NULL;
+    core.tab<-NULL;
   }else{
-      core.tab<-paste("Table", table.count<<-table.count+1,"shows the details of these features.");
+    core.tab<-paste("Table", table.count<<-table.count+1,"shows the details of these features.");
   }
   
   descr <- c("\\subsection{Core Microbiome analysis}\n",
@@ -840,13 +840,13 @@ CreateCOREdoc <- function(mbSetObj){
                "\\begin{center}",
                paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$core,"}", sep=""),
                paste("\\caption{Heatmap representing the core microbiome ", 
-               "at ","\\texttt{", mbSetObj$analSet$core.taxalvl, "} level}", sep=""),
+                     "at ","\\texttt{", mbSetObj$analSet$core.taxalvl, "} level}", sep=""),
                "\\end{center}",
                paste("\\label{",mbSetObj$imgSet$core,"}", sep=""),
                "\\end{figure}"); 
-        
+    
     cat(cmdhist, file=rnwFile, append=TRUE, sep="\n");
-        
+    
   }
   cat("\\clearpage", file=rnwFile, append=TRUE, sep="\n");
 }
@@ -856,12 +856,12 @@ CreateCOREdoc <- function(mbSetObj){
 CreateCORRdoc <- function(mbSetObj){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-
+  
   # need to check if this process is executed
   if(is.null(mbSetObj$analSet$cor.mat) & is.null(mbSetObj$analSet$cor.heatmat)){
     return();
   }
-
+  
   # need to check if this process is executed
   if(!is.null(mbSetObj$analSet$cor.heatmat)){
     descr <- c("\\subsection{Correlation Analysis}\n",
@@ -875,13 +875,13 @@ CreateCORRdoc <- function(mbSetObj){
                "that decrease at first, then bounce back to the original abundance. \n",
                paste("Figure", fig.count<<-fig.count+1, "shows the overall correlation heatmap."),
                "\n");
-
+    
     cat(descr, file=rnwFile, append=TRUE);
     #taxonomic class will be replaced with gene id in SDP
     if(mbSetObj$dataSet$module.type == "metageno"){
       mbSetObj$analSet$corheat.taxalvl<-mbSetObj$dataSet$gene.id;
     }
-            
+    
     cmdhist<-c("\\begin{figure}[htp]",
                "\\begin{center}",
                paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$cor.heat,"}", sep=""),
@@ -889,18 +889,18 @@ CreateCORRdoc <- function(mbSetObj){
                "\\end{center}",
                paste("\\label{",mbSetObj$imgSet$cor.heat,"}", sep=""),
                "\\end{figure}");
-
+    
     cat(cmdhist, file=rnwFile, append=TRUE, sep="\n");
     cat("\n\n", file=rnwFile, append=TRUE, sep="\n");
   }
-
+  
   if(!is.null(mbSetObj$analSet$cor.mat)){
     if(isEmptyMatrix(mbSetObj$analSet$cor.mat)){
       cor.tab<-NULL;
     }else{
       cor.tab<-paste("Table", table.count<<-table.count+1,"shows the details of these features.");
     }
-
+    
     descr <- c("\\subsection{Pattern Search}\n",
                "Paatern Search can be used to identify which features are correlated with a feature of interest.",
                "Basically,correlation analysis is used to identify if certain features show particular patterns",
@@ -913,14 +913,14 @@ CreateCORRdoc <- function(mbSetObj){
                paste("Figure", fig.count<<-fig.count+1, "shows the important features identified by correlation analysis."),
                cor.tab,
                "\n");
-
+    
     cat(descr, file=rnwFile, append=TRUE);
-      
+    
     #taxonomic class will be replaced with gene id in SDP
     if(mbSetObj$dataSet$module.type == "metageno"){
       mbSetObj$analSet$corph.taxalvl<-mbSetObj$dataSet$gene.id;
     }
-            
+    
     cmdhist<-c("\\begin{figure}[htp]",
                "\\begin{center}",
                paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$cor.ph,"}", sep=""),
@@ -929,12 +929,12 @@ CreateCORRdoc <- function(mbSetObj){
                "\\end{center}",
                paste("\\label{",mbSetObj$imgSet$cor.ph,"}", sep=""),
                "\\end{figure}");
-            cat(cmdhist, file=rnwFile, append=TRUE,sep="\n");
-            cmdhist2<-c("<<echo=false, results=tex>>=",
-                   "GetSigTable.Corr(mbSet)",
-                   "@");
-            cat(cmdhist2, file=rnwFile, append=TRUE,sep="\n");
-    }
+    cat(cmdhist, file=rnwFile, append=TRUE,sep="\n");
+    cmdhist2<-c("<<echo=false, results=tex>>=",
+                "GetSigTable.Corr(mbSet)",
+                "@");
+    cat(cmdhist2, file=rnwFile, append=TRUE,sep="\n");
+  }
   cat("\\clearpage", file=rnwFile, append=TRUE);
 }
 
@@ -943,12 +943,12 @@ CreateCORRdoc <- function(mbSetObj){
 CreateUNIVARdoc<-function(mbSetObj){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-
+  
   # need to check if this process is executed
   if(is.null(mbSetObj$analSet$Univar$resTable)){
     return();
   }
-
+  
   if(isEmptyMatrix(mbSetObj$analSet$Univar$resTable)){
     univar.tab<-NULL;
   }else{
@@ -958,7 +958,7 @@ CreateUNIVARdoc<-function(mbSetObj){
     }
     univar.tab<-paste("Table", table.count<<-table.count+1, "shows the important features identified by Univariate analysis at","\\texttt{", mbSetObj$analSet$univar.taxalvl, "}level");
   }
-        
+  
   descr <- c("\\subsection{Univariate analysis}\n",
              "Univariate analysis methods are the most common methods used for exploratory data analysis.",
              "This method is used of identify differentially abundant features in microbiome data analysis.",
@@ -972,10 +972,10 @@ CreateUNIVARdoc<-function(mbSetObj){
              "\n\n",
              univar.tab,
              "\n");
-
+  
   cat(descr, file=rnwFile, append=TRUE);
   cat("\n\n", file=rnwFile, append=TRUE);
-         
+  
   cmdhist<-c("<<echo=false, results=tex>>=",
              "GetSigTable.UNIVAR(mbSet)",
              "@");
@@ -987,12 +987,12 @@ CreateUNIVARdoc<-function(mbSetObj){
 CreateMETAGENOSEQdoc <- function(mbSetObj){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-
+  
   # need to check if this process is executed
   if(is.null(mbSetObj$analSet$metagenoseq$resTable)){
     return();
   }
-
+  
   if(isEmptyMatrix(mbSetObj$analSet$metagenoseq$resTable)){
     metagenoseq.tab<-NULL;
   }else{
@@ -1000,9 +1000,9 @@ CreateMETAGENOSEQdoc <- function(mbSetObj){
     if(mbSetObj$dataSet$module.type == "metageno"){
       mbSetObj$analSet$metageno.taxalvl<-mbSetObj$dataSet$gene.id;
     }
-      metagenoseq.tab<-paste("Table", table.count<<-table.count+1,"shows the important features identified by metagenomeSeq at","\\texttt{", mbSetObj$analSet$metageno.taxalvl, "}level");
+    metagenoseq.tab<-paste("Table", table.count<<-table.count+1,"shows the important features identified by metagenomeSeq at","\\texttt{", mbSetObj$analSet$metageno.taxalvl, "}level");
   }
-
+  
   descr <- c("\\subsection{metagenomeSeq}\n",
              "This method is specifically designed to evaluate differential abundance ",
              "in sparse marker-gene survey data. This method combines Cumulative Sum",
@@ -1021,7 +1021,7 @@ CreateMETAGENOSEQdoc <- function(mbSetObj){
              "analysis for sparse high-throughput sequencing},2013, R Bioconductor package version 1.20.1}.",
              metagenoseq.tab,
              "\n");
-
+  
   cat(descr, file=rnwFile, append=TRUE);
   cat("\n\n", file=rnwFile, append=TRUE);
   cmdhist<-c("<<echo=false, results=tex>>=",
@@ -1036,17 +1036,17 @@ CreateMETAGENOSEQdoc <- function(mbSetObj){
 CreateRNASEQdoc <- function(mbSetObj){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-
+  
   # need to check if this process is executed
   if(is.null(mbSetObj$analSet$rnaseq$resTable)){
     return();
   };
-        
+  
   #taxonomic class will be replaced with gene id in SDP
   if(mbSetObj$dataSet$module.type == "metageno"){
     mbSetObj$analSet$rnaseq.taxalvl<-mbSetObj$dataSet$gene.id;
   }
-        
+  
   descr <- c("\\subsection{RNAseq methods}\n",
              "MicrobiomeAnalyst supports two powerful statistical methods including EdgeR and DESEQ2",
              "for performing differential abundance analysis. Both these methods were originally developed",
@@ -1063,13 +1063,13 @@ CreateRNASEQdoc <- function(mbSetObj){
              "\\texttt{adj.p-value cutoff} = 0.05.",
              "\n\n",
              paste("Table", table.count<<-table.count+1,"shows the important features identified by","\\texttt{", mbSetObj$analSet$rnaseq.meth, "}method at", "\\texttt{", mbSetObj$analSet$rnaseq.taxalvl, "}level" ));
-
+  
   cat(descr, file=rnwFile, append=TRUE);
   cat("\n\n", file=rnwFile, append=TRUE);
   cmdhist<-c("<<echo=false, results=tex>>=",
              "GetSigTable.RNASeq(mbSet)",
              "@");
-        
+  
   cat(cmdhist, file=rnwFile, append=TRUE, sep="\n");
   cat("\\clearpage", file=rnwFile, append=TRUE);
 }
@@ -1078,17 +1078,17 @@ CreateRNASEQdoc <- function(mbSetObj){
 CreateLEFSEdoc <- function(mbSetObj){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-    
+  
   # need to check if this process is executed
   if(is.null(mbSetObj$analSet$lefse$resTable)){
     return();
   };
-    
+  
   #taxonomic class will be replaced with gene id in SDP
   if(mbSetObj$dataSet$module.type == "metageno"){
     mbSetObj$analSet$lefse.taxalvl<-mbSetObj$dataSet$gene.id;
   }
-
+  
   descr <- c("\\subsection{LDA Effect Size (LEfSe)}\n",
              "This method is specifically designed for biomarker discovery and explanation in high-dimensional metagenomic data.",
              "\\footnote{N Segata \\textit{Metagenomic biomarker discovery and explanation.}",
@@ -1103,13 +1103,26 @@ CreateLEFSEdoc <- function(mbSetObj){
              "\\texttt{adj.p-value cutoff} = 0.05.",
              "\n\n",
              paste("Table", table.count<<-table.count+1,"shows the important features identified by LEfSe at","\\texttt{", mbSetObj$analSet$lefse.taxalvl, "}level"));
-
+  
   cat(descr, file=rnwFile, append=TRUE);
   cat("\n\n", file=rnwFile, append=TRUE);
   cmdhist<-c("<<echo=false, results=tex>>=",
              "GetSigTable.LEFSE(mbSet)",
              "@");
   cat(cmdhist, file=rnwFile, append=TRUE, sep="\n");
+  cat("\\clearpage", file=rnwFile, append=TRUE);  
+  
+  cmdhist<-c("\\begin{figure}[htp]",
+             "\\begin{center}",
+             paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$analSet$lefse_plot,"}", sep=""),
+             paste("\\caption{Graphical summary", 
+                   " at ", "\\texttt{", mbSetObj$analSet$lefse.taxalvl, "} level ",
+                   "in group ", "\\texttt{", mbSetObj$analSet$meta, "}", " }", sep=""),      
+             "\\end{center}",
+             paste("\\label{", mbSetObj$analSet$lefse_plot,"}", sep=""),
+             "\\end{figure}");
+  
+  cat(cmdhist, file=rnwFile, append=TRUE);
   cat("\\clearpage", file=rnwFile, append=TRUE);
 }
 
@@ -1117,12 +1130,12 @@ CreateLEFSEdoc <- function(mbSetObj){
 CreateRFdoc <- function(mbSetObj){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-
+  
   # need to check if this process is executed
   if(is.null(mbSetObj$analSet$rf)){
     return();
   }
-
+  
   descr <- c("\\subsection{Random Forest (RF) }\n",
              "Random Forest is a supervised learning algorithm suitable for high dimensional data analysis.",
              "It uses an ensemble of classification trees, each of which is grown by random feature",
@@ -1139,9 +1152,9 @@ CreateRFdoc <- function(mbSetObj){
              paste("Table", table.count<<-table.count+1,"shows the confusion matrix of random forest."),
              paste("Figure", fig.count<<-fig.count+1,"shows the cumulative error rates of random forest analysis for given parameters.\n"),
              paste("Figure", fig.count<<-fig.count+1,"shows the important features ranked by random forest.\n"));
-
+  
   cat(descr, file=rnwFile, append=TRUE);
-
+  
   cmdhist<-c("\\begin{figure}[htp]",
              "\\begin{center}",
              paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$rf.cls,"}", sep=""),
@@ -1150,16 +1163,16 @@ CreateRFdoc <- function(mbSetObj){
              "\\end{center}",
              paste("\\label{",mbSetObj$imgSet$rf.cls,"}", sep=""),
              "\\end{figure}");
-
+  
   cat(cmdhist, file=rnwFile, append=TRUE, sep="\n");
-
+  
   cmdhist<-c("<<echo=false, results=tex>>=",
              "GetRFConf.Table(mbSet)",
              "@",
              paste("The OOB error is ", GetRFOOB(mbSetObj)));
-        
+  
   cat(cmdhist, file=rnwFile, append=TRUE, sep="\n");
-
+  
   cmdhist<-c( "\n\n",
               "\\begin{figure}[htp]",
               "\\begin{center}",
@@ -1169,7 +1182,7 @@ CreateRFdoc <- function(mbSetObj){
               "\\end{center}",
               paste("\\label{",mbSetObj$imgSet$rf.imp,"}", sep=""),
               "\\end{figure}");
-        
+  
   cat(cmdhist, file=rnwFile, append=TRUE, sep="\n");
   cat("\\clearpage", file=rnwFile, append=TRUE);
 }
@@ -1285,7 +1298,7 @@ CreatePCAdoc <- function(mbSetObj){
              "\\textit{loadings}. The PCA analysis is performed using the \\texttt{prcomp} package.",
              "The calculation is based on singular value decomposition.\n",
              paste("Figure", fig.count<<-fig.count+1,"shows the 2-D scores plot between selected PCs\n")
-             );
+  );
   
   cat(descr, file=rnwFile, append=TRUE);
   cmdhist<-c(
@@ -1371,7 +1384,7 @@ CreateEnrichInputDoc<-function(mbSetObj){
     "\\item{A list of microbes names characterized at any species level - entered as a one column data",
     "(\\textit{Species-level taxa});}",
     "\\item{A list of microbes names (Binomial Nomenclature Name/GOLD ID/NCBI Taxonomy ID) characterized at
-            any strain level - entered as a one column data",
+    any strain level - entered as a one column data",
     "(\\textit{Strain-level taxa)})}",
     "\\end{itemize}",
     "\n\n");
@@ -1406,11 +1419,11 @@ CreateEnrichInputDoc<-function(mbSetObj){
                "taxon sets will be used for performing enrichment analysis. \n\n");
   }else{
     if(mbSetObj$dataSet$tset.type=="dis") {
-        descr <- c("You have provided a list of microbes annotated at mixed-level. Mixed-level",
-                   "taxon sets associated with Human diseases will be used for performing enrichment analysis. \n\n");
+      descr <- c("You have provided a list of microbes annotated at mixed-level. Mixed-level",
+                 "taxon sets associated with Human diseases will be used for performing enrichment analysis. \n\n");
     } else {
-         descr <- c("You have provided a list of microbes annotated at mixed-level. Mixed-level",
-                   "taxon sets associated with Human genetic variations will be used for performing enrichment analysis. \n\n");
+      descr <- c("You have provided a list of microbes annotated at mixed-level. Mixed-level",
+                 "taxon sets associated with Human genetic variations will be used for performing enrichment analysis. \n\n");
     }
   }
   
@@ -1436,19 +1449,19 @@ CreateEnrichProcessDoc<-function(){
 
 
 CreateEnrichORAdoc<-function(){
-
+  
   descr <- c("\\section{Enrichment Analysis}\n",
-    "Over Representation Analysis (ORA) is performed when",
-    "a list of taxa or microbes is provided. The list of microbes can be obtained through",
-    "differential abundance testing, or from biomarker analysis or from a clustering algorithm",
-    "performed using MDP",
-    "to investigate if some biologically meaningful patterns can be identified.",
-    "\n\n",
-    "ORA was implemented using the \\textit{hypergeometric test} to evaluate whether a particular",
-    "Taxon set is represented more than expected by chance within the given compound list.",
-    "One-tailed p values are provided after adjusting for multiple testing. \\textbf{Table 2} below",
-    "provides the detail about enriched taxon set.");
-
+             "Over Representation Analysis (ORA) is performed when",
+             "a list of taxa or microbes is provided. The list of microbes can be obtained through",
+             "differential abundance testing, or from biomarker analysis or from a clustering algorithm",
+             "performed using MDP",
+             "to investigate if some biologically meaningful patterns can be identified.",
+             "\n\n",
+             "ORA was implemented using the \\textit{hypergeometric test} to evaluate whether a particular",
+             "Taxon set is represented more than expected by chance within the given compound list.",
+             "One-tailed p values are provided after adjusting for multiple testing. \\textbf{Table 2} below",
+             "provides the detail about enriched taxon set.");
+  
   cat(descr, file=rnwFile, append=TRUE);
   cat("\n\n", file=rnwFile, append=TRUE); 
   descr<-c("<<echo=false, results=tex>>=",
@@ -1464,9 +1477,9 @@ CreateFooter<-function(mbSetObj){
   
   if(mbSetObj$dataSet$module.type == "metageno"){
     descr <- c("\\section{Other Features}\n",
-             "Please be advised that association analysis",
-             "with its corresponding results are not included in this report.",
-             "\n\n");
+               "Please be advised that association analysis",
+               "with its corresponding results are not included in this report.",
+               "\n\n");
     cat(descr, file=rnwFile, append=TRUE); 
   }
   
@@ -1483,34 +1496,34 @@ CreateFooter<-function(mbSetObj){
 
 # write .Rnw file template
 CreatePPDRnwReport<-function(mbSetObj, usrName){
-    CreateHeader(usrName);
-    CreatePPDIntr();
-    CreatePPDOverview();
-    CreateIOdoc();
-    CreatePPDAnalDoc();
-    CreatePPDResultDoc();
-    CreateFooter(mbSetObj);
+  CreateHeader(usrName);
+  CreatePPDIntr();
+  CreatePPDOverview();
+  CreateIOdoc();
+  CreatePPDAnalDoc();
+  CreatePPDResultDoc();
+  CreateFooter(mbSetObj);
 }
 
 CreatePPDIntr<-function(){
-        descr <- c("\\section{Background}\n",
-                   "The 16S rRNA marker gene survey remain one of the most widely used method for microbiome",
-                   "datasets, with large number of datasets publicly available. In principle, these studies",
-                   "can be compared, as they based on the same bacterial 16S ribosomal RNA (rRNA) gene target.",
-                   "However, some technical differences may arise when comparing two such different studies.",
-                   "These technical differences include experimental protocols between laboratories; the way",
-                   "samples are collected and stored, DNA extraction methods, PCR primers used for amplicons",
-                   "generation, the targeted hyper-variable region of 16S rRNA, and the sequencing instruments",
-                   "and technologies used. Despite these concerns, several cross-study comparisons of human",
-                   "microbiota have revealed that biological differences outweigh the variations produced due",
-                   "to these technical factors.\\footnote{Lozupone CA. \\textit{Meta-analyses of studies",
-                   "of the human microbiota}, Genome Res. 2013}",
-                   "\n\n",
-                   "MicrobiomeAnalyst now allows researchers to perform a meta-analysis to reveal larger pictures",
-                   "or novel insights beyond a single study through Projection with Public Data (PPD) module.",
-                   "Users can perform visual analytics on their 16S rRNA data within the background of",
-                   "compatible public datasets. Such meta-analysis will improve statistical power or biological understanding.\n");
-        cat(descr, file=rnwFile, append=TRUE);
+  descr <- c("\\section{Background}\n",
+             "The 16S rRNA marker gene survey remain one of the most widely used method for microbiome",
+             "datasets, with large number of datasets publicly available. In principle, these studies",
+             "can be compared, as they based on the same bacterial 16S ribosomal RNA (rRNA) gene target.",
+             "However, some technical differences may arise when comparing two such different studies.",
+             "These technical differences include experimental protocols between laboratories; the way",
+             "samples are collected and stored, DNA extraction methods, PCR primers used for amplicons",
+             "generation, the targeted hyper-variable region of 16S rRNA, and the sequencing instruments",
+             "and technologies used. Despite these concerns, several cross-study comparisons of human",
+             "microbiota have revealed that biological differences outweigh the variations produced due",
+             "to these technical factors.\\footnote{Lozupone CA. \\textit{Meta-analyses of studies",
+             "of the human microbiota}, Genome Res. 2013}",
+             "\n\n",
+             "MicrobiomeAnalyst now allows researchers to perform a meta-analysis to reveal larger pictures",
+             "or novel insights beyond a single study through Projection with Public Data (PPD) module.",
+             "Users can perform visual analytics on their 16S rRNA data within the background of",
+             "compatible public datasets. Such meta-analysis will improve statistical power or biological understanding.\n");
+  cat(descr, file=rnwFile, append=TRUE);
 }
 
 CreatePPDOverview<-function(){
@@ -1531,9 +1544,9 @@ CreatePPDAnalDoc<-function(mbSetObj){
              "In this step, users are asked to select a public dataset for comparison and meta analysis with",
              "their own data. Currently, user can choose from 34",
              "public datasets for performing such meta-analysis in MicrobiomeAnalyst.\n");
-        
+  
   cat(descr, file=rnwFile, append=TRUE, sep="\n");
-
+  
   descr <- c("\\subsection{Public dataset Library}\n",
              "The datasets are organized into 4 main categories by biome of interest, with a total of 34 datsets :\n",
              "\\begin{itemize}",
@@ -1549,9 +1562,9 @@ CreatePPDAnalDoc<-function(mbSetObj){
              "\n\n",
              mbSetObj$dataSet$lib.msg,
              "\n");
-        
+  
   cat(descr, file=rnwFile, append=TRUE, sep="\n");
-
+  
   descr <- c("\\subsection{Meta analysis}\n",
              "User data is merged with selected reference dataset based on common OTUs or feature names.An internal mapping is performed for OTUs",
              "annotated other than a Greengenes identifier. At least 20 percent overlapping of OTUs is required between the user and reference data to have",
@@ -1586,9 +1599,9 @@ CreatePPDResultDoc<-function(mbSetObj){
              "\n\n",
              mbSetObj$analSet$topo.msg,
              "\n");
-        
+  
   cat(descr, file=rnwFile, append=TRUE, sep="\n");
-        
+  
   fig <- c("\\begin{figure}[htp]",
            "\\begin{center}",
            paste("\\includegraphics[width=1.0\\textwidth]{",mbSetObj$imgSet$ppd.2d,"}",sep=""),
@@ -1597,6 +1610,6 @@ CreatePPDResultDoc<-function(mbSetObj){
            paste("\\label{",mbSetObj$imgSet$ppd.2d,"}", sep=""),
            "\\end{figure}",
            "\\clearpage\n\n");
-        
+  
   cat(fig, file=rnwFile, append=TRUE, sep="\n");
 }

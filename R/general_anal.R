@@ -1,6 +1,6 @@
 # current.selected.tax
 SetCurrentSelectedTaxLevel<-function(taxLvl){
-   current.selected.tax <<- taxLvl;
+  current.selected.tax <<- taxLvl;
 }
 
 #######################################
@@ -25,11 +25,11 @@ SetCurrentSelectedTaxLevel<-function(taxLvl){
 #'@export
 #'@import randomForest
 RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank, datatype){
-    
+  
   if(.on.public.web){
     load_randomforest();
   }
-
+  
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   # set up random numbers
@@ -38,7 +38,7 @@ RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank, data
     mbSetObj$analSet$cur.inx <- 0;
     mbSetObj$analSet$rn.seed <- mbSetObj$analSet$random.seeds[1];
   }
-
+  
   if(randomOn == -1){
     rn.sd <- 123456;
   }else if(randomOn == 0){ # keep current
@@ -52,7 +52,7 @@ RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank, data
   set.seed(rn.sd);
   # save the seed
   mbSetObj$analSet$rn.seed <- rn.sd;
-
+  
   if(datatype=="16S"){
     mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
     data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj,tax_table(mbSetObj$dataSet$proc.phyobj));
@@ -64,7 +64,7 @@ RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank, data
   if(datatype=="metageno"){
     taxrank <- "OTU";
   }
-
+  
   if(taxrank=="OTU"){
     data1 <- as.matrix(t(otu_table(data)));
   }else{
@@ -79,7 +79,7 @@ RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank, data
     #all NA club together
     data1 <- sapply(by(data1,rownames(data1),colSums),identity);
   }
-
+  
   data.impfeat <<- data1;
   cls <- sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]];
   variable <<- variable;
@@ -118,39 +118,39 @@ PlotRF.Classify<-function(mbSetObj, feature, imgName, format="png", dpi=72, widt
   imgName = paste(imgName,".", format, sep="");
   
   mbSetObj$imgSet$rf.cls <- imgName;
-
+  
   if(is.na(width)){
-      if(feature < 5 ){
-            h <- feature*1.2;
-            w <- 9;
-        } else if (feature < 10){
-            h <- feature*1.4;
-            w <- 9;
-        } else if (feature < 15){
-            h <- feature/1.6;
-            w <- 9;
-        } else if (feature < 20){
-            h <- feature/1.8;
-            w <- 9;
-        } else if (feature < 25){
-            h <- feature/2;
-            w <- 9;
-        } else if (feature < 30){
-            h <- feature/2.2;
-            w <- 9;
-        } else if (feature < 40){
-            h <- feature/2.5;
-            w <- 9;
-        } else {
-        h <- feature/10;
-        w <- 9;
-        }
-    }else if(width == 0){
-      w <- 8;
-    }else{
-      w <- width;
+    if(feature < 5 ){
+      h <- feature*1.2;
+      w <- 9;
+    } else if (feature < 10){
+      h <- feature*1.4;
+      w <- 9;
+    } else if (feature < 15){
+      h <- feature/1.6;
+      w <- 9;
+    } else if (feature < 20){
+      h <- feature/1.8;
+      w <- 9;
+    } else if (feature < 25){
+      h <- feature/2;
+      w <- 9;
+    } else if (feature < 30){
+      h <- feature/2.2;
+      w <- 9;
+    } else if (feature < 40){
+      h <- feature/2.5;
+      w <- 9;
+    } else {
+      h <- feature/10;
+      w <- 9;
+    }
+  }else if(width == 0){
+    w <- 8;
+  }else{
+    w <- width;
   }
-
+  
   Cairo::Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
   par(mar=c(4,4,3,2));
   cols <- grDevices::rainbow(length(levels(mbSetObj$analSet$cls))+1);
@@ -183,37 +183,37 @@ PlotRF.VIP<-function(mbSetObj, feature, imgName, format="png", dpi=72, width=NA)
   vip.score <- rev(sort(mbSetObj$analSet$rf$importance[,"MeanDecreaseAccuracy"]));
   
   if(is.na(width)){
-      if(feature < 5 ){
-            h <- feature*1.2;
-            w <- 9;
-        } else if (feature < 10){
-            h <- feature*1.4;
-            w <- 9;
-        } else if (feature < 15){
-            h <- feature/1.6;
-            w <- 9;
-        } else if (feature < 20){
-            h <- feature/1.8;
-            w <- 9;
-        } else if (feature < 25){
-            h <- feature/2;
-            w <- 9;
-        } else if (feature < 30){
-            h <- feature/2.2;
-            w <- 9;
-        } else if (feature < 40){
-            h <- feature/2.5;
-            w <- 9;
-        } else {
-        h <- feature/10;
-        w <- 9;
-        }
-    }else if(width == 0){
-      w <- 8;
-    }else{
-      w <- width;
+    if(feature < 5 ){
+      h <- feature*1.2;
+      w <- 9;
+    } else if (feature < 10){
+      h <- feature*1.4;
+      w <- 9;
+    } else if (feature < 15){
+      h <- feature/1.6;
+      w <- 9;
+    } else if (feature < 20){
+      h <- feature/1.8;
+      w <- 9;
+    } else if (feature < 25){
+      h <- feature/2;
+      w <- 9;
+    } else if (feature < 30){
+      h <- feature/2.2;
+      w <- 9;
+    } else if (feature < 40){
+      h <- feature/2.5;
+      w <- 9;
+    } else {
+      h <- feature/10;
+      w <- 9;
+    }
+  }else if(width == 0){
+    w <- 8;
+  }else{
+    w <- width;
   }
-
+  
   Cairo::Cairo(file = imgName,  unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
   PlotImpVar(mbSetObj, vip.score,"MeanDecreaseAccuracy", feature);
   dev.off();
@@ -227,7 +227,7 @@ PlotRF.VIP<-function(mbSetObj, feature, imgName, format="png", dpi=72, width=NA)
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 PlotImpVar <- function(mbSetObj, imp.vec, xlbl, feature, color.BW=FALSE){
-
+  
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   cls.len <- length(levels(mbSetObj$analSet$cls));
@@ -246,47 +246,47 @@ PlotImpVar <- function(mbSetObj, imp.vec, xlbl, feature, color.BW=FALSE){
     rt.mrg <- 11;
   }
   op <- par(mar=c(5,9,2,rt.mrg)); # set right side margin with the number of class
-
+  
   feat.num = feature;
   if(feat.num <= 0){
     feat.num = 15;
   }
-
+  
   if(feat.num > length(imp.vec)){
     feat.num <- length(imp.vec);
   }
-
+  
   # first get the top subset
   imp.vec <- rev(sort(imp.vec))[1:feat.num];
-
+  
   # reverser the order for display
   imp.vec <- sort(imp.vec);
-
+  
   # as data should already be normalized, use mean/median should be the same
   # mns is a list contains means of all vars at each level
   # conver the list into a matrix with each row contains var averages across different lvls
   data1 <- data.impfeat;
   mns <- by(data1[, names(imp.vec)], mbSetObj$analSet$cls,
-                    function(x){ # inner function note, by send a subset of dataframe
-                        apply(x, 2, mean, trim=0.1)
-                    });
+            function(x){ # inner function note, by send a subset of dataframe
+              apply(x, 2, mean, trim=0.1)
+            });
   mns <- t(matrix(unlist(mns), ncol=feat.num, byrow=TRUE));
-
+  
   vip.nms <- names(imp.vec);
   names(imp.vec) <- NULL;
-
+  
   # modified for B/W color
   dotcolor <- ifelse(color.BW, "darkgrey", "blue");
   dotchart(imp.vec, bg=dotcolor, xlab= xlbl, cex=1.3);
-
+  
   mtext(side=2, at=1:feat.num, vip.nms, las=2, line=1)
-
+  
   axis.lims <- par("usr"); # x1, x2, y1 ,y2
-
+  
   # get character width
   shift <- 2*par("cxy")[1];
   lgd.x <- axis.lims[2] + shift;
-
+  
   x <- rep(lgd.x, feat.num);
   y <- 1:feat.num;
   par(xpd=T);
@@ -294,22 +294,22 @@ PlotImpVar <- function(mbSetObj, imp.vec, xlbl, feature, color.BW=FALSE){
   if(.on.public.web){
     load_rcolorbrewer();
   }
-
+  
   nc <- ncol(mns);
-
+  
   # modified for B/W color
   colorpalette <- ifelse(color.BW, "Greys", "RdYlGn");
   col <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, colorpalette))(nc); # set colors for each class
   if(color.BW) col <- rev(col);
-
+  
   # calculate background
   bg <- matrix("", nrow(mns), nc);
   for (m in 1:nrow(mns)){
     bg[m,] <- (col[nc:1])[rank(mns[m,])];
   }
-
+  
   cls.lbl <- levels(mbSetObj$analSet$cls);
-    
+  
   for (n in 1:ncol(mns)){
     points(x,y, bty="n", pch=22, bg=bg[,n], cex=3);
     # now add label
@@ -317,22 +317,22 @@ PlotImpVar <- function(mbSetObj, imp.vec, xlbl, feature, color.BW=FALSE){
     # shift x, note, this is good for current size
     x <- x + shift/1.25;
   }
-
+  
   # now add color key, padding with more intermediate colors for contiuous band
   col <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(25, colorpalette))(50)
-    
+  
   if(color.BW) col <- rev(col);
-
+  
   nc <- length(col);
   x <- rep(x[1] + shift, nc);
-
+  
   shifty <- (axis.lims[4]-axis.lims[3])/3;
   starty <- axis.lims[3] + shifty;
   endy <- axis.lims[3] + 2*shifty;
   y <- seq(from = starty, to = endy, length = nc);
-
+  
   points(x,y, bty="n", pch=15, col=rev(col), cex=2);
-
+  
   text(x[1], endy+shifty/8, "High");
   text(x[1], starty-shifty/8, "Low");
   par(op);
@@ -371,7 +371,7 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, datatype, shotgunid, ta
   cls <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   lvl <- length(levels(cls));
   data <- mbSetObj$dataSet$norm.phyobj;
-
+  
   #using just normalized abundant data
   if(datatype=="16S"){
     # dynamically add taxa table to norm.phyobj
@@ -380,12 +380,12 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, datatype, shotgunid, ta
   }else{
     data<-data;
   }
-
+  
   #using by default names for shotgun data
   if(datatype=="metageno"){
     taxrank<-"OTU";
   }
-
+  
   if(taxrank=="OTU"){
     data <- data;
     nm <- taxa_names(data);
@@ -394,7 +394,7 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, datatype, shotgunid, ta
     #merging at taxonomy levels
     data <- tax_glom(data, taxrank);
     nm <- as.character(tax_table(data)[,taxrank]);
-
+    
     #converting NA values to unassigned
     nm[is.na(nm)] <- "Not_Assigned";
     data1 <- as.matrix(otu_table(data));
@@ -405,16 +405,16 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, datatype, shotgunid, ta
   }
   
   data.classical.univar <<- data1 
-
+  
   colnames(data1)<-nm;
   isNonPar <- statOpt=="nonpar"
-    
+  
   if(length(levels(cls)) > 2){
     resTable <- data.frame(GetAovRes(cls, data1, nonpar=isNonPar));
   }else{
     resTable <- data.frame(GetTtestRes(cls, data1, nonpar=isNonPar));
   }
-
+  
   rownames(resTable) <- colnames(data1);
   colnames(resTable) <- c("Statistics","Pvalues");
   resTable$FDR <- p.adjust(resTable$Pvalues,method ="fdr");
@@ -424,24 +424,24 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, datatype, shotgunid, ta
   resTable <- resTable[complete.cases(resTable), ];
   resTable <- resTable[,c(2,3,1)];
   write.csv(resTable, file="univar_test_output.csv");
-
+  
   sigHits <- resTable$FDR < p.lvl;
   de.Num <- sum(sigHits);
-    
+  
   if(de.Num == 0){
     current.msg <<- "No significant features were identified using the given p value cutoff.";
   }else{
     current.msg <<- paste("A total of", de.Num, "significant features were identified!");
   }
-    
+  
   if(nrow(resTable) > 500){
     resTable <- resTable[1:500, ];
   }
-    
+  
   #only getting the names of DE features
   diff_ft <<- rownames(resTable)[1:de.Num];
   sigfeat <- rownames(resTable);
-   
+  
   #for individual box plot, filtered data instead of normalizated data will be used.
   #following process is just for box plot.
   ##############################################
@@ -489,7 +489,7 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, datatype, shotgunid, ta
   
   dat3t_boxplot <- as.data.frame(t(otu_table(data_boxplot)));
   colnames(dat3t_boxplot) <- nm_boxplot;
-
+  
   #individual boxplot for features
   box_data <- as.data.frame(dat3t_boxplot[ ,sigfeat]);
   colnames(box_data) <- sigfeat;
@@ -499,6 +499,7 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, datatype, shotgunid, ta
   
   mbSetObj$analSet$datatype <- datatype;
   mbSetObj$analSet$anal.type <- "tt";
+  mbSetObj$analSet$var.type <- variable;
   mbSetObj$analSet$sig.count <- de.Num;
   mbSetObj$analSet$id.type <- shotgunid;
   mbSetObj$analSet$Univar$resTable <- mbSetObj$analSet$resTable <- resTable;
@@ -536,14 +537,14 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, datatype, shotgunid, ta
 #'@import metagenomeSeq
 
 PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, datatype, shotgunid, taxrank, model){
-
+  
   variable <<-  variable;
   p.lvl <<-  p.lvl; 
   datatype <<-  datatype; 
   shotgunid <<-  shotgunid; 
   taxrank <<-  taxrank; 
   model <<- model; 
- 
+  
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
@@ -557,23 +558,23 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, datatype, shotguni
   filt.dataphy <- merge_phyloseq(filt.dataphy, sample_table);
   taxa_names(filt.dataphy) <- rownames(mbSetObj$dataSet$filt.data);
   data <- filt.dataphy;
-    
+  
   #data<-dataSet$norm.phyobj;
   cls <- as.factor(sample_data(data)[[variable]]);
   lvl <- length(levels(cls));
-    
+  
   if(datatype=="16S"){
     mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
     data <- merge_phyloseq(data, mbSetObj$dataSet$taxa_table);
   }else{
     data <- data;
   }
-
+  
   #using by default names for shotgun data
   if(datatype=="metageno"){
     taxrank <- "OTU";
   }
-
+  
   if(taxrank=="OTU"){
     data <- data;
     nm <- taxa_names(data);
@@ -591,12 +592,12 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, datatype, shotguni
     data <- merge_phyloseq(data1, sample_data(data));
     nm <- taxa_names(data);
   }
-    
+  
   tree_data <<- data;
   data <- phyloseq_to_metagenomeSeq(data);
   data <- cumNorm(data, p=cumNormStat(data));
   mod <- model.matrix(~phenoData(data)@data[,variable]);
-    
+  
   if(model=="zigfit"){
     fit <- fitZig(data, mod);
   }else{
@@ -607,10 +608,10 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, datatype, shotguni
       fit <-fitFeatureModel(data, mod);
     }
   }
-
+  
   x <- MRfulltable(fit, number = nrow(assayData(data)$counts));
   x <- x[!is.na(rownames(x)), ];
-
+  
   rownames(x) <- gsub(":1", "", x = rownames(x), fixed = TRUE);
   x$OTUnames <- as.character(rownames(x))
   
@@ -622,17 +623,17 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, datatype, shotguni
   } else {
     res = x;
   }
-    
+  
   # Sort and return #sighits return TRUE or FALSE
   sigHits <-res$adjPvalues<=p.lvl;
   de.Num <- length(which(sigHits));
-    
+  
   if(de.Num == 0){
     current.msg <<- paste( "No significant features were identified using the given p value cutoff. Please change the cutoff limit.");
   }else{
     current.msg <<- paste("A total of", de.Num, "significant features were identified!")
   }
-
+  
   if(model=="ffm"){
     resTable <- res[,c("pvalues","adjPvalues","logFC")];
     resTable <- signif(resTable[,c(3,1,2)], digits = 5);
@@ -642,41 +643,42 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, datatype, shotguni
     resTable <- signif(resTable[,1:2], digits = 5);
     colnames(resTable) <- c("Pvalues","FDR");
   }
-    
+  
   ord.inx <- order(resTable$Pvalues);
   resTable <- resTable[ord.inx, , drop=FALSE];
   write.csv(resTable, file="metageno_de_output.csv");
-
+  
   if(nrow(resTable) > 500){
     resTable <- resTable[1:500, ];
   }
-    
+  
   mbSetObj$analSet$metagenoseq$resTable <- mbSetObj$analSet$resTable <- data.frame(resTable);
-    
+  
   #only getting the names of DE features
   diff_ft <<- rownames(resTable)[1:de.Num];
   sigfeat <- rownames(resTable);
-    
+  
   #prepare individual boxplot
   box_data <- MRcounts(data);
   #subset only diff. Abundant features
   box_data <- box_data[sigfeat, ];
-
+  
   #samples in rows
   box_data <- t(box_data);
   box_data <- data.frame(box_data);
   colnames(box_data) <- sigfeat;
-
+  
   claslbl <- pData(data)[ ,variable];
   box_data$class <- unlist(claslbl);
-
+  
   mbSetObj$analSet$boxdata <- box_data;
   mbSetObj$analSet$sig.count <- de.Num;
   mbSetObj$analSet$datatype <- datatype;
   mbSetObj$analSet$anal.type <- "metagseq";
+  mbSetObj$analSet$var.type <- variable;
   mbSetObj$analSet$metageno.taxalvl <- taxrank;
   mbSetObj$analSet$id.type <- shotgunid;
-    
+  
   if(.on.public.web){
     .set.mbSetObj(mbSetObj)
     return(1);
@@ -716,23 +718,23 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, lda.lvl, variable, isfunc, datatyp
     load_mass();
   }
   claslbl <<- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
-    
+  
   #normalized data
   data <- mbSetObj$dataSet$norm.phyobj;
-    
+  
   if(datatype=="16S"){
     taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
     data <- merge_phyloseq(data, taxa_table);
   }else{
     data <- data;
   }
-
+  
   #using by default names for shotgun data
-    
+  
   if(datatype=="metageno"){
     taxrank <- "OTU";
   }
-    
+  
   if(taxrank=="OTU"){
     data <- data;
     tax_orig <<- nm <- taxa_names(data);
@@ -748,7 +750,7 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, lda.lvl, variable, isfunc, datatyp
     rownames(data1) <- nm;
     dat3t <- as.data.frame(t(t(sapply(by(data1, rownames(data1), colSums), identity))));
   }
-
+  
   data.impfeat_lefse <<- dat3t;
   
   set.seed(56290);
@@ -758,7 +760,7 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, lda.lvl, variable, isfunc, datatyp
   rawpvalues <- rawpvalues[ord.inx];
   clapvalues <- p.adjust(rawpvalues, method ="fdr");
   dat3t <- dat3t[,ord.inx];
-
+  
   if(length(rawpvalues) > 500){
     rawpvalues <- rawpvalues[1:500];
     clapvalues <- clapvalues[1:500];
@@ -768,7 +770,7 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, lda.lvl, variable, isfunc, datatyp
   wil_data <- as.data.frame(dat3t);
   #if no subclass within classes then no wilcoxon rank sum test
   wil_datadf <- wil_data;
-
+  
   #Linear Discriminant analysis (LDA)
   ldares <- lda(claslbl~ .,data = wil_datadf);
   ldamean <- as.data.frame(t(ldares$means));
@@ -779,28 +781,28 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, lda.lvl, variable, isfunc, datatyp
   ldamean$Pvalues <- signif(rawpvalues,digits=5);
   ldamean$FDR <- signif(clapvalues,digits=5);
   resTable <- ldamean;
-    
+  
   # it seems lda add ` around names containing dash "-", need to strip this off
   rawNms <- rownames(resTable);
   rownames(resTable) <- gsub("`", '', rawNms);
   de.Num <- sum(clapvalues<=p.lvl & ldamean$LDAscore>=lda.lvl)
-    
+  
   if(de.Num == 0){
     current.msg <<- "No significant features were identified with given criteria.";
   }else{
     current.msg <<- paste("A total of", de.Num, "significant features with given criteria.")
   }
-
+  
   # sort by p value
   ord.inx <- order(resTable$Pvalues, resTable$LDAscore);
   resTable <- resTable[ord.inx, ,drop=FALSE];
   #p-values column to appear first; then FDR and then others
   resTable <- resTable[,c(ncol(resTable),1:(ncol(resTable)-1))];
   resTable <- resTable[,c(ncol(resTable),1:(ncol(resTable)-1))];
-
+  
   # need to control digits
   resTable <- signif(resTable, 5);
-
+  
   #only getting the names of DE features
   diff_ft <<- rownames(resTable)[1:de.Num];
   resTable$max <- resTable$min <- NULL;
@@ -808,30 +810,30 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, lda.lvl, variable, isfunc, datatyp
   cls.lbls <- levels(claslbl);
   grp.dat <- resTable[, cls.lbls];
   res.cls <- as.character(apply(grp.dat, 1, function(x){cls.lbls[which.max(x)]}));
-    
+  
   if(class_no==2){
     indx <- which(res.cls==unique(claslbl)[1]);
     resTable$LDAscore[indx]<--abs(resTable$LDAscore[indx]);
   }
-    
+  
   write.csv(resTable, file="lefse_de_output.csv");
   mbSetObj$analSet$lefse$resTable <- mbSetObj$analSet$resTable <- resTable;
-    
+  
   #subset dataset for bar plot visualization (LDA Score)
   ldabar <- as.data.frame(rownames(resTable));
   ldabar[,2] <- resTable$LDAscore;
   ldabar[,3] <- res.cls;
-    
+  
   #visualizing top features based on LDA score
   ldabar <<- ldabar;
- 
+  
   #preparing data for indvidual box plot
   sigfeat <<- rownames(resTable);
   taxrank <<- taxrank;
   box_data <- as.data.frame(wil_datadf[, sigfeat]);
   colnames(box_data) <- sigfeat;
   box_data$class <- claslbl;
-    
+  
   mbSetObj$analSet$boxdata <- box_data;
   mbSetObj$analSet$sig.count <- de.Num;
   mbSetObj$analSet$datatype <- datatype;
@@ -839,7 +841,7 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, lda.lvl, variable, isfunc, datatyp
   mbSetObj$analSet$lefse.taxalvl <- taxrank;
   mbSetObj$analSet$id.type <- shotgunid;
   mbSetObj$analSet$meta <- variable;
-
+  
   
   if(.on.public.web){
     .set.mbSetObj(mbSetObj)
@@ -855,6 +857,8 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, lda.lvl, variable, isfunc, datatyp
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@param ldaFeature Numeric, input the number of top
 #'features to include in the plot.
+#'@param layoutOptlf Character, input "dot" to create the VIP plot 
+#'and "bar" to create the bar graph.
 #'@param imgName Character, input the name
 #'of the plot.
 #'@param format Character, input the preferred
@@ -863,59 +867,61 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, lda.lvl, variable, isfunc, datatyp
 #'default it is set to NA.
 #'@param dpi Numeric, input the dots per inch. By default
 #'it is set to 72.
+#'@param colOpt Character, "default", "viridis",
+#'"cividis", or "plasma".
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotLEfSeSummary <- function(mbSetObj, ldaFeature, imgName, format="png", width = NA, dpi=72) {
+PlotLEfSeSummary <- function(mbSetObj, ldaFeature, layoutOptlf, imgName, format="png", width = NA, dpi=72, colOpt="default") {
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   set.seed(280561493);
+  mbSetObj$analSet$lefse_plot <- imgName;
   imgName = paste(imgName, ".", format, sep="");
   ldabar <- ldabar;
   ldabar <-  ldabar[order(-ldabar[[2]]), ];
   if(ldaFeature < nrow(ldabar)) {
-     ldabar <- ldabar[1:ldaFeature,];
+    ldabar <- ldabar[1:ldaFeature,];
   };
-
+  
   vip.score <- ldabar[[2]];
   names(vip.score) <- ldabar[[1]];
-
+  
   if(is.na(width)){
-      if(length(vip.score) < 5 ){
-            h <- length(vip.score)/1.2;
-            w <- 9;
-        } else if (length(vip.score) < 10){
-            h <- length(vip.score)/1.4;
-            w <- 9;
-        } else if (length(vip.score) < 15){
-            h <- length(vip.score)/1.6;
-            w <- 9;
-        } else if (length(vip.score) < 20){
-            h <- length(vip.score)/1.8;
-            w <- 9;
-        } else if (length(vip.score) < 25){
-            h <- length(vip.score)/2;
-            w <- 9;
-        } else if (length(vip.score) < 30){
-            h <- length(vip.score)/2.2;
-            w <- 9;
-        } else if (length(vip.score) < 40){
-            h <- length(vip.score)/2.5;
-            w <- 9;
-        } else {
-        h <- length(vip.score)/5;
-        w <- 9;
-        };
-    }else if(width == 0){
-      w <- 8;
-    }else{
-      w <- width;
+    if(length(vip.score) < 5 ){
+      h <- length(vip.score)/1.2;
+      w <- 9;
+    } else if (length(vip.score) < 10){
+      h <- length(vip.score)/1.4;
+      w <- 9;
+    } else if (length(vip.score) < 15){
+      h <- length(vip.score)/1.6;
+      w <- 9;
+    } else if (length(vip.score) < 20){
+      h <- length(vip.score)/1.8;
+      w <- 9;
+    } else if (length(vip.score) < 25){
+      h <- length(vip.score)/2;
+      w <- 9;
+    } else if (length(vip.score) < 30){
+      h <- length(vip.score)/2.2;
+      w <- 9;
+    } else if (length(vip.score) < 40){
+      h <- length(vip.score)/2.5;
+      w <- 9;
+    } else {
+      h <- length(vip.score)/5;
+      w <- 9;
+    };
+  }else if(width == 0){
+    w <- 8;
+  }else{
+    w <- width;
   }
   
-
   Cairo::Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
-  PlotImpVarLEfSe(mbSetObj, vip.score, mbSetObj$analSet$meta);
+  PlotImpVarLEfSe(mbSetObj, vip.score, layoutOptlf, mbSetObj$analSet$meta, colOpt);
   dev.off();
   return(.set.mbSetObj(mbSetObj))
 }
@@ -929,7 +935,9 @@ PlotLEfSeSummary <- function(mbSetObj, ldaFeature, imgName, format="png", width 
 #'License: GNU GPL (>= 2)
 #'@export
 
-PlotImpVarLEfSe <- function(mbSetObj, imp.vec, meta, color.BW=FALSE){
+PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="default", color.BW=FALSE){
+  
+  save.image("lp.RDATA");
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
@@ -951,11 +959,11 @@ PlotImpVarLEfSe <- function(mbSetObj, imp.vec, meta, color.BW=FALSE){
   op <- par(mar=c(5,9,2,rt.mrg)); # set right side margin with the number of class
   
   #if(feat.num > length(imp.vec)){
-    #feat.num <- length(imp.vec);
+  #feat.num <- length(imp.vec);
   #}
   feat.num <- length(imp.vec);
   # first get the top subset
-
+  
   imp.vec <- rev(sort(imp.vec))[1:feat.num];
   
   # reverser the order for display
@@ -978,68 +986,98 @@ PlotImpVarLEfSe <- function(mbSetObj, imp.vec, meta, color.BW=FALSE){
   vip.nms <- names(imp.vec);
   names(imp.vec) <- NULL;
   
-  # modified for B/W color
-  dotcolor <- ifelse(color.BW, "darkgrey", "blue");
-  dotchart(imp.vec, bg=dotcolor, xlab= "LDA score", cex=1.3);
-  
-  mtext(side=2, at=1:feat.num, vip.nms, las=2, line=1)
-  
-  axis.lims <- par("usr"); # x1, x2, y1 ,y2
-  
-  # get character width
-  shift <- 2*par("cxy")[1];
-  lgd.x <- axis.lims[2] + shift;
-  
-  x <- rep(lgd.x, feat.num);
-  y <- 1:feat.num;
-  par(xpd=T);
-  
-  if(.on.public.web){
-    load_rcolorbrewer();
+  if(layoutOptlf == "dot") {
+    # modified for B/W color
+    dotcolor <- ifelse(color.BW, "darkgrey", "blue");
+    dotchart(imp.vec, bg=dotcolor, xlab= "LDA score", cex=1.3);
+    
+    mtext(side=2, at=1:feat.num, vip.nms, las=2, line=1)
+    
+    axis.lims <- par("usr"); # x1, x2, y1 ,y2
+    
+    # get character width
+    shift <- 2*par("cxy")[1];
+    lgd.x <- axis.lims[2] + shift;
+    
+    x <- rep(lgd.x, feat.num);
+    y <- 1:feat.num;
+    par(xpd=T);
+    
+    if(.on.public.web){
+      load_rcolorbrewer();
+    }
+    
+    nc <- ncol(mns);
+    
+    # modified for B/W color
+    colorpalette <- ifelse(color.BW, "Greys", "RdYlGn");
+    col <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, colorpalette))(nc); # set colors for each class
+    if(color.BW) col <- rev(col);
+    
+    # calculate background
+    bg <- matrix("", nrow(mns), nc);
+    for (m in 1:nrow(mns)){
+      bg[m,] <- (col[nc:1])[rank(mns[m,])];
+    }
+    
+    cls.lbl <- levels(sample_table[[meta]]);
+    
+    for (n in 1:ncol(mns)){
+      points(x,y, bty="n", pch=22, bg=bg[,n], cex=3);
+      # now add label
+      text(x[1], axis.lims[4], cls.lbl[n], srt=45, adj=c(0.2,0.5));
+      # shift x, note, this is good for current size
+      x <- x + shift/1.25;
+    }
+    
+    # now add color key, padding with more intermediate colors for contiuous band
+    col <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(25, colorpalette))(50)
+    
+    if(color.BW) col <- rev(col);
+    
+    nc <- length(col);
+    x <- rep(x[1] + shift, nc);
+    
+    shifty <- (axis.lims[4]-axis.lims[3])/3;
+    starty <- axis.lims[3] + shifty;
+    endy <- axis.lims[3] + 2*shifty;
+    y <- seq(from = starty, to = endy, length = nc);
+    
+    points(x,y, bty="n", pch=15, col=rev(col), cex=2);
+    
+    text(x[1], endy+shifty/8, "High");
+    text(x[1], starty-shifty/8, "Low");
+    
+    par(op);
+    
+  } else {
+    ldabar <- ldabar[order(-ldabar[,2]), ];
+    
+    if(feat.num > nrow(ldabar)){
+      ldabar <- ldabar;
+    }else{
+      ldabar <- ldabar[1:feat.num, ];
+    }
+    # trim levels for ASV
+    levels(ldabar[,1]) <- strtrim(levels(ldabar[,1]), 15)
+    box<- ggplot(ldabar, aes(x=reorder(ldabar[,1],ldabar[,2]), y=ldabar[,2], fill=ldabar[,3]))+ 
+      geom_bar(stat="identity",width=0.8) + coord_flip() + labs(y="LDA score",x="Features",fill="Class") + 
+      theme_bw() 
+    
+    if(colOpt=="default"){
+      box <- box + scale_color_brewer(palette="Set1");
+    }else{
+      if(colOpt == "viridis"){
+        cols <- viridis::viridis(grp.num)
+      }else if(colOpt == "plasma"){
+        cols <- viridis::plasma(grp.num)
+      }else if(colOpt == "cividis"){
+        cols <- viridis::cividis(grp.num)
+      }
+    }
+    
+    print(box);
   }
-  
-  nc <- ncol(mns);
-  
-  # modified for B/W color
-  colorpalette <- ifelse(color.BW, "Greys", "RdYlGn");
-  col <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, colorpalette))(nc); # set colors for each class
-  if(color.BW) col <- rev(col);
-  
-  # calculate background
-  bg <- matrix("", nrow(mns), nc);
-  for (m in 1:nrow(mns)){
-    bg[m,] <- (col[nc:1])[rank(mns[m,])];
-  }
-  
-  cls.lbl <- levels(sample_table[[meta]]);
-  
-  for (n in 1:ncol(mns)){
-    points(x,y, bty="n", pch=22, bg=bg[,n], cex=3);
-    # now add label
-    text(x[1], axis.lims[4], cls.lbl[n], srt=45, adj=c(0.2,0.5));
-    # shift x, note, this is good for current size
-    x <- x + shift/1.25;
-  }
-  
-  # now add color key, padding with more intermediate colors for contiuous band
-  col <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(25, colorpalette))(50)
-  
-  if(color.BW) col <- rev(col);
-  
-  nc <- length(col);
-  x <- rep(x[1] + shift, nc);
-  
-  shifty <- (axis.lims[4]-axis.lims[3])/3;
-  starty <- axis.lims[3] + shifty;
-  endy <- axis.lims[3] + 2*shifty;
-  y <- seq(from = starty, to = endy, length = nc);
-  
-  points(x,y, bty="n", pch=15, col=rev(col), cex=2);
-  
-  text(x[1], endy+shifty/8, "High");
-  text(x[1], starty-shifty/8, "Low");
-  
-  par(op);
 }
 
 #######################################
@@ -1067,9 +1105,9 @@ PlotImpVarLEfSe <- function(mbSetObj, imp.vec, meta, color.BW=FALSE){
 PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, datatype, shotgunid, taxrank){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-
+  
   claslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
-
+  
   # build phyloslim obj in fly
   filt.dataphy <- mbSetObj$dataSet$filt.data;
   filt.dataphy <- apply(filt.dataphy, 2, as.integer);
@@ -1078,19 +1116,19 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, datatype, shotgunid, 
   filt.dataphy <- merge_phyloseq(filt.dataphy, sample_table);
   taxa_names(filt.dataphy) <- rownames(mbSetObj$dataSet$filt.data);
   data <- filt.dataphy;
-
+  
   if(datatype=="16S"){
     mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
     data <- merge_phyloseq(data, mbSetObj$dataSet$taxa_table);
   }else{
     data <- data;
   }
-
+  
   #using by default names for shotgun data
   if(datatype=="metageno"){
     taxrank<-"OTU";
   }
-
+  
   if(taxrank=="OTU"){
     data <- data;
     nm <- taxa_names(data);
@@ -1102,19 +1140,19 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, datatype, shotgunid, 
     nm[is.na(nm)] <- "Not_Assigned";
     data1 <- as.matrix(otu_table(data));
     rownames(data1) <- nm;
-
+    
     #all NA club together
     data1 <- as.matrix(t(sapply(by(data1, rownames(data1), colSums), identity)));
     data1 <- otu_table(data1,taxa_are_rows=T);
     data <- merge_phyloseq(data1, sample_data(data));
     nm <- taxa_names(data);
   }
-    
+  
   dat3t <- as.data.frame(t(otu_table(data)));
   colnames(dat3t) <- nm;
   
-  data.rnaseq <<- dat3t
-
+  mbSetObj$analSet$rnaseq$data.rnaseq <- dat3t
+  
   if(opts=="DESeq2"){
     # only for small data set (< 100)
     if(length(claslbl) > 100){
@@ -1128,7 +1166,7 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, datatype, shotgunid, 
       
       # create formula based on user selection
       my.formula <- as.formula(paste("~", variable));
-
+      
       #converting from phyloslim object to deseq
       diagdds = phyloseq_to_deseq2(data, my.formula);
       geoMeans = apply(counts(diagdds), 1, gm_mean);
@@ -1137,7 +1175,7 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, datatype, shotgunid, 
       res = DESeq2::results(diagdds, independentFiltering = FALSE, cooksCutoff =  Inf);
       sigHits <- which(res$padj < p.lvl);
       de.Num <- length(sigHits);
-            
+      
       if(de.Num == 0){
         current.msg <<- "No significant features were identified using the given p value cutoff.";
       }else{
@@ -1156,49 +1194,50 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, datatype, shotgunid, 
     tt = edgeR::topTags(et, n=nrow(dge$table), adjust.method="BH", sort.by="PValue");
     res = tt@.Data[[1]];
     de.Num <- sum(res$FDR < p.lvl);
-        
+    
     if(de.Num == 0){
       current.msg <<- "No significant features were identified using the given p value cutoff.";
     }else{
       current.msg <<- paste("A total of", de.Num, "significant features were identified!");
     }
-        
+    
     resTable <- res[,c("logFC","logCPM","PValue","FDR")];
     resTable <- signif(data.matrix(resTable), digits = 5);
     colnames(resTable) <- c("log2FC","logCPM","Pvalues","FDR");
     mbSetObj$analSet$anal.type <- "edgr";
   }
-    
+  
   resTable <- as.data.frame(resTable);
   ord.inx <- order(resTable$Pvalues);
   resTable <- resTable[ord.inx, , drop=FALSE];
   write.csv(resTable, file="rnaseq_de.csv");
-    
+  
   if(nrow(resTable) > 500){
     resTable<-resTable[1:500, ];
   }
-    
+  
   mbSetObj$analSet$rnaseq$resTable <- mbSetObj$analSet$resTable <- as.data.frame(resTable);
-    
+  
   #only getting the names of DE features
   diff_ft <<- rownames(resTable)[1:de.Num];
   taxrank <<- taxrank;
-    
+  
   #individual boxplot for features
   sigfeat <- rownames(resTable);
   box_data <- as.data.frame(dat3t[ ,sigfeat]);
   colnames(box_data) <- sigfeat;
   box_data$class <- claslbl;
-    
+  
   mbSetObj$analSet$boxdata <- box_data;
   mbSetObj$analSet$sig.count <- de.Num;
+  mbSetObj$analSet$var.type <- variable;
   mbSetObj$analSet$datatype <- datatype;
   mbSetObj$analSet$id.type <- shotgunid;
   mbSetObj$analSet$rnaseq.taxalvl <- taxrank;
   mbSetObj$analSet$rnaseq.meth <- opts;
   
   tree_data <<- data;
-
+  
   if(.on.public.web){
     .set.mbSetObj(mbSetObj)
     return(1);
@@ -1326,7 +1365,7 @@ PlotRNASeqDotPlot <- function(mbSetObj, top.inx = 15, colpal = "plasma", imgName
   
   anal.type <- anal.type
   print(anal.type)
-    
+  
   if(anal.type == "shotgun"){
     return(0)
   }
@@ -1361,19 +1400,20 @@ PlotRNASeqDotPlot <- function(mbSetObj, top.inx = 15, colpal = "plasma", imgName
   }
   
   merged_table[,1] <- factor(merged_table[,1], levels = merged_table[,1])
+  merged_table[,1] <- strtrim(merged_table[,1], 20)
   merged_table <- merged_table[order(merged_table$FDR),]
   
   size <- length(rownames(feats))
   
   if(size <= 20){
-    h <- 550
-    w <- 500
+    h <- 600
+    w <- 600
   }else if(size <= 35){
-    h <- 650
-    w <- 500
+    h <- 700
+    w <- 600
   }else{
     h <- 800
-    w <- 500
+    w <- 650
   }
   
   plotname <- paste(imgName, ".", format, sep="")
@@ -1432,7 +1472,7 @@ PlotRNASeqDotPlot <- function(mbSetObj, top.inx = 15, colpal = "plasma", imgName
 #'@import RJSONIO
 
 PCoA3D.Anal <- function(mbSetObj, ordMeth, distName, datatype, taxrank, colopt, variable, taxa, alphaopt, jsonNm){
-
+  
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
@@ -1440,7 +1480,7 @@ PCoA3D.Anal <- function(mbSetObj, ordMeth, distName, datatype, taxrank, colopt, 
   }
   
   variable <<- variable;
-
+  
   if(taxrank=="OTU"){
     taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
     data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj, taxa_table);
@@ -1450,7 +1490,7 @@ PCoA3D.Anal <- function(mbSetObj, ordMeth, distName, datatype, taxrank, colopt, 
     #merging at taxonomy levels
     data <- fast_tax_glom_first(data, taxrank)
   }
-
+  
   if(colopt=="taxa"){
     if(taxrank=="OTU"){
       data1 <- as.matrix(otu_table(data));
@@ -1481,9 +1521,9 @@ PCoA3D.Anal <- function(mbSetObj, ordMeth, distName, datatype, taxrank, colopt, 
   }else{
     data<-data;
   }
-
+  
   datacolby <<- data;
-
+  
   if(distName=="wunifrac"){
     pg_tree <- readRDS("tree.RDS");
     pg_tb <- tax_table(data);
@@ -1491,18 +1531,18 @@ PCoA3D.Anal <- function(mbSetObj, ordMeth, distName, datatype, taxrank, colopt, 
     pg_sd <- sample_data(data);
     pg_tree <- prune_taxa(taxa_names(pg_ot), pg_tree);
     data <- merge_phyloseq(pg_tb, pg_ot, pg_sd, pg_tree);
-
+    
     if(!is.rooted(phy_tree(data))){
-        pick_new_outgroup <- function(tree.unrooted){
-            treeDT <- cbind(cbind(data.table(tree.unrooted$edge),data.table(length = tree.unrooted$edge.length))[1:Ntip(tree.unrooted)],
-                    data.table(id = tree.unrooted$tip.label));
-                    new.outgroup <- treeDT[which.max(treeDT$length), ]$id
-                    return(new.outgroup);
-            }
-            new.outgroup <- pick_new_outgroup(phy_tree(data));
-            phy_tree(data) <- ape::root(phy_tree(data),
-                                outgroup = new.outgroup,
-                                resolve.root=TRUE)
+      pick_new_outgroup <- function(tree.unrooted){
+        treeDT <- cbind(cbind(data.table(tree.unrooted$edge),data.table(length = tree.unrooted$edge.length))[1:Ntip(tree.unrooted)],
+                        data.table(id = tree.unrooted$tip.label));
+        new.outgroup <- treeDT[which.max(treeDT$length), ]$id
+        return(new.outgroup);
+      }
+      new.outgroup <- pick_new_outgroup(phy_tree(data));
+      phy_tree(data) <- ape::root(phy_tree(data),
+                                  outgroup = new.outgroup,
+                                  resolve.root=TRUE)
     }
     GP.ord <-ordinate(data,ordMeth,"unifrac",weighted=TRUE);
   } else if (distName=="wunifrac"){
@@ -1512,24 +1552,24 @@ PCoA3D.Anal <- function(mbSetObj, ordMeth, distName, datatype, taxrank, colopt, 
     pg_sd <- sample_data(data);
     pg_tree <- prune_taxa(taxa_names(pg_ot), pg_tree);
     data <- merge_phyloseq(pg_tb, pg_ot, pg_sd, pg_tree);
-
+    
     if(!is.rooted(phy_tree(data))){
-        pick_new_outgroup <- function(tree.unrooted){
-            treeDT <- cbind(cbind(data.table(tree.unrooted$edge),data.table(length = tree.unrooted$edge.length))[1:Ntip(tree.unrooted)],
-            data.table(id = tree.unrooted$tip.label));
-            new.outgroup <- treeDT[which.max(treeDT$length), ]$id
-            return(new.outgroup);
-        }
-        new.outgroup <- pick_new_outgroup(phy_tree(data));
-        phy_tree(data) <- ape::root(phy_tree(data),
-                                outgroup = new.outgroup,
-                                resolve.root=TRUE)
-        }
+      pick_new_outgroup <- function(tree.unrooted){
+        treeDT <- cbind(cbind(data.table(tree.unrooted$edge),data.table(length = tree.unrooted$edge.length))[1:Ntip(tree.unrooted)],
+                        data.table(id = tree.unrooted$tip.label));
+        new.outgroup <- treeDT[which.max(treeDT$length), ]$id
+        return(new.outgroup);
+      }
+      new.outgroup <- pick_new_outgroup(phy_tree(data));
+      phy_tree(data) <- ape::root(phy_tree(data),
+                                  outgroup = new.outgroup,
+                                  resolve.root=TRUE)
+    }
     GP.ord <-ordinate(data,ordMeth,"unifrac",weighted=FALSE);
   }else{
     GP.ord <- ordinate(data,ordMeth,distName);
   }
-    
+  
   # obtain variance explained
   sum.pca <- GP.ord;
   imp.pca <- sum.pca$values;
@@ -1537,7 +1577,7 @@ PCoA3D.Anal <- function(mbSetObj, ordMeth, distName, datatype, taxrank, colopt, 
   var.pca <- imp.pca[,2]; # variance explained by each PC
   cum.pca <- imp.pca[5,]; # cummulated variance explained
   sum.pca <- append(sum.pca, list(std=std.pca, variance=var.pca, cum.var=cum.pca));
-
+  
   pca3d <- list();
   
   if(ordMeth=="NMDS"){
@@ -1552,12 +1592,12 @@ PCoA3D.Anal <- function(mbSetObj, ordMeth, distName, datatype, taxrank, colopt, 
     coords <- data.frame(t(signif(sum.pca$vectors[,1:3], 5)));
     write.csv(signif(sum.pca$vectors,5), file="pcoa_score.csv");
   }
-    
+  
   colnames(coords) <- NULL;
   pca3d$score$xyz <- coords;
   pca3d$score$name <- sample_names(mbSetObj$dataSet$norm.phyobj);
   col.type <- "factor";
-    
+  
   if(colopt=="taxa"){
     cls <- sample_data(data)[[taxa]];
     col.type <- "gradient"
@@ -1571,22 +1611,22 @@ PCoA3D.Anal <- function(mbSetObj, ordMeth, distName, datatype, taxrank, colopt, 
     # now set color for each group
     cols <- unique(as.numeric(cls)) + 1;
   }
-
+  
   pca3d$score$type <- col.type;
   pca3d$score$facA <- cls;
   rgbcols <- col2rgb(cols);
   cols <- apply(rgbcols, 2, function(x){paste("rgb(", paste(x, collapse=","), ")", sep="")});
   pca3d$score$colors <- cols;
-    
+  
   if(.on.public.web){
     load_rjsonio();
   }
-    
+  
   json.obj <- RJSONIO::toJSON(pca3d);
   sink(jsonNm);
   cat(json.obj);
   sink();
-
+  
   if(.on.public.web){
     .set.mbSetObj(mbSetObj) #may need to delete?
     return(1);
@@ -1627,7 +1667,7 @@ FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, taxa, variable,
   if(datatype=="16S"){
     mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
     data <- merge_phyloseq(data, mbSetObj$dataSet$taxa_table);
-        
+    
     if(taxrank=="OTU"){
       taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
       data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj, taxa_table);
@@ -1650,13 +1690,13 @@ FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, taxa, variable,
   }else{
     data <- mbSetObj$dataSet$norm.phyobj;
   }
-    
+  
   if(datatype=="metageno"){
     taxrank <- "OTU";
     data1 <- as.matrix(otu_table(data));
     feat_data <- as.numeric(data1[shotfeat,]);
   }
-    
+  
   data1 <- t(data1);
   clslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   
@@ -1690,7 +1730,7 @@ FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, taxa, variable,
   mbSetObj$analSet$corph.taxalvl <- taxrank;
   mbSetObj$analSet$corph.meth <- dist.name;
   mbSetObj$analSet$sig.count <- 0; # note, not a DE analysis here
-
+  
   if(.on.public.web){
     .set.mbSetObj(mbSetObj) 
     return(1);
@@ -1724,21 +1764,21 @@ PlotCorr <- function(mbSetObj, imgName, format="png", dpi=72, width=NA){
   cor.res <- mbSetObj$analSet$cor.mat;
   pattern <- mbSetObj$analSet$pattern;
   title <- paste(mbSetObj$analSet$taxrank, "correlated with the", pattern);
-    
+  
   if(nrow(cor.res) > 25){
     cor.res <- cor.res[1:25, ];
   }
-    
+  
   # first get most signficant ones (p value)
   ord.inx <- order(cor.res[,3]);
   cor.res <- cor.res[ord.inx, ];
   # then order by their direction (correlation)
   ord.inx <- order(cor.res[,1]);
-    
+  
   if(sum(cor.res[,1] > 0) == 0){ # all negative correlation
     ord.inx <- rev(ord.inx);
   }
-    
+  
   cor.res <- cor.res[ord.inx, ];
   title <- paste("Top",nrow(cor.res), tolower(mbSetObj$analSet$taxrank), "correlated with the", pattern);
   imgName = paste(imgName, ".", format, sep="");
@@ -1751,7 +1791,7 @@ PlotCorr <- function(mbSetObj, imgName, format="png", dpi=72, width=NA){
   }else{
     w <- h <- width;
   }
-
+  
   Cairo::Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
   par(mar=c(5,6,4,3))
   rownames(cor.res)<-substr(rownames(cor.res), 1, 18);
@@ -1790,42 +1830,42 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank,
                           taxa, variable, datatype, shotfeat, shotgunid){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-    
+  
   if(is.null(pattern)){
     pattern <- paste(1:length(levels(clslbl)), collapse="-");
   }
-    
+  
   templ <- as.numeric(ClearStrings(strsplit(pattern, "-")[[1]]));
-
+  
   if(all(templ==templ[1])){
     AddErrMsg("Cannot calculate correlation on constant values!");
     return(0);
   }
-
+  
   new.template <- vector(mode="numeric", length=length(clslbl))
   # expand to match each levels in the analSet$cls
   all.lvls <- levels(clslbl);
-
+  
   if(length(templ)!=length(all.lvls)){
     AddErrMsg("Wrong template - must the same length as the group number!");
     return(0);
   }
-
+  
   for(i in 1:length(templ)){
     hit.inx <- clslbl == all.lvls[i]
     new.template[hit.inx] = templ[i];
   }
-
+  
   if(datatype=="16S"){
     mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
     data <- merge_phyloseq(data, mbSetObj$dataSet$taxa_table);
-        
+    
     if(taxrank=="OTU"){
       taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
       data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj, taxa_table);
       data1 <- as.matrix(otu_table(data));
       feat_data <- as.numeric(data1[taxa,]);
-        
+      
     }else{
       taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
       data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj, taxa_table);
@@ -1843,13 +1883,13 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank,
   }else{
     data <- mbSetObj$dataSet$norm.phyobj;
   }
-    
+  
   if(datatype=="metageno"){
     taxrank <- "OTU";
     data1 <- as.matrix(otu_table(data));
     feat_data <- as.numeric(data1[shotfeat,]);
   }
-    
+  
   data1 <- t(data1);
   clslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   boxdata <- as.data.frame(data1);
@@ -1868,7 +1908,7 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank,
   #removing Inf values from table
   is.na(mbSetObj$analSet$resTable) <- sapply(mbSetObj$analSet$resTable, is.infinite);
   mbSetObj$analSet$resTable[is.na(mbSetObj$analSet$resTable)]<-0;
-    
+  
   if(datatype=="metageno"){
     mbSetObj$analSet$pattern<-shotfeat;
   }else{
@@ -1927,18 +1967,23 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank,
 
 PlotCorrHeatMap <- function(mbSetObj, imgName, format="png", width=NA, cor.method,
                             colors_cntrst, viewOpt, taxrank, fix.col, no.clst, top, 
-                            topNum, datatype){
+                            topNum, datatype, cor.type="corr"){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
+  if(.on.public.web){
+    load_viridis();
+    load_ppcor();
+  }
+  
   main <- xlab <- ylab <- NULL;
-    
+  
   if(datatype=="metageno"){
     data <- mbSetObj$dataSet$norm.phyobj;
     data1 <- as.matrix(otu_table(data));
     taxrank <- "OTU";
   }
-    
+  
   if(datatype=="16S"){
     if(taxrank=="OTU"){
       taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
@@ -1958,19 +2003,50 @@ PlotCorrHeatMap <- function(mbSetObj, imgName, format="png", width=NA, cor.metho
       data1 <- as.matrix(t(sapply(by(data1, rownames(data1), colSums), identity)));
     }
   }
-
+  
   data <- t(data1);
   mbSetObj$analSet$abund_data<-data;
-    
+  
   if(ncol(data) > 1000){
     filter.val <- apply(data.matrix(data), 2, IQR, na.rm=T);
     rk <- rank(-filter.val, ties.method='random');
     data <- as.data.frame(data[,rk <=1000]);
   }
-
+  
   colnames(data)<-substr(colnames(data), 1, 18);
-  corr.mat<-cor(data, method=cor.method);
+  
+  if(cor.type=="corr"){
+    corr.mat<-cor(data, method=cor.method);
+  }else if(cor.type=="pcorr"){
+    df.data <- data.frame(data)
+    df.data[df.data==0|is.na(df.data)] <- .00001
+    names <- colnames(df.data)
+    
+    #check if data is too collinear
+    
+    corr.mat <- tryCatch(
+      {
+        #try
+        corr.mat<-ppcor::pcor(df.data, method=cor.method);
+      },
+      error=function(cond){
+        current.msg <<- "Matrix is not invertible! Variables are highly correlated therefore partial correlation cannot be calculated!"
+        return(0)
+      }
+    )
+    
+    if(length(corr.mat)==1){
+      return(0);
+    }
 
+    corr.mat<-corr.mat$estimate
+    rownames(corr.mat) <- names
+    colnames(corr.mat) <- names
+  }else{
+    current.msg <<- "Correlation type invalid!"
+    return(0)
+  }
+  
   # use total abs(correlation) to select
   if(top){
     cor.sum <- apply(abs(corr.mat), 1, sum);
@@ -1978,14 +2054,13 @@ PlotCorrHeatMap <- function(mbSetObj, imgName, format="png", width=NA, cor.metho
     var.sel <- cor.rk <= topNum;
     corr.mat <- corr.mat[var.sel, var.sel];
   }
-
-  # set up parameter for heatmap
   
+  # set up parameter for heatmap
   if(.on.public.web){
     load_rcolorbrewer();
     load_gplots();
   }
-
+  
   if(colors_cntrst=="gbr"){
     colors <- grDevices::colorRampPalette(c("green", "black", "red"), space="rgb")(256);
   }else if(colors_cntrst == "heat"){
@@ -2003,12 +2078,12 @@ PlotCorrHeatMap <- function(mbSetObj, imgName, format="png", width=NA, cor.metho
   }else{
     colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdBu"))(256));
   }
-    
+  
   #used for network edges
   first_color <- colors[1];
   last_color <- colors[length(colors)];
   imgName = paste(imgName, ".", format, sep="");
-    
+  
   if(viewOpt == "overview"){
     if(is.na(width)){
       w <- 9;
@@ -2018,7 +2093,7 @@ PlotCorrHeatMap <- function(mbSetObj, imgName, format="png", width=NA, cor.metho
     }else{
       w <- 7.2;
     }
-      h <- w;
+    h <- w;
   }else{
     if(ncol(corr.mat) > 50){
       myH <- ncol(corr.mat)*12 + 40;
@@ -2027,8 +2102,8 @@ PlotCorrHeatMap <- function(mbSetObj, imgName, format="png", width=NA, cor.metho
     }else{
       myH <- ncol(corr.mat)*12 + 120;
     }
-      h <- round(myH/72,2);
-
+    h <- round(myH/72,2);
+    
     if(is.na(width)){
       w <- h;
     }else if(width == 0){
@@ -2038,14 +2113,14 @@ PlotCorrHeatMap <- function(mbSetObj, imgName, format="png", width=NA, cor.metho
       w <- h <- 7.2;
     }
     
-  # to prevent too small
-  min.w <- 4.8;
-  
+    # to prevent too small
+    min.w <- 4.8;
+    
     if(w < min.w){
       w <- h <- min.w;
     }
   }
-
+  
   if(format=="pdf"){
     grDevices::pdf(file = imgName, width=w, height=h, bg="white", onefile=FALSE);
   }else{
@@ -2054,7 +2129,7 @@ PlotCorrHeatMap <- function(mbSetObj, imgName, format="png", width=NA, cor.metho
   }
   
   mbSetObj$imgSet$cor.heat<-imgName;
-    
+  
   if(no.clst){
     rowv = FALSE;
     colv = FALSE;
@@ -2077,7 +2152,7 @@ PlotCorrHeatMap <- function(mbSetObj, imgName, format="png", width=NA, cor.metho
     pheatmap::pheatmap(corr.mat, fontsize=8, fontsize_row=8, cluster_rows = colv,
                        cluster_cols = rowv, color = colors);
   }
-    
+  
   dev.off();
   
   mbSetObj$analSet$cor.heatmat<-corr.mat;
@@ -2088,7 +2163,13 @@ PlotCorrHeatMap <- function(mbSetObj, imgName, format="png", width=NA, cor.metho
   mbSetObj$analSet$corheat.taxalvl<-taxrank;
   mbSetObj$analSet$corheat.meth<-cor.method;
   write.csv(signif(corr.mat,5), file="correlation_table.csv");
-  return(.set.mbSetObj(mbSetObj))
+  
+  if(.on.public.web){
+    .set.mbSetObj(mbSetObj)
+    return(1);
+  }else{
+    return(.set.mbSetObj(mbSetObj))
+  }
 }
 
 ###################################
@@ -2144,7 +2225,7 @@ phyloseq_to_edgeR = function(physeq, group, method="RLE", ...){
     load_edgeR();
     load_phyloseq();
   }
-
+  
   # Enforce orientation.
   if( !taxa_are_rows(physeq) ){ physeq <- t(physeq) }
   x = as(otu_table(physeq), "matrix")
@@ -2170,37 +2251,37 @@ phyloseq_to_edgeR = function(physeq, group, method="RLE", ...){
 
 phyloseq_to_metagenomeSeq = function (physeq, ...) 
 {
-    if (!taxa_are_rows(physeq)) {
-        physeq <- t(physeq)
+  if (!taxa_are_rows(physeq)) {
+    physeq <- t(physeq)
+  }
+  countData = round(as(otu_table(physeq), "matrix"), digits = 0)
+  if (!is.null(sample_data(physeq, FALSE))) {
+    ADF = Biobase::AnnotatedDataFrame(data.frame(sample_data(physeq)))
+  }else {
+    ADF = NULL
+  }
+  taxonomy = tax_table(physeq, errorIfNULL=FALSE);
+  if (!is.null(taxonomy)) {
+    TDF = Biobase::AnnotatedDataFrame(data.frame(OTUname = taxa_names(physeq), 
+                                                 data.frame(as(taxonomy, "matrix")), row.names = taxa_names(physeq)))
+    #  data.frame(tax_table(physeq)@.Data), row.names = taxa_names(physeq)))
+    #  data.frame(tax_table(physeq)), row.names = taxa_names(physeq))) ## bugs with tax_table
+  }else {
+    TDF = Biobase::AnnotatedDataFrame(data.frame(OTUname = taxa_names(physeq), 
+                                                 row.names = taxa_names(physeq)))
+  }
+  if (requireNamespace("metagenomeSeq")) {
+    mrobj = metagenomeSeq::newMRexperiment(counts = countData, 
+                                           phenoData = ADF, featureData = TDF, ...)
+    if (sum(colSums(countData > 0) > 1) < ncol(countData)) {
+      p = suppressMessages(metagenomeSeq::cumNormStat(mrobj))
     }
-    countData = round(as(otu_table(physeq), "matrix"), digits = 0)
-    if (!is.null(sample_data(physeq, FALSE))) {
-        ADF = Biobase::AnnotatedDataFrame(data.frame(sample_data(physeq)))
-    }else {
-        ADF = NULL
+    else {
+      p = suppressMessages(metagenomeSeq::cumNormStatFast(mrobj))
     }
-    taxonomy = tax_table(physeq, errorIfNULL=FALSE);
-    if (!is.null(taxonomy)) {
-        TDF = Biobase::AnnotatedDataFrame(data.frame(OTUname = taxa_names(physeq), 
-             data.frame(as(taxonomy, "matrix")), row.names = taxa_names(physeq)))
-          #  data.frame(tax_table(physeq)@.Data), row.names = taxa_names(physeq)))
-          #  data.frame(tax_table(physeq)), row.names = taxa_names(physeq))) ## bugs with tax_table
-    }else {
-        TDF = Biobase::AnnotatedDataFrame(data.frame(OTUname = taxa_names(physeq), 
-            row.names = taxa_names(physeq)))
-    }
-    if (requireNamespace("metagenomeSeq")) {
-        mrobj = metagenomeSeq::newMRexperiment(counts = countData, 
-            phenoData = ADF, featureData = TDF, ...)
-        if (sum(colSums(countData > 0) > 1) < ncol(countData)) {
-            p = suppressMessages(metagenomeSeq::cumNormStat(mrobj))
-        }
-        else {
-            p = suppressMessages(metagenomeSeq::cumNormStatFast(mrobj))
-        }
-        mrobj = metagenomeSeq::cumNorm(mrobj, p = p)
-        return(mrobj)
-    }
+    mrobj = metagenomeSeq::cumNorm(mrobj, p = p)
+    return(mrobj)
+  }
 }
 
 # Helper function
@@ -2335,7 +2416,7 @@ GetORATable<-function(mbSetObj){
 
 # utility method to get anova results
 GetAovRes <- function(cls, data, nonpar=F){
-    
+  
   if(nonpar){
     anova.res <- apply(as.matrix(data), 2, function(x){kruskal.test(x ~ cls)});
     res <- unlist(lapply(anova.res, function(x) {c(x$statistic, x$p.value)}));
@@ -2351,7 +2432,7 @@ GetAovRes <- function(cls, data, nonpar=F){
 # utility method to get p values
 #'@import genefilter
 GetTtestRes<- function(cls, data, paired=FALSE, equal.var=TRUE, nonpar=F){
-    
+  
   if(nonpar){
     inx1 <- which(cls==levels(cls)[1]);
     inx2 <- which(cls==levels(cls)[2]);
@@ -2368,23 +2449,23 @@ GetTtestRes<- function(cls, data, paired=FALSE, equal.var=TRUE, nonpar=F){
       data <- na.omit(data);
       inx1 <- which(cls==levels(cls)[1]);
       inx2 <- which(cls==levels(cls)[2]);
-
+      
       res <- apply(data, 2, function(x) {
-      tmp <- try(t.test(x[inx1], x[inx2], paired = paired, var.equal = equal.var, silent=TRUE));
-                if(class(tmp) == "try-error") {
-                  return(c(NA, NA));
-                }else{
-                  return(c(tmp$statistic, tmp$p.value)); }})
+        tmp <- try(t.test(x[inx1], x[inx2], paired = paired, var.equal = equal.var, silent=TRUE));
+        if(class(tmp) == "try-error") {
+          return(c(NA, NA));
+        }else{
+          return(c(tmp$statistic, tmp$p.value)); }})
     }else{ # use fast version
       if(.on.public.web){
         load_genefilter();
       }
       res <- try(rowttests((t(data)), cls));
-                 if(class(res) == "try-error") {
-                    res <- c(NA, NA);
-                 }else{
-                    res <- t(cbind(res$statistic, res$p.value));
-                 }
+      if(class(res) == "try-error") {
+        res <- c(NA, NA);
+      }else{
+        res <- t(cbind(res$statistic, res$p.value));
+      }
     }
   }
   return(t(res));

@@ -9,9 +9,8 @@ PerformNormalization(mbSetObj, rare.opt, scale.opt, transform.opt)
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
 
-\item{rare.opt}{Character, default is set to "none".
-Use "rarewi" to rarefy with replacement to the minimum library depth and 
-"rarewo" to rarefy without replacemet to the minimum library depth.}
+\item{rare.opt}{Character, "rarewi" to rarefy the data and 
+"none" to not.}
 
 \item{scale.opt}{Character, input the name of the data scaling option.
 "colsum" for total sum scaling, "CSS" for cumulative sum scaling,

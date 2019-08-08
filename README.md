@@ -105,6 +105,7 @@ To inform us of any bugs or requests, please open a new issue or send an email t
 
 ## MicrobiomeAnalystR History & Updates
 
+08-07-2019 - Added function to import SILVA annotated biom files (handling Domain in taxonomy)
 07-11-2019 - Added volcano + dot plots for RNAseq analysis
 07-08-2019 - Testing R code for local use + creating vignettes
 07-03-2019 - Updating R code + documentation
@@ -114,9 +115,7 @@ To inform us of any bugs or requests, please open a new issue or send an email t
 
 Add 3D visualizations using plotly
 
-Add back bar plots for LEfSe/RF
-
 Add function to make multiple feature box plots
 
-Add volcano plot for DESeq2 - added, cut ASV names
+For pcorr - add option to perform pcorr for 1 feature - think about what kind of output. Probably pop up table?
 

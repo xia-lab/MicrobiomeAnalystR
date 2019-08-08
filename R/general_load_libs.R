@@ -156,3 +156,8 @@ load_globaltest <- function(){
 load_viridis <- function(){
   suppressMessages(library(viridis))
 }
+
+# Load ppcor
+load_ppcor <- function(){
+  suppressMessages(library(ppcor))
+}
