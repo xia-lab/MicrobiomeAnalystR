@@ -4,7 +4,7 @@
 \alias{Read16SBiomData}
 \title{Function to read 16S data in biom format}
 \usage{
-Read16SBiomData(mbSetObj, dataName, type, taxa_type, ismetadata)
+Read16SBiomData(mbSetObj, dataName, taxa_type, ismetadata)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

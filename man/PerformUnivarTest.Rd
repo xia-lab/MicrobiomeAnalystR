@@ -4,8 +4,7 @@
 \alias{PerformUnivarTest}
 \title{Main function to perform classical univariate analysis.}
 \usage{
-PerformUnivarTest(mbSetObj, variable, p.lvl, datatype, shotgunid, taxrank,
-  statOpt)
+PerformUnivarTest(mbSetObj, variable, p.lvl, shotgunid, taxrank, statOpt)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
@@ -13,9 +12,6 @@ PerformUnivarTest(mbSetObj, variable, p.lvl, datatype, shotgunid, taxrank,
 \item{variable}{Character, input the name of the experimental factor.}
 
 \item{p.lvl}{Numeric, input the adjusted p-value cutoff.}
-
-\item{datatype}{Character, input whether the data is marker gene
-data ("16S") or metagenomic data ("metageno").}
 
 \item{shotgunid}{If 16S, it is set to "NA".}
 
@@ -26,6 +22,9 @@ univariate analysis.}
 Mann-Whitney for two-group comparisons or Kruskall-Wallis for multiple group comparisons. 
 Input "tt" to use parametric tests including T-tests for two-group comparisons and ANOVA
 for multiple group comparisons.}
+
+\item{datatype}{Character, input whether the data is marker gene
+data ("16S") or metagenomic data ("metageno").}
 }
 \description{
 This functions performs classical univariate analysis

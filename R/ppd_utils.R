@@ -178,15 +178,13 @@ PerformRefDataMapping <- function(mbSetObj, refdataNm, taxo_type, sample_var, bi
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import vegan
-PCoA3DAnal.16SRef <- function(mbSetObj, barplotNm, ordMeth, distName, datatype, taxrank, colopt,
+PCoA3DAnal.16SRef <- function(mbSetObj, barplotNm, ordMeth, distName, taxrank, colopt,
                              taxa, alphaopt, metadata, format="png", dpi=72){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(.on.public.web){
-    load_vegan();
-  }
-  
+  load_vegan();
+
   data<-userrefdata;
   GP.ord <- ordinate(data,ordMeth,distName);
   #creating 2D image for Report Generation
@@ -229,9 +227,7 @@ PlotUsrRefPCoA3DScore <- function(mbSetObj, imgName, format="json", inx1, inx2, 
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(.on.public.web){
-    load_rjsonio();
-  }
+  load_rjsonio();
   
   pca <- mbSetObj$analSet$sum.pca;
   pca3d <- list();

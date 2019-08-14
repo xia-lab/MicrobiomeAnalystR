@@ -109,7 +109,6 @@ ReadShotgunTabData <- function(mbSetObj, dataName, geneidtype, datatype) {
   current.msg <<- paste("A total of ",ncol(mydata) , " samples and ", nrow(mydata), " metagenomic features are present.");
   mbSetObj$dataSet$read.msg<-current.msg;
   mbSetObj$dataSet$data.type<-"text";
-  mbSetObj$dataSet$module.type<-datatype;
   mbSetObj$dataSet$gene.id<-geneidtype;
   
   if(.on.public.web){
@@ -174,7 +173,7 @@ ReadShotgunBiomData <- function(mbSetObj, dataName, geneidtype, module.type, ism
   current.msg <<- paste(msg, collapse="; ");
   mbSetObj$dataSet$read.msg<-current.msg;
   mbSetObj$dataSet$data.type<-"biom";
-  mbSetObj$dataSet$module.type<-module.type;
+  mbSetObj$module.type<-module.type;
   mbSetObj$dataSet$data.orig <- otu.dat;
   mbSetObj$dataSet$gene.id<-geneidtype;
   
@@ -200,10 +199,8 @@ PreparePCA4Shotgun <- function(mbSetObj, imgName,imgName2, format="json", inx1, 
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(.on.public.web){
-    load_rjsonio();
-    load_ggfortify();
-  }
+  load_rjsonio();
+  load_ggfortify();
   
   imgName2 = paste(imgName2, ".", format2d, sep="");
   mbSetObj$imgSet$pca<-imgName2;
@@ -283,14 +280,12 @@ PlotFunctionStack<-function(mbSetObj, summaryplot, functionlvl, abundcal, geneid
 
   summaryplot <- paste(summaryplot, ".", format, sep="");
   
-  if(.on.public.web){
-    load_reshape();
-  }
-    
+  load_reshape();
+
   data <- mbSetObj$dataSet$proc.phyobj;
   smpl_nm <- sample_names(data);
   clsLbl <- factor(sample_data(data)[[metadata]]);
-  if(min(table(clsLbl)) < 3){
+  if(length(levels(clsLbl)) > 9 && min(table(clsLbl)) < 3){
     current.msg<<-"Too many facets to be displayed - please select a more meaningful facet option with at least 3 samples per group.";
     return(0);
   }
@@ -530,10 +525,8 @@ PrepareQueryJson <- function(mbSetObj){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(.on.public.web){
-    load_rjsonio();
-  }
-  
+  load_rjsonio();
+
   if(enrich.type == "hyper"){
     exp.vec <- mbSetObj$analSet$data[,1]; # drop dim for json
   }else{
@@ -601,9 +594,7 @@ PerformKOEnrichAnalysis_Table <- function(mbSetObj, file.nm){
   genemat <- as.data.frame(t(otu_table(mbSetObj$dataSet$norm.phyobj)));
 
   # now, perform the enrichment analysis
-  if(.on.public.web){
-    load_globaltest();
-  }
+  load_globaltest();
 
   # first, get the matched entries from current.geneset
   hits <- lapply(current.geneset, function(x){x[x %in% colnames(genemat)]});
@@ -862,9 +853,7 @@ PerformKOEnrichAnalysis_List <- function(mbSetObj, file.nm){
 #'@import RJSONIO
 Save2KEGGJSON <- function(hits.query, res.mat, file.nm){
   
-  if(.on.public.web){
-    load_rjsonio();
-  }
+  load_rjsonio();
   
   resTable <- data.frame(Pathway=rownames(res.mat), res.mat);
   current.msg <<- "Functional enrichment analysis was completed";

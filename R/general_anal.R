@@ -1,7 +1,8 @@
-# current.selected.tax
-SetCurrentSelectedTaxLevel<-function(taxLvl){
-  current.selected.tax <<- taxLvl;
-}
+##################################################
+## R script for MicrobiomeAnalyst
+## Description: comparative analysis methods for microbiome data
+## Author: Jeff Xia, jeff.xia@mcgill.ca
+###################################################
 
 #######################################
 ########### Random Forest #############
@@ -24,12 +25,9 @@ SetCurrentSelectedTaxLevel<-function(taxLvl){
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import randomForest
-RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank, datatype){
+RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank){
   
-  if(.on.public.web){
-    load_randomforest();
-  }
-  
+  load_randomforest();
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   # set up random numbers
@@ -53,7 +51,7 @@ RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank, data
   # save the seed
   mbSetObj$analSet$rn.seed <- rn.sd;
   
-  if(datatype=="16S"){
+  if(mbSetObj$module.type=="mdp"){
     mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
     data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj,tax_table(mbSetObj$dataSet$proc.phyobj));
   }else{
@@ -61,7 +59,7 @@ RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank, data
   }
   
   #using by default names for shotgun data
-  if(datatype=="metageno"){
+  if(mbSetObj$module.type=="sdp"){
     taxrank <- "OTU";
   }
   
@@ -154,7 +152,8 @@ PlotRF.Classify<-function(mbSetObj, feature, imgName, format="png", dpi=72, widt
   Cairo::Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
   par(mar=c(4,4,3,2));
   cols <- grDevices::rainbow(length(levels(mbSetObj$analSet$cls))+1);
-  plot(mbSetObj$analSet$rf, main="Random Forest classification", col=cols);
+  plot(mbSetObj$analSet$rf, main="Random Forest Classification", col=cols);
+  print(head(mbSetObj$analSet$rf))
   legend("topright", legend = c("Overall", levels(mbSetObj$analSet$cls)), lty=2, lwd=1, col=cols);
   dev.off();
   return(.set.mbSetObj(mbSetObj))
@@ -185,28 +184,28 @@ PlotRF.VIP<-function(mbSetObj, feature, imgName, format="png", dpi=72, width=NA)
   if(is.na(width)){
     if(feature < 5 ){
       h <- feature*1.2;
-      w <- 9;
+      w <- 9.25;
     } else if (feature < 10){
       h <- feature*1.4;
-      w <- 9;
+      w <- 9.25;
     } else if (feature < 15){
       h <- feature/1.6;
-      w <- 9;
+      w <- 9.25;
     } else if (feature < 20){
       h <- feature/1.8;
-      w <- 9;
+      w <- 9.25;
     } else if (feature < 25){
       h <- feature/2;
-      w <- 9;
+      w <- 9.25;
     } else if (feature < 30){
       h <- feature/2.2;
-      w <- 9;
+      w <- 9.25;
     } else if (feature < 40){
       h <- feature/2.5;
-      w <- 9;
+      w <- 9.25;
     } else {
       h <- feature/10;
-      w <- 9;
+      w <- 9.25;
     }
   }else if(width == 0){
     w <- 8;
@@ -276,10 +275,10 @@ PlotImpVar <- function(mbSetObj, imp.vec, xlbl, feature, color.BW=FALSE){
   names(imp.vec) <- NULL;
   
   # modified for B/W color
-  dotcolor <- ifelse(color.BW, "darkgrey", "blue");
-  dotchart(imp.vec, bg=dotcolor, xlab= xlbl, cex=1.3);
+  dotcolor <- ifelse(color.BW, "darkgrey", "#585855");
+  dotchart(imp.vec, bg=dotcolor, xlab= xlbl, cex=1.35);
   
-  mtext(side=2, at=1:feat.num, vip.nms, las=2, line=1)
+  mtext(side=2, at=1:feat.num, vip.nms, las=2, line=1, cex=1.1)
   
   axis.lims <- par("usr"); # x1, x2, y1 ,y2
   
@@ -291,14 +290,12 @@ PlotImpVar <- function(mbSetObj, imp.vec, xlbl, feature, color.BW=FALSE){
   y <- 1:feat.num;
   par(xpd=T);
   
-  if(.on.public.web){
-    load_rcolorbrewer();
-  }
-  
+  load_rcolorbrewer();
+
   nc <- ncol(mns);
   
   # modified for B/W color
-  colorpalette <- ifelse(color.BW, "Greys", "RdYlGn");
+  colorpalette <- ifelse(color.BW, "Greys", "RdYlBu");
   col <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, colorpalette))(nc); # set colors for each class
   if(color.BW) col <- rev(col);
   
@@ -313,7 +310,7 @@ PlotImpVar <- function(mbSetObj, imp.vec, xlbl, feature, color.BW=FALSE){
   for (n in 1:ncol(mns)){
     points(x,y, bty="n", pch=22, bg=bg[,n], cex=3);
     # now add label
-    text(x[1], axis.lims[4], cls.lbl[n], srt=45, adj=c(0.2,0.5));
+    text(x[1], axis.lims[4], cls.lbl[n], srt=45, adj=c(0.2,0.5), cex=1.1);
     # shift x, note, this is good for current size
     x <- x + shift/1.25;
   }
@@ -333,8 +330,8 @@ PlotImpVar <- function(mbSetObj, imp.vec, xlbl, feature, color.BW=FALSE){
   
   points(x,y, bty="n", pch=15, col=rev(col), cex=2);
   
-  text(x[1], endy+shifty/8, "High");
-  text(x[1], starty-shifty/8, "Low");
+  text(x[1], endy+shifty/8, "High", cex=1.1);
+  text(x[1], starty-shifty/8, "Low", cex=1.1);
   par(op);
 }
 
@@ -363,7 +360,7 @@ PlotImpVar <- function(mbSetObj, imp.vec, xlbl, feature, color.BW=FALSE){
 #'@export
 #'@import MASS
 
-PerformUnivarTest <- function(mbSetObj, variable, p.lvl, datatype, shotgunid, taxrank, statOpt){
+PerformUnivarTest <- function(mbSetObj, variable, p.lvl, shotgunid, taxrank, statOpt){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -373,22 +370,15 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, datatype, shotgunid, ta
   data <- mbSetObj$dataSet$norm.phyobj;
   
   #using just normalized abundant data
-  if(datatype=="16S"){
+  if(mbSetObj$module.type=="mdp"){
     # dynamically add taxa table to norm.phyobj
     mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
     data <- merge_phyloseq(data, mbSetObj$dataSet$taxa_table);
   }else{
-    data<-data;
-  }
-  
-  #using by default names for shotgun data
-  if(datatype=="metageno"){
     taxrank<-"OTU";
   }
   
   if(taxrank=="OTU"){
-    data <- data;
-    nm <- taxa_names(data);
     data1 <- as.data.frame(t(otu_table(data)));
   }else{
     #merging at taxonomy levels
@@ -405,8 +395,6 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, datatype, shotgunid, ta
   }
   
   data.classical.univar <<- data1 
-  
-  colnames(data1)<-nm;
   isNonPar <- statOpt=="nonpar"
   
   if(length(levels(cls)) > 2){
@@ -456,22 +444,17 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, datatype, shotgunid, ta
   taxa_names(filt.dataphy) <- rownames(mbSetObj$dataSet$filt.data);
   data_boxplot <- filt.dataphy;
   
-  if(datatype=="16S"){
+  if(mbSetObj$module.type=="mdp"){
     mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
     data_boxplot <- merge_phyloseq(data_boxplot, mbSetObj$dataSet$taxa_table);
-  }else{
-    data_boxplot <- data_boxplot;
   }
   
   #using by default names for shotgun data
-  if(datatype=="metageno"){
+  if(mbSetObj$module.type=="sdp"){
     taxrank_boxplot<-"OTU";
   }
   
-  if(taxrank_boxplot=="OTU"){
-    data_boxplot <- data_boxplot;
-    nm_boxplot <- taxa_names(data_boxplot);
-  }else{
+  if(taxrank_boxplot!="OTU"){
     #merging at taxonomy levels
     data_boxplot <- fast_tax_glom_first(data_boxplot, taxrank_boxplot);
     nm_boxplot <- as.character(tax_table(data_boxplot)[,taxrank_boxplot]);
@@ -484,11 +467,11 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, datatype, shotgunid, ta
     data1_boxplot <- as.matrix(t(sapply(by(data1_boxplot, rownames(data1_boxplot), colSums), identity)));
     data1_boxplot <- otu_table(data1_boxplot,taxa_are_rows=T);
     data_boxplot <- merge_phyloseq(data1_boxplot, sample_data(data_boxplot));
-    nm_boxplot <- taxa_names(data_boxplot);
   }
-  
+
+  nm_boxplot <- taxa_names(data_boxplot);
   dat3t_boxplot <- as.data.frame(t(otu_table(data_boxplot)));
-  colnames(dat3t_boxplot) <- nm_boxplot;
+  colnames(dat3t_boxplot) <- nm_boxplot; 
   
   #individual boxplot for features
   box_data <- as.data.frame(dat3t_boxplot[ ,sigfeat]);
@@ -497,7 +480,6 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, datatype, shotgunid, ta
   mbSetObj$analSet$boxdata <- box_data;
   write.csv(t(box_data), "uni_abund_data.csv")
   
-  mbSetObj$analSet$datatype <- datatype;
   mbSetObj$analSet$anal.type <- "tt";
   mbSetObj$analSet$var.type <- variable;
   mbSetObj$analSet$sig.count <- de.Num;
@@ -536,21 +518,12 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, datatype, shotgunid, ta
 #'@export
 #'@import metagenomeSeq
 
-PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, datatype, shotgunid, taxrank, model){
-  
-  variable <<-  variable;
-  p.lvl <<-  p.lvl; 
-  datatype <<-  datatype; 
-  shotgunid <<-  shotgunid; 
-  taxrank <<-  taxrank; 
-  model <<- model; 
-  
+PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank, model){
+    
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(.on.public.web){
-    load_metagenomeseq();
-  }
-  
+  load_metagenomeseq();
+
   filt.dataphy <- mbSetObj$dataSet$filt.data;
   filt.dataphy <- apply(filt.dataphy,2,as.integer);
   filt.dataphy <- otu_table(filt.dataphy,taxa_are_rows =TRUE);
@@ -563,22 +536,14 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, datatype, shotguni
   cls <- as.factor(sample_data(data)[[variable]]);
   lvl <- length(levels(cls));
   
-  if(datatype=="16S"){
+  if(mbSetObj$module.type=="mdp"){
     mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
     data <- merge_phyloseq(data, mbSetObj$dataSet$taxa_table);
-  }else{
-    data <- data;
-  }
-  
-  #using by default names for shotgun data
-  if(datatype=="metageno"){
+  }else{ #using by default names for shotgun data
     taxrank <- "OTU";
   }
   
-  if(taxrank=="OTU"){
-    data <- data;
-    nm <- taxa_names(data);
-  }else{
+  if(taxrank!="OTU"){
     #merging at taxonomy levels
     data <- fast_tax_glom_first(data, taxrank);
     nm <- as.character(tax_table(data)[,taxrank]);
@@ -599,10 +564,10 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, datatype, shotguni
   mod <- model.matrix(~phenoData(data)@data[,variable]);
   
   if(model=="zigfit"){
-    fit <- fitZig(data, mod);
+    fit <- fitZig(data, mod);  
   }else{
     if(length(levels(cls)) > 2){
-      current.msg <<- paste( "More than two group present in sample variable. This model can only be used with two groups.");
+      current.msg <<- paste( "More than two groups present in your experimental factor. This model can only be used with two groups.");
       return(0);
     }else{
       fit <-fitFeatureModel(data, mod);
@@ -673,7 +638,6 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, datatype, shotguni
   
   mbSetObj$analSet$boxdata <- box_data;
   mbSetObj$analSet$sig.count <- de.Num;
-  mbSetObj$analSet$datatype <- datatype;
   mbSetObj$analSet$anal.type <- "metagseq";
   mbSetObj$analSet$var.type <- variable;
   mbSetObj$analSet$metageno.taxalvl <- taxrank;
@@ -709,40 +673,27 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, datatype, shotguni
 #'@export
 #'@import MASS
 
-PerformLefseAnal <- function(mbSetObj, p.lvl, lda.lvl, variable, isfunc, datatype, shotgunid, taxrank){
+PerformLefseAnal <- function(mbSetObj, p.lvl, lda.lvl, variable, isfunc, shotgunid, taxrank){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  datatype <- datatype;
-  
-  if(.on.public.web){
-    load_mass();
-  }
+  load_MASS();
   claslbl <<- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   
   #normalized data
   data <- mbSetObj$dataSet$norm.phyobj;
   
-  if(datatype=="16S"){
+  if(mbSetObj$module.type=="mdp"){
     taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
     data <- merge_phyloseq(data, taxa_table);
-  }else{
-    data <- data;
-  }
-  
-  #using by default names for shotgun data
-  
-  if(datatype=="metageno"){
+  }else{#using by default names for shotgun data
     taxrank <- "OTU";
   }
   
   if(taxrank=="OTU"){
-    data <- data;
-    tax_orig <<- nm <- taxa_names(data);
     dat3t <- as.data.frame(t(otu_table(data)));
   }else{
     #merging at taxonomy levels
     data <- fast_tax_glom_first(data, taxrank);
-    tax_orig <<- taxa_names(data);
     nm <- as.character(tax_table(data)[,taxrank]);
     #converting NA values to unassigned
     nm[is.na(nm)] <- "Not_Assigned";
@@ -767,10 +718,9 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, lda.lvl, variable, isfunc, datatyp
     dat3t <- dat3t[,1:500];
   };
   
-  wil_data <- as.data.frame(dat3t);
-  #if no subclass within classes then no wilcoxon rank sum test
-  wil_datadf <- wil_data;
-  
+  wil_datadf <- as.data.frame(dat3t);
+
+  #if no subclass within classes then no wilcoxon rank sum test  
   #Linear Discriminant analysis (LDA)
   ldares <- lda(claslbl~ .,data = wil_datadf);
   ldamean <- as.data.frame(t(ldares$means));
@@ -836,12 +786,10 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, lda.lvl, variable, isfunc, datatyp
   
   mbSetObj$analSet$boxdata <- box_data;
   mbSetObj$analSet$sig.count <- de.Num;
-  mbSetObj$analSet$datatype <- datatype;
   mbSetObj$analSet$anal.type <- "lefse";
   mbSetObj$analSet$lefse.taxalvl <- taxrank;
   mbSetObj$analSet$id.type <- shotgunid;
   mbSetObj$analSet$meta <- variable;
-  
   
   if(.on.public.web){
     .set.mbSetObj(mbSetObj)
@@ -891,28 +839,28 @@ PlotLEfSeSummary <- function(mbSetObj, ldaFeature, layoutOptlf, imgName, format=
   if(is.na(width)){
     if(length(vip.score) < 5 ){
       h <- length(vip.score)/1.2;
-      w <- 9;
+      w <- 9.25;
     } else if (length(vip.score) < 10){
       h <- length(vip.score)/1.4;
-      w <- 9;
+      w <- 9.25;
     } else if (length(vip.score) < 15){
       h <- length(vip.score)/1.6;
-      w <- 9;
+      w <- 9.25;
     } else if (length(vip.score) < 20){
       h <- length(vip.score)/1.8;
-      w <- 9;
+      w <- 9.25;
     } else if (length(vip.score) < 25){
       h <- length(vip.score)/2;
-      w <- 9;
+      w <- 9.25;
     } else if (length(vip.score) < 30){
       h <- length(vip.score)/2.2;
-      w <- 9;
+      w <- 9.25;
     } else if (length(vip.score) < 40){
       h <- length(vip.score)/2.5;
-      w <- 9;
+      w <- 9.25;
     } else {
-      h <- length(vip.score)/5;
-      w <- 9;
+      h <- length(vip.score)/4.5;
+      w <- 9.25;
     };
   }else if(width == 0){
     w <- 8;
@@ -937,8 +885,6 @@ PlotLEfSeSummary <- function(mbSetObj, ldaFeature, layoutOptlf, imgName, format=
 
 PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="default", color.BW=FALSE){
   
-  save.image("lp.RDATA");
-  
   mbSetObj <- .get.mbSetObj(mbSetObj);
   sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
   cls.len <- length(levels(sample_table[[meta]]));
@@ -958,9 +904,6 @@ PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="defaul
   }
   op <- par(mar=c(5,9,2,rt.mrg)); # set right side margin with the number of class
   
-  #if(feat.num > length(imp.vec)){
-  #feat.num <- length(imp.vec);
-  #}
   feat.num <- length(imp.vec);
   # first get the top subset
   
@@ -988,10 +931,10 @@ PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="defaul
   
   if(layoutOptlf == "dot") {
     # modified for B/W color
-    dotcolor <- ifelse(color.BW, "darkgrey", "blue");
-    dotchart(imp.vec, bg=dotcolor, xlab= "LDA score", cex=1.3);
+    dotcolor <- ifelse(color.BW, "darkgrey", "#585855");
+    dotchart(imp.vec, bg=dotcolor, xlab= "LDA score", cex=1.35);
     
-    mtext(side=2, at=1:feat.num, vip.nms, las=2, line=1)
+    mtext(side=2, at=1:feat.num, vip.nms, las=2, line=1, cex=1.1)
     
     axis.lims <- par("usr"); # x1, x2, y1 ,y2
     
@@ -1003,14 +946,12 @@ PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="defaul
     y <- 1:feat.num;
     par(xpd=T);
     
-    if(.on.public.web){
-      load_rcolorbrewer();
-    }
-    
+    load_rcolorbrewer();
+
     nc <- ncol(mns);
     
     # modified for B/W color
-    colorpalette <- ifelse(color.BW, "Greys", "RdYlGn");
+    colorpalette <- ifelse(color.BW, "Greys", "RdYlBu");
     col <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, colorpalette))(nc); # set colors for each class
     if(color.BW) col <- rev(col);
     
@@ -1025,7 +966,7 @@ PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="defaul
     for (n in 1:ncol(mns)){
       points(x,y, bty="n", pch=22, bg=bg[,n], cex=3);
       # now add label
-      text(x[1], axis.lims[4], cls.lbl[n], srt=45, adj=c(0.2,0.5));
+      text(x[1], axis.lims[4], cls.lbl[n], srt=45, adj=c(0.2,0.5), cex=1.1);
       # shift x, note, this is good for current size
       x <- x + shift/1.25;
     }
@@ -1045,8 +986,8 @@ PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="defaul
     
     points(x,y, bty="n", pch=15, col=rev(col), cex=2);
     
-    text(x[1], endy+shifty/8, "High");
-    text(x[1], starty-shifty/8, "Low");
+    text(x[1], endy+shifty/8, "High", cex=1.1);
+    text(x[1], starty-shifty/8, "Low", cex=1.1);
     
     par(op);
     
@@ -1061,21 +1002,9 @@ PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="defaul
     # trim levels for ASV
     levels(ldabar[,1]) <- strtrim(levels(ldabar[,1]), 15)
     box<- ggplot(ldabar, aes(x=reorder(ldabar[,1],ldabar[,2]), y=ldabar[,2], fill=ldabar[,3]))+ 
-      geom_bar(stat="identity",width=0.8) + coord_flip() + labs(y="LDA score",x="Features",fill="Class") + 
-      theme_bw() 
-    
-    if(colOpt=="default"){
-      box <- box + scale_color_brewer(palette="Set1");
-    }else{
-      if(colOpt == "viridis"){
-        cols <- viridis::viridis(grp.num)
-      }else if(colOpt == "plasma"){
-        cols <- viridis::plasma(grp.num)
-      }else if(colOpt == "cividis"){
-        cols <- viridis::cividis(grp.num)
-      }
-    }
-    
+      geom_bar(stat="identity",width=0.8) + coord_flip() + labs(y="LDA score", x="Features", fill="Class") + 
+      theme_bw() + scale_fill_brewer(palette="Set1") + 
+      theme(axis.title=element_text(size=14), axis.text=element_text(size=12), legend.text = element_text(size=12));
     print(box);
   }
 }
@@ -1102,7 +1031,7 @@ PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="defaul
 #'@export
 #'@import DESeq2
 
-PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, datatype, shotgunid, taxrank){
+PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -1117,7 +1046,7 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, datatype, shotgunid, 
   taxa_names(filt.dataphy) <- rownames(mbSetObj$dataSet$filt.data);
   data <- filt.dataphy;
   
-  if(datatype=="16S"){
+  if(mbSetObj$module.type=="mdp"){
     mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
     data <- merge_phyloseq(data, mbSetObj$dataSet$taxa_table);
   }else{
@@ -1125,7 +1054,7 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, datatype, shotgunid, 
   }
   
   #using by default names for shotgun data
-  if(datatype=="metageno"){
+  if(mbSetObj$module.type=="sdp"){
     taxrank<-"OTU";
   }
   
@@ -1160,9 +1089,7 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, datatype, shotgunid, 
       return(0);
     }else{
       
-      if(.on.public.web){
-        load_deseq();
-      }
+      load_deseq();
       
       # create formula based on user selection
       my.formula <- as.formula(paste("~", variable));
@@ -1231,7 +1158,6 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, datatype, shotgunid, 
   mbSetObj$analSet$boxdata <- box_data;
   mbSetObj$analSet$sig.count <- de.Num;
   mbSetObj$analSet$var.type <- variable;
-  mbSetObj$analSet$datatype <- datatype;
   mbSetObj$analSet$id.type <- shotgunid;
   mbSetObj$analSet$rnaseq.taxalvl <- taxrank;
   mbSetObj$analSet$rnaseq.meth <- opts;
@@ -1272,11 +1198,9 @@ PlotRNAseqVolcano <- function(mbSetObj, fc.cutoff = 2, p.cutoff = 0.05, colpal =
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(.on.public.web){
-    load_ggplot();
-    load_ggrepel();
-  }
-  
+  load_ggplot();
+  load_ggrepel();
+
   rna_results <- mbSetObj$analSet$rnaseq$resTable
   
   pvals <- rna_results$Pvalues
@@ -1361,12 +1285,8 @@ PlotRNAseqVolcano <- function(mbSetObj, fc.cutoff = 2, p.cutoff = 0.05, colpal =
 PlotRNASeqDotPlot <- function(mbSetObj, top.inx = 15, colpal = "plasma", imgName="rnaseq_dot",
                               format = "png", dpi=72){
   
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  
-  anal.type <- anal.type
-  print(anal.type)
-  
-  if(anal.type == "shotgun"){
+  mbSetObj <- .get.mbSetObj(mbSetObj);  
+  if(mbSetObj$module.type == "sdp"){
     return(0)
   }
   
@@ -1439,201 +1359,6 @@ PlotRNASeqDotPlot <- function(mbSetObj, top.inx = 15, colpal = "plasma", imgName
   return(.set.mbSetObj(mbSetObj))
 }
 
-##################################
-###########3D PCoA/PCA############
-##################################
-
-#'Main function to perform PCoA analysis
-#'@description This functions creates a 3D PCoA plot from the microbiome data.
-#'This is used by the Beta-Diversity analysis.
-#'The 3D interactive visualization is on the web.
-#'@param mbSetObj Input the name of the mbSetObj.
-#'@param ordMeth Character, input the name
-#'of the ordination method. "PCoA" for principal coordinate analysis and "NMDS" for 
-#'non-metric multidimensional scaling.
-#'@param distName Character, input the name of the distance method.
-#'@param datatype Character, input "16S" if the data is marker
-#'gene data and "metageno" if it is metagenomic data.
-#'@param taxrank Character, input the taxonomic
-#'level for beta-diversity analysis.
-#'@param colopt Character, color the data points by the experimental factor,
-#'the taxon abundance of a selected taxa, or alpha diversity.
-#'@param variable Character, input the name of the experimental factor.
-#'@param taxa Character, if the data points are colored by taxon abundance, 
-#'input the name of the selected taxa.
-#'@param alphaopt Character, if the data points are colored by alpha-diversity, 
-#'input the preferred alpha-diversity measure.
-#'@param jsonNm Character, input the name of the json file to output.
-#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
-#'McGill University, Canada
-#'License: GNU GPL (>= 2)
-#'@export
-#'@import vegan
-#'@import RJSONIO
-
-PCoA3D.Anal <- function(mbSetObj, ordMeth, distName, datatype, taxrank, colopt, variable, taxa, alphaopt, jsonNm){
-  
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  
-  if(.on.public.web){
-    load_vegan();
-  }
-  
-  variable <<- variable;
-  
-  if(taxrank=="OTU"){
-    taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
-    data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj, taxa_table);
-  }else{
-    taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
-    data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj, taxa_table);
-    #merging at taxonomy levels
-    data <- fast_tax_glom_first(data, taxrank)
-  }
-  
-  if(colopt=="taxa"){
-    if(taxrank=="OTU"){
-      data1 <- as.matrix(otu_table(data));
-      feat_data <- as.numeric(data1[taxa,]);
-    }else{
-      nm <- as.character(tax_table(data)[,taxrank]);
-      #converting NA values to unassigned
-      nm[is.na(nm)] <- "Not_Assigned";
-      data1 <- as.matrix(otu_table(data));
-      rownames(data1) <- nm;
-      #all NA club together
-      data1 <- as.matrix(t(sapply(by(data1,rownames(data1),colSums),identity)));
-      feat_data <- data1[taxa,];
-    }
-    sample_data(data)$taxa <- feat_data;
-    indx <- which(colnames(sample_data(data))=="taxa");
-    colnames(sample_data(data))[indx] <- taxa;
-  }else if(colopt=="alphadiv"){
-    data1 <- mbSetObj$dataSet$proc.phyobj;
-    box <- plot_richness(data1, measures = alphaopt);
-    alphaboxdata <- box$data;
-    sam_nm <- sample_names(data);
-    alphaboxdata <- alphaboxdata[alphaboxdata$samples %in% sam_nm,];
-    alphaval <- alphaboxdata$value;
-    sample_data(data)$alphaopt <- alphaval;
-    indx <- which(colnames(sample_data(data))=="alphaopt");
-    colnames(sample_data(data))[indx]<-alphaopt;
-  }else{
-    data<-data;
-  }
-  
-  datacolby <<- data;
-  
-  if(distName=="wunifrac"){
-    pg_tree <- readRDS("tree.RDS");
-    pg_tb <- tax_table(data);
-    pg_ot <- otu_table(data);
-    pg_sd <- sample_data(data);
-    pg_tree <- prune_taxa(taxa_names(pg_ot), pg_tree);
-    data <- merge_phyloseq(pg_tb, pg_ot, pg_sd, pg_tree);
-    
-    if(!is.rooted(phy_tree(data))){
-      pick_new_outgroup <- function(tree.unrooted){
-        treeDT <- cbind(cbind(data.table(tree.unrooted$edge),data.table(length = tree.unrooted$edge.length))[1:Ntip(tree.unrooted)],
-                        data.table(id = tree.unrooted$tip.label));
-        new.outgroup <- treeDT[which.max(treeDT$length), ]$id
-        return(new.outgroup);
-      }
-      new.outgroup <- pick_new_outgroup(phy_tree(data));
-      phy_tree(data) <- ape::root(phy_tree(data),
-                                  outgroup = new.outgroup,
-                                  resolve.root=TRUE)
-    }
-    GP.ord <-ordinate(data,ordMeth,"unifrac",weighted=TRUE);
-  } else if (distName=="wunifrac"){
-    pg_tree <- readRDS("tree.RDS");
-    pg_tb <- tax_table(data);
-    pg_ot <- otu_table(data);
-    pg_sd <- sample_data(data);
-    pg_tree <- prune_taxa(taxa_names(pg_ot), pg_tree);
-    data <- merge_phyloseq(pg_tb, pg_ot, pg_sd, pg_tree);
-    
-    if(!is.rooted(phy_tree(data))){
-      pick_new_outgroup <- function(tree.unrooted){
-        treeDT <- cbind(cbind(data.table(tree.unrooted$edge),data.table(length = tree.unrooted$edge.length))[1:Ntip(tree.unrooted)],
-                        data.table(id = tree.unrooted$tip.label));
-        new.outgroup <- treeDT[which.max(treeDT$length), ]$id
-        return(new.outgroup);
-      }
-      new.outgroup <- pick_new_outgroup(phy_tree(data));
-      phy_tree(data) <- ape::root(phy_tree(data),
-                                  outgroup = new.outgroup,
-                                  resolve.root=TRUE)
-    }
-    GP.ord <-ordinate(data,ordMeth,"unifrac",weighted=FALSE);
-  }else{
-    GP.ord <- ordinate(data,ordMeth,distName);
-  }
-  
-  # obtain variance explained
-  sum.pca <- GP.ord;
-  imp.pca <- sum.pca$values;
-  std.pca <- imp.pca[1,]; # eigen values
-  var.pca <- imp.pca[,2]; # variance explained by each PC
-  cum.pca <- imp.pca[5,]; # cummulated variance explained
-  sum.pca <- append(sum.pca, list(std=std.pca, variance=var.pca, cum.var=cum.pca));
-  
-  pca3d <- list();
-  
-  if(ordMeth=="NMDS"){
-    pca3d$score$axis <- paste("NMDS", 1:3 , sep="");
-    coord<-sum.pca$points;
-    write.csv(signif(coord,5), file="pcoa_score.csv");
-    list2 <- rep(as.numeric(0),nrow(coord));
-    coord <- cbind(coord, list2);
-    coords <- data.frame(t(signif(coord[,1:3], 5)));
-  }else{
-    pca3d$score$axis <- paste("PC", 1:3, " (", 100*round(sum.pca$variance[1:3], 3), "%)", sep="");
-    coords <- data.frame(t(signif(sum.pca$vectors[,1:3], 5)));
-    write.csv(signif(sum.pca$vectors,5), file="pcoa_score.csv");
-  }
-  
-  colnames(coords) <- NULL;
-  pca3d$score$xyz <- coords;
-  pca3d$score$name <- sample_names(mbSetObj$dataSet$norm.phyobj);
-  col.type <- "factor";
-  
-  if(colopt=="taxa"){
-    cls <- sample_data(data)[[taxa]];
-    col.type <- "gradient"
-    cols <- ComputeColorGradient(cls);
-  }else if(colopt=="alphadiv") {
-    cls <- sample_data(data)[[alphaopt]];
-    col.type <- "gradient";
-    cols <- ComputeColorGradient(cls);
-  }else{
-    cls <- factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
-    # now set color for each group
-    cols <- unique(as.numeric(cls)) + 1;
-  }
-  
-  pca3d$score$type <- col.type;
-  pca3d$score$facA <- cls;
-  rgbcols <- col2rgb(cols);
-  cols <- apply(rgbcols, 2, function(x){paste("rgb(", paste(x, collapse=","), ")", sep="")});
-  pca3d$score$colors <- cols;
-  
-  if(.on.public.web){
-    load_rjsonio();
-  }
-  
-  json.obj <- RJSONIO::toJSON(pca3d);
-  sink(jsonNm);
-  cat(json.obj);
-  sink();
-  
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj) #may need to delete?
-    return(1);
-  }else{
-    return(.set.mbSetObj(mbSetObj))
-  }
-}
 
 ########################################################
 ###########Correlation Analysis (Pattern Hunter)########
@@ -1659,12 +1384,11 @@ PCoA3D.Anal <- function(mbSetObj, ordMeth, distName, datatype, taxrank, colopt, 
 #'License: GNU GPL (>= 2)
 #'@export
 
-FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, taxa, variable, 
-                               datatype, shotfeat, shotgunid){
+FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, taxa, variable, shotfeat, shotgunid){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(datatype=="16S"){
+  if(mbSetObj$module.type=="mdp"){
     mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
     data <- merge_phyloseq(data, mbSetObj$dataSet$taxa_table);
     
@@ -1689,9 +1413,6 @@ FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, taxa, variable,
     }
   }else{
     data <- mbSetObj$dataSet$norm.phyobj;
-  }
-  
-  if(datatype=="metageno"){
     taxrank <- "OTU";
     data1 <- as.matrix(otu_table(data));
     feat_data <- as.numeric(data1[shotfeat,]);
@@ -1718,7 +1439,7 @@ FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, taxa, variable,
   is.na(mbSetObj$analSet$resTable) <- sapply(mbSetObj$analSet$resTable, is.infinite);
   mbSetObj$analSet$resTable[is.na(mbSetObj$analSet$resTable)]<-0;
   
-  if(datatype=="metageno"){
+  if(mbSetObj$module.type=="sdp"){
     mbSetObj$analSet$pattern <- shotfeat;
   }else{
     mbSetObj$analSet$pattern <- taxa;
@@ -1827,8 +1548,8 @@ PlotCorr <- function(mbSetObj, imgName, format="png", dpi=72, width=NA){
 #'@export
 
 Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, 
-                          taxa, variable, datatype, shotfeat, shotgunid){
-  
+                          taxa, variable, shotfeat, shotgunid){
+ 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(is.null(pattern)){
@@ -1856,46 +1577,36 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank,
     new.template[hit.inx] = templ[i];
   }
   
-  if(datatype=="16S"){
+  if(mbSetObj$module.type=="mdp"){
     mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
     data <- merge_phyloseq(data, mbSetObj$dataSet$taxa_table);
+    taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
+    data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj, taxa_table);
     
     if(taxrank=="OTU"){
-      taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
-      data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj, taxa_table);
-      data1 <- as.matrix(otu_table(data));
-      feat_data <- as.numeric(data1[taxa,]);
-      
+      data <- as.matrix(otu_table(data));
     }else{
-      taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
-      data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj, taxa_table);
       #merging at taxonomy levels
       data <- fast_tax_glom_first(data, taxrank);
       nm <- as.character(tax_table(data)[,taxrank]);
       #converting NA values to unassigned
       nm[is.na(nm)] <- "Not_Assigned";
-      data1 <- as.matrix(otu_table(data));
-      rownames(data1)<-nm;
+      data <- as.matrix(otu_table(data));
+      rownames(data)<-nm;
       #all NA club together
-      data1<-as.matrix(t(sapply(by(data1, rownames(data1), colSums), identity)));
-      feat_data<-data1[taxa,];
+      data<-as.matrix(t(sapply(by(data, rownames(data), colSums), identity)));
     }
   }else{
-    data <- mbSetObj$dataSet$norm.phyobj;
-  }
-  
-  if(datatype=="metageno"){
     taxrank <- "OTU";
-    data1 <- as.matrix(otu_table(data));
-    feat_data <- as.numeric(data1[shotfeat,]);
+    data <- as.matrix(otu_table(mbSetObj$dataSet$norm.phyobj));
   }
   
-  data1 <- t(data1);
+  data <- t(data);
   clslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
-  boxdata <- as.data.frame(data1);
+  boxdata <- as.data.frame(data);
   boxdata$class <- clslbl;
   mbSetObj$analSet$boxdata <- boxdata;
-  cbtempl.results <- apply(data1, 2, template.match, new.template, dist.name);
+  cbtempl.results <- apply(data, 2, template.match, new.template, dist.name);
   cor.res <- t(cbtempl.results);
   fdr.col <- p.adjust(cor.res[,3], "fdr");
   cor.res <- cbind(cor.res, fdr.col);
@@ -1909,7 +1620,7 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank,
   is.na(mbSetObj$analSet$resTable) <- sapply(mbSetObj$analSet$resTable, is.infinite);
   mbSetObj$analSet$resTable[is.na(mbSetObj$analSet$resTable)]<-0;
   
-  if(datatype=="metageno"){
+  if(mbSetObj$module.type=="sdp"){
     mbSetObj$analSet$pattern<-shotfeat;
   }else{
     mbSetObj$analSet$pattern<-taxa;
@@ -1967,24 +1678,20 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank,
 
 PlotCorrHeatMap <- function(mbSetObj, imgName, format="png", width=NA, cor.method,
                             colors_cntrst, viewOpt, taxrank, fix.col, no.clst, top, 
-                            topNum, datatype, cor.type="corr"){
+                            topNum, cor.type="corr"){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(.on.public.web){
-    load_viridis();
-    load_ppcor();
-  }
-  
+  load_viridis();
+  load_ppcor();
+
   main <- xlab <- ylab <- NULL;
   
-  if(datatype=="metageno"){
+  if(mbSetObj$module.type=="sdp"){
     data <- mbSetObj$dataSet$norm.phyobj;
     data1 <- as.matrix(otu_table(data));
     taxrank <- "OTU";
-  }
-  
-  if(datatype=="16S"){
+  }else if(mbSetObj$module.type=="mdp"){
     if(taxrank=="OTU"){
       taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
       data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj, taxa_table);
@@ -2056,11 +1763,9 @@ PlotCorrHeatMap <- function(mbSetObj, imgName, format="png", width=NA, cor.metho
   }
   
   # set up parameter for heatmap
-  if(.on.public.web){
-    load_rcolorbrewer();
-    load_gplots();
-  }
-  
+  load_rcolorbrewer();
+  load_gplots();
+
   if(colors_cntrst=="gbr"){
     colors <- grDevices::colorRampPalette(c("green", "black", "red"), space="rgb")(256);
   }else if(colors_cntrst == "heat"){
@@ -2140,9 +1845,7 @@ PlotCorrHeatMap <- function(mbSetObj, imgName, format="png", width=NA, cor.metho
     dendro = "both";
   }
   
-  if(.on.public.web){
-    load_pheatmap();
-  }
+  load_pheatmap();
   
   if(fix.col){
     breaks <- seq(from = -1, to = 1, length = 257);
@@ -2170,6 +1873,100 @@ PlotCorrHeatMap <- function(mbSetObj, imgName, format="png", width=NA, cor.metho
   }else{
     return(.set.mbSetObj(mbSetObj))
   }
+}
+
+##
+
+#'Function to call FastSpar
+#'@description This function runs the fastspar 
+#'@param mbSetObj Input the name of the mbSetObj.
+#'@export
+RunFastSpar <- function(mbSetObj, taxrank, permNum){
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  
+  # first get OTU table to BIOM TSV format
+  if(mbSetObj$module.type=="sdp"){
+    data <- mbSetObj$dataSet$norm.phyobj;
+    data1 <- as.matrix(otu_table(data));
+    taxrank <- "OTU";
+  }else if(mbSetObj$module.type=="mdp"){
+    if(taxrank=="OTU"){
+      taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
+      data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj, taxa_table);
+      data1 <- as.matrix(otu_table(data));
+    }else{
+      taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
+      data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj, taxa_table);
+      #merging at taxonomy levels
+      data <- fast_tax_glom_first(data,taxrank);
+      nm <- as.character(tax_table(data)[,taxrank]);
+      #converting NA values to unassigned
+      nm[is.na(nm)] <- "Not_Assigned";
+      data1 <- as.matrix(otu_table(data));
+      rownames(data1) <- nm;
+      #all NA club together
+      data1 <- as.matrix(t(sapply(by(data1, rownames(data1), colSums), identity)));
+    }
+  }
+  
+  mbSetObj$analSet$corr_data<-data1;
+  
+  #add header
+  new_col <- c("#OTU ID", rownames(data1))
+  data <- cbind(rownames(data1), data1)
+  colnames(data) <- new_col
+  
+  write.table(data, file="otu_table_corr.tsv",quote=FALSE, row.names = FALSE, sep="\t")
+  
+  # system call, need to change wd to where fastspar is located
+  usrdir <- getwd()
+  
+  otu_table <- paste(usrdir, "/otu_table_corr.tsv", sep="")
+  corr_output <- paste(usrdir, "/sparcc_median_correlation.tsv", sep="")
+  cov_output <- paste(usrdir, "/sparcc_median_covariance.tsv", sep="")
+  bootstrap_counts <- paste(usrdir, "/bootstrap_counts", sep="")
+  counts_prefix <- paste(bootstrap_counts, "/boot_data", sep="")
+  bootstrap_correlation <- paste(usrdir, "/bootstrap_correlation", sep="")
+  corr_bs_output <- paste(bootstrap_correlation, "/${jnew}_median_correlation.tsv", sep="")
+  cov_bs_output <- paste(bootstrap_correlation, "/${k}_median_covariance.tsv", sep="")
+  corr_prefix <- paste(bootstrap_correlation, "/cor_boot_data_", sep="")
+  test <- paste(usrdir, "/text.txt", sep="")
+  pval_output <- paste(usrdir, "/sparcc_pvals.tsv", sep="")
+  
+  if(.on.public.web){
+    path <- "../../lib/fast_spar"
+  }else{
+   path <- "~/Downloads/fastspar-0.0.10_linux/"
+   #code to be added once actually pushed to web
+   #path <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/fast_spar"
+  }
+
+  system(paste("cd", path, ";", 
+               "./fastspar --otu_table", otu_table, "--correlation", corr_output, "--covariance", cov_output, ";",
+               "mkdir", bootstrap_counts, ";",
+               "./fastspar_bootstrap --otu_table", otu_table, "--number 100 --prefix", counts_prefix, ";",
+               "mkdir", bootstrap_correlation, ";",
+               "find", bootstrap_counts, ">>", test, ";",
+               "cat", test, "| while read line; do echo $line; j=$(basename ${line}); jnew=$(echo cor_${j}); k=$(echo cov_${j}); jnew=$(echo ${jnew} | sed 's/\\.tsv//'); k=$(echo ${k} | sed 's/\\.tsv//'); ./fastspar --otu_table ${line} --correlation",
+               corr_bs_output, "--covariance", cov_bs_output, "-i 5 ; done;",
+               "./fastspar_pvalues --otu_table", otu_table, "--correlation", corr_output, "--prefix", corr_prefix, "--permutations 100 --outfile", pval_output, ";",
+               "rm -rf", bootstrap_correlation, "rm -rf", bootstrap_counts))
+  
+  sparcc_results <- read.table(file = corr_output, sep="\t")
+  names <- sparcc_results[,1]
+  colnames(sparcc_results) <- rownames(sparcc_results) <- names
+  sparcc_results_new <- sparcc_results[,-1]
+  
+  sparcc_pvals <- read.table(file=pval_output, sep="\t")
+  colnames(sparcc_pvals) <- rownames(sparcc_pvals) <- names
+  sparcc_pvals_new <- sparcc_pvals[,-1]
+  
+  mbSetObj$analSet$sparcc_cor <- sparcc_results_new;
+  mbSetObj$analSet$sparcc_pvals <- sparcc_pvals_new
+  
+  return(.set.mbSetObj(mbSetObj))
+  
 }
 
 ###################################
@@ -2221,10 +2018,8 @@ gm_mean = function(x, na.rm=TRUE){
 # helper function
 phyloseq_to_edgeR = function(physeq, group, method="RLE", ...){
   
-  if(.on.public.web){
-    load_edgeR();
-    load_phyloseq();
-  }
+  load_edgeR();
+  load_phyloseq();
   
   # Enforce orientation.
   if( !taxa_are_rows(physeq) ){ physeq <- t(physeq) }
@@ -2373,9 +2168,7 @@ GetSigTable.LEFSE<-function(mbSetObj){
 #'@import xtable
 GetRFConf.Table<-function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);  
-  if(.on.public.web){
-    load_xtable();
-  }
+  load_xtable();
   print(xtable::xtable(mbSetObj$analSet$rf$confusion, caption="Random Forest Classification Performance"), size="\\scriptsize");
 }
 
@@ -2389,9 +2182,7 @@ GetRFConf.Table<-function(mbSetObj){
 #'@import xtable
 GetMapTable<-function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);  
-  if(.on.public.web){
-    load_xtable();
-  }
+  load_xtable();
   print(xtable::xtable(mbSetObj$analSet$mapTable, caption="Result from Taxa Name Mapping"),
         tabular.environment = "longtable", caption.placement="top", size="\\scriptsize");
 }
@@ -2406,9 +2197,7 @@ GetMapTable<-function(mbSetObj){
 #'@import xtable
 GetORATable<-function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);  
-  if(.on.public.web){
-    load_xtable();
-  }    
+  load_xtable();   
   res <- mbSetObj$analSet$ora.mat;
   print(xtable::xtable(res, caption="Result from Over Representation Analysis"),
         tabular.environment = "longtable", caption.placement="top", size="\\scriptsize");
@@ -2457,9 +2246,7 @@ GetTtestRes<- function(cls, data, paired=FALSE, equal.var=TRUE, nonpar=F){
         }else{
           return(c(tmp$statistic, tmp$p.value)); }})
     }else{ # use fast version
-      if(.on.public.web){
-        load_genefilter();
-      }
+      load_genefilter();
       res <- try(rowttests((t(data)), cls));
       if(class(res) == "try-error") {
         res <- c(NA, NA);

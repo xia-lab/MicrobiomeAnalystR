@@ -21,6 +21,26 @@ GetBashFullPath<-function(){
   return(path);
 }
 
+# get qualified inx with at least number of replicates
+GetDiscreteInx <- function(my.dat, min.rep=2){
+  good.inx <- apply(my.dat, 2, function(x){
+                    good1.inx <- length(x) > length(unique(x));
+                    good2.inx <- min(table(x)) >= min.rep;
+                    return (good1.inx & good2.inx);
+            });
+   return(good.inx);
+}
+
+# get columns that are "most likely" continuous values
+GetNumbericalInx <- function(my.dat){
+  good.inx <- apply(my.dat, 2, function(x){
+                good1.inx <- all(grepl("^-?[0-9.]+$", x));  # must be all contain numbers or .
+                good2.inx <- all(!is.na(as.numeric(x))); # must be all numerics
+                return (good1.inx & good2.inx);
+            });
+   return(good.inx);
+}
+
 ###########
 # improved list of objects
 .ls.objects <- function (pos = 1, pattern, order.by,
@@ -51,12 +71,9 @@ GetBashFullPath<-function(){
 
 # shorthand
 ShowMemoryUse <- function(..., n=20) {
-  
-  if(.on.public.web){
-    load_pryr();
-  }
-   sink(); # make sure print to screen
-  print(mem_used());
+ 
+  sink(); # make sure print to screen
+  print(pryr::mem_used());
   print(sessionInfo());
   print(.ls.objects(..., order.by="Size", decreasing=TRUE, head=TRUE, n=n));
   print(warnings());
@@ -71,10 +88,7 @@ GetExtendRange<-function(vec, unit=10){
 
 ComputeColorGradient <- function(nd.vec, centered=TRUE){
   
-  if(.on.public.web){
-    load_rcolorbrewer();
-  }
-
+  load_rcolorbrewer();
   if(sum(nd.vec<0, na.rm=TRUE) > 0){
     centered <- T;
   }else{
@@ -301,9 +315,7 @@ gm_mean <- function(x, na.rm=TRUE){
 #'@import xtable
 GetSigTable<-function(mat, method){
   
-  if(.on.public.web){
-    load_xtable();
-  }
+  load_xtable();
 
   if(!isEmptyMatrix(mat)){ # test if empty
     cap<-"Important features identified by";

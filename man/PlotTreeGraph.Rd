@@ -4,8 +4,8 @@
 \alias{PlotTreeGraph}
 \title{Function to plot tree graphics for dendogram.}
 \usage{
-PlotTreeGraph(mbSetObj, plotNm, distnm, clstDist, metadata, datatype,
-  taxrank, colorOpts, format = "png", dpi = 72, width = NA)
+PlotTreeGraph(mbSetObj, plotNm, distnm, clstDist, metadata, taxrank,
+  colorOpts, format = "png", dpi = 72, width = NA)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
@@ -24,9 +24,6 @@ selected clustering algorithm. "ward" for Ward, "average" for Average,
 
 \item{metadata}{Character, input the name of the experimental factor.}
 
-\item{datatype}{Character, "16S" if marker gene data and 
-"metageno" if shotgun metagenomic data.}
-
 \item{taxrank}{Character, input the taxonomic level to perform
 classification. For instance, "OTU-level" to use OTUs.}
 
@@ -37,6 +34,9 @@ classification. For instance, "OTU-level" to use OTUs.}
 \item{dpi}{The dots per inch. Numeric, by default it is set to 72.}
 
 \item{width}{Width of the plot. Numeric, by default it is set to NA.}
+
+\item{datatype}{Character, "16S" if marker gene data and 
+"metageno" if shotgun metagenomic data.}
 }
 \description{
 This functions creates dendogram tree plots.

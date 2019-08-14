@@ -1,3 +1,9 @@
+
+# from clicking a interactive PCoA 3D to generate pie chart
+SetCurrentSelectedTaxLevel<-function(taxLvl){
+  current.selected.tax <<- taxLvl;
+}
+
 #######################################
 ########### I/O for 16S data ##########
 ########### Used by MDP & PPD #########
@@ -12,38 +18,32 @@
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import phyloseq
-Read16SAbundData <- function(mbSetObj, dataName, type, taxalabel, taxa_type,
-                             ismetafile, module.type) {
+Read16SAbundData <- function(mbSetObj, dataName, format, taxa_type, ismetafile) {
   
-  if(.on.public.web){
-    load_phyloseq();
-  }
-  
+  load_phyloseq();
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(type=="text"){
-    
+  if(format=="text"){
     if(.on.public.web){
-      if(!Read16STabData(mbSetObj, dataName, type, ismetafile)){
+      if(!Read16STabData(mbSetObj, dataName, ismetafile)){
         return(0);
       }
     }else{
       # offline
-      mbSetObj <- Read16STabData(mbSetObj, dataName, type, ismetafile)
+      mbSetObj <- Read16STabData(mbSetObj, dataName, ismetafile)
       if(!mbSetObj$dataSet$read){
         return(0);
       }
     }
     
-  }else if(type=="biom"){
-    
+  }else if(format=="biom"){
     if(.on.public.web){
-      if(!Read16SBiomData(mbSetObj, dataName, type, taxa_type, ismetafile)){
+      if(!Read16SBiomData(mbSetObj, dataName, taxa_type, ismetafile)){
         return(0);
       } 
     }else{
       # offline
-      mbSetObj <- Read16SBiomData(mbSetObj, dataName, type, taxa_type, ismetafile)
+      mbSetObj <- Read16SBiomData(mbSetObj, dataName, taxa_type, ismetafile)
       if(!mbSetObj$dataSet$read){
         return(0);
       }
@@ -64,9 +64,8 @@ Read16SAbundData <- function(mbSetObj, dataName, type, taxalabel, taxa_type,
   mbSetObj$dataSet$comp_taxnm <- rownames(data.orig);
   current.msg <<- paste("A total of",ncol(data.orig) ,"samples and ", nrow(data.orig), "features or taxa are present.");
   mbSetObj$dataSet$read.msg <- current.msg;
-  mbSetObj$dataSet$data.type <- type;
+  mbSetObj$dataSet$data.type <- format;
   mbSetObj$dataSet$taxa.type <- taxa_type;
-  mbSetObj$dataSet$module.type <- module.type;
   
   if(.on.public.web){
     .set.mbSetObj(mbSetObj)
@@ -85,7 +84,7 @@ Read16SAbundData <- function(mbSetObj, dataName, type, taxalabel, taxa_type,
 #'License: GNU GPL (>= 2)
 #'@export
 
-Read16STabData <- function(mbSetObj, dataName, type, ismetafile) {
+Read16STabData <- function(mbSetObj, dataName, ismetafile) {
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -108,8 +107,7 @@ Read16STabData <- function(mbSetObj, dataName, type, ismetafile) {
     if(length(sam.inx) == 0){
       current.msg <<- "No labels #NAME found in your data!";
       return(FALSE);
-    }
-        
+    }   
     smpl_nm <- colnames(mydata[-1]);
     
   }else{
@@ -192,15 +190,13 @@ Read16STabData <- function(mbSetObj, dataName, type, ismetafile) {
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import phyloseq
-Read16SBiomData <- function(mbSetObj, dataName, type, taxa_type, ismetadata){
+Read16SBiomData <- function(mbSetObj, dataName, taxa_type, ismetadata){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(.on.public.web){
-    load_phyloseq();
-    load_biomformat();
-  }
-  
+  load_phyloseq();
+  load_biomformat();
+
   msg <- NULL;
 
   if(taxa_type=="Greengenes"||taxa_type=="GreengenesID"){
@@ -253,7 +249,6 @@ Read16SBiomData <- function(mbSetObj, dataName, type, taxa_type, ismetadata){
   }
     
   current.msg <<- paste(msg, collapse=". ");
-  mbSetObj$dataSet$taxa.type <- taxa_type;
   
   if(.on.public.web){
     .set.mbSetObj(mbSetObj)
@@ -275,14 +270,12 @@ Read16SBiomData <- function(mbSetObj, dataName, type, taxa_type, ismetadata){
 #'@import phyloseq
 #'@import data.table
 
-ReadMothurData<-function(mbSetObj, dataName, taxdataNm, taxa_type, module.type){
+ReadMothurData<-function(mbSetObj, dataName, taxdataNm, taxa_type){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(.on.public.web){
-    load_phyloseq();
-    load_datatable();
-  }
+  load_phyloseq();
+  load_datatable();
   
   msg <- NULL;
 
@@ -359,7 +352,6 @@ ReadMothurData<-function(mbSetObj, dataName, taxdataNm, taxa_type, module.type){
   mbSetObj$dataSet$read.msg <- current.msg;
   mbSetObj$dataSet$data.type <- "mothur";
   mbSetObj$dataSet$taxa.type <- taxa_type;
-  mbSetObj$dataSet$module.type <- module.type;
   
   if(.on.public.web){
     .set.mbSetObj(mbSetObj)
@@ -427,14 +419,11 @@ Read16STaxaTable <- function(mbSetObj, dataName) {
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import reshape
-PlotSelectedSample <-function(mbSetObj, imgNm, smplID, idtype, OtuIdType, rel_perct,
-                              format="png", dpi=72){
+PlotSelectedSample <-function(mbSetObj, imgNm, smplID, OtuIdType, rel_perct, format="png", dpi=72){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(.on.public.web){
-    load_reshape();
-  }
+  load_reshape();
 
   if(current.selected.tax == "NA"){
     txlvl <- "Phylum";
@@ -442,7 +431,7 @@ PlotSelectedSample <-function(mbSetObj, imgNm, smplID, idtype, OtuIdType, rel_pe
     txlvl <- current.selected.tax;
   }
 
-  if(idtype=="16S"){
+  if(mbSetObj$module.type=="mdp"){
     data <- mbSetObj$dataSet$norm.phyobj;
     mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
     data <- merge_phyloseq(data, mbSetObj$dataSet$taxa_table);
@@ -519,9 +508,7 @@ GetDataForPie<-function(data_n, datataxa, txlvl, OtuIdType, feat_cnt){
     
   if(OtuIdType=="GreengenesID"){
     
-    if(.on.public.web){
-      load_stringr();
-    }
+    load_stringr();
     
     nm<-c("k__","p__","c__","o__","f__","g__","s__");
     first.10 <- substr(taxa_nm[,1], start=1, stop=3);

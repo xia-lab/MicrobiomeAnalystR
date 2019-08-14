@@ -166,11 +166,7 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
   }else if(palette == "plasma") {
     colors <- rev(viridis::plasma(10))
   }else {
-    
-    if(.on.public.web){
-      load_rcolorbrewer();
-    }
-    
+    load_rcolorbrewer();
     colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdBu"))(10));
   }
   
@@ -278,10 +274,8 @@ plot_core<-function(x, prevalences=seq(.1, 1, 0.1), detections=20,
 #'@import data.table
 core_heatmap<-function(x, dets, cols, min.prev, taxa.order){
   
-  if(.on.public.web){
-    load_datatable();
-  }
-  
+  load_datatable();
+
   data <- x
   #colours <- gray(seq(0, 1, length=5)),
   DetectionThreshold <- Taxa <- Prevalence <- NULL
@@ -396,10 +390,7 @@ PlotOverallPieGraph<-function(mbSetObj, taxalvl, feat_cnt, calcmeth){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(.on.public.web){
-    load_reshape();
-  }
-  
+  load_reshape();
   set.seed(28053448);
   
   #using filtered data
@@ -489,10 +480,8 @@ PlotGroupPieGraph <- function(mbSetObj, taxalvl, metadata, clslevel,
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(.on.public.web){
-    load_reshape();
-  }
-  
+  load_reshape();
+
   set.seed(28053443);
   
   #using filtered data
@@ -577,10 +566,8 @@ PlotSamplePieGraph<-function(mbSetObj, taxalvl, smplnm, feat_cnt){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(.on.public.web){
-    load_reshape();
-  }
-  
+  load_reshape();
+
   set.seed(28053443);
   
   #using filtered data
@@ -657,10 +644,7 @@ PlotDataPieFromPie<-function(mbSetObj, taxalvl, metadata, clslevel,
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(.on.public.web){
-    load_reshape();
-  }
-  
+  load_reshape();
   set.seed(280534431);
   high_taxa <<- as.character(piedata$variable[taxaposn]);
   
@@ -721,9 +705,7 @@ UpdatePieData<-function(mbSetObj, lowtaxa){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(.on.public.web){
-    load_reshape();
-  }
+  load_reshape();
   
   set.seed(280534432);
   
@@ -903,10 +885,7 @@ PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName,
                         metadata, taxrank, group, colors = "default", format="png", dpi=72){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);  
-  
-  if(.on.public.web)
-    
-    set.seed(13133);
+  set.seed(13133);
   
   if(data.src == "orig"){
     data <- readRDS("orig.phyobj");
@@ -998,9 +977,7 @@ PlotTaxaAlphaBarSam<-function(mbSetObj, barplotName, taxalvl, samplnm,
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(.on.public.web){
-    load_reshape();
-  }
+  load_reshape();
   
   #using filtered data
   data <- mbSetObj$dataSet$filt.data;
@@ -1133,9 +1110,7 @@ PlotAlphaBoxData<-function(mbSetObj, boxplotName, distName, metadata, colors="de
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(.on.public.web){
-    load_viridis();
-  }
+  load_viridis();
   
   set.seed(1313397);
   data <- mbSetObj$analSet$alpha;
@@ -1238,11 +1213,9 @@ PlotBetaDiversity<-function(mbSetObj, plotNm, ordmeth, distName, colopt, metadat
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(.on.public.web){
-    load_datatable();
-    load_viridis();
-  }
-  
+  load_datatable();
+  load_viridis();
+
   set.seed(13134);
   metadata <- metadata;
   
@@ -1297,10 +1270,7 @@ PlotBetaDiversity<-function(mbSetObj, plotNm, ordmeth, distName, colopt, metadat
   
   if(distName=="wunifrac"){
     
-    if(.on.public.web){
-      load_ape();
-    }
-    
+    load_ape();
     pg_tree <- readRDS("tree.RDS");
     pg_tb <- tax_table(data);
     pg_ot <- otu_table(data);
@@ -1313,10 +1283,7 @@ PlotBetaDiversity<-function(mbSetObj, plotNm, ordmeth, distName, colopt, metadat
     
   } else if (distName=="unifrac") {
     
-    if(.on.public.web){
-      load_ape();
-    }        
-    
+    load_ape();      
     pg_tree <- readRDS("tree.RDS");
     pg_tb <- tax_table(data);
     pg_ot <- otu_table(data);
@@ -1463,10 +1430,8 @@ PlotTaxaAlphaArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadata,
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(.on.public.web){
-    load_reshape();
-    load_viridis();
-  }
+  load_reshape();
+  load_viridis();
   
   #using filtered data
   data <- mbSetObj$dataSet$filt.data;
@@ -1499,7 +1464,7 @@ PlotTaxaAlphaArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadata,
       metadata <- "newnewnew";
     }
     clsLbl <- factor(sam[[metadata]]);
-    if(min(table(clsLbl)) < 2){
+    if(length(levels(clsLbl)) > 9 && min(table(clsLbl)) < 3){
       current.msg<<-"Too many facets to be displayed - please select a more meaningful facet option with at least 3 samples per group.";
       return(0);
     }
@@ -1701,11 +1666,9 @@ PlotTaxaAlphaBar<-function(mbSetObj, barplotName, taxalvl, metadata, facet, imgO
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(.on.public.web){
-    load_reshape();
-    load_ggplot();
-    load_viridis();
-  }
+  load_reshape();
+  load_ggplot();
+  load_viridis();
   
   data <- mbSetObj$dataSet$filt.data;
   
@@ -1734,7 +1697,7 @@ PlotTaxaAlphaBar<-function(mbSetObj, barplotName, taxalvl, metadata, facet, imgO
   smpl_nm <- sample_names(data1);
   clsLbl <- factor(sam[[facet]]);
   
-  if(min(table(clsLbl)) < 2){
+  if(length(levels(clsLbl)) > 9 && min(table(clsLbl)) < 3){
     current.msg<<-"Too many facets to be displayed - please select a more meaningful facet option with at least 3 samples per group.";
     return(0);
   }
@@ -1927,9 +1890,7 @@ PerformCategoryComp <- function(mbSetObj, method, distnm, variable){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(.on.public.web){
-    load_vegan();
-  }
+  load_vegan();
   
   if(distnm %in% c("wunifrac", "unifrac")) {
     data <- readRDS("data_unifra.RDS");
@@ -2242,7 +2203,7 @@ PlotRarefactionCurve <- function(mbSetObj, data.src, linecolor, linetype, facet,
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PreparePhylogeneticTreePlot <-function(mbSetObj, color, shape, taxa, treeshape, imgName, format="png", dpi=72){
+PlotPhylogeneticTree <-function(mbSetObj, color, shape, taxa, treeshape, imgName, format="png", dpi=72){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -2385,9 +2346,7 @@ GetHtMetaCpInfo <- function(mbSetObj, meta){
 PrepareHeatTreePlot <- function(mbSetObj, meta, taxalvl, color, layoutOpt, comparison, 
                                 wilcox.cutoff, imgName, format="png", dpi=72){
   
-  if(.on.public.web){
-    load_metacoder();
-  }
+  load_metacoder();
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   tax_o <- taxalvl;
@@ -2548,10 +2507,8 @@ PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, co
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(.on.public.web){
-    load_viridis();
-  }
-  
+  load_viridis();
+
   dm_obj_cmf = PrepareHeatTreePlotDataParse_cmf_res;
   
   if(color == "ggr"){
@@ -2642,9 +2599,7 @@ Perform16FunAnot<-function(mbSetObj, type, pipeline) {
   #getting whole taxa labels back
   if(type=="SILVA"){
     func.meth<-"Tax4Fun";
-    if(.on.public.web){
-      load_tax4fun();
-    }
+    load_tax4fun();
     
     if(pipeline=="qi_silva"){
       ModSilvaIds <- gsub("uncultured archaeon","",rownames(merge.otu));

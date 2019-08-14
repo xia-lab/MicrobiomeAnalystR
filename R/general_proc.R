@@ -22,7 +22,7 @@
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-SanityCheckData <- function(mbSetObj, datatype, filetype){
+SanityCheckData <- function(mbSetObj, filetype){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -64,7 +64,7 @@ SanityCheckData <- function(mbSetObj, datatype, filetype){
     samplemeta_no <- sample_no;
   }
   
-  if(datatype!="16S_ref"){
+  if(mbSetObj$module.type!="ppd"){
     mbSetObj$dataSet$sample_data <- mbSetObj$dataSet$sample_data[sapply(mbSetObj$dataSet$sample_data, function(col) length(unique(col))) > 1];
   }
   
@@ -370,16 +370,12 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt){
       data <- data*10000000;
       msg <- c(msg, paste("Performed total sum normalization."));
     }else if(scale.opt=="upperquartile"){
-      if(.on.public.web){
-        load_edgeR();
-      }
+      load_edgeR();
       otuUQ <- edgeRnorm(data,method="upperquartile");
       data <- as.matrix(otuUQ$counts);
       msg <- c(msg, paste("Performed upper quartile normalization"));
     }else if(scale.opt=="CSS"){
-      if(.on.public.web){
-        load_metagenomeseq();
-      }
+      load_metagenomeseq();
       #biom and mothur data also has to be in class(matrix only not in phyloseq:otu_table)
       data1 <- as(data,"matrix");
       dataMR <- newMRexperiment(data1);
@@ -395,16 +391,12 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt){
   
   if(transform.opt != "none"){
     if(transform.opt=="rle"){
-      if(.on.public.web){
-        load_edgeR();
-      }            
+      load_edgeR();            
       otuRLE <- edgeRnorm(data,method="RLE");
       data <- as.matrix(otuRLE$counts);
       msg <- c(msg, paste("Performed RLE Normalization"));
     }else if(transform.opt=="TMM"){
-      if(.on.public.web){
-        load_edgeR();
-      }            
+      load_edgeR();   
       otuTMM <- edgeRnorm(data,method="TMM");
       data <- as.matrix(otuTMM$counts);
       msg <- c(msg, paste("Performed TMM Normalization"));
@@ -503,11 +495,8 @@ PlotRareCurve <- function(mbSetObj, graphName, variable){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   set.seed(13789);
-  
-  if(.on.public.web){
-    load_vegan();
-  }
-  
+  load_vegan();
+
   data <- data.matrix(mbSetObj$dataSet$filt.data);
   rarefaction_curve_data<-as.matrix(otu_table(data));
   
@@ -634,11 +623,9 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel, ismetafile){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(.on.public.web){
-    load_phyloseq();
-    load_splitstackshape();
-  }
-  
+  load_phyloseq();
+  load_splitstackshape();
+
   data.proc <- readRDS("data.proc");
   
   # do some sanity check here on sample and feature names
@@ -653,12 +640,19 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel, ismetafile){
   }
   
   # check for uniqueness of taxon names for metagenomic data only
-  if(anal.type == "shotgun"){
+  if(mbSetObj$module.type == "sdp"){
     if(length(unique(taxa.nms))!=length(taxa.nms)){
       dup.tax.nms <- paste(taxa.nms[duplicated(taxa.nms)], collapse="; ");
       current.msg <<- paste(c("Duplicate taxon names are not allowed:"), dup.tax.nms, collapse=" ");
       return(0);
     }
+  }else{
+     # for ASV data, replace sequences with ASV1, ASV2 ....
+     # check is avegage name length is > 75
+     nm.ln <- sum(nchar(taxa.nms)/length(taxa.nms));
+     if(nm.ln > 75){
+       mbSetObj$is.ASV <-TRUE;
+     }
   }
   
   # now check for special characters in the data labels
@@ -681,7 +675,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel, ismetafile){
   #standard name to be used
   classi.lvl<- c("Phylum", "Class", "Order", "Family", "Genus", "Species", "Strain/OTU-level", "Additional_Name");
   
-  if(anal.type == "markergene" | anal.type == "dataprojection"){
+  if(mbSetObj$module.type == "mdp" | mbSetObj$module.type == "ppd"){
     if(type=="text"){
       # prepare data for phyloseq visualization.
       # if features names are present in specific taxonomy format (greengenes or silva).
@@ -691,9 +685,8 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel, ismetafile){
         
         if(taxa_type=="SILVA"){
           
-          if(.on.public.web){
-            load_splitstackshape();
-          }
+          load_splitstackshape();
+
           feat_nm<-data.frame(mbSetObj$dataSet$feat_nm);
           names(feat_nm)<-"Rank";
           taxonomy<-splitstackshape::cSplit(feat_nm,"Rank",";");
@@ -727,9 +720,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel, ismetafile){
         }else if(taxa_type=="GreengenesID"||taxa_type=="Others/Not_specific"){
           
           # need to parse Taxonomy still!
-          if(.on.public.web){
-            load_splitstackshape();
-          }                  
+          load_splitstackshape();               
           
           feat_nm<-data.frame(mbSetObj$dataSet$feat_nm);
           names(feat_nm)<-"Rank";
@@ -774,6 +765,26 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel, ismetafile){
           return(0);
         }
         
+        # let's address ASV sequence ID here
+        if(mbSetObj$is.ASV){
+            
+            # do the conversion and save 
+            new.nms <- paste("ASV", 1:length(taxa.nms), sep="_");
+            master.nms <- cbind("NewID"=new.nms, "OriginalID"=taxa.nms);
+            write.csv(master.nms, file="ASV_ID_mapping.csv");
+
+            # update the taxa and sample
+            names(new.nms) <- taxa.nms;
+            rownames(data.proc) <- new.nms[rownames(data.proc)];
+            rownames(taxa_table) <- new.nms[rownames(taxa_table)];
+
+            # update tree file if uploaded
+            if(mbSetObj$tree.uploaded){
+               pg_tree <- readRDS("tree.RDS");
+               pg_tree$tip.label <- new.nms[pg_tree$tip.label];
+               saveRDS(pg_tree, "tree.RDS");
+            }
+        }
         nm<-colnames(taxa_table);
         taxa_table<-as.matrix(taxa_table[indx,]);
         colnames(taxa_table)<-nm;
@@ -905,7 +916,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel, ismetafile){
     prefilt.data <- readRDS("data.prefilt");
     rownames(prefilt.data)<-taxa_names(mbSetObj$dataSet$taxa_table);
     saveRDS(prefilt.data, file="data.prefilt")
-  }else if(anal.type == "shotgun"){
+  }else if(mbSetObj$module.type == "sdp"){
     #constructing phyloseq object for aplha diversity.
     data.proc<-otu_table(data.proc, taxa_are_rows = TRUE);
     taxa_names(data.proc)<-rownames(data.proc);

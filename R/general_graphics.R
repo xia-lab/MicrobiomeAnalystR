@@ -1,3 +1,195 @@
+##################################
+###########3D PCoA/PCA############
+##################################
+
+#'Main function to perform PCoA analysis
+#'@description This functions creates a 3D PCoA plot from the microbiome data.
+#'This is used by the Beta-Diversity analysis.
+#'The 3D interactive visualization is on the web.
+#'@param mbSetObj Input the name of the mbSetObj.
+#'@param ordMeth Character, input the name
+#'of the ordination method. "PCoA" for principal coordinate analysis and "NMDS" for 
+#'non-metric multidimensional scaling.
+#'@param distName Character, input the name of the distance method.
+#'@param datatype Character, input "16S" if the data is marker
+#'gene data and "metageno" if it is metagenomic data.
+#'@param taxrank Character, input the taxonomic
+#'level for beta-diversity analysis.
+#'@param colopt Character, color the data points by the experimental factor,
+#'the taxon abundance of a selected taxa, or alpha diversity.
+#'@param variable Character, input the name of the experimental factor.
+#'@param taxa Character, if the data points are colored by taxon abundance, 
+#'input the name of the selected taxa.
+#'@param alphaopt Character, if the data points are colored by alpha-diversity, 
+#'input the preferred alpha-diversity measure.
+#'@param jsonNm Character, input the name of the json file to output.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+#'@import vegan
+#'@import RJSONIO
+
+PCoA3D.Anal <- function(mbSetObj, ordMeth, distName, taxrank, colopt, variable, taxa, alphaopt, jsonNm){
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  
+  load_vegan();
+  
+  variable <<- variable;
+  
+  if(taxrank=="OTU"){
+    taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
+    data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj, taxa_table);
+  }else{
+    taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
+    data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj, taxa_table);
+    #merging at taxonomy levels
+    data <- fast_tax_glom_first(data, taxrank)
+  }
+  
+  if(colopt=="taxa"){
+    if(taxrank=="OTU"){
+      data1 <- as.matrix(otu_table(data));
+      feat_data <- as.numeric(data1[taxa,]);
+    }else{
+      nm <- as.character(tax_table(data)[,taxrank]);
+      #converting NA values to unassigned
+      nm[is.na(nm)] <- "Not_Assigned";
+      data1 <- as.matrix(otu_table(data));
+      rownames(data1) <- nm;
+      #all NA club together
+      data1 <- as.matrix(t(sapply(by(data1,rownames(data1),colSums),identity)));
+      feat_data <- data1[taxa,];
+    }
+    sample_data(data)$taxa <- feat_data;
+    indx <- which(colnames(sample_data(data))=="taxa");
+    colnames(sample_data(data))[indx] <- taxa;
+  }else if(colopt=="alphadiv"){
+    data1 <- mbSetObj$dataSet$proc.phyobj;
+    box <- plot_richness(data1, measures = alphaopt);
+    alphaboxdata <- box$data;
+    sam_nm <- sample_names(data);
+    alphaboxdata <- alphaboxdata[alphaboxdata$samples %in% sam_nm,];
+    alphaval <- alphaboxdata$value;
+    sample_data(data)$alphaopt <- alphaval;
+    indx <- which(colnames(sample_data(data))=="alphaopt");
+    colnames(sample_data(data))[indx]<-alphaopt;
+  }else{
+    data<-data;
+  }
+  
+  datacolby <<- data;
+  
+  if(distName=="wunifrac"){
+    pg_tree <- readRDS("tree.RDS");
+    pg_tb <- tax_table(data);
+    pg_ot <- otu_table(data);
+    pg_sd <- sample_data(data);
+    pg_tree <- prune_taxa(taxa_names(pg_ot), pg_tree);
+    data <- merge_phyloseq(pg_tb, pg_ot, pg_sd, pg_tree);
+    
+    if(!is.rooted(phy_tree(data))){
+      pick_new_outgroup <- function(tree.unrooted){
+        treeDT <- cbind(cbind(data.table(tree.unrooted$edge),data.table(length = tree.unrooted$edge.length))[1:Ntip(tree.unrooted)],
+                        data.table(id = tree.unrooted$tip.label));
+        new.outgroup <- treeDT[which.max(treeDT$length), ]$id
+        return(new.outgroup);
+      }
+      new.outgroup <- pick_new_outgroup(phy_tree(data));
+      phy_tree(data) <- ape::root(phy_tree(data),
+                                  outgroup = new.outgroup,
+                                  resolve.root=TRUE)
+    }
+    GP.ord <-ordinate(data,ordMeth,"unifrac",weighted=TRUE);
+  } else if (distName=="wunifrac"){
+    pg_tree <- readRDS("tree.RDS");
+    pg_tb <- tax_table(data);
+    pg_ot <- otu_table(data);
+    pg_sd <- sample_data(data);
+    pg_tree <- prune_taxa(taxa_names(pg_ot), pg_tree);
+    data <- merge_phyloseq(pg_tb, pg_ot, pg_sd, pg_tree);
+    
+    if(!is.rooted(phy_tree(data))){
+      pick_new_outgroup <- function(tree.unrooted){
+        treeDT <- cbind(cbind(data.table(tree.unrooted$edge),data.table(length = tree.unrooted$edge.length))[1:Ntip(tree.unrooted)],
+                        data.table(id = tree.unrooted$tip.label));
+        new.outgroup <- treeDT[which.max(treeDT$length), ]$id
+        return(new.outgroup);
+      }
+      new.outgroup <- pick_new_outgroup(phy_tree(data));
+      phy_tree(data) <- ape::root(phy_tree(data),
+                                  outgroup = new.outgroup,
+                                  resolve.root=TRUE)
+    }
+    GP.ord <-ordinate(data,ordMeth,"unifrac",weighted=FALSE);
+  }else{
+    GP.ord <- ordinate(data,ordMeth,distName);
+  }
+  
+  # obtain variance explained
+  sum.pca <- GP.ord;
+  imp.pca <- sum.pca$values;
+  std.pca <- imp.pca[1,]; # eigen values
+  var.pca <- imp.pca[,2]; # variance explained by each PC
+  cum.pca <- imp.pca[5,]; # cummulated variance explained
+  sum.pca <- append(sum.pca, list(std=std.pca, variance=var.pca, cum.var=cum.pca));
+  
+  pca3d <- list();
+  
+  if(ordMeth=="NMDS"){
+    pca3d$score$axis <- paste("NMDS", 1:3 , sep="");
+    coord<-sum.pca$points;
+    write.csv(signif(coord,5), file="pcoa_score.csv");
+    list2 <- rep(as.numeric(0),nrow(coord));
+    coord <- cbind(coord, list2);
+    coords <- data.frame(t(signif(coord[,1:3], 5)));
+  }else{
+    pca3d$score$axis <- paste("PC", 1:3, " (", 100*round(sum.pca$variance[1:3], 3), "%)", sep="");
+    coords <- data.frame(t(signif(sum.pca$vectors[,1:3], 5)));
+    write.csv(signif(sum.pca$vectors,5), file="pcoa_score.csv");
+  }
+  
+  colnames(coords) <- NULL;
+  pca3d$score$xyz <- coords;
+  pca3d$score$name <- sample_names(mbSetObj$dataSet$norm.phyobj);
+  col.type <- "factor";
+  
+  if(colopt=="taxa"){
+    cls <- sample_data(data)[[taxa]];
+    col.type <- "gradient"
+    cols <- ComputeColorGradient(cls);
+  }else if(colopt=="alphadiv") {
+    cls <- sample_data(data)[[alphaopt]];
+    col.type <- "gradient";
+    cols <- ComputeColorGradient(cls);
+  }else{
+    cls <- factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
+    # now set color for each group
+    cols <- unique(as.numeric(cls)) + 1;
+  }
+  
+  pca3d$score$type <- col.type;
+  pca3d$score$facA <- cls;
+  rgbcols <- col2rgb(cols);
+  cols <- apply(rgbcols, 2, function(x){paste("rgb(", paste(x, collapse=","), ")", sep="")});
+  pca3d$score$colors <- cols;
+  
+  load_rjsonio();
+
+  json.obj <- RJSONIO::toJSON(pca3d);
+  sink(jsonNm);
+  cat(json.obj);
+  sink();
+  
+  if(.on.public.web){
+    .set.mbSetObj(mbSetObj) #may need to delete?
+    return(1);
+  }else{
+    return(.set.mbSetObj(mbSetObj))
+  }
+}
+
 #'Function to plot tree graphics for dendogram.
 #'@description This functions creates dendogram tree plots.
 #'@param mbSetObj Input the name of the mbSetObj.
@@ -25,13 +217,10 @@
 #'@export
 #'@import ape
 #'@import viridis
-PlotTreeGraph <- function(mbSetObj, plotNm, distnm, clstDist, metadata, datatype,
-                          taxrank, colorOpts, format="png", dpi=72, width=NA){
+PlotTreeGraph <- function(mbSetObj, plotNm, distnm, clstDist, metadata, taxrank, colorOpts, format="png", dpi=72, width=NA){
   
-  if(.on.public.web){
-    load_ape()
-    load_viridis()
-  }
+  load_ape()
+  load_viridis()
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -41,7 +230,7 @@ PlotTreeGraph <- function(mbSetObj, plotNm, distnm, clstDist, metadata, datatype
     
   data <- mbSetObj$dataSet$norm.phyobj;
     
-  if(datatype=="16S"){
+  if(mbSetObj$module.type=="mdp"){
     mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
     data <- merge_phyloseq(data,mbSetObj$dataSet$taxa_table);
   }else{
@@ -49,7 +238,7 @@ PlotTreeGraph <- function(mbSetObj, plotNm, distnm, clstDist, metadata, datatype
   }
     
   #using by default names for shotgun data
-  if(datatype=="metageno"){
+  if(mbSetObj$module.type=="sdp"){
     taxrank<-"OTU";
   }
 
@@ -191,11 +380,9 @@ PlotBoxData<-function(mbSetObj, boxplotName, feat, format="png", dpi=72){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(.on.public.web){
-    load_ggplot();
-    load_grid();
-    load_gridExtra();
-  }
+  load_ggplot();
+  load_grid();
+  load_gridExtra();
   
   variable <-  mbSetObj$analSet$var.type 
   
@@ -268,31 +455,24 @@ PlotBoxData<-function(mbSetObj, boxplotName, feat, format="png", dpi=72){
 #'@import viridis
 
 PlotHeatmap<-function(mbSetObj, plotNm, smplDist, clstDist, palette, metadata,
-                      taxrank, datatype, viewOpt, doclust, format="png", showfeatname,
+                      taxrank, viewOpt, doclust, format="png", showfeatname,
                       appendnm, rowV=F, colV=T, var.inx=NA, border=T, width=NA, dpi=72){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(.on.public.web){
-    load_pheatmap();
-    load_rcolorbrewer();
-    load_viridis();
-  }
+  load_pheatmap();
+  load_rcolorbrewer();
+  load_viridis();
   
   set.seed(2805614);
   #used for color pallete
   variable <<- metadata;
   data <- mbSetObj$dataSet$norm.phyobj;
     
-  if(datatype=="16S"){
+  if(mbSetObj$module.type=="mdp"){
     mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
     data <- merge_phyloseq(data, mbSetObj$dataSet$taxa_table);
   }else{
-    data <- data;
-  }
-
-  #using by default names for shotgun data
-  if(datatype=="metageno"){
     taxrank <- "OTU";
   }
 
@@ -304,10 +484,8 @@ PlotHeatmap<-function(mbSetObj, plotNm, smplDist, clstDist, palette, metadata,
   }
 
   if(taxrank=="OTU"){
-    data <- data;
-    nm <- taxa_names(data);
     data1 <- as.matrix(otu_table(data));
-    rownames(data1) <- nm;
+    rownames(data1) <- taxa_names(data);
   }else{
     #merging at taxonomy levels
     data <- fast_tax_glom_first(data,taxrank);
@@ -338,7 +516,6 @@ PlotHeatmap<-function(mbSetObj, plotNm, smplDist, clstDist, palette, metadata,
     nm <- rownames(data1);
   }
 
-  rownames(data1) <- nm;
   # arrange samples on the basis of slected experimental factor and using the same for annotation also
   annotation <- data.frame(sample_data(data));
 
@@ -351,8 +528,12 @@ PlotHeatmap<-function(mbSetObj, plotNm, smplDist, clstDist, palette, metadata,
     annotation <- annotation[order(annotation[,metadata]),];
   }
 
+  # remove those columns that all values are unique (continuous or non-factors)
+  #uniq.inx <- apply(annotation, 2, function(x){length(unique(x)) == length(x)});
   #there is an additional column sample_id which need to be removed first
-  annotation <- subset(annotation,select = -sample_id);
+  # get only good meta-data
+  good.inx <- GetDiscreteInx(annotation);
+  annotation <- annotation[,good.inx, drop=FALSE];
   sam.ord <- rownames(annotation);
   data1 <- data1[,sam.ord];
 
@@ -375,17 +556,25 @@ PlotHeatmap<-function(mbSetObj, plotNm, smplDist, clstDist, palette, metadata,
     colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdBu"))(256));
   }
 
+  if(showfeatname=="T"){
+    showfeatname<-T;
+    min.margin <- 360;
+  } else {
+    showfeatname<-F;
+    min.margin <- 200;
+  }
+
   #setting the size of plot
   if(is.na(width)){
     minW <- 800;
-    myW <- ncol(data1)*18 + 200;
+    myW <- ncol(data1)*20 + min.margin;
     if(myW < minW){
       myW <- minW;
     }
     w <- round(myW/72,2);
   }
 
-  myH <- nrow(data1)*18 + 150;
+  myH <- nrow(data1)*20 + 180;
   h <- round(myH/72,2);
 
   if(viewOpt == "overview"){
@@ -394,7 +583,6 @@ PlotHeatmap<-function(mbSetObj, plotNm, smplDist, clstDist, palette, metadata,
         w <- 9.3;
       }
     }
-        
     if(h > w){
       h <- w;
     }
@@ -426,12 +614,6 @@ PlotHeatmap<-function(mbSetObj, plotNm, smplDist, clstDist, palette, metadata,
 
   if(doclust=="T"){
     rowV<-T;
-  }
-    
-  if(showfeatname=="T"){
-    showfeatname<-T;
-  } else {
-    showfeatname<-F;
   }
 
   pheatmap::pheatmap(data1,
@@ -534,10 +716,8 @@ PerformPartialCorr <- function(mbSetObj, taxa.lvl="Phylum", variable=NA, alg = "
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(.on.public.web){
-    load_ppcor()
-    load_viridis()
-  }
+  load_ppcor()
+  load_viridis()
   
   # retrieve sample info
   metadata <- as(mbSetObj$dataSet$sample_data, "data.frame")
@@ -715,10 +895,8 @@ PlotPartialCorrConfounders <- function(mbSetObj, pcorrOpt="default", feat="NA", 
   # retrieve sample info
   metadata <- as(mbSetObj$dataSet$sample_data, "data.frame")
   
-  if(.on.public.web){
-    load_ppcor()
-    test <- mbSetObj$analSet$anal.type
-  }
+  load_ppcor()
+  test <- mbSetObj$analSet$anal.type
   
   if(test == "tt"){
     sigFeats <- mbSetObj$analSet$Univar$resTable
@@ -890,10 +1068,8 @@ PlotPartialCorrConfounders <- function(mbSetObj, pcorrOpt="default", feat="NA", 
     dev.off()
   }else{
     #create table plot    
-    if(.on.public.web){
-      load_grid()
-      load_gridExtra()
-    }
+    load_grid()
+    load_gridExtra()
     
     plotname <- paste(imgName, ".", format, sep="")
     Cairo::Cairo(file=plotname, width=500, height=275, type=format, bg="white", dpi=95);

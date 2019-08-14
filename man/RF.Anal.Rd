@@ -4,7 +4,7 @@
 \alias{RF.Anal}
 \title{Performs Random Forest Analysis}
 \usage{
-RF.Anal(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank, datatype)
+RF.Anal(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj. By default,

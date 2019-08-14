@@ -43,21 +43,20 @@ Init.mbSetObj <- function(){
   mbSetObj$dataSet <- dataSet;
   mbSetObj$analSet <- analSet;
   mbSetObj$imgSet <- imgSet;
+  mbSetObj$is.ASV <- FALSE;
+  mbSetObj$tree.uploaded <- FALSE;
   mbSetObj$cmdSet <- vector(mode="character"); # store R command
-
+  
   # set global variables
   current.msg <<- "";
   current.selected.tax <<- "NA";
   enrich.type <<- "hyper";
   msg.vec <<- vector(mode="character");
-
-  if(.on.public.web){
-    load_cairo();
-    load_ggplot();
-    load_biocparallel();
-    BiocParallel::register(BiocParallel::SerialParam());
-  }
-
+  
+  load_cairo();
+  load_ggplot();
+  BiocParallel::register(BiocParallel::SerialParam());
+  
   # preload some general package
   Cairo::CairoFonts("Arial:style=Regular","Arial:style=Bold","Arial:style=Italic","Helvetica","Symbol")
   print("Init MicrobiomeAnalyst!");
@@ -138,7 +137,7 @@ Init.mbSetObj <- function(){
         }else{
           lib.url <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/", filenm, sep="");
         }
-
+        
         download.file(lib.url, destfile=filenm, method="curl")
         my.lib <- readRDS(filenm);
         print("Loaded necessary files.")
@@ -179,17 +178,19 @@ Init.mbSetObj <- function(){
 }
 
 #'Function to set analysis type
-#'@description This functions sets the analysis mode.
+#'@description This functions sets the module name.
 #'@param analType Input the analysis type. If the data is marker gene data, 
-#'use "markergene", if the data is shotgun metagenomics or transcriptomics data, 
-#'use ""shotgun". If performing the Projection with Public Data module, use "dataprojection". 
-#'If performing Taxon Set Enrichment Analysis, use "species". 
+#'use "mdp", if the data is shotgun metagenomics or transcriptomics data, 
+#'use ""sdp". If performing the Projection with Public Data module, use "ppd". 
+#'If performing Taxon Set Enrichment Analysis, use "tsea". 
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-SetAnalType <- function(analType){
-  anal.type <<- analType;
+SetModuleType <- function(mbSetObj, nm){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  mbSetObj$module.type <- nm;
+  return(.set.mbSetObj(mbSetObj));
 }
 
 #'Function to read in sample data
@@ -204,9 +205,7 @@ ReadSampleTable<- function(mbSetObj, dataName) {
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(.on.public.web){
-    load_phyloseq();
-  }
+  load_phyloseq();
   
   msg <- NULL;
   mydata <- .readDataTable(dataName);
@@ -243,16 +242,31 @@ ReadSampleTable<- function(mbSetObj, dataName) {
     na.msg <- paste("A total of", sum(na.inx), "empty or NA values were replaced by 'Unknown'.");
   }
   
-  mbSetObj$dataSet$sample_data <- data.frame(mydata);
+  # as most functions are for discrete groups (not continuouse values
+  # require at least one column contains discrete factors with at least two replicates 
+  my.meta <- data.frame(mydata);
+  disc.inx <- GetDiscreteInx(my.meta);
+  if(sum(disc.inx) == 0){ # all class labels are unique! 
+    current.msg <<- "Make sure your metadata contains a column with at least 2vreplicates for each group! None of your meta-data column meets the criterion";
+    return(0);
+  }
+  mbSetObj$dataSet$meta_info$disc.inx <- disc.inx;
+  mbSetObj$dataSet$sample_data <- my.meta[,disc.inx, drop=FALSE];
+  
+  cont.inx <- GetNumbericalInx(my.meta);
+  cont.inx <- !disc.inx & cont.inx; # discrete is first
+  
+  if(sum(cont.inx)>0){
+    # make sure the discrete data is on the left side
+    mbSetObj$dataSet$sample_data <- cbind(mbSetObj$dataSet$sample_data, my.meta[,cont.inx, drop=FALSE]);
+    mbSetObj$dataSet$meta_info$cont.inx <- cont.inx;
+  }else{
+    mbSetObj$dataSet$meta_info$cont.inx <- "NA";
+  }
   current.msg <<- paste(na.msg, "The sample data contains a total of ", nrow(mydata), "samples and  ", ncol(mydata), " sample variables.", collapse=" ");
   mbSetObj$dataSet$smpl.msg <- current.msg;
   
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj)  
-    return(1);
-  }else{
-    return(.set.mbSetObj(mbSetObj));
-  }
+  return(.set.mbSetObj(mbSetObj));
 }
 
 #'Function to read in tree files.
@@ -264,31 +278,32 @@ ReadSampleTable<- function(mbSetObj, dataName) {
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import phyloseq
-ReadTreeFile<- function(mbSetObj, dataName) {
+ReadTreeFile <- function(mbSetObj, dataName) {
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-
-  if(.on.public.web){
-    load_phyloseq();
-  }
   
+  load_phyloseq();
   msg <- NULL;
   
-  tree <- tryCatch(
-    {read_tree(dataName)}
-  )
+  tree <- tryCatch({
+    read_tree(dataName);
+  })
   
   if(!is.null(tree)){
     saveRDS(tree, "tree.RDS");
+    mbSetObj$tree.uploaded <- TRUE;
+    return(.set.mbSetObj(mbSetObj));
   }else{
+    print("Failed to parse tree file data!")
     return(0)
   }
-  
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj)  
+}
+
+TreeUploaded <- function(mbSetObj) {
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  if(mbSetObj$tree.uploaded){
     return(1);
   }else{
-    print("Tree file successfully uploaded!")
     return(.set.mbSetObj(mbSetObj));
   }
 }
@@ -302,41 +317,24 @@ RecordRCommand <- function(mbSetObj=NA, cmd){
 
 GetRCommandHistory <- function(mbSetObj=NA){
   mbSetObj <- .get.mbSetObj(mbSetObj); 
+  if(is.null(mbSetObj$cmdSet)){
+    return("NA");
+  }
   return(mbSetObj$cmdSet);
+}
+
+ClearRCommandHistory <- function(mbSetObj=NA){
+  mbSetObj <- .get.mbSetObj(mbSetObj); 
+  mbSetObj$cmdSet <- c();
+  return(.set.mbSetObj(mbSetObj));
 }
 
 ####################################
 ############ Get Funs ##############
 ####################################
-
-GetNameMapCol <-function(mbSetObj, colInx){
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  if(.on.public.web){
-    return(mbSetObj$analSet$resTable[,colInx]);
-  }else{
-    print(mbSetObj$analSet$resTable[,colInx]);
-    return(.set.mbSetObj(mbSetObj))
-  }
-}
-
 GetResRowNames <- function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   return(rownames(mbSetObj$analSet$resTable));
-}
-
-GetTseaRowNames <- function(mbSetObj){
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  return(rownames(mbSetObj$analSet$tseaInfo));
-}
-
-GetTseaCol <-function(mbSetObj, colInx){
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  return(mbSetObj$analSet$resTable[,colInx]);
-}
-
-GetMirResCol <-function(mbSetObj, colInx){
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  return(mbSetObj$analSet$resTable[,colInx]);
 }
 
 GetResColNames <- function(mbSetObj){
@@ -349,11 +347,6 @@ GetResMat <- function(mbSetObj){
   return(as.matrix(mbSetObj$analSet$resTable));
 }
 
-GetMetaInfo <- function(mbSetObj){
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  return(colnames(mbSetObj$dataSet$sample_data));
-}
-
 GetConfounderOpts <- function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   metadata <- colnames(mbSetObj$dataSet$sample_data)
@@ -364,20 +357,55 @@ GetConfounderOpts <- function(mbSetObj){
   }
 }
 
+SetMetaInfo <- function(mbSetObj, varInfo){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  print(varInfo)
+  return(1)
+}
+
+# type can be all, discrete or continuous
+GetMetaInfo <- function(mbSetObj, type="disc"){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  return(colnames(mbSetObj$dataSet$sample_data));
+}
+
+GetMetaTypes <- function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  meta.table <- mbSetObj$dataSet$sample_data;
+  disc.inx <- GetDiscreteInx(meta.table);
+  types <- ifelse(disc.inx == TRUE, "Categorical", "Continuous")
+  return(types)
+  all.nms <- colnames(mbSetObj$dataSet$sample_data);
+  if(type=="all"){
+    return(all.nms);
+  }else if(type=="disc"){
+    return(all.nms[mbSetObj$dataSet$meta_info$disc.inx]);
+  }else if(type=="cont"){
+    cont.inx <- mbSetObj$dataSet$meta_info$cont.inx;
+    if(sum(cont.inx) == 0){
+      return("NA");
+    }
+    return(all.nms[mbSetObj$dataSet$meta_info$cont.inx]);
+  }else{
+    print(paste("Unknown type:", type));
+    return("NA");
+  }
+}
+
 GetMetaTaxaInfo <- function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   return(rank_names(mbSetObj$dataSet$proc.phyobj));
 }
 
-GetSampleGrpInfo <- function(mbSetObj, class){
+GetSampleGrpInfo <- function(mbSetObj, clsLbl){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  return(levels(factor(get_variable(mbSetObj$dataSet$norm.phyobj, class))));
+  return(levels(factor(get_variable(mbSetObj$dataSet$norm.phyobj, clsLbl))));
 }
 
-GetSampleGrpNo <- function(mbSetObj, class){
+GetSampleGrpNo <- function(mbSetObj, clsLbl){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   #Issue with phyloslim (after merging into phyloslim object the sample variable are converted to numeric again rather than factor)
-  return(length(levels(factor(get_variable(mbSetObj$dataSet$norm.phyobj, class)))));
+  return(length(levels(factor(get_variable(mbSetObj$dataSet$norm.phyobj, clsLbl)))));
 }
 
 GetAllSampleGrpInfo <- function(mbSetObj){
@@ -387,14 +415,14 @@ GetAllSampleGrpInfo <- function(mbSetObj){
   if(length(sam_var)>0){
     return(names(sam_var[1]));
   } else {
-      return(NULL);
+    return(NULL);
   }
 }
 
 GetTaxaFeatName<- function(mbSetObj, taxlvl){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-    
+  
   if(taxlvl=="OTU"){
     return(taxa_names(mbSetObj$dataSet$norm.phyobj));
   }else{
@@ -408,9 +436,9 @@ GetTaxaFeatName<- function(mbSetObj, taxlvl){
 }
 
 GetTaxaFeatSize<- function(mbSetObj, taxlvl){
-
+  
   mbSetObj <- .get.mbSetObj(mbSetObj);
-    
+  
   if(taxlvl=="OTU"){
     feat.size <- length(taxa_names(mbSetObj$dataSet$norm.phyobj));
   }else{
@@ -423,9 +451,12 @@ GetTaxaFeatSize<- function(mbSetObj, taxlvl){
 
 GetLowerTaxaLvlNm<- function(mbSetObj, taxrank){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  indx <- which(colnames(tax_table(mbSetObj$dataSet$proc.phyobj))==taxrank);
-  rem <- ncol(tax_table(mbSetObj$dataSet$proc.phyobj))-indx;
-  return(colnames(tax_table(mbSetObj$dataSet$proc.phyobj))[indx+1:rem]);
+  all.rnks <- colnames(tax_table(mbSetObj$dataSet$proc.phyobj));
+  bad.inx <- is.na(all.rnks) | nchar(all.rnks)==0;
+  gd.rnks <- all.rnks[!bad.inx];
+  indx <- which(gd.rnks==taxrank);
+  low.rnks <- gd.rnks[(indx+1):length(gd.rnks)];
+  return(low.rnks);
 }
 
 GetHighTaxaLvlNm<- function(mbSetObj, taxrank){
@@ -439,9 +470,9 @@ GetHighTaxaLvlNm<- function(mbSetObj, taxrank){
   }
 }
 
-GetSampleGrpUser <- function(mbSetObj, class){
+GetSampleGrpUser <- function(mbSetObj, clsLbl){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  return(levels(get_variable(mbSetObj$dataSet$proc.phyobj, class)));
+  return(levels(get_variable(mbSetObj$dataSet$proc.phyobj, clsLbl)));
 }
 
 ##########################
@@ -451,7 +482,6 @@ GetSampleGrpUser <- function(mbSetObj, class){
 ValidateFeatureName <- function(mbSetObj, taxlvl, nm){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
   if(taxlvl=="OTU"){
     tax.nms <- taxa_names(mbSetObj$dataSet$norm.phyobj);
   }else{
@@ -461,19 +491,9 @@ ValidateFeatureName <- function(mbSetObj, taxlvl, nm){
   }
   
   if(nm %in% tax.nms){
-    if(.on.public.web){
-      .set.mbSetObj(mbSetObj)  
-      return(1);
-    }else{
-      return(.set.mbSetObj(mbSetObj));
-    }
-  }
-  
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj)  
-    return(0);
+    return(1);
   }else{
-    return(.set.mbSetObj(mbSetObj));
+    return(0);
   }
 }
 
@@ -481,31 +501,20 @@ ValidateFeatureName <- function(mbSetObj, taxlvl, nm){
 CheckContSampleVar <- function(mbSetObj, variable){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
   cls<-as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   
   if(length(cls)/length(levels(cls)) < 2){
-    current.msg <<-"Sample variable having continuous values. This method is only applicable for variables containing discrete values.";
-    if(.on.public.web){
-      .set.mbSetObj(mbSetObj)  
-      return(0);
-    }else{
-      return(.set.mbSetObj(mbSetObj));
-    }
+    current.msg <<-"Sample variable has continuous values. This method is only applicable for variables containing discrete values.";
+    return(0);
   } else {
-    if(.on.public.web){
-      .set.mbSetObj(mbSetObj)  
-      return(1);
-    }else{
-      return(.set.mbSetObj(mbSetObj));
-    }
+    return(1);
   }
 }
 
 # save the processed data with class names
-SaveData <- function(mbSetObj, anal.type){
+PrepareDownloadData <- function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  if(anal.type == "16S" || anal.type == "metageno"){
+  if(mbSetObj$module.type == "mdp" || mbSetObj$module.type == "sdp"){
     if(!is.null(mbSetObj$dataSet$data.orig)){
       write.csv(mbSetObj$dataSet$data.orig, file="data_original.csv");
     }
@@ -515,10 +524,10 @@ SaveData <- function(mbSetObj, anal.type){
     if(!is.null(otu_table(mbSetObj$dataSet$norm.phyobj,as.matrix()))){
       write.csv(otu_table(mbSetObj$dataSet$norm.phyobj,as.matrix()), file="data_normalized.csv");
     }
-  }else if(anal.type == "16S_ref"){
+  }else if(mbSetObj$module.type == "ppd"){
     write.csv(otu_table(userrefdata,as.matrix()), file="merge_otutable.csv");
     write.csv(as.matrix(tax_table(userrefdata)), file="merge_taxtable.csv");
     write.csv(as.data.frame(sample_data(userrefdata)), file="merge_sampletable.csv");
   }
   return(.set.mbSetObj(mbSetObj));
-}
+};

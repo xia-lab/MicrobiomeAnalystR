@@ -4,7 +4,7 @@
 \alias{CrossReferencing}
 \title{Perform cross referencing.}
 \usage{
-CrossReferencing(mbSetObj, q.type, module.type)
+CrossReferencing(mbSetObj, q.type)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

@@ -4,7 +4,7 @@
 \alias{PlotSelectedSample}
 \title{Function to create a summary of a sample using a piechart at different tax level.}
 \usage{
-PlotSelectedSample(mbSetObj, imgNm, smplID, idtype, OtuIdType, rel_perct,
+PlotSelectedSample(mbSetObj, imgNm, smplID, OtuIdType, rel_perct,
   format = "png", dpi = 72)
 }
 \arguments{

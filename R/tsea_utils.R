@@ -2,6 +2,26 @@
 ###########TSEA#############
 ############################
 
+GetNameMapCol <-function(mbSetObj, colInx){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  if(.on.public.web){
+    return(mbSetObj$analSet$resTable[,colInx]);
+  }else{
+    print(mbSetObj$analSet$resTable[,colInx]);
+    return(.set.mbSetObj(mbSetObj))
+  }
+}
+
+GetTseaRowNames <- function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  return(rownames(mbSetObj$analSet$tseaInfo));
+}
+
+GetTseaCol <-function(mbSetObj, colInx){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  return(mbSetObj$analSet$resTable[,colInx]);
+}
+
 #'Function to set up data for TSEA
 #'@description This function sets up data for TSEA.
 #'@param mbSetObj Input the name of the mbSetObj.
@@ -30,7 +50,7 @@ Setup.MapData<-function(mbSetObj, qvec){
 #'License: GNU GPL (>= 2)
 #'@export
 
-CrossReferencing <- function(mbSetObj, q.type, module.type){
+CrossReferencing <- function(mbSetObj, q.type){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -38,9 +58,7 @@ CrossReferencing <- function(mbSetObj, q.type, module.type){
   name.map <<- list();
   
   # distribute job
-  mbSetObj$dataSet$q.type <- q.type;
-  mbSetObj$dataSet$module.type <- module.type;
-  
+  mbSetObj$dataSet$q.type <- q.type;  
   .set.mbSetObj(mbSetObj)
   
   qvec <- mbSetObj$dataSet$species;
@@ -378,11 +396,9 @@ SetMsetLib <- function(mbSetObj, tset.type){
 #'@import RJSONIO
 PlotEnrichNet.Overview<-function(hits, pvals){
   
-  if(.on.public.web){
-    load_igraph();
-    load_reshape();
-    load_rjsonio();
-  }
+  load_igraph();
+  load_reshape();
+  load_rjsonio();
 
   # due to space limitation, plot top 50 if more than 50 were given
   title <- "Taxon Set Enrichment Network Overview";

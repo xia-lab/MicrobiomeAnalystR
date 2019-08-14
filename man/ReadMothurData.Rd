@@ -4,7 +4,7 @@
 \alias{ReadMothurData}
 \title{Function to read 16S data in mothur format}
 \usage{
-ReadMothurData(mbSetObj, dataName, taxdataNm, taxa_type, module.type)
+ReadMothurData(mbSetObj, dataName, taxdataNm, taxa_type)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

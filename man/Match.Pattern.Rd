@@ -5,7 +5,7 @@
 \title{Match Patterns Function}
 \usage{
 Match.Pattern(mbSetObj, dist.name = "pearson", pattern = NULL, taxrank,
-  taxa, variable, datatype, shotfeat, shotgunid)
+  taxa, variable, shotfeat, shotgunid)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
@@ -23,12 +23,12 @@ of that taxa here.}
 
 \item{variable}{Input the name of the experimental factor.}
 
-\item{datatype}{If the data is marker gene, input "16S". If the
-data is metagenomic, use "metageno".}
-
 \item{shotfeat}{Only valid for SDP module, set to "null".}
 
 \item{shotgunid}{Only valid for SDP module, set to "NA".}
+
+\item{datatype}{If the data is marker gene, input "16S". If the
+data is metagenomic, use "metageno".}
 }
 \description{
 This functions matches patterns (when

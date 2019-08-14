@@ -8,11 +8,6 @@ load_metacoder <- function(){
   suppressMessages(library(metacoder))
 }
 
-# Load pryr
-load_pryr <- function(){
-  suppressMessages(library(pryr))
-}
-
 # Load biomformat
 load_biomformat <- function(){
   suppressMessages(library(biomformat))
@@ -63,7 +58,7 @@ load_metagenomeseq <- function(){
 }
 
 # Load MASS
-load_mass <- function(){
+load_MASS <- function(){
   suppressMessages(library(MASS))
 }
 

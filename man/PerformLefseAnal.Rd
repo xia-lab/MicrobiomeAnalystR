@@ -4,8 +4,8 @@
 \alias{PerformLefseAnal}
 \title{Main function to perform LEfSe analysis}
 \usage{
-PerformLefseAnal(mbSetObj, p.lvl, lda.lvl, variable, isfunc, datatype,
-  shotgunid, taxrank)
+PerformLefseAnal(mbSetObj, p.lvl, lda.lvl, variable, isfunc, shotgunid,
+  taxrank)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
@@ -18,13 +18,13 @@ PerformLefseAnal(mbSetObj, p.lvl, lda.lvl, variable, isfunc, datatype,
 
 \item{isfunc}{Logical, default set to "F".}
 
-\item{datatype}{Character, input whether the data is marker gene
-data ("16S") or metagenomic data ("metageno").}
-
 \item{shotgunid}{Only valid for SDP module, set to "NA".}
 
 \item{taxrank}{Character, input the taxonomic level to perform
 univariate analysis.}
+
+\item{datatype}{Character, input whether the data is marker gene
+data ("16S") or metagenomic data ("metageno").}
 }
 \description{
 This functions performs LEfSe analysis on the microbiome data.
