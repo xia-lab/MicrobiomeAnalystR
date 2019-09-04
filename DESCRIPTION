@@ -4,7 +4,6 @@ Version: 0.0.0.9000
 Authors@R: c(person("Jianguo", "Xia", email = "jeff.xia@mcgill.ca", role = "aut"), person("Jasmine", "Chong", email = "jasmine.chong@mail.mcgill.ca", role=c("aut", "cre")), person("Peng", "Liu", email = "peng.liu@mail.mcgill.ca", role=c("aut")))
 Author: Jianguo Xia [aut], Jasmine Chong [aut, cre], Peng Liu [aut]
 Maintainer: Jasmine Chong <jasmine.chong@mail.mcgill.ca>
-BugReports: https://github.com/xia-lab/MetaboAnalystR/issues
 Description: This package contains the entire underlying R functionality of the web-based tool MicrobiomeAnalyst. It also provides a workflow for raw sequencing preprocessing using the DADA2 pipeline.
 Depends: R (>= 3.5.3),
          phyloseq

@@ -121,7 +121,7 @@ Init.mbSetObj <- function(){
   # Deal w. corrupt downloaded files
   tryCatch({
     my.lib <- readRDS(file_name); # this is a returned value, my.lib never called outside this function, should not be in global env.
-    print("Loaded files from MetaboAnalyst web-server.")
+    print("Loaded files from MicrobiomeAnalyst web-server.")
   },
   warning = function(w) { print("Warning, files not successfully downloaded from web.") },
   error = function(err) {
