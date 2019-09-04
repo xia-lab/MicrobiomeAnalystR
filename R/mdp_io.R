@@ -12,6 +12,7 @@ SetCurrentSelectedTaxLevel<-function(taxLvl){
 #'Main function to read 16S data
 #'@description This is the main function read in the 16S data
 #'into the mbSetObj.
+# ismetafile: whether meta-data is given (for BIOM format only)
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
@@ -25,12 +26,12 @@ Read16SAbundData <- function(mbSetObj, dataName, format, taxa_type, ismetafile) 
   
   if(format=="text"){
     if(.on.public.web){
-      if(!Read16STabData(mbSetObj, dataName, ismetafile)){
+      if(Read16STabData(mbSetObj, dataName)==0){
         return(0);
       }
     }else{
       # offline
-      mbSetObj <- Read16STabData(mbSetObj, dataName, ismetafile)
+      mbSetObj <- Read16STabData(mbSetObj, dataName)
       if(!mbSetObj$dataSet$read){
         return(0);
       }
@@ -38,12 +39,12 @@ Read16SAbundData <- function(mbSetObj, dataName, format, taxa_type, ismetafile) 
     
   }else if(format=="biom"){
     if(.on.public.web){
-      if(!Read16SBiomData(mbSetObj, dataName, taxa_type, ismetafile)){
+      if(Read16SBiomData(mbSetObj, dataName, taxa_type, ismetafile)==0){
         return(0);
       } 
     }else{
       # offline
-      mbSetObj <- Read16SBiomData(mbSetObj, dataName, taxa_type, ismetafile)
+      mbSetObj <- Read16SBiomData(mbSetObj, dataName, taxa_type, ismetafile);
       if(!mbSetObj$dataSet$read){
         return(0);
       }
@@ -67,12 +68,8 @@ Read16SAbundData <- function(mbSetObj, dataName, format, taxa_type, ismetafile) 
   mbSetObj$dataSet$data.type <- format;
   mbSetObj$dataSet$taxa.type <- taxa_type;
   
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj)
-    return(1);
-  }else{
-    return(.set.mbSetObj(mbSetObj))
-  }
+  return(.set.mbSetObj(mbSetObj));
+
 }
 
 #'Function to read 16S data
@@ -84,7 +81,7 @@ Read16SAbundData <- function(mbSetObj, dataName, format, taxa_type, ismetafile) 
 #'License: GNU GPL (>= 2)
 #'@export
 
-Read16STabData <- function(mbSetObj, dataName, ismetafile) {
+Read16STabData <- function(mbSetObj, dataName) {
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -93,11 +90,10 @@ Read16STabData <- function(mbSetObj, dataName, ismetafile) {
 
   if(any(is.na(mydata)) || class(mydata) == "try-error"){
     current.msg <<- "Failed to read in the OTU abundance data! Please make sure the data is in the right format and do not have empty cells or NA.";
-    return(FALSE);
+    return(0);
   }
 
-  # if metadata file present seperately
-  if(ismetafile=="T"){
+
     # note dateSet$sample_data already set
     # getting NAME label
     sam.nm <- substr(colnames(mydata[1]),1,5);
@@ -106,44 +102,10 @@ Read16STabData <- function(mbSetObj, dataName, ismetafile) {
         
     if(length(sam.inx) == 0){
       current.msg <<- "No labels #NAME found in your data!";
-      return(FALSE);
+      return(0);
     }   
     smpl_nm <- colnames(mydata[-1]);
     
-  }else{
-    # look for #CLASS,have class labels, store in a list
-    meta.info <- list();
-    #getting Group label
-    sam.nm <- substr(mydata[1,1],1,6);
-    sam.nm <- tolower(sam.nm);
-    cls.inx <- grep("^#class",sam.nm);
-        
-    if(length(cls.inx) > 0){
-      for(i in 1:length(cls.inx)){
-        inx <- cls.inx[i];
-        cls.nm <- substring(mydata[inx, 1],2); # discard the first char #
-        if(nchar(cls.nm) > 6){
-          cls.nm <- substring(cls.nm, 7); # remove class
-        }
-        cls.lbls <- mydata[inx, -1];
-        # test NA
-        na.inx <- is.na(cls.lbls);
-        cls.lbls[na.inx] <- "NA";
-        cls.lbls <- ClearFactorStrings(cls.nm, cls.lbls);
-        meta.info[[cls.nm]] <- cls.lbls;
-      }
-    }else{
-      current.msg <<- "No metadata labels #CLASS found in your data!";
-      return(FALSE);
-    }
-        
-    #creating phyloseq(sample_data)object
-    sample_data <- as.data.frame(cls.lbls);
-    names(sample_data) <- "CLASS";
-    rownames(sample_data) <- smpl_nm <- colnames(mydata)[-1];
-    mbSetObj$dataSet$sample_data <- sample_data; # set up sample_data
-    mydata<-mydata[-1, ];
-  }
 
   # remove extra comments if any
   dat.nms <- mydata[,1];
@@ -172,13 +134,8 @@ Read16STabData <- function(mbSetObj, dataName, ismetafile) {
   mbSetObj$dataSet$smpl_nm <- smpl_nm;
   mbSetObj$dataSet$data.orig <- data.matrix(mydata);
   
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj)
-    return(TRUE);
-  }else{
-    mbSetObj$dataSet$read <- TRUE
-    return(.set.mbSetObj(mbSetObj))
-  }
+  mbSetObj$dataSet$read <- TRUE
+  return(.set.mbSetObj(mbSetObj))
 }
 
 #'Function to read 16S data in biom format
@@ -211,8 +168,8 @@ Read16SBiomData <- function(mbSetObj, dataName, taxa_type, ismetadata){
   otu.dat <- otu_table(mydata,taxa_are_rows = TRUE,errorIfNULL = FALSE);
     
   if(length(otu.dat)==0){
-    current.msg <<-"File does not contain 16S abundance data";
-    return(FALSE);
+    AddErrMsg("File does not contain 16S abundance data");
+    return(0);
   }
     
   otu.dat <- as.matrix(otu.dat);
@@ -222,8 +179,8 @@ Read16SBiomData <- function(mbSetObj, dataName, taxa_type, ismetadata){
   taxa_table <- tax_table(mydata,errorIfNULL = FALSE);
     
   if(length(taxa_table)==0){
-    current.msg <<-"File does not contain taxonomy data.";
-    return(FALSE);
+    AddErrMsg("File does not contain taxonomy data.");
+    return(0);
   }
     
   taxa_table<-as.matrix(taxa_table);
@@ -239,24 +196,18 @@ Read16SBiomData <- function(mbSetObj, dataName, taxa_type, ismetadata){
     sample_data <- as.data.frame(sample_data);
         
     if(length(sample_data)==0){
-      current.msg <<- "Metadata file not detected in your biom file. Please upload metadata file seperately.";
-      ismetafile<-"F";
-      return(FALSE);
+      AddErrMsg("Metadata file not detected in your biom file. Please upload metadata file seperately.");
+      return(0);
     }
         
     mbSetObj$dataSet$sample_data <- as.data.frame(sample_data);
     msg <- c(msg, "Metadata file is detected in your biom file.");
   }
-    
   current.msg <<- paste(msg, collapse=". ");
   
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj)
-    return(TRUE);
-  }else{
-    mbSetObj$dataSet$read <- TRUE
-    return(.set.mbSetObj(mbSetObj))
-  }
+  mbSetObj$dataSet$read <- TRUE;
+  return(.set.mbSetObj(mbSetObj));
+  
 }
 
 #'Function to read 16S data in mothur format
@@ -353,12 +304,8 @@ ReadMothurData<-function(mbSetObj, dataName, taxdataNm, taxa_type){
   mbSetObj$dataSet$data.type <- "mothur";
   mbSetObj$dataSet$taxa.type <- taxa_type;
   
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj)
-    return(1);
-  }else{
-    return(.set.mbSetObj(mbSetObj))
-  }
+  return(.set.mbSetObj(mbSetObj));
+  
 }
 
 #'Function to read 16S taxonomy table from txt format
@@ -402,12 +349,7 @@ Read16STaxaTable <- function(mbSetObj, dataName) {
     
   mbSetObj$dataSet$taxa_table <- mydata;
   
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj)
-    return(1);
-  }else{
-    return(.set.mbSetObj(mbSetObj))
-  }
+  return(.set.mbSetObj(mbSetObj));
 }
 
 #'Function to create a summary of a sample using a piechart at different tax level.
@@ -482,12 +424,7 @@ PlotSelectedSample <-function(mbSetObj, imgNm, smplID, OtuIdType, rel_perct, for
   print(box);
   dev.off();
   
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj)
-    return(1);
-  }else{
-    return(.set.mbSetObj(mbSetObj))
-  }
+  return(.set.mbSetObj(mbSetObj));
 }
 
 #'Utility function to exract data for piechart.
@@ -504,7 +441,14 @@ GetDataForPie<-function(data_n, datataxa, txlvl, OtuIdType, feat_cnt){
   data_new <- otu_table(data_n);
   data_new <- data.frame(data_new);
   data_new <- t(data_new);
-  taxa_nm <- as.data.frame(datataxa[,txlvl]);
+
+  if(txlvl=="OTU"){
+    taxa_nm <- as.matrix(colnames(data));
+    rownames(taxa_nm) <- colnames(data);
+    rownames(taxa_nm) <- sub("^X", "", rownames(taxa_nm))
+  }else{
+    taxa_nm <- as.data.frame(datataxa[,txlvl]);
+  }
     
   if(OtuIdType=="GreengenesID"){
     

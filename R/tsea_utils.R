@@ -4,12 +4,7 @@
 
 GetNameMapCol <-function(mbSetObj, colInx){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  if(.on.public.web){
-    return(mbSetObj$analSet$resTable[,colInx]);
-  }else{
-    print(mbSetObj$analSet$resTable[,colInx]);
-    return(.set.mbSetObj(mbSetObj))
-  }
+  return(mbSetObj$analSet$resTable[,colInx]);
 }
 
 GetTseaRowNames <- function(mbSetObj){
@@ -95,7 +90,7 @@ SpeciesMappingExact<-function(qvec, q.type){
     hit.inx <- match(tolower(qvec), tolower(species.db$GOLD_ID));
     match.values <- species.db$GOLD_ID[hit.inx];
     match.state[!is.na(hit.inx)] <- 1;
-  }else if(q.type == "taxa"){
+  }else if(q.type %in% c("mixed","species","strain")){
     hit.inx <- match(tolower(qvec), tolower(species.db$taxa));
     match.values <- species.db$taxa[hit.inx];
     match.state[!is.na(hit.inx)] <- 1;
@@ -128,7 +123,7 @@ SpeciesMappingExact<-function(qvec, q.type){
   # construct the result table with cells wrapped in html tags
   # the unmatched will be highlighted in different background
   html.res <- matrix("", nrow=length(qvec), ncol=6);
-  colnames(html.res) <- c("Query", "Match","Species","Genus","NCBI_Taxonomy_ID","GOLDSTAMP_ID");
+  colnames(html.res) <- c("Query", "Match", "Species", "Genus", "NCBI_Taxonomy_ID", "GOLDSTAMP_ID");
 
   for (i in 1:length(qvec)){
     if(match.state[i]==1){
@@ -229,12 +224,8 @@ CalculateHyperScore <- function(mbSetObj){
   mbSetObj$analSet$ora.hits = hits;
   write.csv(mbSetObj$analSet$ora.mat, file="tsea_ora_result.csv");
 
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj)
-    return(1);
-  }else{
-    return(.set.mbSetObj(mbSetObj))
-  }
+  return(.set.mbSetObj(mbSetObj));
+  
 }
 
 #'Getter to return final map
@@ -258,14 +249,6 @@ GetFinalNameMap<-function(mbSetObj){
     for (i in 1:length(qvec)){
       nm.mat[i, ]<-c(qvec[i],qvec[i]);
     }
-    
-    if(.on.public.web){
-      return(as.data.frame(nm.mat));
-    }else{
-      print(as.data.frame(nm.mat))
-      return(.set.mbSetObj(mbSetObj))
-    }
-    
   }else{
     hit.inx <- name.map$hit.inx;
     hit.values <- name.map$hit.values;
@@ -281,14 +264,8 @@ GetFinalNameMap<-function(mbSetObj){
       }
       nm.mat[i, ] <- c(qvec[i], kegg.hit);
     }
-    
-    if(.on.public.web){
-      return(as.data.frame(nm.mat));
-    }else{
-      print(as.data.frame(nm.mat))
-      return(.set.mbSetObj(mbSetObj))
-    }
   }
+  return(as.data.frame(nm.mat));
 }
 
 #'Function to prepare data for enrichment network.
@@ -492,7 +469,6 @@ GetORA.mat<-function(mbSetObj){
 GetORA.colorBar<-function(mbSetObj){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
   len <- nrow(mbSetObj$analSet$ora.mat);
   
   if(len > 50){
@@ -585,6 +561,7 @@ GetHTMLMetSet<-function(mbSetObj, msetNm){
 
   # get references
   matched.inx <- match(tolower(msetNm), tolower(current.msetlib$name))[1];
+
   return(cbind(msetNm, paste(mset, collapse="; "), current.msetlib$reference[matched.inx]));
 }
 
@@ -593,16 +570,10 @@ GetMsetPval<-function(mbSetObj, msetNm){
   return(mbSetObj$analSet$ora.mat[msetNm, "Raw p"]);
 }
 
-# given a metset inx, return all info
-GetTaxaSet <- function(mbSetObj, msetNm){
+GetMsetEvidence <- function(mbSetObj, msetNm){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  mset <- subset(current.msetlib, name == msetNm)
-  mbSetObj$analSet$tseaInfo <- t(rbind(colnames(current.msetlib), mset))
-  
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj)
-    return(1);
-  }else{
-    return(.set.mbSetObj(mbSetObj))
-  }
+  matched.inx <- match(tolower(msetNm), tolower(current.msetlib$name))[1];
+  print(current.msetlib$evidence[matched.inx])
+  return(current.msetlib$evidence[matched.inx])
 }
+

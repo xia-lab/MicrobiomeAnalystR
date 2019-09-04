@@ -34,9 +34,7 @@ GetDiscreteInx <- function(my.dat, min.rep=2){
 # get columns that are "most likely" continuous values
 GetNumbericalInx <- function(my.dat){
   good.inx <- apply(my.dat, 2, function(x){
-                good1.inx <- all(grepl("^-?[0-9.]+$", x));  # must be all contain numbers or .
-                good2.inx <- all(!is.na(as.numeric(x))); # must be all numerics
-                return (good1.inx & good2.inx);
+                return(all(!is.na(as.numeric(as.character(x))))); 
             });
    return(good.inx);
 }
@@ -149,9 +147,10 @@ scale_colours = function(mat, col = rainbow(10), breaks = NA){
 #'@param msg Error message to print
 #'@export
 AddErrMsg <- function(msg){
-  msg.vec <<- c(msg.vec, msg);
+  current.msg <<- msg;
   print(msg);
 }
+
 
 # this is to be validated (data.table), not done yet, very promising need to validate
 # https://github.com/joey711/phyloseq/issues/517
@@ -196,10 +195,25 @@ fast_tax_glom <- function(physeq, taxrank, NArm=TRUE, bad_empty=c(NA, "", " ", "
 	return(physeqNew)
 }
 
+# same as fast_tax_glom_first, but cached, no repeat computing
+fast_tax_glom_mem <- function(physeq, taxrank){
+   # set up the cache for reuse (i.e updating colors)
+   if(!exists("FastTaxGlom_mem")){
+        require("memoise");
+        FastTaxGlom_mem<<- memoise(fast_tax_glom_first); # the cache will be empty after 5 min
+    }
+    res <- FastTaxGlom_mem(physeq, taxrank);
+    return(res);
+}
+
 fast_tax_glom_first <- function(physeq, taxrank){
 
   # setup data. we are going to glob the OTU table based on the Class Taxonomy
-  CN  <- which( rank_names(physeq) %in% taxrank);
+  CN  <- which(rank_names(physeq) %in% taxrank);
+  if(length(CN) == 0){
+      print("name not in the rank!");
+      return(NULL);
+  }
   tax <- as(access(physeq, "tax_table"), "matrix")[, 1:CN, drop=FALSE];
   tax <- apply(tax, 1, function(i){paste(i, sep=";_;", collapse=";_;")});
   # using Map-Reduce/vectorized
@@ -211,7 +225,13 @@ fast_tax_glom_first <- function(physeq, taxrank){
   otab2 <- condenseOTUs(otab2,"tax");
   otab2<-otu_table(otab2,taxa_are_rows = T);
   colnames(otab2)<-sample_names(physeq);
-    
+
+  # check if this is meaningful 
+  if(sum(is.na(otab2))/length(otab2) > 0.7){
+    AddErrMsg("More than 70% values are missing at this level!");
+    return(NULL);
+  }
+
   if(length(phy_tree(physeq,errorIfNULL = FALSE))==0){
     phy_data<-merge_phyloseq(otab2,tax_table(physeq),sample_data(physeq));
   }else{
@@ -380,3 +400,17 @@ col_vector<-c("#7FC97F","#BEAED4","#FDC086","#FFFF99","#386CB0","#F0027F","#BF5B
               "#B3E2CD","#FDCDAC","#CBD5E8","#F4CAE4","#E6F5C9","#FFF2AE","#F1E2CC","#666666","#1B9E77","#D95F02",
               "#7570B3","#E7298A","#66A61E","#E6AB02","#A6761D","#CCCCCC","#E41A1C","#377EB8","#4DAF4A","#D9D9D9",
               "#BC80BD","#CCEBC5","#FFED6F","#B2DF8A","#FF7F00","#B15928","#CAB2D6","#1F78B4","#A65628");
+
+ComputeColorGradientCorr <- function(nd.vec, centered=TRUE){
+  
+  load_rcolorbrewer();
+  if(sum(nd.vec<0, na.rm=TRUE) > 0){
+    centered <- T;
+  }else{
+    centered <- F;
+  }
+    
+  color <- c(grDevices::colorRampPalette(c("#003366", "#add8e6"))(50), grDevices::colorRampPalette(c("#FF9DA6", "#FF7783", "#E32636", "#BD0313"))(50));
+  breaks <- generate_breaks(nd.vec, length(color), center = centered);
+  return(scale_vec_colours(nd.vec, col = color, breaks = breaks));
+}

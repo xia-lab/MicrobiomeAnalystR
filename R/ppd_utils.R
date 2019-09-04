@@ -45,10 +45,9 @@ PrepareMergedData <- function(mbSetObj, metadata, keepfeat){
 PerformRefDataMapping <- function(mbSetObj, refdataNm, taxo_type, sample_var, biome){
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
-  msg <- NULL;
   #reading the reference data: (OTU abundance and tax info) and associated sample data file seperately.
-  refdatafile_otu <- paste(refdataNm ,"_otu.rds", sep="");
-  refdatafile_tax <- paste(refdataNm ,"_tax.rds", sep="");
+  refdatafile_otu <- paste("/",refdataNm, "/", refdataNm, "_otu.rds", sep="");
+  refdatafile_tax <- paste("/",refdataNm, "/", refdataNm,"_tax.rds", sep="");
   
   current.refset.otu <- .read.microbiomeanalyst.lib(refdatafile_otu, "ppd", refdataNm);
   current.refset.tax <- .read.microbiomeanalyst.lib(refdatafile_tax, "ppd", refdataNm);
@@ -67,12 +66,12 @@ PerformRefDataMapping <- function(mbSetObj, refdataNm, taxo_type, sample_var, bi
   }
     
   #sample data
-  refsmpldataNm <- paste(refdataNm ,"_sampledata.csv", sep="");
+  refsmpldataNm <- paste("/", refdataNm, "/", refdataNm ,"_sampledata.csv", sep="");
   
   if(.on.public.web){
-    refsmpldataloc <- paste("../../lib/ref_data",refdataNm,refsmpldataNm,sep="/");
+    refsmpldataloc <- paste("../../lib/ppd",refsmpldataNm,sep="");
   }else{
-    refsmpldataloc <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/ref_data", refdataNm, refsmpldataNm, sep="/");
+    refsmpldataloc <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/ppd", refsmpldataNm, sep="");
   }
   
   current.sample <- read.csv(refsmpldataloc,sep = "\t",header = T,row.names = 1);
@@ -90,9 +89,9 @@ PerformRefDataMapping <- function(mbSetObj, refdataNm, taxo_type, sample_var, bi
     #taxonomy mapping file
     
     if(.on.public.web){
-      otu.dic <<- readRDS("../../lib/greengenes_taxmap.rds");
+      otu.dic <<- readRDS("../../lib/picrust/greengenes_taxmap.rds");
     }else{
-      otu.dic <<- readRDS("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/greengenes_taxmap.rds");
+      otu.dic <<- readRDS("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/picrust/greengenes_taxmap.rds");
     }
     
     #returns a vector of the positions of (first) matches of its first argument in user data(second argument).
@@ -101,7 +100,7 @@ PerformRefDataMapping <- function(mbSetObj, refdataNm, taxo_type, sample_var, bi
     match_ind1 <- match_ind[!is.na(match_ind)];
         
     if(length(match_ind1)==0){
-      msg <- c(msg,paste("No SILVA labels match between user and taxonomy mapping file.please check taxonomy labels "));
+      AddErrMsg("No SILVA labels match between user and taxonomy mapping file. Please check taxonomy labels ");
       return(0);
     }
         
@@ -120,11 +119,10 @@ PerformRefDataMapping <- function(mbSetObj, refdataNm, taxo_type, sample_var, bi
   taxa_ind <- match(taxa_names(data),taxa_names(current.refset));
     
   if(length(which(taxa_ind != "NA")) < 0.20*otu_no){
-    msg <- c(msg, paste(c("Less than 20 percent OTU  match between user and reference data.", length(which(taxa_ind != "NA")), "% match!")));
-    print(msg)
+    AddErrMsg(paste(c("Less than 20 percent OTU match between user and reference data.", length(which(taxa_ind != "NA")), "% match!")));
     return(0);
   } else {
-    msg <- paste("Dataset from",biome,"have been selected for comparison with user's data")
+    msg <- paste("Dataset from",biome,"has been selected for comparison with user's data.")
   }
     
   #pruning reference dataset
@@ -161,13 +159,9 @@ PerformRefDataMapping <- function(mbSetObj, refdataNm, taxo_type, sample_var, bi
   merged.data <<- merged.data;
   
   mbSetObj$dataSet$lib.msg <- current.msg <<- paste(msg, collapse=".");
-    
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj)
-    return(1);
-  }else{
-    return(.set.mbSetObj(mbSetObj))
-  }
+
+  return(.set.mbSetObj(mbSetObj));
+
 }
 
 #'Function to create PCoA
@@ -178,19 +172,40 @@ PerformRefDataMapping <- function(mbSetObj, refdataNm, taxo_type, sample_var, bi
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import vegan
-PCoA3DAnal.16SRef <- function(mbSetObj, barplotNm, ordMeth, distName, taxrank, colopt,
-                             taxa, alphaopt, metadata, format="png", dpi=72){
+PCoA3DAnal.16SRef <- function(mbSetObj, barplotNm, ordMeth, distName, taxrank, metadata, format="png", dpi=72){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
-  load_vegan();
 
-  data<-userrefdata;
-  GP.ord <- ordinate(data,ordMeth,distName);
+  if(.on.public.web){
+     load_vegan();
+  }
+
+  data <- userrefdata;
+
+  if(taxrank!="OTU"){
+    data <- fast_tax_glom_mem(data, taxrank);
+    if(is.null(data)){
+        AddErrMsg("Errors in projecting to the selected taxanomy level!");
+        return(0);
+    }
+    nm <- as.character(tax_table(data)[,taxrank]);
+    if(sum(is.na(nm))/length(nm) > 0.7){
+      AddErrMsg("More than 70% values are missing at this level!");
+      return(0);
+    }
+    #converting NA values to unassigned
+    nm[is.na(nm)] <- "Not_Assigned";
+    data1 <- as.matrix(otu_table(data));
+    rownames(data1) <- nm;
+    #all NA club together
+    data1 <- as.matrix(t(sapply(by(data1, rownames(data1), colSums), identity)));
+  }
+  
+  GP.ord <- ordinate(data, ordMeth, distName);
   #creating 2D image for Report Generation
   barplotNm = paste(barplotNm, ".", format, sep="");
   mbSetObj$imgSet$ppd.2d<-barplotNm;
-
+  
   Cairo::Cairo(file=barplotNm, width=720, height=500, type=format, bg="white",dpi=dpi);
   box = plot_ordination(data,GP.ord,color=metadata,shape="data");
   box$layers <- box$layers[-1];
@@ -201,7 +216,7 @@ PCoA3DAnal.16SRef <- function(mbSetObj, barplotNm, ordMeth, distName, taxrank, c
   box=box+ stat_ellipse(type="norm", linetype=2, geom = "polygon",alpha = 0.2, aes_string(fill = clsLbl), show.legend=FALSE);
   print(box);
   dev.off();
-    
+  
   # obtain variance explained
   sum.pca<-GP.ord;
   imp.pca<-sum.pca$values;

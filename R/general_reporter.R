@@ -52,12 +52,8 @@ PreparePDFReport <- function(mbSetObj, usrName){
     res <- try(tools::texi2dvi("Analysis_Report.tex", pdf = TRUE, quiet=TRUE));
   }
 
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj)
-    return(1);
-  }else{
-    return(.set.mbSetObj(mbSetObj))
-  }
+  return(.set.mbSetObj(mbSetObj));
+  
 }
 
 # this is for PDF report generation from bash
@@ -590,7 +586,6 @@ CreatePHYLOGENETICTREEdoc <- function(mbSetObj){
 CreateHEATTREEdoc <- function(mbSetObj){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
   # need to check if this process is executed
   if(is.null(mbSetObj$analSet$heat_tree_plot)){
     return();
@@ -604,7 +599,7 @@ descr <- c("\\subsection{Heat tree }\n",
            "User can also select the metadata variable and subsequently determined which pair of factors in that metadata variable they want to compare.",
            "Heat tree analysis is performed using R package \\texttt{metacoder} package\\footnote{Zachary S. L. Foster",
            "\\textit{ metacoder: An R package for visualization and manipulation of community taxonomic diversity data.}, 2017, R package version 0.3.2.}\n",
-           paste("Figure", fig.count<<-fig.count+1,"shows the heat tree for pair-wise comparison."),
+           paste("Figure", fig.count,"shows the heat tree for pair-wise comparison."),
            "\n ");
 
   cat(descr, file=rnwFile, append=TRUE,sep="\n");

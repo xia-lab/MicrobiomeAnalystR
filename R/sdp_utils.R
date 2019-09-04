@@ -49,14 +49,9 @@ UpdateListInput <- function(mbSetObj, minL, maxL=Inf){
   if(sum(hit.inx) > 0){
     current.msg <<- paste("A total of unqiue", sum(hit.inx), "KO genes were selected!");
     mbSetObj$analSet$data <- mbSetObj$analSet$ko.mapped[hit.inx, , drop=FALSE];
-    if(.on.public.web){
-      .set.mbSetObj(mbSetObj)
-      return(1);
-    }else{
-      return(.set.mbSetObj(mbSetObj))
-    }
+    return(.set.mbSetObj(mbSetObj));
   }else{
-    current.msg <<- paste("No genes were selected in this range!");
+    AddErrMsg("No genes were selected in this range!");
     return(0);
   }
 }
@@ -90,7 +85,7 @@ ReadShotgunTabData <- function(mbSetObj, dataName, geneidtype, datatype) {
     smpl_nm<-colnames(mydata[-1]);
   }else{
     current.msg <<- "No labels #NAME found in your data!";
-    return("F");
+    return(0);
   }
 
   dat.nms <- mydata[,1];
@@ -111,12 +106,8 @@ ReadShotgunTabData <- function(mbSetObj, dataName, geneidtype, datatype) {
   mbSetObj$dataSet$data.type<-"text";
   mbSetObj$dataSet$gene.id<-geneidtype;
   
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj)
-    return(1);
-  }else{
-    return(.set.mbSetObj(mbSetObj))
-  }
+  return(.set.mbSetObj(mbSetObj));
+
 }
 
 #'Main function to read in shotgun data
@@ -177,12 +168,8 @@ ReadShotgunBiomData <- function(mbSetObj, dataName, geneidtype, module.type, ism
   mbSetObj$dataSet$data.orig <- otu.dat;
   mbSetObj$dataSet$gene.id<-geneidtype;
   
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj)
-    return(1);
-  }else{
-    return(.set.mbSetObj(mbSetObj))
-  }
+  return(.set.mbSetObj(mbSetObj));
+  
 }
 
 #'Function to prepare shotgun data for PCA.
@@ -503,12 +490,8 @@ PerformKOmapping <- function(mbSetObj, geneIDs, type){
     mbSetObj$analSet$ko.mapped <- mbSetObj$analSet$data <- gene.mat; # data will be updated, ko.map will keep intact
     current.msg <<- paste("A total of unqiue", nrow(gene.mat), "KO genes were mapped to KEGG network!");
 
-    if(.on.public.web){
-      .set.mbSetObj(mbSetObj)
-      return(1);
-    }else{
-      return(.set.mbSetObj(mbSetObj))
-    }
+    return(.set.mbSetObj(mbSetObj));
+    
   }
 }
 
@@ -548,12 +531,8 @@ PrepareQueryJson <- function(mbSetObj){
   cat(json.mat);
   sink();
 
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj)
-    return(1);
-  }else{
-    return(.set.mbSetObj(mbSetObj))
-  }
+  return(.set.mbSetObj(mbSetObj));
+  
 }
 
 #'Function to prepare KO enrichment analysis.
@@ -631,23 +610,19 @@ PerformKOEnrichAnalysis_Table <- function(mbSetObj, file.nm){
 
   Save2KEGGJSON(hits, res.mat, file.nm);
   
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj)
-    return(1);
-  }else{
-    return(.set.mbSetObj(mbSetObj))
-  }
+  return(.set.mbSetObj(mbSetObj));
+  
 }
 
 # Utility function
 LoadKEGGKO_lib<-function(category){
     
   if(category == "module"){
-    .load.microbiomeanalyst.lib("ko_modules.rda")
+    .load.microbiomeanalyst.lib("ko_modules.rda", "ko")
     current.setlink <- kegg.anot$link;
     current.mset <- kegg.anot$sets$"Pathway module";
   }else{
-    .load.microbiomeanalyst.lib("ko_pathways.rda")
+    .load.microbiomeanalyst.lib("ko_pathways.rda", "ko")
     current.setlink <- kegg.anot$link;
     current.mset <- kegg.anot$sets$Metabolism;
   }
@@ -656,9 +631,9 @@ LoadKEGGKO_lib<-function(category){
   if(!exists("ko.edge.map")){
     
     if(.on.public.web){
-      ko.edge.path <- paste("../../lib/ko_edge.csv", sep="");
+      ko.edge.path <- paste("../../lib/ko/ko_edge.csv", sep="");
     }else{
-      ko.edge.path <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/ko_edge.csv", sep="");
+      ko.edge.path <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/ko/ko_edge.csv", sep="");
     }
     ko.edge.map <<- .readDataTable(ko.edge.path);
   }
@@ -728,12 +703,8 @@ PerformKOProjection <- function(mbSetObj){
     current.msg <<- paste("A total of unqiue", nrow(gene.mat), "KO genes were mapped to KEGG network!");
   }
 
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj)
-    return(1);
-  }else{
-    return(.set.mbSetObj(mbSetObj))
-  }
+  return(.set.mbSetObj(mbSetObj));
+  
 }
 
 ##############################################
@@ -746,9 +717,9 @@ MapKO2KEGGEdges<- function(kos, net="ko01100"){
   if(!exists("ko.edge.map")){
     
     if(.on.public.web){
-      ko.edge.path <- paste("../../lib/ko_edge.csv", sep="");
+      ko.edge.path <- paste("../../lib/ko/ko_edge.csv", sep="");
     }else{
-      ko.edge.path <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/ko_edge.csv", sep="");
+      ko.edge.path <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/ko/ko_edge.csv", sep="");
     }
     ko.edge.map <<- .readDataTable(ko.edge.path);
   }
@@ -840,12 +811,9 @@ PerformKOEnrichAnalysis_List <- function(mbSetObj, file.nm){
     }
   }
   Save2KEGGJSON(hits.query, res.mat, file.nm);
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj)
-    return(1);
-  }else{
-    return(.set.mbSetObj(mbSetObj))
-  }
+
+  return(.set.mbSetObj(mbSetObj));
+  
 }
 
 # Utility function
@@ -861,9 +829,9 @@ Save2KEGGJSON <- function(hits.query, res.mat, file.nm){
   if(!exists("ko.edge.map")){
     
     if(.on.public.web){
-      ko.edge.path <- paste("../../lib/ko_edge.csv", sep="");
+      ko.edge.path <- paste("../../lib/ko/ko_edge.csv", sep="");
     }else{
-      ko.edge.path <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/ko_edge.csv", sep="");
+      ko.edge.path <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/ko/ko_edge.csv", sep="");
     }
     ko.edge.map <- .readDataTable(ko.edge.path);
     ko.edge.map <- ko.edge.map[ko.edge.map$net=="ko01100",];  #only one map

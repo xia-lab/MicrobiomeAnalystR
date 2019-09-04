@@ -19,7 +19,7 @@
 
 .get.mbSetObj <- function(mbSetObj=NA){
   if(.on.public.web){
-    return(mbSet)
+    return(mbSet);
   }else{
     return(mbSetObj);
   }
@@ -44,6 +44,7 @@ Init.mbSetObj <- function(){
   mbSetObj$analSet <- analSet;
   mbSetObj$imgSet <- imgSet;
   mbSetObj$is.ASV <- FALSE;
+  mbSetObj$poor.replicate <- FALSE; # flag to show if all unique values
   mbSetObj$tree.uploaded <- FALSE;
   mbSetObj$cmdSet <- vector(mode="character"); # store R command
   
@@ -51,11 +52,11 @@ Init.mbSetObj <- function(){
   current.msg <<- "";
   current.selected.tax <<- "NA";
   enrich.type <<- "hyper";
-  msg.vec <<- vector(mode="character");
   
   load_cairo();
   load_ggplot();
   BiocParallel::register(BiocParallel::SerialParam());
+  corr.net.count <<- 0
   
   # preload some general package
   Cairo::CairoFonts("Arial:style=Regular","Arial:style=Bold","Arial:style=Italic","Helvetica","Symbol")
@@ -71,19 +72,18 @@ Init.mbSetObj <- function(){
 #' @param ref Default set to "NA".
 
 # read binary RDS files
-.read.microbiomeanalyst.lib <- function(filenm, opt = "none", ref = NA){
-  
+.read.microbiomeanalyst.lib <- function(filenm, sub.dir = NULL, ref = NA){
+
   if(.on.public.web){
-    if(opt=="tsea"){
-      lib.path <- paste("../../lib/tsea/", filenm, sep="");
-    }else if(opt=="ppd"){
-      lib.path <- paste(paste("../../lib/ref_data/", ref, sep=""), filenm, sep="/");
-    }else{
+    if(is.null(sub.dir)){
       lib.path <- paste("../../lib/", filenm, sep="");
+    }else{
+      lib.path <- paste("../../lib/", sub.dir, "/", filenm,  sep="");
     }
     return(readRDS(lib.path));
   }else{
     lib.download <- FALSE;
+    file_name <- basename(filenm)
     if(!file.exists(filenm)){
       lib.download <- TRUE;
     }else{
@@ -95,23 +95,23 @@ Init.mbSetObj <- function(){
     }
     # Deal with curl issues
     if(lib.download){
-      if(opt == "tsea"){
+      if(sub.dir == "tsea"){
         lib.url <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/tsea/", filenm, sep="");
-      }else if(opt == "picrust"){
+      }else if(sub.dir == "picrust"){
         lib.url <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/picrust/", filenm, sep="");
-      }else if(opt == "ppd"){
-        lib.url <- paste(paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/ref_data/", ref, sep=""), filenm, sep = "/");
+      }else if(sub.dir == "ppd"){
+        lib.url <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/ppd", filenm, sep = "");
       }else{
         lib.url <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/", filenm, sep="");
       }
       tryCatch(
         {
-          download.file(lib.url, destfile=filenm, method="curl")
+          download.file(lib.url, destfile=file_name, method="curl")
         }, warning = function(w){ print() },
         error = function(e) {
           print("Download unsucceful. Ensure that curl is downloaded on your computer.")
           print("Attempting to re-try download using libcurl...")
-          download.file(lib.url, destfile=filenm, method="libcurl")
+          download.file(lib.url, destfile=file_name, method="libcurl")
         }
       )
     }
@@ -120,7 +120,7 @@ Init.mbSetObj <- function(){
   
   # Deal w. corrupt downloaded files
   tryCatch({
-    my.lib <- readRDS(lib.path); # this is a returned value, my.lib never called outside this function, should not be in global env.
+    my.lib <- readRDS(file_name); # this is a returned value, my.lib never called outside this function, should not be in global env.
     print("Loaded files from MetaboAnalyst web-server.")
   },
   warning = function(w) { print("Warning, files not successfully downloaded from web.") },
@@ -128,18 +128,18 @@ Init.mbSetObj <- function(){
     print("Reading data unsuccessful, attempting to re-download file...")
     tryCatch(
       {
-        if(opt == "tsea"){
+        if(sub.dir == "tsea"){
           lib.url <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/tsea/", filenm, sep="");
-        }else if(opt == "picrust"){
+        }else if(sub.dir == "picrust"){
           lib.url <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/picrust/", filenm, sep="");
-        }else if(opt == "ppd"){
-          lib.url <- paste(paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/ref_data/", ref, sep=""), filenm, sep = "/");
+        }else if(sub.dir == "ppd"){
+          lib.url <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/ppd", filenm, sep = "");
         }else{
           lib.url <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/", filenm, sep="");
         }
         
-        download.file(lib.url, destfile=filenm, method="curl")
-        my.lib <- readRDS(filenm);
+        download.file(lib.url, destfile=file_name, method="curl")
+        my.lib <- readRDS(file_name);
         print("Loaded necessary files.")
       },
       warning = function(w) { print() },
@@ -151,13 +151,18 @@ Init.mbSetObj <- function(){
   return(my.lib)
 }
 
+
 # read binary RDA files (old style should be all RDS)
 # type should mset or kegg
-.load.microbiomeanalyst.lib <- function(libname){
+.load.microbiomeanalyst.lib <- function(libname, sub.dir=NULL){
   
   destfile <- libname;
   if(.on.public.web){
-    destfile <- paste("../../lib/", libname, sep="");
+    if(is.null(sub.dir)){
+        destfile <- paste("../../lib/", libname, sep="");
+    }else{
+        destfile <- paste("../../lib/", sub.dir, "/", libname, sep="");
+    }
   }else{
     lib.download <- FALSE;
     if(!file.exists(destfile)){
@@ -247,22 +252,21 @@ ReadSampleTable<- function(mbSetObj, dataName) {
   my.meta <- data.frame(mydata);
   disc.inx <- GetDiscreteInx(my.meta);
   if(sum(disc.inx) == 0){ # all class labels are unique! 
-    current.msg <<- "Make sure your metadata contains a column with at least 2vreplicates for each group! None of your meta-data column meets the criterion";
-    return(0);
+    na.msg <- c(na.msg, "It seems that all your meta data values are unique! MicrobiomeAnalyst requires some biological replicates for robust analysis");
+    mbSetObj$poor.replicate <- TRUE;
   }
   mbSetObj$dataSet$meta_info$disc.inx <- disc.inx;
   mbSetObj$dataSet$sample_data <- my.meta[,disc.inx, drop=FALSE];
-  
+
   cont.inx <- GetNumbericalInx(my.meta);
   cont.inx <- !disc.inx & cont.inx; # discrete is first
-  
+  mbSetObj$dataSet$meta_info$cont.inx <- cont.inx;
+
   if(sum(cont.inx)>0){
     # make sure the discrete data is on the left side
     mbSetObj$dataSet$sample_data <- cbind(mbSetObj$dataSet$sample_data, my.meta[,cont.inx, drop=FALSE]);
-    mbSetObj$dataSet$meta_info$cont.inx <- cont.inx;
-  }else{
-    mbSetObj$dataSet$meta_info$cont.inx <- "NA";
   }
+
   current.msg <<- paste(na.msg, "The sample data contains a total of ", nrow(mydata), "samples and  ", ncol(mydata), " sample variables.", collapse=" ");
   mbSetObj$dataSet$smpl.msg <- current.msg;
   
@@ -299,13 +303,17 @@ ReadTreeFile <- function(mbSetObj, dataName) {
   }
 }
 
-TreeUploaded <- function(mbSetObj) {
+IsTreeUploaded <- function(mbSetObj) {
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  if(mbSetObj$tree.uploaded){
-    return(1);
-  }else{
-    return(.set.mbSetObj(mbSetObj));
+  
+  if(.on.public.web){
+    if(mbSetObj$tree.uploaded){
+      return(1);
+    }else{
+      return(0)
+    }
   }
+  return(.set.mbSetObj(mbSetObj));
 }
 
 RecordRCommand <- function(mbSetObj=NA, cmd){
@@ -342,40 +350,23 @@ GetResColNames <- function(mbSetObj){
   return(colnames(mbSetObj$analSet$resTable));
 }
 
+IsPoorReplicate <- function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  if(mbSetObj$poor.replicate){
+    return(1);
+  }
+  return(0);
+}
+
 GetResMat <- function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   return(as.matrix(mbSetObj$analSet$resTable));
 }
 
-GetConfounderOpts <- function(mbSetObj){
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  metadata <- colnames(mbSetObj$dataSet$sample_data)
-  if(length(metadata)==1){
-    return("NA")
-  }else{
-    return(metadata)
-  }
-}
-
-SetMetaInfo <- function(mbSetObj, varInfo){
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  print(varInfo)
-  return(1)
-}
-
 # type can be all, discrete or continuous
 GetMetaInfo <- function(mbSetObj, type="disc"){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  return(colnames(mbSetObj$dataSet$sample_data));
-}
-
-GetMetaTypes <- function(mbSetObj){
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  meta.table <- mbSetObj$dataSet$sample_data;
-  disc.inx <- GetDiscreteInx(meta.table);
-  types <- ifelse(disc.inx == TRUE, "Categorical", "Continuous")
-  return(types)
-  all.nms <- colnames(mbSetObj$dataSet$sample_data);
+  all.nms <- names(mbSetObj$dataSet$meta_info$disc.inx)
   if(type=="all"){
     return(all.nms);
   }else if(type=="disc"){
@@ -393,8 +384,17 @@ GetMetaTypes <- function(mbSetObj){
 }
 
 GetMetaTaxaInfo <- function(mbSetObj){
+  
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  return(rank_names(mbSetObj$dataSet$proc.phyobj));
+  
+  #check that each rank has >2 groups
+  taxa.tbl <- as(tax_table(mbSetObj$dataSet$proc.phyobj), "matrix")
+  
+  #drop taxa with only 1 level (i.e. Viruses at Phylum)
+  gd.inx <- apply(taxa.tbl, 2, function(x) length(unique(x))!=1);
+  taxa.tbl.update <- taxa.tbl[,gd.inx];
+  taxa.nms <- rank_names(taxa.tbl.update);
+  return(taxa.nms[!is.na(taxa.nms)]);
 }
 
 GetSampleGrpInfo <- function(mbSetObj, clsLbl){
@@ -408,19 +408,8 @@ GetSampleGrpNo <- function(mbSetObj, clsLbl){
   return(length(levels(factor(get_variable(mbSetObj$dataSet$norm.phyobj, clsLbl)))));
 }
 
-GetAllSampleGrpInfo <- function(mbSetObj){
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  #sample variable having more than one group will be selected as default
-  sam_var<-which(sapply(sample_data(mbSetObj$dataSet$norm.phyobj)[,sapply(sample_data(mbSetObj$dataSet$norm.phyobj), is.factor)], nlevels)>1);
-  if(length(sam_var)>0){
-    return(names(sam_var[1]));
-  } else {
-    return(NULL);
-  }
-}
-
-GetTaxaFeatName<- function(mbSetObj, taxlvl){
-  
+GetTaxaNames<- function(mbSetObj, taxlvl){
+ 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(taxlvl=="OTU"){
@@ -429,6 +418,10 @@ GetTaxaFeatName<- function(mbSetObj, taxlvl){
     taxa_table<-tax_table(mbSetObj$dataSet$proc.phyobj);
     data<-merge_phyloseq(mbSetObj$dataSet$norm.phyobj,taxa_table);
     nm<-unique(as.character(tax_table(data)[,taxlvl]));
+    if(sum(is.na(nm))/length(nm) > 0.7){
+      AddErrMsg("More than 70% values are missing at this level!");
+      return(0);
+    }
     indx<-which(is.na(nm)==TRUE);
     nm[indx]<-"Not_Assigned";
     return(nm);
@@ -470,11 +463,6 @@ GetHighTaxaLvlNm<- function(mbSetObj, taxrank){
   }
 }
 
-GetSampleGrpUser <- function(mbSetObj, clsLbl){
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  return(levels(get_variable(mbSetObj$dataSet$proc.phyobj, clsLbl)));
-}
-
 ##########################
 ######## Checks ##########
 ##########################
@@ -488,26 +476,15 @@ ValidateFeatureName <- function(mbSetObj, taxlvl, nm){
     taxa_table<-tax_table(mbSetObj$dataSet$proc.phyobj);
     data<-merge_phyloseq(mbSetObj$dataSet$norm.phyobj,taxa_table);
     tax.nms<-unique(as.character(tax_table(data)[,taxlvl]));
+    if(sum(is.na(tax.nms))/length(tax.nms) > 0.7){
+      AddErrMsg("More than 70% values are missing at this level!");
+      return(0);
+    }
   }
-  
   if(nm %in% tax.nms){
     return(1);
   }else{
     return(0);
-  }
-}
-
-#check whether sample variable is continuous and give warning abt it in metagenomeSeq and LEfSe
-CheckContSampleVar <- function(mbSetObj, variable){
-  
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  cls<-as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
-  
-  if(length(cls)/length(levels(cls)) < 2){
-    current.msg <<-"Sample variable has continuous values. This method is only applicable for variables containing discrete values.";
-    return(0);
-  } else {
-    return(1);
   }
 }
 
@@ -531,3 +508,62 @@ PrepareDownloadData <- function(mbSetObj){
   }
   return(.set.mbSetObj(mbSetObj));
 };
+
+## utility functions to create phyloseq obs + count tables
+
+UtilMakePhyloseqObjs <- function(mbSetObj, taxrank){
+  
+  if(mbSetObj$module.type=="mdp"){
+    taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
+    data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj, taxa_table);
+  }else{
+    data <- mbSetObj$dataSet$norm.phyobj; #for shotgun
+  }
+  
+  if(taxrank!="OTU"){
+    #merging at taxonomy levels
+    data <- fast_tax_glom_mem(data, taxrank);
+    if(is.null(data)){
+      AddErrMsg("Errors in projecting to the selected taxanomy level!");
+      return(0);
+    }
+  }
+  return(data)
+}
+
+UtilMakeCountTables <- function(phyloseq.obj, taxrank){
+  
+  if(taxrank=="OTU"){
+    data1 <- as(otu_table(phyloseq.obj), "matrix");
+  }else{
+    nm <- as.character(tax_table(phyloseq.obj)[,taxrank]);
+    #converting NA values to unassigned
+    nm[is.na(nm)] <- "Not_Assigned";
+    data1 <- as(otu_table(phyloseq.obj), "matrix");
+    rownames(data1) <- nm;
+    #all NA club together
+    data1 <- as.matrix(t(sapply(by(data1, rownames(data1), colSums), identity)));
+  }
+  return(data1)
+}
+
+# only used when data is norm.phyobj
+MakeRankedCountTables <- function(mbSetObj){
+
+  # make hierarchies
+  ranks <- c(GetMetaTaxaInfo(mbSetObj), "OTU")
+  # start with lowest
+  data.list <- list()
+  data.list$merged_obj <- vector(length = length(ranks), "list")
+  data.list$count_tables <- vector(length = length(ranks), "list")
+  names(data.list$count_tables) <- names(data.list$merged_obj) <- ranks
+  
+  for(i in 1:length(ranks)){
+    phyloseq.obj <- UtilMakePhyloseqObjs(mbSetObj, ranks[i])
+    data.list$merged_obj[[i]] <- phyloseq.obj
+    count.table <- UtilMakeCountTables(phyloseq.obj, ranks[i])
+    data.list$count_tables[[i]] <- count.table
+  }
+  saveRDS(data.list, "phyloseq_objs.RDS")
+  return(.set.mbSetObj(mbSetObj))
+}

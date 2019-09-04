@@ -45,7 +45,11 @@ PCoA3D.Anal <- function(mbSetObj, ordMeth, distName, taxrank, colopt, variable, 
     taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
     data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj, taxa_table);
     #merging at taxonomy levels
-    data <- fast_tax_glom_first(data, taxrank)
+    data <- fast_tax_glom_mem(data, taxrank)
+    if(is.null(data)){
+        AddErrMsg("Errors in projecting to the selected taxanomy level!");
+        return(0);
+    }
   }
   
   if(colopt=="taxa"){
@@ -182,12 +186,7 @@ PCoA3D.Anal <- function(mbSetObj, ordMeth, distName, taxrank, colopt, variable, 
   cat(json.obj);
   sink();
   
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj) #may need to delete?
-    return(1);
-  }else{
-    return(.set.mbSetObj(mbSetObj))
-  }
+  return(.set.mbSetObj(mbSetObj));
 }
 
 #'Function to plot tree graphics for dendogram.
@@ -242,11 +241,13 @@ PlotTreeGraph <- function(mbSetObj, plotNm, distnm, clstDist, metadata, taxrank,
     taxrank<-"OTU";
   }
 
-  if(taxrank=="OTU"){
-    data<-data;
-  }else{
+  if(taxrank!="OTU"){
     #merging at taxonomy levels
-    data<-fast_tax_glom_first(data,taxrank);
+    data<-fast_tax_glom_mem(data,taxrank);
+    if(is.null(data)){
+        AddErrMsg("Errors in projecting to the selected taxanomy level!");
+        return(0);
+    }
   }
 
   hc.cls <-as.factor(sample_data(data)[[variable]]);
@@ -442,7 +443,7 @@ PlotBoxData<-function(mbSetObj, boxplotName, feat, format="png", dpi=72){
 #'@param rowV Logical, default set to "F".
 #'@param colV Logical, default set to "T".
 #'@param var.inx Default set to NA.
-#'@param border Logical, show cell borders, default set to "T".
+#'@paraboxdatam border Logical, show cell borders, default set to "T".
 #'@param width Numeric, input the width of the plot. By
 #'default it is set to NA.
 #'@param dpi Numeric, input the dots per inch. By default
@@ -488,7 +489,11 @@ PlotHeatmap<-function(mbSetObj, plotNm, smplDist, clstDist, palette, metadata,
     rownames(data1) <- taxa_names(data);
   }else{
     #merging at taxonomy levels
-    data <- fast_tax_glom_first(data,taxrank);
+    data <- fast_tax_glom_mem(data,taxrank);
+    if(is.null(data)){
+        AddErrMsg("Errors in projecting to the selected taxanomy level!");
+        return(0);
+    }
     nm <- as.character(tax_table(data)[,taxrank]);
     y <- which(is.na(nm)==TRUE);
     #converting NA values to unassigned
@@ -533,9 +538,13 @@ PlotHeatmap<-function(mbSetObj, plotNm, smplDist, clstDist, palette, metadata,
   #there is an additional column sample_id which need to be removed first
   # get only good meta-data
   good.inx <- GetDiscreteInx(annotation);
-  annotation <- annotation[,good.inx, drop=FALSE];
-  sam.ord <- rownames(annotation);
-  data1 <- data1[,sam.ord];
+  if(sum(good.inx)>0){
+    annotation <- annotation[,good.inx, drop=FALSE];
+    sam.ord <- rownames(annotation);
+    data1 <- data1[,sam.ord];
+  }else{
+    annotation <- NA;
+  }
 
   # set up colors for heatmap
   if(palette=="gbr"){
@@ -694,400 +703,32 @@ GetColorSchema <- function(mbSetObj, grayscale=F){
   return (colors);
 }
 
-#' Perform Partial Correlation Analysis
-#' @description Function to perform and plot
-#' partial correlations between all taxonomic features,
-#' the outcome, and selected confounders.
-#' NOTE: All metadata must be numeric
-#' @param mbSetObj Input the name of the mbSetObj.
-#' @param taxa.lvl Character, input the taxonomic level
-#' to perform partial correlation analysis.
-#' @param variable Character, input the selected variable.
-#' @param alg Use "kendall" or "spearman" for non-parametric and 
-#' "pearson" for parametric.
-#' @param imgName Character, input the name of the partial correlation plot.
-#' @param format Character, by default the plot format
-#' is "png".
-#' @param dpi Numeric, set to 72 by default.
-#' @export
-#' @import ppcor
-PerformPartialCorr <- function(mbSetObj, taxa.lvl="Phylum", variable=NA, alg = "pearson", pval.cutoff = 0.05, 
-                               imgName="partial_corr", format="png", dpi=72){
-
+PlotBoxDataCorr<-function(mbSetObj, boxplotName, feat, format="png", dpi=72){
+  
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  load_ppcor()
-  load_viridis()
+  load_ggplot();
+  load_grid();
+  load_gridExtra();
   
-  # retrieve sample info
-  metadata <- as(mbSetObj$dataSet$sample_data, "data.frame")
-  confounders <- mbSetObj$dataSet$confs
+  variable <-  mbSetObj$analSet$var.typecor 
   
-  # get list of confounders to consider
-  if(length(confounders)==0){
-    current.msg <<- "No confounders inputted!"
-    return(0);
-  }
-  
-  #check that confounders do not include variable
-  check <- variable %in% confounders
-  
-  if(check){
-    current.msg <<- "Invalid confounders! Variable included."
-    return(0)
-  }
-  
-  check2 <- "NA" %in% confounders
-  
-  if(check2){
-    current.msg <<- "NA included as a confounder!"
-    return(0)
-  }
-  
-  # create list of confounders
-  meta.subset <- metadata[, confounders]
-  
-  if(class(meta.subset) == "data.frame"){
-    meta.subset <- data.frame(apply(meta.subset, 2, function(x) as.numeric(as.character(x))))
-    meta.subset <- as.list(meta.subset)
-  }else{
-    meta.subset <- as.numeric(as.character(meta.subset))
-    meta.subset <- as.list(as.data.frame(meta.subset))
-  }
-  
-  # check variable is numeric
-  var <- metadata[,variable]
-  
-  if(class(levels(var))=="character"){
-    var <- as.numeric(var)
-  }
-  
-  # now get otu data
-  if(taxa.lvl=="OTU"){
-    taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
-    data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj, taxa_table);
-    data1 <- as.matrix(otu_table(data));
-  }else{
-    #get otu table
-    taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
-    data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj, taxa_table);
-    #merging at taxonomy levels
-    data <- fast_tax_glom_first(data,taxa.lvl);
-    nm <- as.character(tax_table(data)[,taxa.lvl]);
-    #converting NA values to unassigned
-    nm[is.na(nm)] <- "Not_Assigned";
-    data1 <- as.matrix(otu_table(data));
-    rownames(data1) <- nm;
-    #all NA club together
-    data1 <- as.matrix(t(sapply(by(data1, rownames(data1), colSums), identity)));
-  }
+  data <- mbSetObj$analSet$boxdatacor;
+  a <- data[,feat];
+  ind <- which(a=="0");
+  a[ind] <- 0.1;
+  data$log_feat <- log(a);
+  boxplotName = paste(boxplotName,".",format, sep="");
+  Cairo::Cairo(file=boxplotName,width=325, height=280, type=format, bg="white",dpi=dpi);
 
-  otu.table <- t(data1);
-  mbSetObj$analSet$abund_data <- otu.table;
-  
-  #replace 0s and NAs with small number
-  otu.table[otu.table==0|is.na(otu.table)] <- .00001
-  
-  #more than 1 imp.feat, convert to named list of vectors then perform partial correlation
-  if(class(otu.table)=="numeric"){
-    otu.subset <- otu.table
-    # first calculate corr
-    cor.result <- cor.test(otu.subset, var, method=alg)
-    cor.results <- data.frame(cor_pval=cor.result$p.value, cor_est=cor.result$estimate)
-    # calculate pcorr
-    pcor.results <- ppcor::pcor.test(otu.subset, var, meta.subset, method = alg)
-    pcor.results <- cbind(cor.results, pcor.results)
-  }else{
-    otu.subset <- lapply(seq_len(ncol(otu.table)), function(i) otu.table[,i])
-    
-    # first calculate corr
-    cor.results <- do.call(rbind, lapply(otu.subset, function(x){
-      cor.result <- cor.test(x, var, method = alg);
-      data.frame(cor_pval=cor.result$p.value, cor_est=cor.result$estimate)}))  
-    row.names(cor.results) <- colnames(otu.table)
-    
-    # calculate pcorr
-    pcor.fun <- function(feats){ ppcor::pcor.test(feats, var, meta.subset, method = alg) }
-    pcor.results <- do.call("rbind", lapply(otu.subset, pcor.fun))
-    pcor.results <- cbind(cor.results, pcor.results)
-  }
-  
-  #order results by p.value
-  row.names(pcor.results) <- colnames(otu.table)
-  resTable <- as.data.frame(pcor.results)
-  ord.inx <- order(resTable$p.value);
-  resTable <- resTable[ord.inx, , drop=FALSE];
-  write.csv(resTable, "partial_corr.csv", row.names = TRUE);
-  resTable$taxarank = row.names(pcor.results)
+  box=ggplot(data,aes(x=data$class, y = data$log_feat)) + stat_boxplot(geom ='errorbar') + 
+      geom_boxplot(aes(fill=class), outlier.shape = NA) + geom_jitter() + theme_bw() + labs(y="Log-transformed Counts", x=variable, fill=variable) +
+      ggtitle(feat) + theme(plot.title = element_text(hjust=0.5, size=13), axis.title=element_text(size=11), legend.title=element_text(size=11), axis.text=element_text(size=10)) +
+      scale_fill_manual(values=c("#E95346", "#164AA6"));
+  #remove grid
+  box <- box + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), panel.border = element_rect(colour = "#787878", fill=NA, size=0.5))
 
-  #create plot
-  y <- -log(resTable$p.value)
-  x <- resTable$estimate
-  cor.y <- -log(resTable$cor_pval)
-  cor.x <- resTable$cor_est
-  tax.nms <- row.names(resTable)
-  
-  df <- data.frame(tax.nms, x, y)
-  df2 <- data.frame(y=cor.y, x=cor.x)
-  df2$name <- df$name <- row.names(resTable)
-  df2$label <- df$label <- ifelse(df$y > -log(pval.cutoff), TRUE, FALSE)
-  
-  plotname <- paste(imgName, ".", format, sep="")
-  mbSetObj$imgSet$pcorr.plot <- plotname;
-  Cairo::Cairo(file=plotname, width=650, height=550, type=format, bg="white", dpi=dpi);
-  
-  # color opts
-  if(taxa.lvl=="Phylum"){
-    p <- ggplot(df, aes(x, y, label=name, color=tax.nms)) + labs(color="Phylum") +
-      geom_point(size=3) + theme_bw() + viridis::scale_color_viridis(discrete = TRUE)
-  }else{
-    p <- ggplot2::ggplot(df, aes(x, y, label=name)) + geom_point(data = df2, color = "grey", size=3, alpha = 0.5) + theme_bw() +
-      scale_color_gradient2(low="darkgreen", mid="yellow", high="red") + labs(colour="Correlation", size="-log(p)") +
-      geom_point(data=df, aes(colour=x, size=y), alpha = 0.4)
-  }
-  
-  p <- p + labs(x="Partial Correlation", y="-log(p)") + 
-    scale_x_continuous(breaks = round(seq(min(df$x), max(df$x), by=0.1), 1))  +
-    geom_text(data = subset(df, label==TRUE), aes(label = subset(df, label==TRUE)[,'name']), hjust = "inward", vjust="inward", check_overlap = TRUE)
-  
-  print(p);
+  print(box)
   dev.off();
-  
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj)
-    return(1);
-  }else{
-    return(.set.mbSetObj(mbSetObj))
-  }
-}
-
-#' Function to perform and plot
-#' partial correlations between a selected feature,
-#' the outcome, and selected confounders.
-#' NOTE: All metadata must be numeric
-#' @param mbSetObj Input the name of the mbSetObj.
-#' @param pcorrOpt Character, either use the top 15 features 
-#' or perform partial correlation using a single feature.
-#' @param feat Character, input the name of the specific feature
-#' to perform partial correlation.
-#' @param test Character, input the analysis used to determine
-#' the set of important features.
-#' @param p.cutoff Numeric.
-#' @param lda.cutoff Numeric.
-#' @param fc.cutoff Numeric.
-#' @param variable Character.
-#' @param alg Use "kendall" or "spearman" for non-parametric and 
-#' "pearson" for parametric.
-#' @param colOpt Five options are available. "magma" (or "A"), "inferno" (or "B"), 
-#' "plasma" (or "C"), "viridis" (or "D", the default option) and "cividis" (or "E").
-#' @param imgName Character, input the name of the partial correlation plot.
-#' @param format Character, by default the plot format
-#' is "png".
-#' @param feats.cutoff Numeric, insert the maximum number of important features
-#' to include. Default is set to 15.
-#' @export
-#' @import ppcor
-PlotPartialCorrConfounders <- function(mbSetObj, pcorrOpt="default", feat="NA", test="lefse", p.cutoff=0.05, lda.cutoff=2, fc.cutoff=2, 
-                                       variable=NA, alg = "pearson", colOpt = "D", imgName="partial_corr", format="png", feats.cutoff=15){
-
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-
-  # retrieve sample info
-  metadata <- as(mbSetObj$dataSet$sample_data, "data.frame")
-  
-  load_ppcor()
-  test <- mbSetObj$analSet$anal.type
-  
-  if(test == "tt"){
-    sigFeats <- mbSetObj$analSet$Univar$resTable
-    taxrank <- mbSetObj$analSet$univar.taxalvl
-    confounders <- mbSetObj$dataSet$univ.confs
-  }else if(test == "lefse"){
-    sigFeats <- mbSetObj$analSet$lefse$resTable
-    taxrank <- mbSetObj$analSet$lefse.taxalvl 
-    confounders <- mbSetObj$dataSet$lefse.confs
-  }else if(test == "metagseq"){
-    sigFeats <- mbSetObj$analSet$metagenoseq$resTable
-    taxrank <- mbSetObj$analSet$metageno.taxalvl
-    confounders <- mbSetObj$dataSet$metagen.confs
-  }else if(test == "deseq"| test == "edgr"){
-    sigFeats <- mbSetObj$analSet$rnaseq$resTable
-    taxrank <- mbSetObj$analSet$rnaseq.taxalvl
-    confounders <- mbSetObj$dataSet$rnaseq.confs
-  }
-
-  # get list of confounders to consider
-  if(length(confounders)==0){
-    current.msg <<- "No confounders inputted!"
-    return(0);
-  }
-  
-  #check that confounders do not include variable
-  check <- variable %in% confounders
-  
-  if(check){
-    current.msg <<- "Invalid confounders! Variable included."
-    return(0)
-  }
-  
-  # create list of confounders
-  meta.subset <- metadata[, confounders]
-  
-  if(class(meta.subset) == "data.frame"){
-    meta.subset <- data.frame(apply(meta.subset, 2, function(x) as.numeric(as.character(x))))
-    meta.subset <- as.list(meta.subset)
-  }else{
-    meta.subset <- as.numeric(as.character(meta.subset))
-    meta.subset <- as.list(as.data.frame(meta.subset))
-  }
-  
-  # check variable is numeric
-  var <- metadata[,variable]
-  
-  if(class(levels(var))=="character"){
-    var <- as.numeric(var)
-  }
-  
-  if(.on.public.web){
-    feats.cutoff <- 15
-  }else{
-    feats.cutoff <- feats.cutoff
-  }
-  
-  #get imp feats only if pcorrOpts not default
-  if(pcorrOpt=="default"){
-    
-    if(test == "lefse"){
-      
-      imp.feats <- subset(sigFeats, FDR < p.cutoff & abs(LDAscore) > lda.cutoff)
-      
-      # sometimes >100 imp feats
-      if(length(row.names(imp.feats)) > feats.cutoff){
-        imp.feats <- imp.feats[1:feats.cutoff,]
-      }
-      otu.table <- data.impfeat_lefse
-      
-    }else if(test == "tt"| test == "metagseq"){
-      
-      imp.feats <- subset(sigFeats, FDR < p.cutoff)
-      
-      # sometimes >100 imp feats
-      if(length(row.names(imp.feats)) > feats.cutoff){
-        imp.feats <- imp.feats[1:feats.cutoff,]
-      }
-      
-      if(test == "tt"){
-        otu.table <- data.classical.univar
-      }else{
-        data <- tree_data
-        otu.table <- as.data.frame(t(otu_table(data)));
-      }
-      
-    }else if(test == "deseq"| test == "edgr"){
-      
-      imp.feats <- subset(sigFeats, FDR < p.cutoff & abs(log2FC) > fc.cutoff)
-      
-      # sometimes >100 imp feats
-      if(length(row.names(imp.feats)) > feats.cutoff){
-        imp.feats <- imp.feats[1:feats.cutoff,]
-      }
-      otu.table <- mbSetObj$analSet$rnaseq$data.rnaseq
-    }
-  }else{
-    #check if pcorrOpt is valid
-    if(feat %in% rownames(sigFeats)){
-      imp.feats <- sigFeats[rownames(sigFeats) == feat,]
-    }else{
-      current.msg <<- "Taxa name invalid!"
-      return(0)
-    }
-    
-    if(test == "lefse"){
-      otu.table <- data.impfeat_lefse
-    }else if(test == "tt"| test == "metagseq"){
-      if(test == "tt"){
-        otu.table <- data.classical.univar
-      }else{
-        data <- tree_data
-        otu.table <- as.data.frame(t(otu_table(data)));
-      }
-    }else if(test == "deseq"| test == "edgr"){
-      otu.table <- mbSetObj$analSet$rnaseq$data.rnaseq
-    }
-  }
-  
-  #replace 0s and NAs with small number
-  otu.table[otu.table==0|is.na(otu.table)] <- .00001
-  imp.taxa <- rownames(imp.feats)
-  x <- otu.table[, imp.taxa]
-  
-  #more than 1 imp.feat, convert to named list of vectors then perform partial correlation
-  if(class(x)=="numeric"){
-    otu.subset <- x
-    pcor.results <- ppcor::pcor.test(otu.subset, var, meta.subset, method = alg)
-  }else{
-    otu.subset <- lapply(seq_len(ncol(x)), function(i) x[,i])
-    pcor.fun <- function(feats){ ppcor::pcor.test(feats, var, meta.subset, method = alg) }
-    pcor.results <- do.call("rbind", lapply(otu.subset, pcor.fun))
-  }
-  
-  row.names(pcor.results) <- imp.taxa
-  write.csv(pcor.results, "partial_corr.csv", row.names = TRUE);
-  pcor.results$id = strtrim(rownames(pcor.results), 15)
-  pcor.results$variable = rep(1)
-  
-  if(pcorrOpt == "default"){
-    # plot results
-    size <- length(row.names(pcor.results))
-    
-    if(size <= 10){
-      h <- 450
-    }else if(size <= 25){
-      h <- 550
-    }else{
-      h <- 800
-    }
-    
-    plotname <- paste(imgName, ".", format, sep="")
-    Cairo::Cairo(file=plotname, width=400, height=h, type=format, bg="white", dpi=72);
-    mbSetObj$imgSet$dotplot <- plotname;
-    
-    p <- ggplot(pcor.results, aes(x=variable, y=id, size = estimate, color = p.value)) + 
-      geom_point(alpha = 0.7) +
-      theme_bw() + 
-      labs(y = paste(taxrank)) + 
-      theme(axis.title.x=element_blank(), 
-            axis.text.x=element_blank(), 
-            axis.ticks.x=element_blank(),
-            axis.text.y = element_text(size=11)) +
-      labs(size = "Partial Correlation", color = "FDR P-Value") + 
-      update_geom_defaults("point", list(shape = 19)) +
-      viridis::scale_color_viridis(option = paste(colOpt))
-    
-    print(p)
-    dev.off()
-  }else{
-    #create table plot    
-    load_grid()
-    load_gridExtra()
-    
-    plotname <- paste(imgName, ".", format, sep="")
-    Cairo::Cairo(file=plotname, width=500, height=275, type=format, bg="white", dpi=95);
-    mbSetObj$imgSet$dotplot <- plotname;
-    
-    #trim table
-    table <- pcor.results[,-c(4:8)]
-    rownames(table) <- pcor.results$id
-    table <- round(table, 3)
-    colnames(table) <- c("Correlation", "P.Value", "Statistic")
-    gridExtra::grid.table(d=table, theme=ttheme_default(base_size = 14))
-    dev.off()
-  }
-  
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj)
-    return(1);
-  }else{
-    return(.set.mbSetObj(mbSetObj))
-  }
+  return(.set.mbSetObj(mbSetObj))
 }

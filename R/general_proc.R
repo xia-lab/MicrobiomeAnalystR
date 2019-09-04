@@ -27,7 +27,6 @@ SanityCheckData <- function(mbSetObj, filetype){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   feat.sums <- apply(mbSetObj$dataSet$data.orig, 1, function(x){sum(x>0, na.rm=T)});
-  #gd.inx <- feat.sums > 0; # occur in at least 1 samples
   gd.inx <- feat.sums > 1; # occur in at least 2 samples
   
   if(length(which(gd.inx=="TRUE"))==0){
@@ -110,6 +109,8 @@ SanityCheckData <- function(mbSetObj, filetype){
   mbSetObj$dataSet$tree <- tree_exist
   
   vari_no <- ncol(mbSetObj$dataSet$sample_data);
+  disc_no <- sum(mbSetObj$dataSet$meta_info$disc.inx);
+  cont_no <- sum(mbSetObj$dataSet$meta_info$cont.inx);
   smpl.sums <- apply(data.proc, 2, sum);
   tot_size <- sum(smpl.sums);
   smin <- min(smpl.sums)
@@ -119,7 +120,7 @@ SanityCheckData <- function(mbSetObj, filetype){
   
   if(.on.public.web){
     .set.mbSetObj(mbSetObj)
-    return(c(1,taxa_no,sample_no,vari_no,smin,smean,smax,gd_feat,samplemeta_no,tot_size, tree_exist, samname_same, samname_same_number, sample_no_in_outfile));
+    return(c(1,taxa_no,sample_no,vari_no, smin,smean,smax,gd_feat,samplemeta_no,tot_size, tree_exist, samname_same, samname_same_number, sample_no_in_outfile, disc_no, cont_no));
   }else{
     print("Sanity check passed!")
     return(.set.mbSetObj(mbSetObj))
@@ -150,9 +151,12 @@ ApplyAbundanceFilter <- function(mbSetObj, filt.opt, count, smpl.perc){
   #this data is used for sample categorial comparision further
   rmn_feat <- nrow(data);
   
+  mbSetObj$dataSet$ab.filtered <- FALSE
+  
   if(count==0){# no low-count filtering
     kept.inx <- rep(TRUE, rmn_feat);
   }else{
+    mbSetObj$dataSet$ab.filtered <- TRUE
     if(filt.opt == "prevalence"){
       rmn_feat <- nrow(data);
       minLen <- smpl.perc*ncol(data);
@@ -170,12 +174,7 @@ ApplyAbundanceFilter <- function(mbSetObj, filt.opt, count, smpl.perc){
   saveRDS(mbSetObj$dataSet$filt.data, file="filt.data.orig"); # save an copy
   current.msg <<- paste("A total of ", sum(!kept.inx), " low abundance features were removed based on ", filt.opt, ".", sep="");
   
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj)
-    return(1);
-  }else{
-    return(.set.mbSetObj(mbSetObj))
-  }
+  return(.set.mbSetObj(mbSetObj));
 }
 
 #'Function to filter uploaded data
@@ -201,9 +200,12 @@ ApplyVarianceFilter <- function(mbSetObj, filtopt, filtPerct){
   
   filter.val <- nm <- NULL;
   
+  mbSetObj$dataSet$var.filtered <- FALSE
+  
   if(filtPerct==0){# no low-count filtering
     remain <- rep(TRUE, rmn_feat);
   }else{
+    mbSetObj$dataSet$var.filtered <- TRUE
     if (filtopt == "iqr"){
       filter.val <- apply(data, 1, IQR, na.rm=T);
       nm <- "IQR";
@@ -230,12 +232,8 @@ ApplyVarianceFilter <- function(mbSetObj, filtopt, filtPerct){
   current.msg <<- paste(c(current.msg, rm.msg1, rm.msg2), collapse=" ");
   mbSetObj$dataSet$filt.msg <- current.msg;
   
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj)
-    return(1);
-  }else{
-    return(.set.mbSetObj(mbSetObj))
-  }
+  return(.set.mbSetObj(mbSetObj));
+
 }
 
 #'Function to update samples
@@ -279,50 +277,10 @@ UpdateSampleItems <- function(mbSetObj){
   saveRDS(prefilt.data, file="data.prefilt")
   current.msg <<- "Successfully updated the sample items!";
   
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj)
-    return(1);
-  }else{
-    return(.set.mbSetObj(mbSetObj))
-  }
+  return(.set.mbSetObj(mbSetObj));
+  
 }
 
-#'Function to update confounders used for partial correlation
-#'@description This function updates which confounders will be
-#'used to calculate partial correlation.
-#'@param mbSetObj Input the name of the mbSetObj.
-#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
-#'McGill University, Canada
-#'License: GNU GPL (>= 2)
-#'@export
-UpdateConfItems <- function(mbSetObj){
-  
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  
-  if(!exists("conf.vec")){
-    current.msg <<- "Cannot find the current list of available metadata!";
-    return (0);
-  }
-  
-  if(length(conf.vec)==0){
-    current.msg <<- "No confounders inputted!";
-    return (0);
-  }
-  
-  #double check validity of metadata
-  metadata <- colnames(mbSetObj$dataSet$sample_data)
-  check <- metadata[(which(metadata %in% conf.vec))]
-  mbSetObj$dataSet$confs <- check
-  
-  current.msg <<- "Successfully updated selected confounders!";
-  
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj)
-    return(1);
-  }else{
-    return(.set.mbSetObj(mbSetObj))
-  }
-}
 
 #'Function to perform normalization
 #'@description This function performs normalization on the uploaded
@@ -414,11 +372,8 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt){
   taxa_names(otu.tab) <- tax_nm;
   
   # create phyloseq obj
-  #after rarefaction the OTU sequences changes automatically
-  #random_tree <- phy_tree(createRandomTree(ntaxa(otu.tab),rooted=TRUE,tip.label=taxa_names(otu.tab)));
   mbSetObj$dataSet$sample_data$sample_id <- rownames(mbSetObj$dataSet$sample_data);
   sample_table <- sample_data(mbSetObj$dataSet$sample_data, errorIfNULL=TRUE);
-  #phy.obj <- merge_phyloseq(otu.tab,sample_table,random_tree);
   phy.obj <- merge_phyloseq(otu.tab, sample_table);
   
   #using this object for plotting
@@ -426,12 +381,28 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt){
   current.msg <<- paste(msg, collapse=" ");
   mbSetObj$dataSet$norm.msg <- current.msg;
   
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj)
-    return(1);
+  #make hierarchies
+  if(mbSetObj$module.type=="sdp"){
+    ranks <- "OTU"
   }else{
-    return(.set.mbSetObj(mbSetObj))
+    ranks <- c(GetMetaTaxaInfo(mbSetObj), "OTU")
+  } 
+
+  # start with lowest
+  data.list <- list()
+  data.list$merged_obj <- vector(length = length(ranks), "list")
+  data.list$count_tables <- vector(length = length(ranks), "list")
+  names(data.list$count_tables) <- names(data.list$merged_obj) <- ranks
+  
+  for(i in 1:length(ranks)){
+    phyloseq.obj <- UtilMakePhyloseqObjs(mbSetObj, ranks[i])
+    data.list$merged_obj[[i]] <- phyloseq.obj
+    count.table <- UtilMakeCountTables(phyloseq.obj, ranks[i])
+    data.list$count_tables[[i]] <- count.table
   }
+  saveRDS(data.list, "phyloseq_objs.RDS")
+  
+  return(.set.mbSetObj(mbSetObj));
 }
 
 #'Utility function to perform rarefraction (used by PerformNormalization)
@@ -496,7 +467,7 @@ PlotRareCurve <- function(mbSetObj, graphName, variable){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   set.seed(13789);
   load_vegan();
-
+  
   data <- data.matrix(mbSetObj$dataSet$filt.data);
   rarefaction_curve_data<-as.matrix(otu_table(data));
   
@@ -619,13 +590,13 @@ PlotLibSizeView <- function(mbSetObj, imgName, format="png", dpi=72){
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import phyloseq
-CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel, ismetafile){
+CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
+
   load_phyloseq();
   load_splitstackshape();
-
+  
   data.proc <- readRDS("data.proc");
   
   # do some sanity check here on sample and feature names
@@ -647,19 +618,19 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel, ismetafile){
       return(0);
     }
   }else{
-     # for ASV data, replace sequences with ASV1, ASV2 ....
-     # check is avegage name length is > 75
-     nm.ln <- sum(nchar(taxa.nms)/length(taxa.nms));
-     if(nm.ln > 75){
-       mbSetObj$is.ASV <-TRUE;
-     }
+    # for ASV data, replace sequences with ASV1, ASV2 ....
+    # check is avegage name length is > 75
+    nm.ln <- sum(nchar(taxa.nms)/length(taxa.nms));
+    if(nm.ln > 75){
+      mbSetObj$is.ASV <-TRUE;
+    }
   }
   
   # now check for special characters in the data labels
   if(sum(is.na(iconv(smpl.nms)))>0){
     na.inx <- is.na(iconv(smpl.nms));
     nms <- paste(smpl.nms[na.inx], collapse="; ");
-    current.msg <<- paste("No special letters (i.e. Latin, Greek) are allowed in sample names:", nms, collapse=" ");
+    AddErrMsg(paste("No special letters (i.e. Latin, Greek) are allowed in sample names:", nms, collapse=" "));
     return(0);
   }
   
@@ -668,30 +639,30 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel, ismetafile){
   if(sum(is.na(iconv(var.nms)))>0){
     na.inx <- is.na(iconv(var.nms));
     nms <- paste(var.nms[na.inx], collapse="; ");
-    current.msg <<- paste("No special letters (i.e. Latin, Greek) are allowed in feature or taxa names:", nms, collapse=" ");
+    AddErrMsg(paste("No special letters (i.e. Latin, Greek) are allowed in feature or taxa names:", nms, collapse=" "));
     return(0);
   }
   
   #standard name to be used
-  classi.lvl<- c("Phylum", "Class", "Order", "Family", "Genus", "Species", "Strain/OTU-level", "Additional_Name");
+  classi.lvl<- c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species");
   
   if(mbSetObj$module.type == "mdp" | mbSetObj$module.type == "ppd"){
     if(type=="text"){
       # prepare data for phyloseq visualization.
       # if features names are present in specific taxonomy format (greengenes or silva).
-      if(taxalabel=="T"){
+      if(taxalabel=="T"){ #taxa labels present and need to be parsed in OTU table
         feat_nm <- rownames(data.proc);
         mbSetObj$dataSet$feat_nm <- feat_nm;
         
         if(taxa_type=="SILVA"){
           
           load_splitstackshape();
-
+          
           feat_nm<-data.frame(mbSetObj$dataSet$feat_nm);
           names(feat_nm)<-"Rank";
           taxonomy<-splitstackshape::cSplit(feat_nm,"Rank",";");
           taxmat= data.frame(matrix(NA, ncol = 7, nrow = nrow(taxonomy)));
-          colnames(taxmat) <- c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus","Species");
+          colnames(taxmat) <- classi.lvl;
           taxmat[,1:ncol(taxonomy)]<-taxonomy;
           taxmat<-taxmat[colSums(!is.na(taxmat))>0];
           taxmat<-as.matrix(taxmat);
@@ -726,7 +697,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel, ismetafile){
           names(feat_nm)<-"Rank";
           taxonomy<-splitstackshape::cSplit(feat_nm,"Rank",";");
           taxmat= data.frame(matrix(NA, ncol = 7, nrow = nrow(taxonomy)));
-          colnames(taxmat) <- c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus","Species");
+          colnames(taxmat) <- classi.lvl;
           taxmat[,1:ncol(taxonomy)]<-taxonomy;
           taxmat<-taxmat[colSums(!is.na(taxmat))>0];
           taxmat<-as.matrix(taxmat);
@@ -756,35 +727,37 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel, ismetafile){
         feat_nm<-NULL;
         mbSetObj$dataSet$taxa_table<-taxa_table;
       }else{
-        #sanity check: features name of taxonomy table should match feature names in OTU abundance table,Only features in filtered OTU tables are selected additional are removed.
+        #sanity check: features name of taxonomy table should match feature names in OTU abundance table,
+        # Only features in filtered OTU tables are selected additional are removed.
         taxa_table <- mbSetObj$dataSet$taxa_table;
         indx<-match(rownames(data.proc), rownames(taxa_table));
         
-        if(all(is.na(indx))){
-          current.msg <<-"Please make sure that features name in the taxonomy table match the feature names in the OTU abundance table.";
+        if(anyNA(indx)){
+          na.nms <- rownames(data.proc)[is.na(indx)];
+          current.msg <<- paste("The following names cannot be found in your taxanomy table:", paste(na.nms, collapse="; "));
           return(0);
         }
         
         # let's address ASV sequence ID here
         if(mbSetObj$is.ASV){
-            
-            # do the conversion and save 
-            new.nms <- paste("ASV", 1:length(taxa.nms), sep="_");
-            master.nms <- cbind("NewID"=new.nms, "OriginalID"=taxa.nms);
-            write.csv(master.nms, file="ASV_ID_mapping.csv");
-
-            # update the taxa and sample
-            names(new.nms) <- taxa.nms;
-            rownames(data.proc) <- new.nms[rownames(data.proc)];
-            rownames(taxa_table) <- new.nms[rownames(taxa_table)];
-
-            # update tree file if uploaded
-            if(mbSetObj$tree.uploaded){
-               pg_tree <- readRDS("tree.RDS");
-               pg_tree$tip.label <- new.nms[pg_tree$tip.label];
-               saveRDS(pg_tree, "tree.RDS");
-            }
+          # do the conversion and save 
+          new.nms <- paste("ASV", 1:length(taxa.nms), sep="_");
+          master.nms <- cbind("NewID"=new.nms, "OriginalID"=taxa.nms);
+          write.csv(master.nms, file="ASV_ID_mapping.csv");
+          
+          # update the taxa and sample
+          names(new.nms) <- taxa.nms;
+          rownames(data.proc) <- new.nms[rownames(data.proc)];
+          rownames(taxa_table) <- new.nms[rownames(taxa_table)];
+          
+          # update tree file if uploaded
+          if(mbSetObj$tree.uploaded){
+            pg_tree <- readRDS("tree.RDS");
+            pg_tree$tip.label <- new.nms[pg_tree$tip.label];
+            saveRDS(pg_tree, "tree.RDS");
+          }
         }
+        
         nm<-colnames(taxa_table);
         taxa_table<-as.matrix(taxa_table[indx,]);
         colnames(taxa_table)<-nm;
@@ -806,20 +779,21 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel, ismetafile){
       }
       
       # removing first KINGDOM OR DOMAIN column
-      indx<-apply(mbSetObj$dataSet$taxa_table[,1], 2, function(x) which(x %in% c("Bacteria","Archaea","k__Bacteria","k__Archea", "D_0__Bacteria","D_0__Archea")));
-      # error thrown here - taxa_type = others/not specific
+      indx<-apply(mbSetObj$dataSet$taxa_table[,1], 2, function(x) which(x %in% c("k__Fungi", "Fungi", "k__Viruses", "Viruses",
+                                                                                 "Bacteria", "Archaea", "k__Bacteria", "k__Archea", 
+                                                                                 "D_0__Bacteria", "D_0__Archea")));
       
       if(length(indx)>0){
         mbSetObj$dataSet$taxa_table<-mbSetObj$dataSet$taxa_table[,-1];
-        #dataSet$taxa_table<-dataSet$taxa_table #newnew
       }
-      
-      colnames(mbSetObj$dataSet$taxa_table)<-classi.lvl[1:ncol(mbSetObj$dataSet$taxa_table)];
+
+      classi.lvl<- c("Phylum", "Class", "Order", "Family", "Genus", "Species");
+      colnames(mbSetObj$dataSet$taxa_table)<-classi.lvl[1:ncol(mbSetObj$dataSet$taxa_table)]; 
       #sanity check: no of sample of both abundance and metadata should match.
       indx<-match(colnames(data.proc), rownames(mbSetObj$dataSet$sample_data));
       
       if(all(is.na(indx))){
-        current.msg <<-"Please make sure that sample names and their number are same in metadata and OTU abundance files.";
+        AddErrMsg("Please make sure that sample names and their number are same in metadata and OTU abundance files.");
         return(0);
       }else{
         mbSetObj$dataSet$sample_data<-mbSetObj$dataSet$sample_data[indx, ,drop=FALSE];
@@ -853,7 +827,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel, ismetafile){
       indx<-match(taxa_names(data.proc),taxa_names(mbSetObj$dataSet$taxa_table));
       
       if(all(is.na(indx))){
-        current.msg <<-"Please make sure that features name of the taxonomy table match the feature names in the OTU abundance table.";
+        AddErrMsg("Please make sure that features name of the taxonomy table match the feature names in the OTU abundance table.");
         return(0);
       }
       
@@ -867,14 +841,16 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel, ismetafile){
         #dataSet$taxa_table<-dataSet$taxa_table #newnew
       }
       
-      #removing first KINGDOM OR DOMAIN column
-      indx<-apply(mbSetObj$dataSet$taxa_table[,1], 2, function(x) which(x %in% c("Bacteria","Archaea","k__Bacteria","k__Archea")));
+      # removing first KINGDOM OR DOMAIN column
+      indx<-apply(mbSetObj$dataSet$taxa_table[,1], 2, function(x) which(x %in% c("k__Fungi", "Fungi", "k__Viruses", "Viruses", 
+                                                                                 "Bacteria","Archaea","k__Bacteria","k__Archea", 
+                                                                                 "D_0__Bacteria","D_0__Archea")));
       
       if(length(indx)>0){
         mbSetObj$dataSet$taxa_table<-mbSetObj$dataSet$taxa_table[,-1];
-        #dataSet$taxa_table<-dataSet$taxa_table #newnew
       }
       
+      classi.lvl<- c("Phylum", "Class", "Order", "Family", "Genus", "Species"); 
       colnames(mbSetObj$dataSet$taxa_table)<-classi.lvl[1:ncol(mbSetObj$dataSet$taxa_table)];
       #sanity check: no of sample of both abundance and metadata should match.
       indx<-match(colnames(data.proc), rownames(mbSetObj$dataSet$sample_data));
@@ -916,6 +892,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel, ismetafile){
     prefilt.data <- readRDS("data.prefilt");
     rownames(prefilt.data)<-taxa_names(mbSetObj$dataSet$taxa_table);
     saveRDS(prefilt.data, file="data.prefilt")
+
   }else if(mbSetObj$module.type == "sdp"){
     #constructing phyloseq object for aplha diversity.
     data.proc<-otu_table(data.proc, taxa_are_rows = TRUE);
@@ -936,13 +913,8 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel, ismetafile){
   saveRDS(mbSetObj$dataSet$proc.phyobj, file="proc.phyobj.orig");
   #do some data cleaning
   mbSetObj$dataSet$data.prefilt <- NULL;
-  
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj)
-    return(1);
-  }else{
-    return(.set.mbSetObj(mbSetObj))
-  }
+
+  return(.set.mbSetObj(mbSetObj));
 }
 
 ###########################################
@@ -988,12 +960,3 @@ GetSampleNamesaftNorm<-function(mbSetObj){
   return(sample_names(mbSetObj$dataSet$norm.phyobj));
 }
 
-GetRemFeatNames<-function(mbSetObj){
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  return(mbSetObj$dataSet$remfeat);
-}
-
-GetRemSamplNames<-function(mbSetObj){
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  return(mbSetObj$dataSet$remsam);
-}
