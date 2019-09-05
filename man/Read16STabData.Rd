@@ -4,7 +4,7 @@
 \alias{Read16STabData}
 \title{Function to read 16S data}
 \usage{
-Read16STabData(mbSetObj, dataName, ismetafile)
+Read16STabData(mbSetObj, dataName)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

@@ -4,8 +4,8 @@
 \alias{PerformLefseAnal}
 \title{Main function to perform LEfSe analysis}
 \usage{
-PerformLefseAnal(mbSetObj, p.lvl, lda.lvl, variable, isfunc, shotgunid,
-  taxrank)
+PerformLefseAnal(mbSetObj, p.lvl, pvalOpt = "fdr", lda.lvl, variable,
+  isfunc, shotgunid, taxrank)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

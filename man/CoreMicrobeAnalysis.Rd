@@ -5,7 +5,8 @@
 \title{Perform core microbiome analysis}
 \usage{
 CoreMicrobeAnalysis(mbSetObj, imgName, preval, detection, taxrank, palette,
-  viewOpt, format = "png", dpi = 72, width = NA)
+  viewOpt, analOpt, expFact, group, format = "png", dpi = 72,
+  width = NA)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

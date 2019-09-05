@@ -4,9 +4,9 @@
 \alias{PlotCorrHeatMap}
 \title{Function to create correlation heat map}
 \usage{
-PlotCorrHeatMap(mbSetObj, imgName, format = "png", width = NA,
-  cor.method, colors_cntrst, viewOpt, taxrank, fix.col, no.clst, top,
-  topNum, cor.type = "corr")
+PlotCorrHeatMap(mbSetObj, imgName, format = "png", cor.method,
+  colors_cntrst, viewOpt, taxrank, topNum, permNum = 100,
+  pvalCutoff = 0.05, corrCutoff = 0.3)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
@@ -16,9 +16,6 @@ of the plot.}
 
 \item{format}{Character, input the preferred
 format of the plot. By default it is set to "png".}
-
-\item{width}{Numeric, input the width of the plot. By
-default it is set to NA.}
 
 \item{cor.method}{Input the distance measure. Input "pearson" for 
 Pearson R, "spearman" for Spearman rank correlation, and "kendall"
@@ -38,14 +35,17 @@ heatmap (< 1500 features).}
 \item{taxrank}{Character, input the taxonomic level to perform
 classification. For instance, "OTU-level" to use OTUs.}
 
+\item{topNum}{Numeric, set the number of top features
+to include.}
+
+\item{width}{Numeric, input the width of the plot. By
+default it is set to NA.}
+
 \item{fix.col}{Logical, default set to FALSE.}
 
 \item{no.clst}{Logical, default set to FALSE.}
 
 \item{top}{Logical, default set to FALSE.}
-
-\item{topNum}{Numeric, set the number of top features
-to include.}
 
 \item{datatype}{If the data is marker gene, input "16S". If the
 data is metagenomic, use "metageno".}

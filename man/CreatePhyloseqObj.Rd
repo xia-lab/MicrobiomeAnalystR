@@ -4,7 +4,7 @@
 \alias{CreatePhyloseqObj}
 \title{Function to recreate phyloseq object}
 \usage{
-CreatePhyloseqObj(mbSetObj, type, taxa_type, taxalabel, ismetafile)
+CreatePhyloseqObj(mbSetObj, type, taxa_type, taxalabel)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

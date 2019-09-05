@@ -54,8 +54,6 @@ format of the plot. By default it is set to "png".}
 
 \item{var.inx}{Default set to NA.}
 
-\item{border}{Logical, show cell borders, default set to "T".}
-
 \item{width}{Numeric, input the width of the plot. By
 default it is set to NA.}
 

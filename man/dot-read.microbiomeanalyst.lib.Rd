@@ -4,14 +4,14 @@
 \alias{.read.microbiomeanalyst.lib}
 \title{Read RDS files from the internet}
 \usage{
-.read.microbiomeanalyst.lib(filenm, opt = "none", ref = NA)
+.read.microbiomeanalyst.lib(filenm, sub.dir = NULL, ref = NA)
 }
 \arguments{
 \item{filenm}{Input the name of the file to download.}
 
-\item{opt}{Default set to "none".}
-
 \item{ref}{Default set to "NA".}
+
+\item{opt}{Default set to "none".}
 }
 \description{
 Function downloads the required file and reads it only if not already in working directory.

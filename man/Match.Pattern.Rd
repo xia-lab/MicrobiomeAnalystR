@@ -5,7 +5,7 @@
 \title{Match Patterns Function}
 \usage{
 Match.Pattern(mbSetObj, dist.name = "pearson", pattern = NULL, taxrank,
-  taxa, variable, shotfeat, shotgunid)
+  variable)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
@@ -18,17 +18,17 @@ for Kendall rank correlation.}
 
 \item{taxrank}{Character, input the taxonomic level to use.}
 
+\item{variable}{Input the name of the experimental factor.}
+
 \item{taxa}{If the pattern is defined by using a specific taxon, input the name
 of that taxa here.}
 
-\item{variable}{Input the name of the experimental factor.}
+\item{datatype}{If the data is marker gene, input "16S". If the
+data is metagenomic, use "metageno".}
 
 \item{shotfeat}{Only valid for SDP module, set to "null".}
 
 \item{shotgunid}{Only valid for SDP module, set to "NA".}
-
-\item{datatype}{If the data is marker gene, input "16S". If the
-data is metagenomic, use "metageno".}
 }
 \description{
 This functions matches patterns (when
