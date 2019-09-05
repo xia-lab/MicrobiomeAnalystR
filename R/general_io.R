@@ -73,7 +73,7 @@ Init.mbSetObj <- function(){
 
 # read binary RDS files
 .read.microbiomeanalyst.lib <- function(filenm, sub.dir = NULL, ref = NA){
-
+  
   if(.on.public.web){
     if(is.null(sub.dir)){
       lib.path <- paste("../../lib/", filenm, sep="");
@@ -121,7 +121,7 @@ Init.mbSetObj <- function(){
   # Deal w. corrupt downloaded files
   tryCatch({
     my.lib <- readRDS(file_name); # this is a returned value, my.lib never called outside this function, should not be in global env.
-    print("Loaded files from MicrobiomeAnalyst web-server.")
+    print("Loaded files from MetaboAnalyst web-server.")
   },
   warning = function(w) { print("Warning, files not successfully downloaded from web.") },
   error = function(err) {
@@ -159,9 +159,9 @@ Init.mbSetObj <- function(){
   destfile <- libname;
   if(.on.public.web){
     if(is.null(sub.dir)){
-        destfile <- paste("../../lib/", libname, sep="");
+      destfile <- paste("../../lib/", libname, sep="");
     }else{
-        destfile <- paste("../../lib/", sub.dir, "/", libname, sep="");
+      destfile <- paste("../../lib/", sub.dir, "/", libname, sep="");
     }
   }else{
     lib.download <- FALSE;
@@ -250,21 +250,25 @@ ReadSampleTable<- function(mbSetObj, dataName) {
   # as most functions are for discrete groups (not continuouse values
   # require at least one column contains discrete factors with at least two replicates 
   my.meta <- data.frame(mydata);
+  mbSetObj$dataSet$group_names <- colnames(my.meta)
+
   disc.inx <- GetDiscreteInx(my.meta);
   if(sum(disc.inx) == 0){ # all class labels are unique! 
     na.msg <- c(na.msg, "It seems that all your meta data values are unique! MicrobiomeAnalyst requires some biological replicates for robust analysis");
     mbSetObj$poor.replicate <- TRUE;
-  }
-  mbSetObj$dataSet$meta_info$disc.inx <- disc.inx;
-  mbSetObj$dataSet$sample_data <- my.meta[,disc.inx, drop=FALSE];
-
-  cont.inx <- GetNumbericalInx(my.meta);
-  cont.inx <- !disc.inx & cont.inx; # discrete is first
-  mbSetObj$dataSet$meta_info$cont.inx <- cont.inx;
-
-  if(sum(cont.inx)>0){
-    # make sure the discrete data is on the left side
-    mbSetObj$dataSet$sample_data <- cbind(mbSetObj$dataSet$sample_data, my.meta[,cont.inx, drop=FALSE]);
+    mbSetObj$dataSet$sample_data <- my.meta
+  }else{
+    mbSetObj$dataSet$meta_info$disc.inx <- disc.inx;
+    mbSetObj$dataSet$sample_data <- my.meta[,disc.inx, drop=FALSE];
+    
+    cont.inx <- GetNumbericalInx(my.meta);
+    cont.inx <- !disc.inx & cont.inx; # discrete is first
+    mbSetObj$dataSet$meta_info$cont.inx <- cont.inx;
+    
+    if(sum(cont.inx)>0){
+      # make sure the discrete data is on the left side
+      mbSetObj$dataSet$sample_data <- cbind(mbSetObj$dataSet$sample_data, my.meta[,cont.inx, drop=FALSE]);
+    }
   }
 
   current.msg <<- paste(na.msg, "The sample data contains a total of ", nrow(mydata), "samples and  ", ncol(mydata), " sample variables.", collapse=" ");
@@ -366,7 +370,7 @@ GetResMat <- function(mbSetObj){
 # type can be all, discrete or continuous
 GetMetaInfo <- function(mbSetObj, type="disc"){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  all.nms <- names(mbSetObj$dataSet$meta_info$disc.inx)
+  all.nms <- mbSetObj$dataSet$group_names
   if(type=="all"){
     return(all.nms);
   }else if(type=="disc"){
@@ -390,6 +394,11 @@ GetMetaTaxaInfo <- function(mbSetObj){
   #check that each rank has >2 groups
   taxa.tbl <- as(tax_table(mbSetObj$dataSet$proc.phyobj), "matrix")
   
+  if(ncol(taxa.tbl)==1){
+    taxa.nms <- "Phylum"
+    return(taxa.nms)
+  }
+  
   #drop taxa with only 1 level (i.e. Viruses at Phylum)
   gd.inx <- apply(taxa.tbl, 2, function(x) length(unique(x))!=1);
   taxa.tbl.update <- taxa.tbl[,gd.inx];
@@ -409,7 +418,7 @@ GetSampleGrpNo <- function(mbSetObj, clsLbl){
 }
 
 GetTaxaNames<- function(mbSetObj, taxlvl){
- 
+  
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(taxlvl=="OTU"){
@@ -549,7 +558,7 @@ UtilMakeCountTables <- function(phyloseq.obj, taxrank){
 
 # only used when data is norm.phyobj
 MakeRankedCountTables <- function(mbSetObj){
-
+  
   # make hierarchies
   ranks <- c(GetMetaTaxaInfo(mbSetObj), "OTU")
   # start with lowest

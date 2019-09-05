@@ -301,7 +301,7 @@ UpdateSampleItems <- function(mbSetObj){
 #'@import edgeR
 #'@import metagenomeSeq
 PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt){
-  
+  browser()
   mbSetObj <- .get.mbSetObj(mbSetObj);
   data <- readRDS("filt.data.orig");
   tax_nm <- rownames(data);
