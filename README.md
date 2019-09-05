@@ -55,7 +55,7 @@ R CMD INSTALL MicrobiomeAnalystR_*.tar.gz
 
 ```
 
-#### Option C) Manual download of MicrobiomeAnalystR.tar.gz and install locally
+#### Option C) Manual download of MicrobiomeAnalystR.tar.gz and install locally - not yet available, stable release to come soon!!
 
 Manually download the .tar.gz file from [here](). The * must be replaced by what is actually downloaded and built.  
 
