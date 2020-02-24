@@ -2,6 +2,8 @@
   <img src="https://github.com/xia-lab/MicrobiomeAnalystR/blob/master/docs/microbiomeanalystr_logo.png" width="600">
 </p>
 
+## Note - MicrobiomeAnalystR is still in development stage, we cannot guarantee full functionality ## 
+
 ## Description 
 
 **MicrobiomeAnalystR** contains the R functions and libraries underlying the popular MicrobiomeAnalyst web server, including > 200 functions for statistical, functional, and visual analysis of microbiome data. The package is synchronized with the MicrobiomeAnalyst web server. After installing and loading the package, users will be able to reproduce the same results from their local computers using the corresponding R command history downloaded from MicrobiomeAnalyst, thereby achieving maximum flexibility and reproducibility. With this R package we also aim to address an important gap left in its web version. Raw sequence data processing. 
@@ -105,6 +107,7 @@ To inform us of any bugs or requests, please open a new issue or send an email t
 
 ## MicrobiomeAnalystR History & Updates
 
+02-24-2020 - Code update w. web + added note about usage
 09-05-2019 - Bug fixing w. web
 08-07-2019 - Added function to import SILVA annotated biom files (handling Domain in taxonomy)
 07-11-2019 - Added volcano + dot plots for RNAseq analysis

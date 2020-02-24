@@ -4,8 +4,16 @@
 \alias{PlotGroupPieGraph}
 \title{Main function to plot pie graphs of microbiome data.}
 \usage{
-PlotGroupPieGraph(mbSetObj, taxalvl, metadata, clslevel, feat_cnt,
-  calcmeth)
+PlotGroupPieGraph(
+  mbSetObj,
+  taxalvl,
+  metadata,
+  clslevel,
+  feat_cnt,
+  calcmeth,
+  toptaxapie,
+  pietoptaxaopt
+)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

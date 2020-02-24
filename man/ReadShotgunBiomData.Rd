@@ -4,8 +4,7 @@
 \alias{ReadShotgunBiomData}
 \title{Main function to read in shotgun data}
 \usage{
-ReadShotgunBiomData(mbSetObj, dataName, geneidtype, module.type,
-  ismetadata)
+ReadShotgunBiomData(mbSetObj, dataName, geneidtype, module.type, ismetadata)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

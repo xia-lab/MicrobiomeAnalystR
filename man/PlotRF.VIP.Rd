@@ -4,8 +4,7 @@
 \alias{PlotRF.VIP}
 \title{Plot variable importance ranked by MeanDecreaseAccuracy}
 \usage{
-PlotRF.VIP(mbSetObj, feature, imgName, format = "png", dpi = 72,
-  width = NA)
+PlotRF.VIP(mbSetObj, feature, imgName, format = "png", dpi = 72, width = NA)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

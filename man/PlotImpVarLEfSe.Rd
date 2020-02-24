@@ -4,8 +4,14 @@
 \alias{PlotImpVarLEfSe}
 \title{Plot LEfSe summary}
 \usage{
-PlotImpVarLEfSe(mbSetObj, imp.vec, layoutOptlf, meta, colOpt = "default",
-  color.BW = FALSE)
+PlotImpVarLEfSe(
+  mbSetObj,
+  imp.vec,
+  layoutOptlf,
+  meta,
+  colOpt = "default",
+  color.BW = FALSE
+)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

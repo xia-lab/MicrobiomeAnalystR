@@ -4,10 +4,26 @@
 \alias{PlotHeatmap}
 \title{Main function to plot heatmap.}
 \usage{
-PlotHeatmap(mbSetObj, plotNm, smplDist, clstDist, palette, metadata,
-  taxrank, viewOpt, doclust, format = "png", showfeatname, appendnm,
-  rowV = F, colV = T, var.inx = NA, border = T, width = NA,
-  dpi = 72)
+PlotHeatmap(
+  mbSetObj,
+  plotNm,
+  smplDist,
+  clstDist,
+  palette,
+  metadata,
+  taxrank,
+  viewOpt,
+  doclust,
+  format = "png",
+  showfeatname,
+  appendnm,
+  rowV = F,
+  colV = T,
+  var.inx = NA,
+  border = T,
+  width = NA,
+  dpi = 72
+)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

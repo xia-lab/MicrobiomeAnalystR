@@ -4,8 +4,19 @@
 \alias{PlotSampleTaxaAundanceBar}
 \title{Function to create bar plots of selected taxa level.}
 \usage{
-PlotSampleTaxaAundanceBar(mbSetObj, barplotName, taxalvl, samplnm, imgOpt,
-  feat_cnt, format = "png", dpi = 72)
+PlotSampleTaxaAundanceBar(
+  mbSetObj,
+  barplotName,
+  taxalvl,
+  samplnm,
+  imgOpt,
+  feat_cnt,
+  toptaxa,
+  abunTopTaxaOpt,
+  appendnm,
+  format = "png",
+  dpi = 72
+)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

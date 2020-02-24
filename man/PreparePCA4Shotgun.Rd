@@ -4,8 +4,19 @@
 \alias{PreparePCA4Shotgun}
 \title{Function to prepare shotgun data for PCA.}
 \usage{
-PreparePCA4Shotgun(mbSetObj, imgName, imgName2, format = "json", inx1,
-  inx2, inx3, variable, showlabel, format2d = "png", dpi = 72)
+PreparePCA4Shotgun(
+  mbSetObj,
+  imgName,
+  imgName2,
+  format = "json",
+  inx1,
+  inx2,
+  inx3,
+  variable,
+  showlabel,
+  format2d = "png",
+  dpi = 72
+)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

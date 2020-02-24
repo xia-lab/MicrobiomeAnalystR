@@ -4,8 +4,15 @@
 \alias{PlotAlphaBoxData}
 \title{Function to create box plots for alpha diversity analysis}
 \usage{
-PlotAlphaBoxData(mbSetObj, boxplotName, distName, metadata,
-  colors = "default", format = "png", dpi = 72)
+PlotAlphaBoxData(
+  mbSetObj,
+  boxplotName,
+  distName,
+  metadata,
+  colors = "default",
+  format = "png",
+  dpi = 72
+)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

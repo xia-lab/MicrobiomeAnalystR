@@ -4,8 +4,18 @@
 \alias{PrepareHeatTreePlot}
 \title{Function to plot heat tree}
 \usage{
-PrepareHeatTreePlot(mbSetObj, meta, taxalvl, color, layoutOpt, comparison,
-  wilcox.cutoff, imgName, format = "png", dpi = 72)
+PrepareHeatTreePlot(
+  mbSetObj,
+  meta,
+  taxalvl,
+  color,
+  layoutOpt,
+  comparison,
+  wilcox.cutoff,
+  imgName,
+  format = "png",
+  dpi = 72
+)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

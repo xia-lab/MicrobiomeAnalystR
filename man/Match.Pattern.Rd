@@ -4,15 +4,20 @@
 \alias{Match.Pattern}
 \title{Match Patterns Function}
 \usage{
-Match.Pattern(mbSetObj, dist.name = "pearson", pattern = NULL, taxrank,
-  variable)
+Match.Pattern(
+  mbSetObj,
+  dist.name = "pearson",
+  pattern = NULL,
+  taxrank,
+  variable
+)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
 
 \item{dist.name}{Input the distance measure. Input "pearson" for 
-Pearson R, "spearman" for Spearman rank correlation, and "kendall"
-for Kendall rank correlation.}
+Pearson R, "spearman" for Spearman rank correlation, "kendall"
+for Kendall rank correlation and "sparcc" for SparCC.}
 
 \item{pattern}{Character, input the specified pattern.}
 

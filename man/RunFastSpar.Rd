@@ -4,8 +4,15 @@
 \alias{RunFastSpar}
 \title{Function to call FastSpar}
 \usage{
-RunFastSpar(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff,
-  output = "network", palette = "viridis")
+RunFastSpar(
+  mbSetObj,
+  taxrank,
+  permNum,
+  pvalCutoff,
+  corrCutoff,
+  output = "network",
+  opt = "corr"
+)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

@@ -19,7 +19,6 @@
 GetGeneListStat <- function(mbSetObj){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
   range <- c(0, 0);
     
   if(mbSetObj$analSet$gene.only){
@@ -71,8 +70,8 @@ ReadShotgunTabData <- function(mbSetObj, dataName, geneidtype, datatype) {
   mydata <- .readDataTable(dataName);
     
   if(any(is.na(mydata)) || class(mydata) == "try-error"){
-    current.msg <<- "Failed to read in the abundance data! Please make sure the gene abundance table is in the right format and do not have empty cells or NA.";
-    return("F");
+    AddErrMsg("Failed to read in the abundance data! Please make sure the gene abundance table is in the right format and do not have empty cells or NA.");
+    return(0);
   }
 
   # look for #NAME, store in a list
@@ -84,7 +83,7 @@ ReadShotgunTabData <- function(mbSetObj, dataName, geneidtype, datatype) {
   if(length(sam.inx) > 0){
     smpl_nm<-colnames(mydata[-1]);
   }else{
-    current.msg <<- "No labels #NAME found in your data!";
+    AddErrMsg("No labels #NAME found in your data!");
     return(0);
   }
 
@@ -92,7 +91,7 @@ ReadShotgunTabData <- function(mbSetObj, dataName, geneidtype, datatype) {
   mydata <- as.matrix(mydata[,-1]);
     
   if(mode(mydata)=="character"){
-    current.msg <<- paste("Errors in parsing your data as numerics - possible reason: comma as decimal separator?");
+    AddErrMsg(paste("Errors in parsing your data as numerics - possible reason: comma as decimal separator?"));
     return(0);
   }
   
@@ -138,7 +137,7 @@ ReadShotgunBiomData <- function(mbSetObj, dataName, geneidtype, module.type, ism
   otu.dat = otu_table(mydata, taxa_are_rows=TRUE)
     
   if(length(otu.dat)==0){
-    current.msg <<-"Biom file does not contain abundance information";
+    AddErrMsg("Biom file does not contain abundance information");
     return(0);
   }
     
@@ -152,7 +151,7 @@ ReadShotgunBiomData <- function(mbSetObj, dataName, geneidtype, module.type, ism
   if(ismetadata=="T"){
     sample_data<-sample_data(mydata,errorIfNULL = FALSE);
     if(length(sample_data)==0){
-      current.msg <<- "Metadata file not detected in your biom file. Please upload metadeta file seperately.";
+      AddErrMsg("Metadata file not detected in your biom file. Please upload metadeta file seperately.");
       ismetafile<-"F";
       return(0);
     }
@@ -273,7 +272,7 @@ PlotFunctionStack<-function(mbSetObj, summaryplot, functionlvl, abundcal, geneid
   smpl_nm <- sample_names(data);
   clsLbl <- factor(sample_data(data)[[metadata]]);
   if(length(levels(clsLbl)) > 9 && min(table(clsLbl)) < 3){
-    current.msg<<-"Too many facets to be displayed - please select a more meaningful facet option with at least 3 samples per group.";
+    AddErrMsg("Too many facets to be displayed - please select a more meaningful facet option with at least 3 samples per group.");
     return(0);
   }
   #reorder data based on groups
@@ -480,8 +479,7 @@ PerformKOmapping <- function(mbSetObj, geneIDs, type){
   kos <-  doKOFiltering(rownames(gene.mat), type);
 
   if(sum(!is.na(kos)) < 2){
-    current.msg <<- "Less than two hits found in the database. ";
-    print(current.msg);
+    AddErrMsg("Less than two hits found in the database. ");
     return(0);
   }else{
     rownames(gene.mat) <- kos;
@@ -491,7 +489,6 @@ PerformKOmapping <- function(mbSetObj, geneIDs, type){
     current.msg <<- paste("A total of unqiue", nrow(gene.mat), "KO genes were mapped to KEGG network!");
 
     return(.set.mbSetObj(mbSetObj));
-    
   }
 }
 
@@ -571,47 +568,58 @@ PerformKOEnrichAnalysis_Table <- function(mbSetObj, file.nm){
 
   phenotype <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[selected.meta.data]]);
   genemat <- as.data.frame(t(otu_table(mbSetObj$dataSet$norm.phyobj)));
-
-  # now, perform the enrichment analysis
-  load_globaltest();
-
   # first, get the matched entries from current.geneset
   hits <- lapply(current.geneset, function(x){x[x %in% colnames(genemat)]});
-
-  # this step is very slow
-  gt.obj <- globaltest::gt(phenotype, genemat, subsets=hits);
-  gt.res <- globaltest::result(gt.obj);
   set.num <- unlist(lapply(current.geneset, length), use.names = FALSE);
 
-  match.num <- gt.res[,5];
-    
-  if(sum(match.num>0)==0){
-    AddErrMsg("No match was found to the selected metabolite set library!");
-    return(0);
-  }
+   # now, perform the enrichment analysis
+   library(RSclient);
+    rsc <- RS.connect();
+    RS.assign(rsc, "my.dir", getwd()); 
+    RS.eval(rsc, setwd(my.dir));
 
-  raw.p <- gt.res[,1];
+    gt.out <- list(cls=phenotype, data=genemat, subsets=hits, set.num=set.num);
+    RS.assign(rsc, "gt.in", gt.out); 
 
-  # add adjust p values
-  bonf.p <- p.adjust(raw.p, "holm");
-  fdr.p <- p.adjust(raw.p, "fdr");
+    # there are more steps, better drop a function to compute in the remote env.
+    my.fun <- function(){
+        gt.obj <- globaltest::gt(gt.in$cls, gt.in$data, subsets=gt.in$subsets);
+        gt.res <- globaltest::result(gt.obj);
 
-  res.mat <- cbind(set.num, match.num, gt.res[,2], gt.res[,3], raw.p, bonf.p, fdr.p);
-  rownames(res.mat) <- names(hits);
-  colnames(res.mat) <- c("Size", "Hits", "Statistic Q", "Expected Q", "Pval", "Holm p", "FDR");
-  hit.inx <- res.mat[,2]>0;
-  res.mat <- res.mat[hit.inx, ];
-  ord.inx <- order(res.mat[,5]);
-  res.mat <- res.mat[ord.inx,];
+        match.num <- gt.res[,5];
+        if(sum(match.num>0)==0){
+            return(NA);
+        }
+        raw.p <- gt.res[,1];
 
-  # in R, sort list is by its name!, using pos order has issues!
-  nms <- rownames(res.mat);
-  hits <- hits[nms];
+        # add adjust p values
+        bonf.p <- p.adjust(raw.p, "holm");
+        fdr.p <- p.adjust(raw.p, "fdr");
 
-  Save2KEGGJSON(hits, res.mat, file.nm);
-  
-  return(.set.mbSetObj(mbSetObj));
-  
+        res.mat <- cbind(set.num, match.num, gt.res[,2], gt.res[,3], raw.p, bonf.p, fdr.p);
+        rownames(res.mat) <- names(hits);
+        colnames(res.mat) <- c("Size", "Hits", "Statistic Q", "Expected Q", "Pval", "Holm p", "FDR");
+        hit.inx <- res.mat[,2]>0;
+        res.mat <- res.mat[hit.inx, ];
+        ord.inx <- order(res.mat[,5]);
+        res.mat <- res.mat[ord.inx,];
+        return(res.mat);
+    }
+    RS.assign(rsc, my.fun);
+    my.res <- RS.eval(rsc, my.fun());
+    RS.close(rsc);
+
+    if(length(my.res)==1 && is.na(my.res)){
+        AddErrMsg("No match was found to the selected metabolite set library!");
+        return(0);
+    }
+
+    # in R, sort list is by its name!, using pos order has issues!
+    nms <- rownames(my.res);
+    hits <- hits[nms];
+
+    Save2KEGGJSON(hits, my.res, file.nm);
+    return(.set.mbSetObj(mbSetObj));
 }
 
 # Utility function
@@ -693,7 +701,7 @@ PerformKOProjection <- function(mbSetObj){
   kos <- doKOFiltering(rownames(gene.mat),id.type);
     
   if(sum(!is.na(kos)) < 2){
-    current.msg <<- "Less than two hits found in the database. ";
+    AddErrMsg("Less than two hits found in the database.");
     return(0);
   }else{
     rownames(gene.mat) <- kos;
@@ -811,9 +819,7 @@ PerformKOEnrichAnalysis_List <- function(mbSetObj, file.nm){
     }
   }
   Save2KEGGJSON(hits.query, res.mat, file.nm);
-
   return(.set.mbSetObj(mbSetObj));
-  
 }
 
 # Utility function
@@ -864,11 +870,7 @@ Save2KEGGJSON <- function(hits.query, res.mat, file.nm){
   sink();
   
   # write csv
-  fun.hits <<- hits.query;
-  fun.pval <<- resTable[,5];
-  hit.num <<- resTable[,4];
-  csv.nm <- paste(file.nm, ".csv", sep="");
-  write.csv(resTable, file=csv.nm, row.names=F);
+  write.csv(resTable, file=paste(file.nm, ".csv", sep=""), row.names=F);
 }
 
 # Utility function
@@ -924,20 +926,6 @@ RemoveDuplicates <- function(data, lvlOpt, quiet=T){
     }
     return(data);
   }
-}
-
-# Utility function
-doKO2NameMapping <- function(ko.vec){
-  
-  ko.dic <- .read.microbiomeanalyst.lib("ko_dic.rds", "ko");
-  hit.inx <- match(ko.vec, ko.dic[, "KO"]);
-  symbols <- ko.dic[hit.inx, "Label"];
-  
-  # if not gene symbol, use id by itself
-  na.inx <- is.na(symbols);
-  symbols[na.inx] <- ko.vec[na.inx];
-  
-  return(symbols);
 }
 
 #############################
@@ -1006,10 +994,4 @@ doKOFiltering <- function(ko.vec, type){
     }
     return(match.values);
   }
-}
-
-# Utility function
-PerformExprFilter<-function(gene.mat, cutoff=0){
-  gd.inx <- gene.mat[,1] >= cutoff;
-  gene.mat[gd.inx, , drop=F];
 }

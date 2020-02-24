@@ -4,8 +4,14 @@
 \alias{PlotRF.Classify}
 \title{Plot Random Forest Classification}
 \usage{
-PlotRF.Classify(mbSetObj, feature, imgName, format = "png", dpi = 72,
-  width = NA)
+PlotRF.Classify(
+  mbSetObj,
+  feature,
+  imgName,
+  format = "png",
+  dpi = 72,
+  width = NA
+)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

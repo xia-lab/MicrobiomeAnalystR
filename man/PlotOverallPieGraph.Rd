@@ -4,7 +4,14 @@
 \alias{PlotOverallPieGraph}
 \title{Main function to plot pie graphs of microbiome data.}
 \usage{
-PlotOverallPieGraph(mbSetObj, taxalvl, feat_cnt, calcmeth)
+PlotOverallPieGraph(
+  mbSetObj,
+  taxalvl,
+  feat_cnt,
+  calcmeth,
+  toptaxapie,
+  pietoptaxaopt
+)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

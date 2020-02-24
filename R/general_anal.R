@@ -239,7 +239,7 @@ PlotImpVar <- function(mbSetObj, imp.vec, xlbl, feature, color.BW=FALSE){
     rt.mrg <- 11;
   }
   op <- par(mar=c(5,9,2,rt.mrg)); # set right side margin with the number of class
-  
+
   feat.num = feature;
   if(feat.num <= 0){
     feat.num = 15;
@@ -355,7 +355,7 @@ PlotImpVar <- function(mbSetObj, imp.vec, xlbl, feature, color.BW=FALSE){
 #'@import MASS
 
 PerformUnivarTest <- function(mbSetObj, variable, p.lvl, shotgunid, taxrank, statOpt){
-
+  
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   #rather than whole name from taxonomy just last name.
@@ -380,15 +380,15 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, shotgunid, taxrank, sta
   }
   
   isNonPar <- statOpt=="nonpar"
-  
-  if(length(levels(cls)) > 2){
-    resTable <- data.frame(GetAovRes(cls, data1, nonpar=isNonPar));
+  if(ncol(data1) > 1000 & !isNonPar){
+    resTable <- PerformFastUnivTests(data1, cls);
   }else{
-    resTable <- data.frame(GetTtestRes(cls, data1, nonpar=isNonPar));
+    resTable <- PerformUnivTests(cls, data1, nonpar=isNonPar);
   }
   
   rownames(resTable) <- colnames(data1);
   colnames(resTable) <- c("Statistics","Pvalues");
+  resTable <- data.frame(resTable);
   resTable$FDR <- p.adjust(resTable$Pvalues,method ="fdr");
   ord.inx <- order(resTable$Pvalues);
   resTable <- resTable[ord.inx, , drop=FALSE];
@@ -679,7 +679,7 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
       dat3t <- t(phyloseq_objs$count_tables[[taxrank.inx]])
     } 
   }
-
+  
   data.impfeat_lefse <<- dat3t;
   
   set.seed(56290);
@@ -823,32 +823,43 @@ PlotLEfSeSummary <- function(mbSetObj, ldaFeature, layoutOptlf, imgName, format=
   
   vip.score <- ldabar[[2]];
   names(vip.score) <- ldabar[[1]];
-  
+
   if(is.na(width)){
+    
+    sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
+    meta <- mbSetObj$analSet$meta
+    cls.len <- length(levels(sample_table[[meta]]));
+    
+    if(cls.len <= 4){
+      w <- 9.25;
+    }else if(cls.len < 6){
+      w <- 10.25;
+    }else if(cls.len < 8){
+      w <- 11.25;
+    }else if(cls.len < 10){
+      w <- 12.25;
+    }else if(cls.len < 12){
+      w <- 13.25;
+    }else{
+      w <- 12;
+    }
+    
     if(length(vip.score) < 5 ){
       h <- 6;
-      w <- 9.25;
     } else if (length(vip.score) < 10){
       h <- length(vip.score)/1.3;
-      w <- 9.25;
     } else if (length(vip.score) < 15){
       h <- length(vip.score)/1.6;
-      w <- 9.25;
     } else if (length(vip.score) < 20){
       h <- length(vip.score)/1.8;
-      w <- 9.25;
     } else if (length(vip.score) < 25){
       h <- length(vip.score)/2;
-      w <- 9.25;
     } else if (length(vip.score) < 30){
       h <- length(vip.score)/2.2;
-      w <- 9.25;
     } else if (length(vip.score) < 40){
       h <- length(vip.score)/2.5;
-      w <- 9.25;
     } else {
       h <- length(vip.score)/4.5;
-      w <- 9.25;
     };
   }else if(width == 0){
     w <- 8;
@@ -880,18 +891,20 @@ PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="defaul
     sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
     cls.len <- length(levels(sample_table[[meta]]));
     
-    if(cls.len == 2){
+    if(cls.len <= 3){
       rt.mrg <- 5;
-    }else if(cls.len == 3){
-      rt.mrg <- 6;
-    }else if(cls.len == 4){
-      rt.mrg <- 7;
-    }else if(cls.len == 5){
+    }else if(cls.len <= 5){
+      rt.mrg <- 6.5;
+    }else if(cls.len <= 7){
       rt.mrg <- 8;
-    }else if(cls.len == 6){
-      rt.mrg <- 9;
-    }else{
+    }else if(cls.len <= 9){
+      rt.mrg <- 9.5;
+    }else if(cls.len <= 11){
       rt.mrg <- 11;
+    }else if(cls.len <= 12){
+      rt.mrg <- 12.5;
+    }else{
+      rt.mrg <- 15;
     }
     op <- par(mar=c(5,9,2,rt.mrg)); # set right side margin with the number of class
     
@@ -906,8 +919,6 @@ PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="defaul
     # as data should already be normalized, use mean/median should be the same
     # mns is a list contains means of all vars at each level
     # conver the list into a matrix with each row contains var averages across different lvls
-    
-    #data.impfeat <- as.matrix(t(otu_table(mbSetObj$dataSet$filt.data)))
     data1 <- data.impfeat_lefse;
     mns <- by(data1[, names(imp.vec)], 
               sample_table[[meta]],
@@ -918,13 +929,14 @@ PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="defaul
     mns <- t(matrix(unlist(mns), ncol=feat.num, byrow=TRUE));
     
     vip.nms <- names(imp.vec);
+    vip.clean.nms <- CleanTaxaNames(mbSetObj, vip.nms)
     names(imp.vec) <- NULL;
     
     # modified for B/W color
     dotcolor <- ifelse(color.BW, "darkgrey", "#585855");
     dotchart(imp.vec, bg=dotcolor, xlab= "LDA score", cex=1.35);
     
-    mtext(side=2, at=1:feat.num, vip.nms, las=2, line=1, cex=1.1)
+    mtext(side=2, at=1:feat.num, vip.clean.nms, las=2, line=1, cex=1.1)
     
     axis.lims <- par("usr"); # x1, x2, y1 ,y2
     
@@ -1081,31 +1093,51 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank){
   if(opts=="DESeq2"){
     # only for small data set (< 100)
     if(length(claslbl) > 100){
-      current.msg <<- "Only EdgeR is supported for sample size over 100.";
+      AddErrMsg("Only EdgeR is supported for sample size over 100.");
       return(0);
     }else{
+      # use microservice
+      print("Peforming DESeq2 ....");
       
-      load_deseq();
+      library(RSclient);
+      rsc <- RS.connect();
       
-      # create formula based on user selection
-      my.formula <- as.formula(paste("~", variable));
+      RS.assign(rsc, "my.dir", getwd()); 
+      RS.eval(rsc, setwd(my.dir));
       
-      #converting from phyloslim object to deseq
-      diagdds = phyloseq_to_deseq2(data, my.formula);
-      geoMeans = apply(counts(diagdds), 1, gm_mean);
-      diagdds = DESeq2::estimateSizeFactors(diagdds, geoMeans = geoMeans);
-      diagdds = DESeq2::DESeq(diagdds, test="Wald", fitType="parametric");
-      res = DESeq2::results(diagdds, independentFiltering = FALSE, cooksCutoff =  Inf);
-      sigHits <- which(res$padj < p.lvl);
+      dat.out <- list(data=data, variable=variable);
+      RS.assign(rsc, "dat.in", dat.out); 
+      my.fun <- function(){
+        # create formula based on user selection
+        variable <- dat.in$variable;
+        my.formula <- as.formula(paste("~", variable));
+        
+        #converting from phyloslim object to deseq
+        library(phyloseq);
+        library(DESeq2);
+        diagdds <- phyloseq_to_deseq2(dat.in$data, my.formula);
+        geoMeans <- apply(counts(diagdds), 1, 
+                          function(x, na.rm=TRUE){exp(sum(log(x[x > 0]), na.rm=na.rm) / length(x))}
+        );
+        diagdds <- estimateSizeFactors(diagdds, geoMeans = geoMeans);
+        diagdds <- DESeq(diagdds, test="Wald", fitType="parametric");
+        res <- results(diagdds, independentFiltering = FALSE, cooksCutoff =  Inf);
+        # make sure it is basic R, not DESeq2 obj
+        resTable <- data.frame(res[,c("log2FoldChange" ,"lfcSE","pvalue","padj")]); 
+        return(resTable);
+      }
+      RS.assign(rsc, my.fun);
+      resTable <-  RS.eval(rsc, my.fun());
+      RS.close(rsc);
+      
+      sigHits <- which(resTable$padj < p.lvl);
       de.Num <- length(sigHits);
-      
       if(de.Num == 0){
         current.msg <<- "No significant features were identified using the given p value cutoff.";
       }else{
         current.msg <<- paste("A total of", de.Num, "significant features were identified!");
       }
       
-      resTable <- res[,c("log2FoldChange" ,"lfcSE","pvalue","padj")];
       resTable <- signif(data.matrix(resTable), digits=5);
       colnames(resTable) <- c("log2FC","lfcSE","Pvalues","FDR");
       mbSetObj$analSet$anal.type <- "deseq";
@@ -1161,197 +1193,6 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank){
   tree_data <<- data;
   return(.set.mbSetObj(mbSetObj));
   
-}
-
-#'Function to plot volacano analysis results from RNAseq analysis
-#'@description This functions plots the RNAseq analysis 
-#'results from the microbiome data.
-#'@param mbSetObj Input the name of the mbSetObj.
-#'@param fc.cutoff Numeric, input the fold-change cutoff.
-#'@param p.cutoff Numeric, input the p-value cutoff.
-#'@param colpal Character, "default" for a blue and red color
-#'palette, "pog" for the purple and orange color palette, "bog"
-#'for the blue and orange color palette, and "rgg" for the red and 
-#'green color palette.
-#'@param imgName Character, input the name of the plot.
-#'@param format Character, input the preferred
-#'format of the plot. By default it is set to "png".
-#'@param dpi Numeric, input the dots per inch. By default
-#'it is set to 72.
-#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
-#'McGill University, Canada
-#'License: GNU GPL (>= 2)
-#'@import ggplot2
-#'@import ggrepel
-#'@import viridis
-PlotRNAseqVolcano <- function(mbSetObj, fc.cutoff = 2, p.cutoff = 0.05, colpal = "default", imgName="volcano",
-                              format = "png", dpi=72){
-  
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  
-  load_ggplot();
-  load_ggrepel();
-  
-  rna_results <- mbSetObj$analSet$rnaseq$resTable
-  
-  pvals <- rna_results$Pvalues
-  inx.p <- pvals <= p.cutoff
-  pvals[pvals == 0] <- .Machine$double.xmin
-  logpvals <- -log10(pvals)
-  
-  df <- data.frame(id = rownames(rna_results), logfc = rna_results$log2FC, logp = logpvals, inx.p = inx.p)
-  df$sig <- ifelse(df$logfc >= fc.cutoff,"A", ifelse(df$logfc<=-fc.cutoff , "B", "C"))
-  
-  # label significant features
-  imp.inx <- (df$sig == "A" | df$sig == "B") & df$inx.p;
-  
-  sig.inx <- imp.inx;
-  p.topInx <- GetTopInx(df$logp, 5, T) & (df$sig == "A");
-  fc.leftInx <- GetTopInx(df$logfc, 5, F);
-  lblInx.up <-  sig.inx & (p.topInx | fc.leftInx);
-  text.lbls.up <- rownames(rna_results)[lblInx.up]
-  
-  p.topInx <- GetTopInx(df$logp, 5, T) & (df$sig == "B");
-  fc.rtInx <- GetTopInx(df$logfc, 5, T);
-  lblInx.down <- sig.inx & (p.topInx | fc.rtInx);
-  text.lbls.dwn <- rownames(rna_results)[lblInx.down]
-  
-  text.lbls.all <- c(text.lbls.dwn, text.lbls.up)
-  indices <- which(df$id %in% text.lbls.all)
-  
-  df$siglabels <- ifelse(df$id %in% text.lbls.all, "TRUE", "FALSE")
-  
-  if(colpal=="default"){
-    cols <- c("red", "blue", "lightgrey")
-  }else if(colpal=="pog"){ # orange, purple, grey
-    cols <- c("#FA9E3BFF", "#47039FFF", "lightgrey")
-  }else if(colpal=="bog"){ # orange, blue, grey
-    cols <- c("#ED7953FF", "#1F9E89FF", "lightgrey")
-  }else if(colpal=="rgg"){ # red, green, grey
-    cols <- c("#F04C3BFF", "#1D9A6CFF", "lightgrey")
-  }
-  
-  plotname <- paste(imgName, ".", format, sep="")
-  Cairo::Cairo(file=plotname, width=550, height=550, type=format, bg="white", dpi=dpi);
-  mbSetObj$imgSet$volcano <- plotname;
-  
-  # plot volcano
-  p <- ggplot(df, aes(x = logfc, y = logp)) + geom_point(aes(color=sig), size = 3.5, alpha=0.75) + 
-    scale_color_manual(values = c("A" = cols[1], "B" = cols[2], "C" = cols[3])) +
-    theme_bw() + labs(x = "\nLog2 Fold Change", y = "-Log10 P-Value") + theme(legend.position = "none") + 
-    theme(axis.title = element_text(size = 13), axis.text = element_text(size = 11)) 
-  
-  if(.on.public.web){
-    p <- p + geom_text(data = subset(df, siglabels == TRUE), aes(label = subset(df, siglabels == TRUE)[,'id']), angle = 45, hjust = "inward", vjust="inward", check_overlap = TRUE)
-  }else{
-    p <- p + geom_text_repel(data = subset(df, siglabels == TRUE), aes(label = subset(df, siglabels == TRUE)[,'id']))
-  }
-  
-  print(p);
-  dev.off();
-  
-  return(.set.mbSetObj(mbSetObj))
-  
-}
-
-#'Plot fold-change dot plot
-#'@description This functions creates a dot plot of the RNAseq analysis 
-#'results from the microbiome data.
-#'@param mbSetObj Input the name of the mbSetObj.
-#'@param top.inx Numeric, input the number of features to include in the dot plot.
-#'@param colpal Character, "default", "viridis" for the 
-#'default viridis color palette, "plasma"
-#'for the plasma color palette, and "cividis" for the  
-#'cividis color palette.
-#'@param imgName Character, input the name of the plot.
-#'@param format Character, input the preferred
-#'format of the plot. By default it is set to "png".
-#'@param dpi Numeric, input the dots per inch. By default
-#'it is set to 72.
-#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
-#'McGill University, Canada
-#'License: GNU GPL (>= 2)
-#'@import ggplot2
-#'@import viridis
-PlotRNASeqDotPlot <- function(mbSetObj, top.inx = 15, colpal = "plasma", imgName="rnaseq_dot",
-                              format = "png", dpi=72){
-  
-  mbSetObj <- .get.mbSetObj(mbSetObj);  
-  if(mbSetObj$module.type == "sdp"){
-    return(0)
-  }
-  
-  taxrank <- taxrank
-  rna_results <- mbSetObj$analSet$rnaseq$resTable
-  
-  # results to plot
-  feats <- rna_results[1:top.inx,]
-  cols <- colnames(feats)
-  feats <- cbind(rownames(feats), feats)
-  colnames(feats) <- c(taxrank, cols) 
-  
-  # create taxonomy table
-  if(taxrank != "OTU"){
-    # dirty fix to deal w. multiple matching taxa showing up
-    glom <- fast_tax_glom_mem(mbSetObj$dataSet$proc.phyobj, taxrank);
-    if(is.null(data)){
-      AddErrMsg("Errors in projecting to the selected taxanomy level!");
-      return(0);
-    }
-    taxa_table <- as(tax_table(glom), "matrix")
-    t.first <- taxa_table[match(unique(taxa_table[,taxrank]), taxa_table[,taxrank]),]
-    
-    matches <- which(t.first[,taxrank] %in% rownames(feats))
-    taxa_table_sub <- t.first[matches,]
-    merged_table <- merge(feats, taxa_table_sub, taxrank)
-  }else{
-    glom <- mbSetObj$dataSet$proc.phyobj
-    t.first <- as(tax_table(glom), "matrix")
-    taxa <- rownames(t.first)
-    oldcolnames <- colnames(t.first)
-    t.first.merged <- cbind(taxa, t.first)
-    colnames(t.first.merged) <- c("OTU", oldcolnames)
-    merged_table <- merge(feats, t.first.merged, "OTU")
-  }
-  
-  merged_table[,1] <- factor(merged_table[,1], levels = merged_table[,1])
-  merged_table[,1] <- strtrim(merged_table[,1], 20)
-  merged_table <- merged_table[order(merged_table$FDR),]
-  
-  size <- length(rownames(feats))
-  
-  if(size <= 20){
-    h <- 600
-    w <- 600
-  }else if(size <= 35){
-    h <- 700
-    w <- 600
-  }else{
-    h <- 800
-    w <- 650
-  }
-  
-  plotname <- paste(imgName, ".", format, sep="")
-  Cairo::Cairo(file=plotname, width=w, height=h, type=format, bg="white", dpi=dpi);
-  mbSetObj$imgSet$dotplot <- plotname;
-  
-  p <- ggplot(merged_table, aes(x = merged_table[,1], y = log2FC, color = Phylum)) + geom_point(size = 6, alpha = 0.75) +
-    theme_bw() + theme(axis.text.x = element_text(angle = -90, hjust = 0, vjust = 0.5, size = 11), axis.text.y = element_text(size = 11)) +
-    labs(y = "\nLog2 Fold Change", x = paste(taxrank)) + coord_flip() + 
-    theme(legend.text = element_text(size = 11), axis.title = element_text(size = 13), legend.title = element_text(size = 13));
-  
-  if(colpal == "viridis"){
-    p <- p + viridis::scale_color_viridis(discrete = TRUE);
-  }else if(colpal == "plasma"){
-    p <- p + viridis::scale_color_viridis(discrete = TRUE, option="C");
-  }else if(colpal == "cividis"){
-    p <- p + viridis::scale_color_viridis(discrete = TRUE, option="E");
-  }
-  
-  print(p)
-  dev.off()
-  
-  return(.set.mbSetObj(mbSetObj))
 }
 
 
@@ -1423,16 +1264,45 @@ FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, feat){
   }
   
   data1 <- t(data1);
+  saveRDS(data1, "match_data.RDS")
   #making boxplot data
+  
+  sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
+  variable <- colnames(sample_table)[1];
+  clslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   boxdata <- as.data.frame(data1);
+  boxdata$class <- clslbl;
   mbSetObj$analSet$boxdata <- boxdata;
-  cbtempl.results <- apply(data1, 2, template.match, feat_data, dist.name);
-  cor.res <- t(cbtempl.results);
-  fdr.col <- p.adjust(cor.res[,3], "fdr");
-  cor.res <- cbind(cor.res, fdr.col);
-  colnames(cor.res) <- c("correlation", "t-stat", "p-value", "FDR");
-  ord.inx <- order(cor.res[,3])
-  sig.mat <-signif(cor.res[ord.inx,],5);
+  
+  if(dist.name == "sparcc"){
+    
+    permNum <- 100
+    pvalCutoff <- 1 
+    corrCutoff <- 0
+    
+    if(.on.public.web){
+      sparcc_results <- RunFastSpar_mem(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, "network", "feat")
+    }else{
+      sparcc_results <- RunFastSpar(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, "network", "feat")
+    }
+    cbtempl.results <- sparcc_results[which(sparcc_results$Taxon1==feat), 2:4]
+    fdr.col <- p.adjust(cbtempl.results[,3], "fdr");
+    rownames(cbtempl.results) <- cbtempl.results[,1]
+    
+    cor.res <- signif(cbind(cbtempl.results[,-1], fdr.col),5)
+    ord.inx <- order(cor.res[,2])
+    sig.mat <- cor.res[ord.inx,]
+    colnames(sig.mat) <- c("Correlation", "P-Value", "FDR");
+  }else{
+    cbtempl.results <- apply(data1, 2, template.match, feat_data, dist.name);
+    cor.res <- t(cbtempl.results);
+    fdr.col <- p.adjust(cor.res[,3], "fdr");
+    cor.res <- cbind(cor.res, fdr.col);
+    colnames(cor.res) <- c("Correlation", "T-Stat", "P-Value", "FDR");
+    ord.inx <- order(cor.res[,3])
+    sig.mat <-signif(cor.res[ord.inx,],5);
+  }
+  
   fileName <- "correlation_feature.csv";
   write.csv(sig.mat,file=fileName);
   mbSetObj$analSet$resTable <- as.data.frame(sig.mat);
@@ -1442,6 +1312,7 @@ FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, feat){
   
   mbSetObj$analSet$pattern <- feat;
   mbSetObj$analSet$taxrank <- taxrank;
+  mbSetObj$analSet$feat.corr <- TRUE;
   
   sig.nm <<- fileName;
   mbSetObj$analSet$cor.mat <- sig.mat;
@@ -1470,17 +1341,24 @@ FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, feat){
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-
 PlotCorr <- function(mbSetObj, imgName, format="png", dpi=72, width=NA){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
+  variable <- mbSetObj$analSet$pattern.var;
+  data <- readRDS("match_data.RDS")
+  sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
+  
+  if(is.null(variable)){
+    variable <- colnames(sample_table)[1];
+  }
+  
   cor.res <- mbSetObj$analSet$cor.mat;
   pattern <- mbSetObj$analSet$pattern;
-  title <- paste(mbSetObj$analSet$taxrank, "correlated with the", pattern);
+  title <- paste(mbSetObj$analSet$taxrank, "correlated with", pattern);
   
   if(nrow(cor.res) > 25){
-    cor.res <- cor.res[1:25, ];
+    cor.res <- cor.res[1:26, ];
   }
   
   # first get most signficant ones (p value)
@@ -1494,25 +1372,132 @@ PlotCorr <- function(mbSetObj, imgName, format="png", dpi=72, width=NA){
   }
   
   cor.res <- cor.res[ord.inx, ];
+  # need to remove pattern feature from corr matrix (always 1)
+  if(mbSetObj$analSet$feat.corr & mbSetObj$analSet$corph.meth != "sparcc"){
+    match.inx <- match(pattern, rownames(cor.res))
+    cor.res <- cor.res[-match.inx,]
+  }else{
+    if(nrow(cor.res) > 25){
+      cor.res <- cor.res[-(nrow(cor.res)),]
+    }
+  }
+  
   title <- paste("Top",nrow(cor.res), tolower(mbSetObj$analSet$taxrank), "correlated with", pattern);
   imgName = paste(imgName, ".", format, sep="");
   mbSetObj$imgSet$cor.ph <- imgName;
+  feat.num <- nrow(cor.res);
   
   if(is.na(width)){
-    w <- h <- 7.2;
+    h <- w <- 8 
   }else if(width == 0){
-    w <- 7.2;
+    h <- w <- 8 
   }else{
-    w <- h <- width;
+    w <- width;
+    h <- w/0.85
   }
   
+  cls.len <- length(levels(sample_table[[variable]]));
+  
+  if(cls.len == 2){
+    rt.mrg <- 7.75;
+  }else if(cls.len == 3){
+    rt.mrg <- 8.75;
+    w <- w + 1
+  }else if(cls.len == 4){
+    rt.mrg <- 9.75;
+    w <- w + 1.5
+  }else if(cls.len == 5){
+    rt.mrg <- 10.75;
+    w <- w + 2
+  }else if(cls.len == 6){
+    rt.mrg <- 11.75;
+    w <- w + 2.5
+  }else{
+    rt.mrg <- 12;
+    w <- w + 3
+  }
+  
+  # for heatmap
+  mns <- by(data[, rownames(cor.res)], 
+            sample_table[[variable]],
+            # sample_table[["SampleType"]],
+            function(x){ # inner function note, by send a subset of dataframe
+              apply(x, 2, mean, trim=0.1)
+            });
+  mns <- t(matrix(unlist(mns), ncol=nrow(cor.res), byrow=TRUE));
+  
   Cairo::Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
-  par(mar=c(5,6,4,3))
-  rownames(cor.res)<-substr(rownames(cor.res), 1, 18);
-  cols <- ifelse(cor.res[,1] >0, "mistyrose","lightblue");
-  dotchart(cor.res[,1], pch="", xlim=c(-1,1), xlab="Correlation Coefficients", main=title);
+  
+  op <- par(mar=c(5, 10, 3, rt.mrg));
+  
+  feat.nms <- substr(rownames(cor.res), 1, 18);
+  feat.num <- length(feat.nms)
   rownames(cor.res) <- NULL;
+  
+  cols <- case_when(
+    cor.res > 0.75 ~ "#d47273",
+    cor.res > 0.5 & cor.res < 0.75 ~ "#dd9091",
+    cor.res > 0.25 & cor.res < 0.5 ~ "#e6aeaf",
+    cor.res > 0 & cor.res < 0.25 ~ "#f0cccd",
+    cor.res < 0 & cor.res > -0.25 ~ "#ccdef0",
+    cor.res > -0.25 ~ "#ccdef0",
+    cor.res > -0.5 ~ "#aecbe6",
+    cor.res > -0.75 ~ "#90b7dd",
+    TRUE ~ "#72a4d4"
+  )
+  
+  dotchart(cor.res[,1], pch="", xlim=c(-1,1), xlab="Correlation Coefficients", main=title, cex = 1.05);
+  mtext(side=2, at=1:feat.num, feat.nms, las=2, line=1, cex=1.05)
   barplot(cor.res[,1], space=c(0.5, rep(0, nrow(cor.res)-1)), xlim=c(-1,1), xaxt="n", col = cols, add=T,horiz=T);
+  
+  axis.lims <- par("usr"); # x1, x2, y1 ,y2
+  
+  # get character width
+  shift <- 2*par("cxy")[1];
+  lgd.x <- axis.lims[2] + shift;
+  
+  x <- rep(lgd.x, feat.num);
+  y <- 1:feat.num;
+  par(xpd=T);
+  
+  load_rcolorbrewer();
+  nc <- ncol(mns);
+  
+  col <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdYlBu"))(nc); # set colors for each class
+  
+  # calculate background
+  bg <- matrix("", nrow(mns), nc);
+  for (m in 1:nrow(mns)){
+    bg[m,] <- (col[nc:1])[rank(mns[m,])];
+  }
+  
+  cls.lbl <- levels(sample_table[[variable]]);
+  
+  for (n in 1:ncol(mns)){
+    points(x,y, bty="n", pch=22, bg=bg[,n], cex=3);
+    # now add label
+    text(x[1], axis.lims[4], cls.lbl[n], srt=45, adj=c(0.2, 0.2), cex=1.05);
+    # shift x, note, this is good for current size
+    x <- x + shift/1.05;
+  }
+  
+  # now add color key, padding with more intermediate colors for contiuous band
+  col <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(25, "RdYlBu"))(50)
+  
+  nc <- length(col);
+  x <- rep(x[1] + shift, nc);
+  
+  shifty <- (axis.lims[4]-axis.lims[3])/3;
+  starty <- axis.lims[3] + shifty;
+  endy <- axis.lims[3] + 2*shifty;
+  y <- seq(from = starty, to = endy, length = nc);
+  
+  points(x,y, bty="n", pch=15, col=rev(col), cex=2);
+  
+  text(x[1], endy+shifty/8, "High", cex=1.05);
+  text(x[1], starty-shifty/8, "Low", cex=1.05);
+  
+  par(op)
   dev.off();
   
   return(.set.mbSetObj(mbSetObj))
@@ -1524,8 +1509,8 @@ PlotCorr <- function(mbSetObj, imgName, format="png", dpi=72, width=NA){
 #'profile) in the Pattern Search analysis.
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@param dist.name Input the distance measure. Input "pearson" for 
-#'Pearson R, "spearman" for Spearman rank correlation, and "kendall"
-#'for Kendall rank correlation.
+#'Pearson R, "spearman" for Spearman rank correlation, "kendall"
+#'for Kendall rank correlation and "sparcc" for SparCC.
 #'@param pattern Character, input the specified pattern.
 #'@param taxrank Character, input the taxonomic level to use.
 #'@param taxa If the pattern is defined by using a specific taxon, input the name
@@ -1590,17 +1575,47 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, 
   }
   
   data <- t(data);
+  saveRDS(data, "match_data.RDS")
+  
   clslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   boxdata <- as.data.frame(data);
   boxdata$class <- clslbl;
   mbSetObj$analSet$boxdata <- boxdata;
-  cbtempl.results <- apply(data, 2, template.match, new.template, dist.name);
-  cor.res <- t(cbtempl.results);
-  fdr.col <- p.adjust(cor.res[,3], "fdr");
-  cor.res <- cbind(cor.res, fdr.col);
-  colnames(cor.res) <- c("correlation", "t-stat", "p-value", "FDR");
-  ord.inx <- order(cor.res[,3]);
-  sig.mat <- signif(cor.res[ord.inx,],5);
+  
+  if(dist.name == "sparcc"){
+    
+    pattern.data <- cbind(data, new.template)
+    saveRDS(t(pattern.data), "pattern_data.RDS")
+    permNum <- 100
+    pvalCutoff <- 1 
+    corrCutoff <- 0
+    
+    if(.on.public.web){
+      sparcc_results <- RunFastSpar_mem(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, "network", "pattern")
+    }else{
+      sparcc_results <- RunFastSpar(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, "network", "pattern")
+    }
+    
+    cbtempl.results <- sparcc_results[which(sparcc_results$Taxon1=="new.template"), 2:4]
+    fdr.col <- p.adjust(cbtempl.results[,3], "fdr");
+    rownames(cbtempl.results) <- cbtempl.results[,1]
+    cor.res <- signif(cbind(cbtempl.results[,-1], fdr.col),5)
+    ord.inx <- order(cor.res[,2])
+    sig.mat <- cor.res[ord.inx,]
+    colnames(sig.mat) <- c("Correlation", "P-Value", "FDR");
+    
+  }else if(dist.name %in% c("spearman", "kendall", "pearson")){
+    cbtempl.results <- apply(data, 2, template.match, new.template, dist.name);
+    cor.res <- t(cbtempl.results);
+    fdr.col <- p.adjust(cor.res[,3], "fdr");
+    cor.res <- cbind(cor.res, fdr.col);
+    colnames(cor.res) <- c("Correlation", "T-Stat", "P-Value", "FDR");
+    ord.inx <- order(cor.res[,3]);
+    sig.mat <- signif(cor.res[ord.inx,],5);
+  }else{
+    AddErrMsg("Distance measure invalid!")
+  }
+  
   fileName <- "correlation_feature.csv";
   write.csv(sig.mat, file=fileName);
   mbSetObj$analSet$resTable <- as.data.frame(sig.mat);
@@ -1616,403 +1631,10 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, 
   }
   
   sig.nm <<- fileName;
+  mbSetObj$analSet$corph.meth <- dist.name;
+  mbSetObj$analSet$feat.corr <- FALSE;
   mbSetObj$analSet$cor.mat<-sig.mat;
-  
-  return(.set.mbSetObj(mbSetObj));
-}
-
-#'Function to create correlation heat map
-#'@description This function creates the correlation heat map
-#'@param mbSetObj Input the name of the mbSetObj.
-#'@param imgName Character, input the name
-#'of the plot.
-#'@param format Character, input the preferred
-#'format of the plot. By default it is set to "png".
-#'@param width Numeric, input the width of the plot. By
-#'default it is set to NA.
-#'@param cor.method Input the distance measure. Input "pearson" for 
-#'Pearson R, "spearman" for Spearman rank correlation, and "kendall"
-#'for Kendall rank correlation.
-#'@param colors_cntrst Set the colors of the heatmap. By default it 
-#'is set to "bwm", blue, white, to red. Use "gbr" for green, black, red, use
-#'"heat" for red to yellow, "topo" for blue to yellow, "gray" for 
-#'white to black, and "byr" for blue, yellow, red. Use "viridis"
-#'for the viridis color palette and "plasma" for the plasma color palette from
-#'the viridis R package.
-#'@param viewOpt Character, "overview" to view an overview
-#'of the heatmap, and "detail" to iew a detailed view of the
-#'heatmap (< 1500 features).
-#'@param taxrank Character, input the taxonomic level to perform
-#'classification. For instance, "OTU-level" to use OTUs.
-#'@param fix.col Logical, default set to FALSE.
-#'@param no.clst Logical, default set to FALSE.
-#'@param top Logical, default set to FALSE.
-#'@param topNum Numeric, set the number of top features
-#'to include.
-#'@param datatype If the data is marker gene, input "16S". If the
-#'data is metagenomic, use "metageno".
-#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
-#'McGill University, Canada
-#'License: GNU GPL (>= 2)
-#'@export
-#'@import RColorBrewer
-#'@import gplots
-#'@import pheatmap
-
-PlotCorrHeatMap <- function(mbSetObj, imgName, format="png", cor.method,
-                            colors_cntrst, viewOpt, taxrank, 
-                            topNum, permNum=100, pvalCutoff=0.05, corrCutoff=0.3){
-  
-  
-  fix.col="F"; 
-  no.clst="F"; 
-  top="F"
-  width ="NA"
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  load_viridis();
-  
-  main <- xlab <- ylab <- NULL;
-  
-  if(mbSetObj$module.type=="sdp"){
-    data <- mbSetObj$dataSet$norm.phyobj;
-    data1 <- as.matrix(otu_table(data));
-    taxrank <- "OTU";
-  }else if(mbSetObj$module.type=="mdp"){
-    if(taxrank=="OTU"){
-      taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
-      data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj, taxa_table);
-      data1 <- as.matrix(otu_table(data));
-    }else{
-      taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
-      data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj, taxa_table);
-      #merging at taxonomy levels
-      data <- fast_tax_glom_mem(data,taxrank);
-      if(is.null(data)){
-        AddErrMsg("Errors in projecting to the selected taxanomy level!");
-        return(0);
-      }
-      nm <- as.character(tax_table(data)[,taxrank]);
-      #converting NA values to unassigned
-      nm[is.na(nm)] <- "Not_Assigned";
-      data1 <- as.matrix(otu_table(data));
-      rownames(data1) <- nm;
-      #all NA club together
-      data1 <- as.matrix(t(sapply(by(data1, rownames(data1), colSums), identity)));
-    }
-  }
-  
-  data <- t(data1);
-  mbSetObj$analSet$abund_data<-data;
-  
-  if(ncol(data) > 1000){
-    filter.val <- apply(data.matrix(data), 2, IQR, na.rm=T);
-    rk <- rank(-filter.val, ties.method='random');
-    data <- as.data.frame(data[,rk <=1000]);
-  }
-  
-  colnames(data)<-substr(colnames(data), 1, 18);
-  
-  if(cor.method=="sparcc"){
-    #corr.mat <- RunFastSpar(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, "heatmap")
-    if(.on.public.web){
-        corr.mat <- RunFastSpar_mem(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, "heatmap")
-    }else{
-        corr.mat <- RunFastSpar(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, "heatmap")
-    }
-  }else{
-    corr.mat<-cor(data, method=cor.method);
-  }
-  
-  # use total abs(correlation) to select
-  if(top){
-    cor.sum <- apply(abs(corr.mat), 1, sum);
-    cor.rk <- rank(-cor.sum);
-    var.sel <- cor.rk <= topNum;
-    corr.mat <- corr.mat[var.sel, var.sel];
-  }
-  
-  # set up parameter for heatmap
-  load_rcolorbrewer();
-  load_gplots();
-  
-  if(colors_cntrst=="gbr"){
-    colors <- grDevices::colorRampPalette(c("green", "black", "red"), space="rgb")(256);
-  }else if(colors_cntrst == "heat"){
-    colors <- grDevices::heat.colors(256);
-  }else if(colors_cntrst == "topo"){
-    colors <- grDevices::topo.colors(256);
-  }else if(colors_cntrst == "gray"){
-    colors <- grDevices::colorRampPalette(c("grey90", "grey10"))(256);
-  }else if(colors_cntrst == "byr"){
-    colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdYlBu"))(256));
-  }else if(colors_cntrst == "viridis") {
-    colors <- rev(viridis::viridis(10))
-  }else if(colors_cntrst == "plasma") {
-    colors <- rev(viridis::plasma(10))
-  }else{
-    colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdBu"))(256));
-  }
-  
-  #used for network edges
-  first_color <- colors[1];
-  last_color <- colors[length(colors)];
-  imgName = paste(imgName, ".", format, sep="");
-  
-  if(viewOpt == "overview"){
-    if(is.na(width)){
-      w <- 9;
-    }else if(width == 0){
-      w <- 7.2;
-      mbSetObj$imgSet$heatmap <-imgName;
-    }else{
-      w <- 7.2;
-    }
-    h <- w;
-  }else{
-    if(ncol(corr.mat) > 50){
-      myH <- ncol(corr.mat)*12 + 40;
-    }else if(ncol(corr.mat) > 20){
-      myH <- ncol(corr.mat)*12 + 60;
-    }else{
-      myH <- ncol(corr.mat)*12 + 120;
-    }
-    h <- round(myH/72,2);
-    
-    if(is.na(width)){
-      w <- h;
-    }else if(width == 0){
-      w <- h <- 7.2;
-      mbSetObj$imgSet$corr.heatmap <-imgName;
-    }else{
-      w <- h <- 7.2;
-    }
-    
-    # to prevent too small
-    min.w <- 4.8;
-    
-    if(w < min.w){
-      w <- h <- min.w;
-    }
-  }
-  
-  if(format=="pdf"){
-    grDevices::pdf(file = imgName, width=w, height=h, bg="white", onefile=FALSE);
-  }else{
-    #Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
-    Cairo::Cairo(file = imgName, unit="in", dpi=72, width=w, height=h, type=format, bg="white");
-  }
-  
-  mbSetObj$imgSet$cor.heat<-imgName;
-  
-  if(no.clst){
-    rowv = FALSE;
-    colv = FALSE;
-    dendro = "none";
-  }else{
-    rowv = TRUE;
-    colv = TRUE;
-    dendro = "both";
-  }
-  
-  load_pheatmap();
-  
-  if(fix.col){
-    breaks <- seq(from = -1, to = 1, length = 257);
-    pheatmap::pheatmap(corr.mat, fontsize=8, fontsize_row=8, cluster_rows = colv,
-                       cluster_cols = rowv, color = colors, breaks = breaks);
-  }else{
-    pheatmap::pheatmap(corr.mat, fontsize=8, fontsize_row=8, cluster_rows = colv,
-                       cluster_cols = rowv, color = colors);
-  }
-  
-  dev.off();
-  
-  mbSetObj$analSet$cor.heatmat<-corr.mat;
-  mbSetObj$analSet$colors_cntrst<-colors_cntrst;
-  mbSetObj$analSet$edge_col_low<-first_color;
-  mbSetObj$analSet$edge_col_high<-last_color;
-  mbSetObj$analSet$colors<-colors;
-  mbSetObj$analSet$corheat.taxalvl<-taxrank;
-  mbSetObj$analSet$corheat.meth<-cor.method;
-  write.csv(signif(corr.mat,5), file="correlation_table.csv");
-  
-  if(cor.method=="sparcc"){
-    method = "SparCC"
-  }else{
-    method = "Correlation"
-  }
-  
-  current.msg <<- paste(method, "performed successfully!") 
-  return(.set.mbSetObj(mbSetObj));
-}
-
-#'Function to call for correlation network
-#'@description This function runs the fastspar or cor.test 
-#'@param mbSetObj Input the name of the mbSetObj.
-#'@import ppcor
-#'@import igraph
-#'@export
-PerformNetworkCorrelation <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr", 
-                                      permNum=100, pvalCutoff=0.05, corrCutoff=0.3){
-  
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  if(.on.public.web){
-    load_ppcor();
-    load_igraph();
-  }
-
-  mbSetObj$analSet$corr_color_opt <- colorOpt;
-  
-  if(cor.method == "sparcc"){
-    if(.on.public.web){
-        sparcc_results <- RunFastSpar_mem(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, "network")
-    }else{
-        sparcc_results <- RunFastSpar(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, "network")
-    }
-  
-    if(nrow(sparcc_results)==0){
-      AddErrMsg("No correlations meet the p-value and correlation thresholds!")
-      return(0)
-    }else{
-      mbSetObj$analSet$network_cor <- sparcc_results
-    }
-  }else{
-    
-    if(!exists("phyloseq_objs")){
-      phyloseq_objs <- readRDS("phyloseq_objs.RDS")
-    }
-    
-    if(taxrank=="OTU"){
-      data1 <- phyloseq_objs$count_tables$OTU
-    }else{
-      taxrank.inx <- which(names(phyloseq_objs$count_tables) %in% taxrank)
-      data1 <- phyloseq_objs$count_tables[[taxrank.inx]]
-    }
-    
-    data <- t(data1);
-    data <- data[which(rownames(data) %in% mbSetObj$dataSet$selected.grps),]
-    data[data==0|is.na(data)] <- .00001
-    
-    if(ncol(data) > 1000){
-      filter.val <- apply(data.matrix(data), 2, IQR, na.rm=T);
-      rk <- rank(-filter.val, ties.method='random');
-      data <- as.data.frame(data[,rk <=1000]);
-    }
-    
-      mbSetObj$analSet$netcorr_data<-data;
-      vars = data.frame(t(combn(colnames(data), 2)), stringsAsFactors = FALSE)
-      
-      if(cor.method == "spearman"){
-        cor.results <- do.call(rbind, mapply(SpearmanCorrFunc, vars[,1], vars[,2], MoreArgs = list(data=data), SIMPLIFY = FALSE))
-      }else if(cor.method == "kendall"){
-        cor.results <- do.call(rbind, mapply(KendallCorrFunc, vars[,1], vars[,2], MoreArgs = list(data=data), SIMPLIFY = FALSE))
-      }else if(cor.method == "pearson"){
-        cor.results <- do.call(rbind, mapply(PearsonCorrFunc, vars[,1], vars[,2], MoreArgs = list(data=data), SIMPLIFY = FALSE))
-      }else{
-        AddErrMsg("Invalid correlation method!")
-        return(0)
-      }
-      
-      cor.results.filt <- cor.results[(abs(cor.results[,3]) > corrCutoff & cor.results[,4] < pvalCutoff),]
-      colnames(cor.results.filt) <- c("Taxon1", "Taxon2", "Correlation", "P.value", "Statistic", "Method")
-      cor.results.filt[,3] <- round(cor.results.filt[,3], digits=4)
-      cor.results.filt[,4] <- round(cor.results.filt[,4], digits=4)
-      write.csv(cor.results.filt, "correlation_table.csv", row.names = FALSE)
-      mbSetObj$analSet$network_cor <- cor.results.filt;
-    
-  }
-  
-  #network building only needed for web
-  if(.on.public.web){
-    all.taxons = unique(c(mbSetObj$analSet$network_cor[,1] , mbSetObj$analSet$network_cor[,2]))
-    taxColNms = vector();
-    
-    if(taxrank == "OTU"){
-      tax.tbl = as.data.frame(matrix(mbSetObj$dataSet$taxa_table[,1:7],ncol=7))
-      colnames(tax.tbl) = colnames(mbSetObj$dataSet$taxa_table[,1:7])
-      colnames(tax.tbl)[7] = "OTU"
-      tax.tbl[,7]=rownames(mbSetObj$dataSet$taxa_table)
-      taxColNms = colnames(tax.tbl)
-      tax.tbl = as.data.frame(tax.tbl[which(tax.tbl[,simpleCap(taxrank)] %in% all.taxons),])
-      colnames(tax.tbl) = taxColNms
-    }else{
-      tax.tbl = data.frame(mbSetObj$dataSet$taxa_table[,1:which( colnames(mbSetObj$dataSet$taxa_table)== simpleCap(taxrank))])
-      taxColNms = colnames(mbSetObj$dataSet$taxa_table[,1:which( colnames(mbSetObj$dataSet$taxa_table)== simpleCap(taxrank))])
-      colnames(tax.tbl) = taxColNms
-      tax.tbl = as.data.frame(tax.tbl[which(tax.tbl[,simpleCap(taxrank)] %in% all.taxons),])
-      colnames(tax.tbl) = taxColNms
-    }
-    
-    inx = !duplicated(tax.tbl[,simpleCap(taxrank)])
-    filt.taxa.table = data.frame(tax.tbl[inx,])
-    colnames(filt.taxa.table) = taxColNms
-    mbSetObj$analSet$filt.taxa.table = filt.taxa.table 
-    .set.mbSetObj(mbSetObj);
-    res <- SparccToNet(mbSetObj)
-    if(res == 0){
-      AddErrMsg("Errors during creating correlation network!")
-      return(0);
-    }
-  }
-  
-  if(cor.method=="sparcc"){
-    method = "SparCC"
-  }else{
-    method = paste(cor.method, "correlation"); 
-  }
-  
-  # calculate microbial dysbiosis index
-  feats_used <- unique(mbSetObj$analSet$network_cor[,1], mbSetObj$analSet$network_cor[,2]) 
-  fc <- mbSetObj$analSet$diff_table
-  taxa_lvl <- mbSetObj$analSet$network_taxalvl
-  clean_feats_used <- sub("^[^_]*__", "", unique(feats_used))
-  match.inx <- which(fc$tax_name %in% clean_feats_used)
-  
-  if(length(match.inx)!=0){
-    fc.filt <- fc[match.inx,]
-    
-    if(length(unique(fc.filt$tax_name)) < length(fc.filt$tax_name)){
-      # need to delete doubles in fc.filt
-      keep <- c(TRUE, head(fc.filt$tax_name, -1) != tail(fc.filt$tax_name, -1))
-      fc.filt <- fc.filt[keep,]
-    }
-    
-    # need to filter again
-    if(cor.method=="sparcc"){
-      abund_data <- readRDS("sparcc_data.RDS")
-    }else{
-      abund_data <- t(as.matrix(mbSetObj$analSet$netcorr_data))
-    }
-    
-    abund.inx <- which(rownames(abund_data) %in% feats_used)
-    abund_data.filt <- abund_data[abund.inx,]
-    
-    log2fc <- fc.filt$log2_median_ratio
-    names(log2fc) <- fc.filt$tax_name
-    
-    inc <- which(log2fc >= 0) # total abundance increased in X
-    dec <- which(log2fc < 0) # total abundance decreased in X
-    
-    if(length(inc)==0 | length(dec)==0){
-      mbSetObj$analSet$mdi <- "MD-index could not be calculated."
-    }else{
-      abund <- c(sum(abund_data.filt[inc,]), sum(abund_data.filt[dec,]))
-      abund[abund==0] <- 0.1
-      
-      MDI1 <- round(log(abund[1]/abund[2]), digits = 4) 
-      first <- unique(fc.filt$treatment_1)
-      second <- unique(fc.filt$treatment_2)
-      groups <- paste(first, "/", second, sep="")
-      
-      mbSetObj$analSet$mdi <- paste(groups, "MD-index:", MDI1)
-    }
-  }
-  
-  if(current.msg == "Only the top 500 features are kept, ranked by their variance!"){
-    current.msg <<- paste(current.msg, method, "performed successfully!")
-  }else{
-    current.msg <<- paste(method, "performed successfully!")
-  }
+  mbSetObj$analSet$pattern.var <- variable
   
   return(.set.mbSetObj(mbSetObj));
 }
@@ -2022,13 +1644,13 @@ PerformNetworkCorrelation <- function(mbSetObj, taxrank, cor.method="pearson", c
 ###################################
 
 # use memoise tech to avoid repeating
-RunFastSpar_mem <- function(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, output="network", palette="viridis"){
+RunFastSpar_mem <- function(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, output="network", opt="corr"){
   if(!exists("fastsparr_mem")){
     require("memoise");
-    fastsparr_mem<<- memoise(RunFastSpar); 
+    fastsparr_mem <<- memoise(RunFastSpar); 
   }
   
-  res <- fastsparr_mem(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, output="network", palette="viridis");
+  res <- fastsparr_mem(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, output=output, opt=opt);
   return(res);
 }
 
@@ -2037,63 +1659,63 @@ RunFastSpar_mem <- function(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, 
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@import igraph 
 #'@export
-RunFastSpar <- function(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, output="network", palette="viridis"){
+RunFastSpar <- function(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, output="network", opt="corr"){
+  
+  # only works for unix
+  my.os <- tolower(GetOS());
+  
+  if(my.os == "mac" | my.os == "windows"){
+    AddErrMsg("The built-in fastspar only works for unix system. Please visit https://github.com/scwatts/fastspar for more details.");
+    return(0);
+  }
+  
+  if(.on.public.web){
+    spar_home <- "../../lib/fastspar/";
+  }else if (file.exists("/home/jasmine/Downloads/fastspar/fastspar")){ #jas local
+    spar_home <- "/home/jasmine/Downloads/fastspar/"
+  }else{
+    spar_home <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/fast_spar/"
+  }
+  
+  path_fastspar <- paste(spar_home, "fastspar", sep="");
+  path_fastspar_bs <- paste(spar_home, "fastspar_bootstrap", sep="");
+  path_fastspar_pvals <- paste(spar_home, "fastspar_pvalues", sep="");
+  
+  # make sure they are executable
+  my.cmd <- paste("chmod a+x", path_fastspar, path_fastspar_bs, path_fastspar_pvals);
+  system(my.cmd);
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
   if(.on.public.web){
     load_igraph();
   }
   
-  path_fastspar <- "";
-  path_fastspar_bs <- "";
-  path_fastspar_pvals <- "";
-  
-  # for development purposes
-  if(.on.public.web){ 
-    if(file.exists("/home/glassfish/libraries/fastspar")){ #server
-      path_fastspar <- "/home/glassfish/libraries/fastspar/fastspar"
-      path_fastspar_bs <- "/home/glassfish/libraries/fastspar/fastspar_bootstrap"
-      path_fastspar_pvals <- "/home/glassfish/libraries/fastspar/fastspar_pvalues"
-    }else if(file.exists("~/Downloads/fastspar-0.0.10_linux/fastspar")){ #jasmine workstation
-      path_fastspar <- "~/Downloads/fastspar-0.0.10_linux/fastspar"
-      path_fastspar_bs <- "~/Downloads/fastspar-0.0.10_linux/fastspar_bootstrap"
-      path_fastspar_pvals <- "~/Downloads/fastspar-0.0.10_linux/fastspar_pvalues"
-    }else{
-      AddErrMsg("Cannot find path to fastspar! Please intall fastspar and add path here!");
-      return(0);
-    }
+  if(opt == "pattern"){
+    data1 <- readRDS("pattern_data.RDS")
   }else{
-    if(file.exists("~/fastspar")){ # need to adapt per user
-      path_fastspar <- "~/Downloads/fastspar-0.0.10_linux/fastspar"
-      path_fastspar_bs <- "~/Downloads/fastspar-0.0.10_linux/fastspar_bootstrap"
-      path_fastspar_pvals <- "~/Downloads/fastspar-0.0.10_linux/fastspar_pvalues"
-    }else{
-      AddErrMsg("Cannot find path to fastspar! If fastspar is not downloaded, please install!");
-      return(0);
+    # first get OTU table to BIOM TSV format
+    if(mbSetObj$module.type=="sdp"){
+      data1 <- as.matrix(otu_table(mbSetObj$dataSet$norm.phyobj));
+      taxrank <- "OTU";
+    }else if(mbSetObj$module.type=="mdp"){
+      if(!exists("phyloseq_objs")){
+        phyloseq_objs <- readRDS("phyloseq_objs.RDS")
+      }
+      
+      if(taxrank=="OTU"){
+        data1 <- phyloseq_objs$count_tables$OTU
+      }else{
+        taxrank.inx <- which(names(phyloseq_objs$count_tables) %in% taxrank)
+        data1 <- phyloseq_objs$count_tables[[taxrank.inx]]
+      }
     }
   }
   
-  # first get OTU table to BIOM TSV format
-  if(mbSetObj$module.type=="sdp"){
-    data <- mbSetObj$dataSet$norm.phyobj;
-    data1 <- as.matrix(otu_table(data));
-    taxrank <- "OTU";
-  }else if(mbSetObj$module.type=="mdp"){
-    
-    if(!exists("phyloseq_objs")){
-      phyloseq_objs <- readRDS("phyloseq_objs.RDS")
-    }
-    
-    if(taxrank=="OTU"){
-      data1 <- phyloseq_objs$count_tables$OTU
-    }else{
-      taxrank.inx <- which(names(phyloseq_objs$count_tables) %in% taxrank)
-      data1 <- phyloseq_objs$count_tables[[taxrank.inx]]
-    }
+  if(opt=="corr"){
+    saveRDS(data1, "sparcc_full_data.RDS")  
   }
   
-  if(!is.null(mbSetObj$dataSet$selected.grps)){
+  if(!is.null(mbSetObj$dataSet$selected.grps) & opt == "corr"){
     data1 <- data1[,which(colnames(data1) %in% mbSetObj$dataSet$selected.grps)]
   }
   
@@ -2131,7 +1753,12 @@ RunFastSpar <- function(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, outp
   # replace zeros with random numbers based on lowest non-zero count
   
   set.seed(12345)
-  lowest.count <- min(apply(data1, 1, FUN = function(x) {min(x[x > 0])}))
+  
+  if(opt %in% c("corr", "feat")){
+    lowest.count <- min(apply(data1, 1, FUN = function(x) {min(x[x > 0])}))
+  }else{ #only pattern searching
+    lowest.count <- min(apply(data1[-nrow(data1),], 1, FUN = function(x) {min(x[x > 0])}))
+  }
   
   # replacements
   replacements <- apply(data1, 1, function(x) { (sample(1:lowest.count, size=sum(x==0), replace = F))/lowest.count} )
@@ -2147,7 +1774,9 @@ RunFastSpar <- function(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, outp
   colnames(zero.output) <- colnames(data1)
   rownames(zero.output) <- rownames(data1)
   
-  saveRDS(zero.output, "sparcc_data.RDS")
+  if(opt=="corr"){
+    saveRDS(zero.output, "sparcc_data.rds")
+  }
   
   # add header
   new_col <- c("#OTU ID", colnames(zero.output))
@@ -2168,21 +1797,21 @@ RunFastSpar <- function(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, outp
   test <- "text.txt"
   pval_output <- "sparcc_pvals.tsv"
   
-  system(paste(path_fastspar, "--otu_table", otu_table, "--correlation", corr_output, "--covariance", cov_output, ";",
-               "mkdir", bootstrap_counts, ";",
-               path_fastspar_bs,  "--otu_table", otu_table, "--number", permNum, "--prefix", counts_prefix, ";",
-               "find", bootstrap_counts, ">>", test, ";",
-               "cat", test, "| while read line; do echo $line; j=$(basename ${line}); jnew=$(echo cor_${j}); k=$(echo cov_${j}); jnew=$(echo ${jnew} | sed 's/\\.tsv//'); k=$(echo ${k} | sed 's/\\.tsv//');", path_fastspar, "--otu_table ${line} --correlation",
-               corr_bs_output, "--covariance", cov_bs_output, "-i 5 ; done;",
-               path_fastspar_pvals,  "--otu_table", otu_table, "--correlation", corr_output, "--prefix", corr_prefix, "--permutations", permNum, "--outfile", pval_output, ";",
-               "rm cor_boot_data*.tsv; rm cov_boot_data*.tsv;", "rm -rf", bootstrap_counts, "rm -rf text.txt"))
+  invisible(system(paste(path_fastspar, "--otu_table", otu_table, "--correlation", corr_output, "--covariance", cov_output, ";",
+                         "mkdir", bootstrap_counts, ";",
+                         path_fastspar_bs,  "--otu_table", otu_table, "--number", permNum, "--prefix", counts_prefix, ";",
+                         "find", bootstrap_counts, ">>", test, ";",
+                         "cat", test, "| while read line; do echo $line; j=$(basename ${line}); jnew=$(echo cor_${j}); k=$(echo cov_${j}); jnew=$(echo ${jnew} | sed 's/\\.tsv//'); k=$(echo ${k} | sed 's/\\.tsv//');", path_fastspar, "--otu_table ${line} --correlation",
+                         corr_bs_output, "--covariance", cov_bs_output, "-i 5 ; done;",
+                         path_fastspar_pvals, "--otu_table", otu_table, "--correlation", corr_output, "--prefix", corr_prefix, "--permutations", permNum, "--outfile", pval_output, ";",
+                         "rm cor_boot_data*.tsv; rm cov_boot_data*.tsv;", "rm -rf", bootstrap_counts, "rm -rf text.txt"), intern=TRUE, ignore.stdout=TRUE))
   
-  sparcc_results <- read.table(file = corr_output, sep="\t", stringsAsFactors = FALSE)
+  sparcc_results <- read.table(file = "sparcc_median_correlation.tsv", sep="\t", stringsAsFactors = FALSE)
   names <- sparcc_results[,1]
   sparcc_results_new <- as.matrix(sparcc_results[,-1])
   colnames(sparcc_results_new) <- rownames(sparcc_results_new) <- names
   
-  sparcc_pvals <- read.table(file = pval_output, sep="\t", stringsAsFactors = FALSE)
+  sparcc_pvals <- read.table(file = "sparcc_pvals.tsv", sep="\t", stringsAsFactors = FALSE)
   sparcc_pvals_new <- as.matrix(sparcc_pvals[,-1])
   colnames(sparcc_pvals_new) <- rownames(sparcc_pvals_new) <- names
   
@@ -2193,8 +1822,10 @@ RunFastSpar <- function(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, outp
     sparcc_pvals <- igraph::as_data_frame(igraph::graph_from_adjacency_matrix(sparcc_pvals_new, weighted = TRUE))
     
     sparcc_combo <- cbind(sparcc_corr, sparcc_pvals[,3])
-    sparcc_combo <- sparcc_combo[(abs(sparcc_combo[,3]) > corrCutoff & sparcc_combo[,4] < pvalCutoff),]
     colnames(sparcc_combo) <- c("Taxon1", "Taxon2", "Correlation", "P.Value")
+    saveRDS(sparcc_combo, "network_correlation.rds")
+    
+    sparcc_combo <- sparcc_combo[(abs(sparcc_combo[,3]) > corrCutoff & sparcc_combo[,4] < pvalCutoff),]
     write.csv(sparcc_combo, "correlation_table.csv", row.names = FALSE)
     .set.mbSetObj(mbSetObj)
     return(sparcc_combo)
@@ -2218,6 +1849,218 @@ SpearmanCorrFunc <- function(var1, var2, data){
 KendallCorrFunc <- function(var1, var2, data){
   result <- cor.test(data[,var1], data[,var2], method = "kendall", exact = FALSE)
   data.frame(var1, var2, result[c("estimate", "p.value", "statistic", "method")], stringsAsFactors = FALSE)
+}
+
+#'Function to create Network Summary plot
+#'@description This function outputs the network
+#'summary plot for a specific taxa.
+#'@param mbSetObj Input the name of the mbSetObj.
+#'@param colOpt Character, "default", "viridis",
+#'"cividis", or "plasma".
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+
+PlotNetworkSummary <- function(mbSetObj, imgName, taxa, format, width=NA, dpi=72,
+                               colOpt="default", num_taxa=10){
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  
+  group <- mbSetObj$dataSet$meta
+  pvalCutoff <- mbSetObj$dataSet$corr.pval.cutoff
+  
+  mbSetObj$analSet$network_sum <- imgName;
+  imgName <- paste(imgName, ".", format, sep="");
+  
+  cor.method <- mbSetObj$dataSet$cor.method
+  
+  network_results <- readRDS("network_correlation.rds")
+  
+  if(cor.method != "sparcc"){
+    network_results <- network_results[,1:4]
+    data <- readRDS("network_cor_data.rds") 
+    taxa_inx1 <- which(network_results$Taxon1 %in% taxa)
+    taxa_inx2 <- which(network_results$Taxon2 %in% taxa)
+    taxa_results1 <- network_results[taxa_inx1,]
+    taxa_results2 <- network_results[taxa_inx2,]
+    taxa_results2 <- taxa_results2[, c(2,1,3,4)]
+    colnames(taxa_results2) <- colnames(taxa_results1)
+    taxa_results <- rbind(taxa_results1, taxa_results2) 
+  }else{
+    data <- readRDS("sparcc_full_data.RDS") 
+    data <- t(data)
+    taxa_inx <- which(network_results$Taxon1 %in% taxa)
+    taxa_results <- network_results[taxa_inx,]
+  }
+  
+  taxa_results <- taxa_results[!taxa_results$Taxon1 == taxa_results$Taxon2,] 
+  taxa_results <- taxa_results[order(-abs(taxa_results[[3]])), ];
+  
+  if(num_taxa < nrow(taxa_results)) {
+    taxa_results <- taxa_results[1:num_taxa,]
+  }
+  
+  # reverse order
+  taxa_results <- taxa_results[nrow(taxa_results):1,]
+  
+  # next create dot-size by p-value
+  pval <- taxa_results[[4]]
+  corr <- taxa_results[[3]]
+  sig.names <- names(corr) <- taxa_results[[2]]
+  
+  sig.inx <- which(pval < pvalCutoff)
+  sig.names[sig.inx] <- paste0(sig.names[sig.inx], "*")
+  
+  if(sum(corr > 0) == 0){ # all negative correlation
+    corr <- rev(corr);
+  }
+  
+  feat.num <- length(corr);
+  
+  if(is.na(width)){
+    if(length(corr) < 5 ){
+      h <- 6;
+      w <- 8;
+    } else if (length(corr) < 10){
+      h <- length(corr)/1.3;
+      w <- 8;
+    } else if (length(corr) < 15){
+      h <- length(corr)/1.6;
+      w <- 8;
+    } else if (length(corr) < 20){
+      h <- length(corr)/1.8;
+      w <- 8;
+    } else if (length(corr) < 25){
+      h <- length(corr)/2;
+      w <- 8;
+    } else if (length(corr) < 30){
+      h <- length(corr)/2.2;
+      w <- 8;
+    } else if (length(corr) < 40){
+      h <- length(corr)/2.5;
+      w <- 8;
+    } else {
+      h <- length(corr)/4.5;
+      w <- 8;
+    };
+  }else if(width == 0){
+    w <- 8.5;
+  }else{
+    w <- width;
+  }
+  
+  Cairo::Cairo(file = imgName, unit="in", dpi=72, width=w, height=h, type=format, bg="white");
+  
+  sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
+  keep <- mbSetObj$dataSet$selected.grps
+  keep.inx <- rownames(sample_table) %in% keep
+  sample_table$Keep <- keep.inx
+  sample_table <- eval(parse(text = paste("phyloseq:::subset_samples(sample_table,", "Keep == TRUE)", sep="")))
+  
+  cls.len <- length(mbSetObj$dataSet$comparison)
+  
+  if(cls.len == 2){
+    rt.mrg <- 7;
+  }else if(cls.len == 3){
+    rt.mrg <- 8;
+  }else if(cls.len == 4){
+    rt.mrg <- 9;
+  }else if(cls.len == 5){
+    rt.mrg <- 10;
+  }else if(cls.len == 6){
+    rt.mrg <- 11;
+  }else{
+    rt.mrg <- 12;
+  }
+  
+  op <- par(mar=c(5,10,3,rt.mrg)); # set right side margin with the number of class (always 2)
+  
+  # as data should already be normalized, use mean/median should be the same
+  # mns is a list contains means of all vars at each level
+  # convert the list into a matrix with each row contains var averages across different lvls
+  data1 <- data[which(rownames(data) %in% mbSetObj$dataSet$selected.grps),]
+  mns <- by(data1[, names(corr)], 
+            sample_table[[group]],
+            function(x){ # inner function note, by send a subset of dataframe
+              apply(x, 2, mean, trim=0.1)
+            });
+  mns <- t(matrix(unlist(mns), ncol=feat.num, byrow=TRUE));
+  
+  vip.nms <- sig.names;
+  names(corr) <- NULL;
+  
+  cols <- case_when(
+    corr > 0.75 ~ "#d47273",
+    corr > 0.5 & corr < 0.75 ~ "#dd9091",
+    corr > 0.25 & corr < 0.5 ~ "#e6aeaf",
+    corr > 0 & corr < 0.25 ~ "#f0cccd",
+    corr < 0 & corr > -0.25 ~ "#ccdef0",
+    corr > -0.25 ~ "#ccdef0",
+    corr > -0.5 ~ "#aecbe6",
+    corr > -0.75 ~ "#90b7dd",
+    TRUE ~ "#72a4d4"
+  )
+  
+  title <- taxa
+  
+  dotchart(corr, xlab="Correlation", xlim=c(-1, 1), pch="", main=title, cex.lab = 1.15);
+  barplot(corr, space=c(0.5, rep(0, length(corr)-1)), xlim=c(-1,1), xaxt="n", col = cols, add=T, horiz=T);
+  
+  mtext(side=2, at=1:feat.num, vip.nms, las=2, line=1) # set y-axis (species names)
+  
+  axis.lims <- par("usr"); # x1, x2, y1 ,y2
+  
+  # get character width
+  shift <- 2*par("cxy")[1];
+  lgd.x <- axis.lims[2] + shift;
+  
+  x <- rep(lgd.x, feat.num);
+  y <- 1:feat.num;
+  par(xpd=T);
+  
+  load_rcolorbrewer();
+  
+  nc <- ncol(mns);
+  
+  col <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdYlBu"))(nc); # set colors for each class
+  
+  # calculate background
+  bg <- matrix("", nrow(mns), nc);
+  for (m in 1:nrow(mns)){
+    bg[m,] <- (col[nc:1])[rank(mns[m,])];
+  }
+  
+  cls.lbl <- levels(sample_table[[group]]);
+  
+  for (n in 1:ncol(mns)){
+    points(x,y, bty="n", pch=22, bg=bg[,n], cex=3);
+    # now add label
+    text(x[1], axis.lims[4], cls.lbl[n], srt=45, adj=c(0.2,0.5));
+    # shift x, note, this is good for current size
+    x <- x + shift/1.25;
+  }
+  
+  # now add color key, padding with more intermediate colors for contiuous band
+  col <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(25, "RdYlBu"))(50)
+  
+  nc <- length(col);
+  x <- rep(x[1] + shift, nc);
+  
+  shifty <- (axis.lims[4]-axis.lims[3])/3;
+  starty <- axis.lims[3] + shifty;
+  endy <- axis.lims[3] + 2*shifty;
+  y <- seq(from = starty, to = endy, length = nc);
+  
+  points(x,y, bty="n", pch=15, col=rev(col), cex=2);
+  
+  text(x[1], endy+shifty/8, "High");
+  text(x[1], starty-shifty/8, "Low");
+  
+  par(op);
+  dev.off();
+  
+  return(.set.mbSetObj(mbSetObj));
 }
 
 #'Function to generate templates
@@ -2439,77 +2282,6 @@ GetMapTable<-function(mbSetObj){
         tabular.environment = "longtable", caption.placement="top", size="\\scriptsize");
 }
 
-#'Getter function
-#'@description This function retrieves table from mbSetObj.
-#'@param mbSetObj Input the name of the mbSetObj.
-#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
-#'McGill University, Canada
-#'License: GNU GPL (>= 2)
-#'@export
-#'@import xtable
-GetORATable<-function(mbSetObj){
-  mbSetObj <- .get.mbSetObj(mbSetObj);  
-  load_xtable();   
-  res <- mbSetObj$analSet$ora.mat;
-  print(xtable::xtable(res, caption="Result from Over Representation Analysis"),
-        tabular.environment = "longtable", caption.placement="top", size="\\scriptsize");
-}
-
-# utility method to get anova results
-GetAovRes <- function(cls, data, nonpar=F){
-  
-  if(nonpar){
-    anova.res <- apply(as.matrix(data), 2, function(x){kruskal.test(x ~ cls)});
-    res <- unlist(lapply(anova.res, function(x) {c(x$statistic, x$p.value)}));
-    return(matrix(res, nrow=length(anova.res), byrow=T));
-  }else{
-    aov.res <- apply(as.matrix(data), 2, function(x){aov(x ~ cls)});
-    anova.res <- lapply(aov.res, anova);
-    res <- unlist(lapply(anova.res, function(x) { c(x["F value"][1,], x["Pr(>F)"][1,])}));
-    return(matrix(res, nrow=length(aov.res), byrow=T));
-  }
-}
-
-# utility method to get p values
-#'@import genefilter
-GetTtestRes<- function(cls, data, paired=FALSE, equal.var=TRUE, nonpar=F){
-  
-  if(nonpar){
-    inx1 <- which(cls==levels(cls)[1]);
-    inx2 <- which(cls==levels(cls)[2]);
-    res <- apply(data, 2, function(x) {
-      tmp <- try(wilcox.test(x[inx1], x[inx2], paired = paired));
-      if(class(tmp) == "try-error") {
-        return(c(NA, NA));
-      }else{
-        return(c(tmp$statistic, tmp$p.value));
-      }
-    })
-  }else{
-    if(ncol(data) < 1000){
-      data <- na.omit(data);
-      inx1 <- which(cls==levels(cls)[1]);
-      inx2 <- which(cls==levels(cls)[2]);
-      
-      res <- apply(data, 2, function(x) {
-        tmp <- try(t.test(x[inx1], x[inx2], paired = paired, var.equal = equal.var, silent=TRUE));
-        if(class(tmp) == "try-error") {
-          return(c(NA, NA));
-        }else{
-          return(c(tmp$statistic, tmp$p.value)); }})
-    }else{ # use fast version
-      load_genefilter();
-      res <- try(rowttests((t(data)), cls));
-      if(class(res) == "try-error") {
-        res <- c(NA, NA);
-      }else{
-        res <- t(cbind(res$statistic, res$p.value));
-      }
-    }
-  }
-  return(t(res));
-}
-
 ####
 #### WEB UTILS
 ####
@@ -2554,521 +2326,3 @@ GetRFConfColNames<-function(mbSetObj){
   return(colnames(mbSetObj$analSet$rf$confusion));
 }
 
-SparccToNet <- function(mbSetObj=NULL){
-  library(igraph)
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  edge.list= mbSetObj$analSet$network_cor
-  edge.list = edge.list[,c("Taxon1", "Taxon2"), drop=FALSE]
-  g = graph_from_data_frame(edge.list, directed = FALSE, vertices = NULL)
-  E(g)$weight = abs(mbSetObj$analSet$network_cor[, "Correlation"])
-  E(g)$correlation = mbSetObj$analSet$network_cor[, "Correlation"]
-  corr_matrix = get.adjacency(g,sparse=FALSE)
-  mbSetObj$analSet$corr_matrix = corr_matrix
-  
-  colnames(edge.list) = c("Source", "Target")
-  nodes = unique(c(edge.list[,1], edge.list[,2]))
-  node.list = data.frame(Id=nodes, Name=nodes)
-  overall.graph <- g
-  
-  ppi.net <- list(
-    db.type="abc",
-    order=1, 
-    seeds=" ", 
-    table.nm=" ", 
-    node.data = node.list, 
-    edge.data = edge.list,
-    require.exp = FALSE,
-    min.score = 400
-  );
-  
-  ppi.net <<-ppi.net
-  
-  ppi.comps <- list();
-  ppi.comps[["subnetwork"]] <- overall.graph;
-  ppi.comps <<- ppi.comps
-  mbSetObj <- .set.mbSetObj(mbSetObj);
-  corr.net.name <- paste0("correlation_net_", corr.net.count, ".json")
-  corr.net.name <<- corr.net.name
-  return(PrepareNetworkExp(mbSetObj, "subnetwork",corr.net.name));
-}
-
-
-PrepareNetworkExp <- function(mbSetObj=NULL, net.nm, json.nm){
-  
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  mbSetObj$analSet$corr_net_nm <- json.nm
-  if(is.null(net.nm)){
-    net.nm <- names(ppi.comps)[1];
-  }
-  
-  taxa = mbSetObj$analSet$filt.taxa.table
-  
-  my.ppi <- ppi.comps[[net.nm]];
-  nd.nms <- V(my.ppi)$name;
-  
-  entrezIDs <- nd.nms
-  names(entrezIDs) <- nd.nms;
-  current.anot <<- entrezIDs;
-  current.net.nm <<- net.nm; 
-  
-  return(convertIgraph2JSONExp(net.nm, json.nm, FALSE));
-}
-
-
-convertIgraph2JSONExp <- function(net.nm, filenm, thera=FALSE){
-  g <- ppi.comps[[net.nm]];
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  
-  abundance_table = mbSet$analSet$boxdatacor[,-length(colnames(mbSet$analSet$boxdatacor))]
-  ab = apply(abundance_table,2,function(x){sum(x)/length(x)})  
-  taxa = mbSetObj$analSet$filt.taxa.table
-  
-  colorOpt <- mbSetObj$analSet$corr_color_opt;
-  if(!colorOpt %in% colnames(taxa) && colorOpt != "expr"){
-    current.msg <<- "Invalid taxa is selected for coloring (must be same or higher taxonomy level of selected taxa used for correlation calculation)"
-    return(0);
-  }
-  
-  # annotation
-  nms <- V(g)$name;
-  inx <- !nms %in% taxa[,length(colnames(taxa))]
-  toDelete = nms[inx]
-  g <- delete_vertices(g, toDelete);
-  nms <- V(g)$name;
-  taxa=taxa[match(nms, taxa[,length(colnames(taxa))]),]
-  hit.inx <- match(nms, ppi.net$node.data[,1]);
-  lbls <- ppi.net$node.data[hit.inx, 2];
-  
-  # setup shape (gene circle, other squares)
-  shapes <- rep("circle", length(nms));
-  itypes <- rep("circle", length(nms));
-  seeds <- rep("circle", length(nms));
-  
-  # get edge data
-  edge.mat <- get.edgelist(g);
-
-  edge.mat1 = data.frame(edge.mat)
-  edge.mat1$color = ComputeColorGradientCorr(E(g)$correlation);
-  edge.mat1 = as.matrix(edge.mat1)
-  
-  edge.mat <- cbind(id=1:nrow(edge.mat), source=edge.mat[,1], target=edge.mat[,2], color = edge.mat1[,3], weight=E(g)$weight, correlation = E(g)$correlation);
-  
-  # now get coords
-  pos.xy <- PerformLayOut(net.nm, "Default");
-  # get the note data
-  node.btw <- as.numeric(betweenness(g));
-  node.eig <- eigen_centrality(g);
-  node.eig = as.numeric(node.eig$vector);
-  node.tra=transitivity(g,type=c("local"))
-  node.dgr <- as.numeric(degree(g));
-  node.exp <- as.numeric(get.vertex.attribute(g, name="abundance", index = V(g)));
-  
-  # node size to abundance values
-  if(vcount(g)>500){
-    min.size = 1;
-  }else if(vcount(g)>200){
-    min.size = 2;
-  }else{
-    min.size = 2;
-  }
-  
-  #modules = FindCommunities("walktrap", FALSE);
-  abundance = unname(ab[nms])
-  node.sizes <- as.numeric(rescale2NewRange((log(abundance+1))^2, min.size, 15));
-  
-  centered = T;
-  notcentered = F;
-  # update node color based on betweenness
-  require("RColorBrewer");
-  topo.val <- log(node.btw+1);
-  exp_table = mbSetObj$analSet$diff_table
-  #log(exp_table$median_diff + min(exp_table$median_diff/2))
-  colVecNms = rep("NA", length(topo.val))
-  nms2=nms
-  if(colorOpt == "expr"){
-    nms1 = strsplit(nms, "__")
-    if(length(nms1[[2]])>1){
-    l = unlist(lapply(nms1, function(x) unlist(x[2])));
-    inx = is.na(l)
-if(length(which(inx == T))>0){
-    l[inx]= paste0(nms1[[which(inx == T)]][1],"__")
-}
-    nms2=l
-    }else{
-    nms2 = nms
-    }
-    exp_table = exp_table[match(nms2, exp_table$tax_name), ]
-    topo.colsb <- topo.colsb1 <-ComputeColorGradientCorr(exp_table$median_diff);
-    topo.colsw <- topo.colsw1 <-ComputeColorGradientCorr(exp_table$median_diff);
-  }else{
-    color_var <- as.character(unique(taxa[,colorOpt]));
-    x <- length(color_var);
-    if(x<10){
-      cols = brewer.pal(n = 9, name = "Set3")
-      colVec <- rep(cols,length.out=x);
-    }else if(x<21){
-      colVec <- rep(custom_col21,length.out=x);
-    }else{
-      colVec <- rep(custom_col42,length.out=x);
-    }
-    names(colVec) = unique(taxa[,colorOpt])
-    colVecNms<-names(colVec[as.character(taxa[,colorOpt])])
-    topo.colsb  <- unname(colVec[as.character(taxa[,colorOpt])])
-    topo.colsw  <- topo.colsb
-  }
-  #topo.colsb <- topo.colsb1 <- topo.val
-  #topo.colsw <- topo.colsw1 <- topo.val
-  
-  # color based on expression
-  bad.inx <- is.na(node.exp) | node.exp==0;
-  if(!all(bad.inx)){
-    exp.val <- node.exp;
-    node.colsb.exp <- ComputeColorGradientCorr(exp.val); 
-    node.colsw.exp <- ComputeColorGradientCorr(exp.val);
-    node.colsb.exp[bad.inx] <- "#d3d3d3"; 
-    node.colsw.exp[bad.inx] <- "#c6c6c6"; 
-  }else{
-    node.colsb.exp <- rep("#D3D3D3",length(node.dgr)); 
-    node.colsw.exp <- rep("#C6C6C6",length(node.dgr)); 
-  }
-  
-  # now update for bipartite network
-  
-  #topo.colsw <- rep("#FF8484", length(nms))
-  #topo.colsb <- rep("#FF8484", length(nms))
-  
-  types_arr <<- c("gene", "interactor")
-  
-  shapes<- "gene";
-  
-  mat_source <<- edge.mat[,"source"]
-  mat_target <<- edge.mat[,"target"]
-  
-  network_prop = list();
-  for(i in 1:length(node.sizes)){
-    network_prop[[i]]  <- list(
-      eigen = node.eig[i],
-      transitivity = node.tra[i]
-    )
-  }
-  
-  type <- rep(FALSE,length(node.dgr))
-  
-  lblsu <<- lbls;
-  node_attr = list.vertex.attributes(g);
-  node_attr = node_attr[which(node_attr!="names")] 
-  
-  # now create the json object
-  nodes <- vector(mode="list");
-  for(i in 1:length(node.sizes)){
-    nodes[[i]] <- list(
-      id=nms[i], 
-      idx=i,
-      label=nms2[i],
-      size=node.sizes[i], 
-      tsize=node.sizes[i],
-      type=shapes[i],
-      itype=itypes[i],
-      taxon=colVecNms[i],
-      color=topo.colsb[i],
-      colorb=topo.colsb[i],
-      colorw=topo.colsw[i],
-      topocolb=topo.colsb[i],
-      topocolw=topo.colsw[i],
-      expcolb=node.colsb.exp[i],
-      expcolw=node.colsw.exp[i],
-      #x = pos.xy[i,1],
-      #y = pos.xy[i,2],
-      x=pos.xy[i,1],
-      y= pos.xy[i,2],
-      user =network_prop[[i]],
-      attributes=list(
-        degree=node.dgr[i], 
-        between=node.btw[i],
-        expr = exp_table$mean_diff[i],
-        eigen = node.eig[i],
-        transitivity = node.tra[i]
-      )
-    );
-  }
-  summary = vector(mode="list");
-  summary[[1]] = list(nodes=vcount(g));
-  summary[[2]] = list(edges=ecount(g));
-  #if(nrow(edge.mat) > 2*length(nms)){
-  #    edge.mat <- edge.mat[-order(edge.mat[,5),]
-  #    edge.mat <- edge.mat[c(1:length(nms)*2),]
-  #}
-  # save node table
-  nd.tbl <- data.frame(Id=nms, Label=lbls, Degree=node.dgr, Betweenness=round(node.btw,2));
-  # order 
-  ord.inx <- order(nd.tbl[,3], nd.tbl[,4], decreasing = TRUE)
-  nd.tbl <- nd.tbl[ord.inx, ];
-  write.csv(nd.tbl, file="node_table.csv", row.names=FALSE);
-  edge.matall <- edge.mat
-  # covert to json
-  require(RJSONIO);
-  taxNodes = list(tax=colVecNms,colors=topo.colsb)
-  mbSetObj <- .set.mbSetObj(mbSetObj);
-  netData <- list(nodes=nodes, edges=edge.mat, taxa=taxa, taxaNodes = taxNodes)#, modules = modules, taxaNodes = list(tax=colVecNms,colors=topo.colsb));
-  sink(filenm);
-  cat(toJSON(netData));
-  sink();
-  return(1)
-}
-
-GetColorGradient <- function(background, center){
-  if(background == "black"){
-    if(center){
-      return(c(colorRampPalette(c("#31A231", "#5BC85B", "#90EE90", "#C1FFC1"))(50), colorRampPalette(c("#FF9DA6", "#FF7783", "#E32636", "#BD0313"))(50)));
-    }else{
-      return(c(colorRampPalette(c("#edf8fb","#b2e2e2","#66c2a4","#2ca25f","#006d2c"))(100)));
-    }
-  }else{ # white background
-    if(center){
-      return(c(colorRampPalette(c("#137B13", "#31A231", "#5BC85B", "#90EE90"))(50), colorRampPalette(c("#FF7783", "#E32636", "#BD0313", "#96000D"))(50)));
-    }else{
-      return(colorRampPalette(hsv(h = seq(0.72, 1, 0.035), s = 0.72, v = 1))(100));
-    }
-  }
-}
-
-ComputeColorGradient <- function(nd.vec, background="black", centered){
-  require("RColorBrewer");
-  minval = min(nd.vec, na.rm=TRUE);
-  maxval = max(nd.vec, na.rm=TRUE);
-  res = maxval-minval;
-  
-  if(res == 0){
-    return(rep("#0b6623", length(nd.vec)));
-  }
-  
-  if(sum(nd.vec<0, na.rm=TRUE) > 0){ 
-    centered <- T;
-  }else{
-    centered <- F;
-  }
-  color <- GetColorGradient(background, centered);
-  breaks <- generate_breaks(nd.vec, length(color), center = centered);
-  return(scale_vec_colours(nd.vec, col = color, breaks = breaks));
-}
-
-simpleCap <- function(x) {
-  s <- strsplit(x, " ")[[1]]
-  paste(toupper(substring(s, 1,1)), substring(s, 2),
-        sep="", collapse=" ")
-}
-
-
-PerformLayOut <- function(net.nm, algo){
-  g <- ppi.comps[[net.nm]];
-  vc <- vcount(g);
-  if(algo == "Default"){
-    if(vc > 3000) {
-      pos.xy <- layout.lgl(g, maxiter = 100);
-    }else if(vc > 2000) {
-      pos.xy <- layout.lgl(g, maxiter = 150);
-    }else if(vc > 1000) {
-      pos.xy <- layout.lgl(g, maxiter = 200);
-    }else if(vc < 150){
-      pos.xy <- layout.kamada.kawai(g);
-    }else{
-      pos.xy <- layout.fruchterman.reingold(g);
-    }
-  }else if(algo == "FrR"){
-    pos.xy <- layout.fruchterman.reingold(g);
-  }else if(algo == "random"){
-    pos.xy <- layout.random(g);
-  }else if(algo == "lgl"){
-    if(vc > 3000) {
-      pos.xy <- layout.lgl(g, maxiter = 100);
-    }else if(vc > 2000) {
-      pos.xy <- layout.lgl(g, maxiter = 150);
-    }else {
-      pos.xy <- layout.lgl(g, maxiter = 200);
-    }
-  }else if(algo == "gopt"){
-    # this is a slow one
-    if(vc > 3000) {
-      maxiter = 50;
-    }else if(vc > 2000) {
-      maxiter = 100;
-    }else if(vc > 1000) {
-      maxiter = 200;
-    }else{
-      maxiter = 500;
-    }
-    pos.xy <- layout.graphopt(g, niter=maxiter);
-  }
-  pos.xy;
-}
-
-GetCorrNetName <- function(){
-  
-  return(corr.net.name)
-}
-
-rescale2NewRange <- function(qvec, a, b){
-  q.min <- min(qvec);
-  q.max <- max(qvec);
-  if(length(qvec) < 50){
-    a <- a*2;
-  }
-  if(q.max == q.min){
-    new.vec <- rep(8, length(qvec));
-  }else{
-    coef.a <- (b-a)/(q.max-q.min);
-    const.b <- b - coef.a*q.max;
-    new.vec <- coef.a*qvec + const.b;
-  }
-  return(new.vec);
-}
-
-PrepareCorrExpValues <- function(mbSetObj, meta, taxalvl, color, layoutOpt, comparison, 
-                                 wilcox.cutoff){
-
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  
-  load_metacoder();
-  tax_o <- taxalvl;
-  dm <- mbSetObj$dataSet$proc.phyobj;
-  dims <- ncol(tax_table(dm))
-  tax_table_new = data.frame("Kingdom" = "Root", as(tax_table(dm), "matrix")[, 1:dims]) # add root to tax table
-  tax_table(dm) <- as.matrix(tax_table_new);
-  
-  dm_samples = as(sample_data(dm), "data.frame");
-  dm_samples <- cbind.data.frame("sample_id" = row.names(dm_samples), dm_samples); # add sample_id to sample table
-  row.names(dm_samples) <- c();
-  dm_samples[] <- lapply(dm_samples, as.character);
-  
-  grp.nms <- strsplit(comparison, "_vs_")[[1]];
-  dm_samples_cmf <- dm_samples[dm_samples[[meta]] %in% grp.nms, ]; #subset sample data by meta variable
-  
-  otu_dm <- as.data.frame(as(otu_table(dm), "matrix"));
-  tax_dm <- as.data.frame(as(tax_table(dm), "matrix"));
-  tax_dm[] <- lapply(tax_dm, as.character);#make sure characters in tax_dm;
-  
-  depth <- ncol(tax_dm)
-  rank_dm <- c("r", "p", "c", "o", "f", "g", "s");
-  names(tax_dm) <- rank_dm[1:depth];
-  
-  for (i in 1:ncol(tax_dm)){
-    for (j in 1:nrow(tax_dm)){
-      if (is.na(tax_dm[j, i])){
-        tax_dm[j, i] <- "";
-      } else {
-        tax_dm[j, i] <- paste(names(tax_dm)[i],
-                              tax_dm[j, i],
-                              sep = "__");
-      }
-    }
-  } #add __ to tax table
-  
-  if(taxalvl == "Phylum"){
-    tax <- "p";
-  } else if(taxalvl == "Class"){
-    tax <- "c";
-  } else if(taxalvl == "Order"){
-    tax <- "o";
-  } else if(taxalvl == "Family"){
-    tax <- "f";
-  } else if(taxalvl == "Genus"){
-    tax <- "g"
-  } else {
-    tax <- "s";
-  }; # get tax rank for heat tree
-  
-  tax_dm <- tax_dm[, 1:which(names(tax_dm) == tax)]; #subset tax table
-  rank_dm_new <- rank_dm[1:which(rank_dm == tax)];
-  tax_dm$lineage <- apply(tax_dm[, rank_dm_new], 1, paste, collapse = ";"); #collapse all tax ranks
-  dm_otu <- cbind.data.frame("otu_id" = row.names(tax_dm),
-                             "lineage" = tax_dm$lineage,
-                             otu_dm); #make new otu table
-  row.names(dm_otu) <- c();
-  dm_otu$lineage <- gsub(";+$", "", dm_otu$lineage); #remove empty tax names
-  
-  dm_otu_cmf <- dm_otu[, c("otu_id", "lineage", dm_samples_cmf$sample_id)]; #make otu table ready for heat tree  
-  
-  PrepareHeatTreePlotDataParse_cmf_res <- PrepareHeatTreePlotDataParse_cmf(dm_otu_cmf, dm_samples_cmf, meta);
-  dm_obj_cmf = PrepareHeatTreePlotDataParse_cmf_res;
-  mbSetObj$dataSet$selected.grps = dm_samples_cmf$sample_id
-  mbSetObj$dataSet$comparison = grp.nms 
-  mbSetObj$dataSet$meta = meta
-  cls = data.frame(dm_obj_cmf$data$class_data)
-  cls = cls[!duplicated(cls$taxon_id),]
-  cls = cls[,c(1,4)]
-  diff_table = data.frame(dm_obj_cmf$data$diff_table)
-  df = merge(diff_table, cls, by="taxon_id")
-  df = df[which(df$tax_name != "Root"),]
-  df = df[order(df$tax_name),]
-  mbSetObj$analSet$diff_table <- df;
-  #PerformUnivarTestForCorrBoxPlot(mbSetObj, meta,0.05,"NA",taxalvl,"par");
-  
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj);
-    PrepareBoxPlot(taxalvl, mbSetObj$dataSet$meta);
-    return(1)
-  }else{
-    return(.set.mbSetObj(mbSetObj));
-  }
-}
-
-PrepareBoxPlot <- function(taxrank, variable){
-  mbSetObj <- .get.mbSetObj();
-  
-  selSamples = mbSetObj$dataSet$selected.grps
-  grps = mbSetObj$dataSet$comparison
-  taxrank_boxplot <- taxrank;
-  claslbl_boxplot <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
-  claslbl_boxplot <- claslbl_boxplot[which(claslbl_boxplot %in% grps)];
-  # build phyloslim obj in fly
-  filt.dataphy <- mbSetObj$dataSet$filt.data;
-  filt.dataphy <- apply(filt.dataphy, 2, as.integer);
-  filt.dataphy <- otu_table(filt.dataphy, taxa_are_rows =TRUE);
-  sample_table_boxplot <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
-  filt.dataphy <- merge_phyloseq(filt.dataphy, sample_table_boxplot);
-  taxa_names(filt.dataphy) <- rownames(mbSetObj$dataSet$filt.data);
-  data_boxplot <- filt.dataphy;
-  
-  if(mbSetObj$module.type=="mdp"){
-    mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
-    data_boxplot <- merge_phyloseq(data_boxplot, mbSetObj$dataSet$taxa_table);
-  }
-  
-  #using by default names for shotgun data
-  if(mbSetObj$module.type=="sdp"){
-    taxrank_boxplot<-"OTU";
-  }
-  
-  if(taxrank_boxplot!="OTU"){
-    #merging at taxonomy levels
-    data_boxplot <- fast_tax_glom_mem(data_boxplot, taxrank_boxplot);
-    if(is.null(data_boxplot)){
-      AddErrMsg("Errors in projecting to the selected taxanomy level!");
-      return(0);
-    }
-    
-    nm_boxplot <- tax_table(data_boxplot)[,taxrank_boxplot];
-    nm_boxplot <- as.character(nm_boxplot);
-    #converting NA values to unassigned
-    nm_boxplot[is.na(nm_boxplot)] <- "Not_Assigned";
-    data1_boxplot <- as.matrix(otu_table(data_boxplot));
-    rownames(data1_boxplot) <- nm_boxplot;
-    
-    #all NA club together
-    data1_boxplot <- as.matrix(t(sapply(by(data1_boxplot, rownames(data1_boxplot), colSums), identity)));
-    data1_boxplot <- otu_table(data1_boxplot,taxa_are_rows=T);
-    data_boxplot <- merge_phyloseq(data1_boxplot, sample_data(data_boxplot));
-  }
-  
-  nm_boxplot <- taxa_names(data_boxplot);
-  dat3t_boxplot <- as.data.frame(t(otu_table(data_boxplot)));
-  colnames(dat3t_boxplot) <- nm_boxplot; 
-  
-  #individual boxplot for features
-  box_data <- as.data.frame(dat3t_boxplot[which(rownames(dat3t_boxplot) %in% selSamples),]);
-  box_data$class <- claslbl_boxplot;
-  mbSetObj$analSet$boxdatacor <- box_data;
-  mbSetObj$analSet$var.typecor <- variable
-  mbSet<<- mbSetObj
-  return(.set.mbSetObj(mbSetObj));
-}

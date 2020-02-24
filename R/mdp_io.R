@@ -57,7 +57,7 @@ Read16SAbundData <- function(mbSetObj, dataName, format, taxa_type, ismetafile) 
   data.orig <- mbSetObj$dataSet$data.orig;
   
   if(mode(data.orig)=="character"){
-    current.msg <<- paste("Errors in parsing your data as numerical - possible reason: comma as decimal separator?");
+    AddErrMsg(paste("Errors in parsing your data as numerical - possible reason: comma as decimal separator?"));
     return(0);
   }
   
@@ -89,7 +89,7 @@ Read16STabData <- function(mbSetObj, dataName) {
   mydata <- .readDataTable(dataName);
 
   if(any(is.na(mydata)) || class(mydata) == "try-error"){
-    current.msg <<- "Failed to read in the OTU abundance data! Please make sure the data is in the right format and do not have empty cells or NA.";
+    AddErrMsg("Failed to read in the OTU abundance data! Please make sure the data is in the right format and do not have empty cells or NA.");
     return(0);
   }
 
@@ -101,7 +101,7 @@ Read16STabData <- function(mbSetObj, dataName) {
     sam.inx <- grep("^#name",sam.nm);
         
     if(length(sam.inx) == 0){
-      current.msg <<- "No labels #NAME found in your data!";
+      AddErrMsg("No labels #NAME found in your data!");
       return(0);
     }   
     smpl_nm <- colnames(mydata[-1]);
@@ -200,8 +200,30 @@ Read16SBiomData <- function(mbSetObj, dataName, taxa_type, ismetadata){
       return(0);
     }
         
-    mbSetObj$dataSet$sample_data <- as.data.frame(sample_data);
+    mbSetObj$dataSet$sample_data <- sample_data;
     msg <- c(msg, "Metadata file is detected in your biom file.");
+    
+    mbSetObj$dataSet$group_names <- colnames(sample_data)
+    
+    disc.inx <- GetDiscreteInx(sample_data);
+    if(sum(disc.inx) == 0){ # all class labels are unique! 
+      na.msg <- c(na.msg, "It seems that all your meta data values are unique! MicrobiomeAnalyst requires some biological replicates for robust analysis");
+      mbSetObj$poor.replicate <- TRUE;
+      mbSetObj$dataSet$sample_data <- sample_data
+    }else{
+      mbSetObj$dataSet$meta_info$disc.inx <- disc.inx;
+      mbSetObj$dataSet$sample_data <- sample_data[,disc.inx, drop=FALSE];
+      
+      cont.inx <- GetNumbericalInx(sample_data);
+      cont.inx <- !disc.inx & cont.inx; # discrete is first
+      mbSetObj$dataSet$meta_info$cont.inx <- cont.inx;
+      
+      if(sum(cont.inx)>0){
+        # make sure the discrete data is on the left side
+        mbSetObj$dataSet$sample_data <- cbind(mbSetObj$dataSet$sample_data, sample_data[,cont.inx, drop=FALSE]);
+      }
+    }
+    msg <<- paste(msg, "The sample data contains a total of ", nrow(sample_data), "samples and  ", ncol(sample_data), " sample variables.", collapse=" ");
   }
   current.msg <<- paste(msg, collapse=". ");
   
@@ -233,14 +255,14 @@ ReadMothurData<-function(mbSetObj, dataName, taxdataNm, taxa_type){
   indx <- grep(".shared$", dataName);
     
   if(length(indx)!=1){
-    current.msg <<-"Data format error. Make sure that abundance file ends with (.shared) extension";
+    AddErrMsg("Data format error. Make sure that abundance file ends with (.shared) extension");
     return(0);
   }
     
   indx2 <- grep(".taxonomy$", taxdataNm);
     
   if(length(indx2)!=1){
-    current.msg <<-"Data format error. Make sure that taxonomy file ends with (.taxonomy) extension";
+    AddErrMsg("Data format error. Make sure that taxonomy file ends with (.taxonomy) extension");
     return(0);
   }
 
@@ -248,7 +270,7 @@ ReadMothurData<-function(mbSetObj, dataName, taxdataNm, taxa_type){
   mydata <- import_mothur(mothur_shared_file = dataName);
     
   if(length(mydata)==0){
-    current.msg <<-"Data format error. Make sure the file is not empty and is in mothur shared file format(.shared).";
+    AddErrMsg("Data format error. Make sure the file is not empty and is in mothur shared file format(.shared).");
     return(0);
   }
 
@@ -264,7 +286,7 @@ ReadMothurData<-function(mbSetObj, dataName, taxdataNm, taxa_type){
 
   #getting orignal label from .taxonomy file (Tax4Fun)
   if(nrow(tax_data)!=nrow(mydata)){
-    current.msg <<-"Please make sure that number of features and their row names are same in OTU abundance table and taxonomy table.";
+    AddErrMsg("Please make sure that number of features and their row names are same in OTU abundance table and taxonomy table.");
     return(0);
   }
     
@@ -274,7 +296,7 @@ ReadMothurData<-function(mbSetObj, dataName, taxdataNm, taxa_type){
   taxa_table <- tax_table(tax_data,errorIfNULL = FALSE);
     
   if(length(taxa_table)==0){
-    current.msg <- "Make sure the file is not empty and is in Mothur taxonomy file format (should have header).";
+    AddErrMsg("Make sure the file is not empty and is in Mothur taxonomy file format (should have header).");
     return(0);
   }
     
@@ -287,7 +309,7 @@ ReadMothurData<-function(mbSetObj, dataName, taxdataNm, taxa_type){
   indx<-match(rownames(mydata), rownames(taxa_table));
     
   if(all(is.na(indx))){
-    current.msg <<-"Please make sure that features name of taxonomy table should match feature names in OTU abundance table.";
+    AddErrMsg("Please make sure that features name of taxonomy table should match feature names in OTU abundance table.");
     return(0);
   }
     
@@ -318,13 +340,11 @@ ReadMothurData<-function(mbSetObj, dataName, taxdataNm, taxa_type){
 #'@export
 Read16STaxaTable <- function(mbSetObj, dataName) {
   
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  
   msg <- NULL;
   mydata <- .readDataTable(dataName);
     
   if(is.null(mydata) || class(mydata) == "try-error"){
-    current.msg <<- "Failed to read in the taxonomic data! Please make sure the data is in the right format.";
+    AddErrMsg("Failed to read in the taxonomic data! Please make sure the data is in the right format.");
     return(0);
   }
 
@@ -337,7 +357,7 @@ Read16STaxaTable <- function(mbSetObj, dataName) {
     tax_nm <- mydata[,1];
     tax_rank <- colnames(mydata[-1]);
   }else{
-    current.msg <<- "No labels #TAXONOMY found in your data!";
+    AddErrMsg("Failed to read in the taxonomic data! Please make sure the data is in the right format.");
     return(0);
   }
     
@@ -346,7 +366,7 @@ Read16STaxaTable <- function(mbSetObj, dataName) {
   rownames(mydata) <- tax_nm;
   colnames(mydata) <- tax_rank;
   current.msg <<- paste("Taxonomy file has total of ",nrow(mydata),"features and",ncol(mydata), "taxonomic rank. Additional features which are not present in abundance table has been removed if present.");
-    
+  mbSetObj <- .get.mbSetObj(mbSetObj);   
   mbSetObj$dataSet$taxa_table <- mydata;
   
   return(.set.mbSetObj(mbSetObj));
@@ -400,7 +420,7 @@ PlotSelectedSample <-function(mbSetObj, imgNm, smplID, OtuIdType, rel_perct, for
   ind1 <- which(piedata_rel[,"value"]<rel_perct);
     
   if(length(ind)==0){
-    current.msg<<-"All features have lower relative abundance than given minimum abundance. Please lower the cut off for relative abundance.";
+    AddErrMsg("All features have lower relative abundance than given minimum abundance. Please lower the cut off for relative abundance.");
     return(0);
   }
     

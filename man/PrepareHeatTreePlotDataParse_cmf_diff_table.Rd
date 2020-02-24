@@ -4,8 +4,9 @@
 \alias{PrepareHeatTreePlotDataParse_cmf_diff_table}
 \title{Function to prepare heat tree data}
 \usage{
-
-  PrepareHeatTreePlotDataParse_cmf_diff_table(PrepareHeatTreePlotDataParse_cmf_res)
+PrepareHeatTreePlotDataParse_cmf_diff_table(
+  PrepareHeatTreePlotDataParse_cmf_res
+)
 }
 \description{
 This functions plots the heat tree.

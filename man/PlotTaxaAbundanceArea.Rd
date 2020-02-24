@@ -4,8 +4,21 @@
 \alias{PlotTaxaAbundanceArea}
 \title{Plot functional annotation summary}
 \usage{
-PlotTaxaAbundanceArea(mbSetObj, barplotName, viewOpt, taxalvl, metadata,
-  feat_cnt, colpalopt, calcmeth, format = "png", dpi = 72)
+PlotTaxaAbundanceArea(
+  mbSetObj,
+  barplotName,
+  viewOpt,
+  taxalvl,
+  metadata,
+  feat_cnt,
+  colpalopt,
+  calcmeth,
+  toptaxa,
+  abunTopTaxaOpt,
+  appendnm = FALSE,
+  format = "png",
+  dpi = 72
+)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

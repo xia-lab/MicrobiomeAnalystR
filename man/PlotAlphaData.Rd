@@ -4,8 +4,17 @@
 \alias{PlotAlphaData}
 \title{Function to plot alpha-diversity analysis.}
 \usage{
-PlotAlphaData(mbSetObj, data.src, bargraphName, distName, metadata,
-  taxrank, colors = "default", format = "png", dpi = 72)
+PlotAlphaData(
+  mbSetObj,
+  data.src,
+  bargraphName,
+  distName,
+  metadata,
+  taxrank,
+  colors = "default",
+  format = "png",
+  dpi = 72
+)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

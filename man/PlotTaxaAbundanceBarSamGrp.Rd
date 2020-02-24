@@ -4,8 +4,22 @@
 \alias{PlotTaxaAbundanceBarSamGrp}
 \title{Function to plot group-wise bar charts.}
 \usage{
-PlotTaxaAbundanceBarSamGrp(mbSetObj, barplotName, taxalvl, metadata,
-  imgOpt, feat_cnt, colpalopt, calcmeth, format = "png", dpi = 72)
+PlotTaxaAbundanceBarSamGrp(
+  mbSetObj,
+  barplotName,
+  taxalvl,
+  metadata,
+  facet2,
+  imgOpt,
+  feat_cnt,
+  colpalopt,
+  calcmeth,
+  toptaxa,
+  abunTopTaxaOpt,
+  appendnm,
+  format = "png",
+  dpi = 72
+)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

@@ -4,10 +4,12 @@
 \alias{PerformCategoryComp}
 \title{Function to perform categorical comparison.}
 \usage{
-PerformCategoryComp(mbSetObj, method, distnm, variable)
+PerformCategoryComp(mbSetObj, taxaLvl, method, distnm, variable)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{taxaLvl}{Input the name of the taxonomic level to calculate Beta-diversity comparison.}
 
 \item{method}{Statistical method to calculate
 beta-diversity significance. Use "adonis" for Permutational MANOVA, "anosim" for

@@ -56,7 +56,6 @@ Init.mbSetObj <- function(){
   load_cairo();
   load_ggplot();
   BiocParallel::register(BiocParallel::SerialParam());
-  corr.net.count <<- 0
   
   # preload some general package
   Cairo::CairoFonts("Arial:style=Regular","Arial:style=Bold","Arial:style=Italic","Helvetica","Symbol")
@@ -216,7 +215,7 @@ ReadSampleTable<- function(mbSetObj, dataName) {
   mydata <- .readDataTable(dataName);
   
   if(any(is.na(mydata)) || class(mydata) == "try-error"){
-    current.msg <<- "Failed to read in the metadata! Please make sure that the metadata file is in the right format and does not have empty cells or NA.";
+    AddErrMsg("Failed to read in the metadata! Please make sure that the metadata file is in the right format and does not have empty cells or NA.");
     return(0);
   }
   
@@ -229,7 +228,7 @@ ReadSampleTable<- function(mbSetObj, dataName) {
     smpl_nm<-mydata[,1];
     smpl_var<-colnames(mydata[-1]);
   }else{
-    current.msg <<- "Please make sure you have the label #NAME in your sample data file!";
+    AddErrMsg("Please make sure you have the label #NAME in your sample data file!");
     return(0);
   }
   
@@ -309,15 +308,11 @@ ReadTreeFile <- function(mbSetObj, dataName) {
 
 IsTreeUploaded <- function(mbSetObj) {
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
-  if(.on.public.web){
     if(mbSetObj$tree.uploaded){
       return(1);
     }else{
       return(0)
     }
-  }
-  return(.set.mbSetObj(mbSetObj));
 }
 
 RecordRCommand <- function(mbSetObj=NA, cmd){
@@ -401,7 +396,7 @@ GetMetaTaxaInfo <- function(mbSetObj){
   
   #drop taxa with only 1 level (i.e. Viruses at Phylum)
   gd.inx <- apply(taxa.tbl, 2, function(x) length(unique(x))!=1);
-  taxa.tbl.update <- taxa.tbl[,gd.inx];
+  taxa.tbl.update <- taxa.tbl[,gd.inx, drop=FALSE];
   taxa.nms <- rank_names(taxa.tbl.update);
   return(taxa.nms[!is.na(taxa.nms)]);
 }

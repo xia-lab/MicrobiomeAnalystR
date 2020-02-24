@@ -35,6 +35,22 @@ Setup.MapData<-function(mbSetObj, qvec){
   return(.set.mbSetObj(mbSetObj))
 }
 
+#'Getter function
+#'@description This function retrieves table from mbSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+#'@import xtable
+GetORATable<-function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);  
+  load_xtable();   
+  res <- mbSetObj$analSet$ora.mat;
+  print(xtable::xtable(res, caption="Result from Over Representation Analysis"),
+        tabular.environment = "longtable", caption.placement="top", size="\\scriptsize");
+}
+
 #'Perform cross referencing.
 #'@description This function performs cross referencing of user's data
 #'with the MicrobiomeAnalyst database. Given a list of species names or ids, 
@@ -295,7 +311,7 @@ PrepareEnrichNet<-function(mbSetObj){
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-SetMsetLib <- function(mbSetObj, tset.type){
+SetTaxonSetLib <- function(mbSetObj, tset.type){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
 

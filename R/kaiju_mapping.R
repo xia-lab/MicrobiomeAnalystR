@@ -189,8 +189,8 @@ kaijuTaxa <- function(kaiju_taxa,
   rfi <- file.path(kaiju_map, paste0(smpname, ".txt"));
   rfo <- file.path(kaiju_taxa, paste0(smpname, "_summary.tsv"));
   
-  if (!file.exists(nodes.dmp) | !file.exists(kaiju_db.fmi)) {
-    stop(red("Please provide nodes.dmp or kaiju_db.fmi files"));
+  if (!file.exists(nodes.dmp)) {
+    stop(red("Please provide nodes.dmp file!"));
   };
   
   cat(green("detected", length(smpname), "samples for Kaiju taxa"), "\n");

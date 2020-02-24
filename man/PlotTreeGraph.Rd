@@ -4,8 +4,18 @@
 \alias{PlotTreeGraph}
 \title{Function to plot tree graphics for dendogram.}
 \usage{
-PlotTreeGraph(mbSetObj, plotNm, distnm, clstDist, metadata, taxrank,
-  colorOpts, format = "png", dpi = 72, width = NA)
+PlotTreeGraph(
+  mbSetObj,
+  plotNm,
+  distnm,
+  clstDist,
+  metadata,
+  taxrank,
+  colorOpts,
+  format = "png",
+  dpi = 72,
+  width = NA
+)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

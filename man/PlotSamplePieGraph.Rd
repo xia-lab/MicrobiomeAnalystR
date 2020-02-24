@@ -4,7 +4,14 @@
 \alias{PlotSamplePieGraph}
 \title{Main function to plot sample-wise pie graphs of microbiome data.}
 \usage{
-PlotSamplePieGraph(mbSetObj, taxalvl, smplnm, feat_cnt)
+PlotSamplePieGraph(
+  mbSetObj,
+  taxalvl,
+  smplnm,
+  feat_cnt,
+  toptaxapie,
+  pietoptaxaopt
+)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

@@ -30,7 +30,7 @@ SanityCheckData <- function(mbSetObj, filetype){
   gd.inx <- feat.sums > 1; # occur in at least 2 samples
   
   if(length(which(gd.inx=="TRUE"))==0){
-    current.msg <<-"Reads occur in only one sample.  All these are considered as artifacts and have been removed from data. No data left after such processing.";
+    AddErrMsg("Reads occur in only one sample.  All these are considered as artifacts and have been removed from data. No data left after such processing.");
     return(0);
   }
   
@@ -44,7 +44,7 @@ SanityCheckData <- function(mbSetObj, filetype){
   data.proc <- data.proc[!constCol, ];
   
   if(length(data.proc)==0){
-    current.msg <<-"All features are found to be constant and have been removed from data. No data left after such processing.";
+    AddErrMsg("All features are found to be constant and have been removed from data. No data left after such processing.");
     return(0);
   }
   
@@ -68,7 +68,7 @@ SanityCheckData <- function(mbSetObj, filetype){
   }
   
   if(ncol(mbSetObj$dataSet$sample_data)==0){
-    current.msg <<-"No sample variable have more than one group. Please provide variables with at least two groups.";
+    AddErrMsg("No sample variable have more than one group. Please provide variables with at least two groups.");
     return(0);
   }
   
@@ -233,7 +233,7 @@ ApplyVarianceFilter <- function(mbSetObj, filtopt, filtPerct){
   mbSetObj$dataSet$filt.msg <- current.msg;
   
   return(.set.mbSetObj(mbSetObj));
-
+  
 }
 
 #'Function to update samples
@@ -249,8 +249,8 @@ UpdateSampleItems <- function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(!exists("smpl.nm.vec")){
-    current.msg <<- "Cannot find the current sample names!";
-    return (0);
+    AddErrMsg("Cannot find the current sample names!");
+    return(0);
   }
   
   # read from saved original copy
@@ -277,6 +277,18 @@ UpdateSampleItems <- function(mbSetObj){
   saveRDS(prefilt.data, file="data.prefilt")
   current.msg <<- "Successfully updated the sample items!";
   
+  # need to update metadata info after removing samples
+  my.meta <- sample_data(mbSetObj$dataSet$proc.phyobj)
+  disc.inx <- GetDiscreteInx(my.meta);
+  
+  if(sum(disc.inx) == 0){
+    mbSetObj$poor.replicate <- TRUE;
+  }else{
+    mbSetObj$poor.replicate <- FALSE;
+  }
+  
+  mbSetObj$dataSet$sample_data <- my.meta
+  
   return(.set.mbSetObj(mbSetObj));
   
 }
@@ -301,7 +313,7 @@ UpdateSampleItems <- function(mbSetObj){
 #'@import edgeR
 #'@import metagenomeSeq
 PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt){
-  browser()
+  
   mbSetObj <- .get.mbSetObj(mbSetObj);
   data <- readRDS("filt.data.orig");
   tax_nm <- rownames(data);
@@ -387,7 +399,7 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt){
   }else{
     ranks <- c(GetMetaTaxaInfo(mbSetObj), "OTU")
   } 
-
+  
   # start with lowest
   data.list <- list()
   data.list$merged_obj <- vector(length = length(ranks), "list")
@@ -591,9 +603,9 @@ PlotLibSizeView <- function(mbSetObj, imgName, format="png", dpi=72){
 #'@export
 #'@import phyloseq
 CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
-
+  
   mbSetObj <- .get.mbSetObj(mbSetObj);
-
+  
   load_phyloseq();
   load_splitstackshape();
   
@@ -606,7 +618,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
   # check for uniqueness of dimension name
   if(length(unique(smpl.nms))!=length(smpl.nms)){
     dup.nms <- paste(smpl.nms[duplicated(smpl.nms)], collapse="; ");
-    current.msg <<- paste(c("Duplicate sample names are not allowed:"), dup.nms, collapse=" ");
+    AddErrMsg(paste(c("Duplicate sample names are not allowed:"), dup.nms, collapse=" "));
     return(0);
   }
   
@@ -614,7 +626,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
   if(mbSetObj$module.type == "sdp"){
     if(length(unique(taxa.nms))!=length(taxa.nms)){
       dup.tax.nms <- paste(taxa.nms[duplicated(taxa.nms)], collapse="; ");
-      current.msg <<- paste(c("Duplicate taxon names are not allowed:"), dup.tax.nms, collapse=" ");
+      AddErrMsg(paste(c("Duplicate taxon names are not allowed:"), dup.tax.nms, collapse=" "));
       return(0);
     }
   }else{
@@ -671,18 +683,20 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
           taxa_table <- tax_table(taxmat);
           taxa_names(taxa_table)<-rownames(taxmat);
         }else if(taxa_type=="Greengenes"||taxa_type=="QIIME"){
-          a<-lapply(feat_nm, parse_taxonomy_qiime); # note, this functions will remove empty strings, replace with NA!?
-          taxa_table<-build_tax_table(a);
+          my.parser<-lapply(feat_nm, parse_taxonomy_qiime); # note, this functions will remove empty strings, replace with NA!?
+          taxa_table<-build_tax_table(my.parser);
           
           if(taxa_type=="Greengenes"){
             #additional columns are added(starting with Rank1 etc; has to be removed)
             indx<-grep("^Rank",colnames(taxa_table));
             # need to test if still columns left (could be that users specified wrong tax format)
             if(ncol(taxa_table) == length(indx)){
-              current.msg <<-"Error with parsing Greengenes Taxonomy Labels. Please make sure the taxonomy label was specified correctly during data upload.";
+              AddErrMsg("Error with parsing Greengenes Taxonomy Labels. Please make sure the taxonomy label was specified correctly during data upload.");
               return(0);
             }
-            taxa_table<-taxa_table[,-indx];
+            if(length(indx) > 0){
+              taxa_table<-taxa_table[,-indx];
+            }
             #if all taxa ranks of an taxa are NA with pase_taxonomy_qiime function #covert to Not_assigned
             ind<-which(apply(taxa_table,1, function(x)all(is.na(x)))==TRUE);
             taxa_table[ind,]<-rep("Not_Assigned",ncol(taxa_table));
@@ -732,9 +746,12 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
         taxa_table <- mbSetObj$dataSet$taxa_table;
         indx<-match(rownames(data.proc), rownames(taxa_table));
         
-        if(anyNA(indx)){
+        if(sum(is.na(indx)) > 0){
           na.nms <- rownames(data.proc)[is.na(indx)];
-          current.msg <<- paste("The following names cannot be found in your taxanomy table:", paste(na.nms, collapse="; "));
+          if(length(na.nms)>10){
+            na.nms <- na.nms[1:10];
+          }
+          AddErrMsg(paste("The following names cannot be found in your taxanomy table (showing 10 max):", paste(na.nms, collapse="; ")));
           return(0);
         }
         
@@ -763,6 +780,13 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
         colnames(taxa_table)<-nm;
         #converting taxonomy file(data frame) to phyloseq taxonomy object;keeping the taxonomy names as it is.
         mbSetObj$dataSet$taxa_table<-tax_table(taxa_table);
+        taxa_nms <- rownames(taxa_table)
+        
+        if(length(unique(taxa_nms))!=length(taxa_nms)){
+          dup.tax.nms <- paste(taxa_nms[duplicated(taxa_nms)], collapse="; ");
+          AddErrMsg(paste(c("Duplicate taxon names are not allowed:"), dup.tax.nms, collapse=" "));
+          return(0);
+        }
         taxa_names(mbSetObj$dataSet$taxa_table)<-rownames(taxa_table);
       }
       
@@ -786,7 +810,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
       if(length(indx)>0){
         mbSetObj$dataSet$taxa_table<-mbSetObj$dataSet$taxa_table[,-1];
       }
-
+      
       classi.lvl<- c("Phylum", "Class", "Order", "Family", "Genus", "Species");
       colnames(mbSetObj$dataSet$taxa_table)<-classi.lvl[1:ncol(mbSetObj$dataSet$taxa_table)]; 
       #sanity check: no of sample of both abundance and metadata should match.
@@ -856,7 +880,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
       indx<-match(colnames(data.proc), rownames(mbSetObj$dataSet$sample_data));
       
       if(all(is.na(indx))){
-        current.msg <<-"Please make sure that sample names and their number are the same in metadata and OTU abundance files.";
+        AddErrMsg("Please make sure that sample names and their number are the same in metadata and OTU abundance files.");
         return(0);
       }else{
         mbSetObj$dataSet$sample_data<-mbSetObj$dataSet$sample_data[indx, ,drop=FALSE];
@@ -892,7 +916,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
     prefilt.data <- readRDS("data.prefilt");
     rownames(prefilt.data)<-taxa_names(mbSetObj$dataSet$taxa_table);
     saveRDS(prefilt.data, file="data.prefilt")
-
+    
   }else if(mbSetObj$module.type == "sdp"){
     #constructing phyloseq object for aplha diversity.
     data.proc<-otu_table(data.proc, taxa_are_rows = TRUE);
@@ -903,7 +927,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
     indx<-match(colnames(data.proc), rownames(mbSetObj$dataSet$sample_data));
     
     if(all(is.na(indx))){
-      current.msg <<-"Please make sure that sample names are matched between both files.";
+      AddErrMsg("Please make sure that sample names are matched between both files.");
       return(0);
     }
     mbSetObj$dataSet$sample_data<-sample_data(mbSetObj$dataSet$sample_data, errorIfNULL=TRUE);
@@ -913,7 +937,8 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
   saveRDS(mbSetObj$dataSet$proc.phyobj, file="proc.phyobj.orig");
   #do some data cleaning
   mbSetObj$dataSet$data.prefilt <- NULL;
-
+  mbSetObj$dataSet$taxa_type <- taxa_type;
+  
   return(.set.mbSetObj(mbSetObj));
 }
 
@@ -935,7 +960,7 @@ edgeRnorm = function(x,method){
   z = edgeR::calcNormFactors(y, method=method);
   # A check that we didn't divide by zero inside `calcNormFactors`
   if( !all(is.finite(z$samples$norm.factors)) ){
-    current.msg <<- paste("Something wrong with edgeR::calcNormFactors on this data, non-finite $norm.factors.");
+    AddErrMsg(paste("Something wrong with edgeR::calcNormFactors on this data, non-finite $norm.factors."));
     return(0);
   }
   return(z)

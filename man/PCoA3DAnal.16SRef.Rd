@@ -4,8 +4,16 @@
 \alias{PCoA3DAnal.16SRef}
 \title{Function to create PCoA}
 \usage{
-PCoA3DAnal.16SRef(mbSetObj, barplotNm, ordMeth, distName, taxrank,
-  metadata, format = "png", dpi = 72)
+PCoA3DAnal.16SRef(
+  mbSetObj,
+  barplotNm,
+  ordMeth,
+  distName,
+  taxrank,
+  metadata,
+  format = "png",
+  dpi = 72
+)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

@@ -4,8 +4,17 @@
 \alias{PCoA3D.Anal}
 \title{Main function to perform PCoA analysis}
 \usage{
-PCoA3D.Anal(mbSetObj, ordMeth, distName, taxrank, colopt, variable, taxa,
-  alphaopt, jsonNm)
+PCoA3D.Anal(
+  mbSetObj,
+  ordMeth,
+  distName,
+  taxrank,
+  colopt,
+  variable,
+  taxa,
+  alphaopt,
+  jsonNm
+)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

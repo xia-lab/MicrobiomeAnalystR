@@ -4,8 +4,7 @@
 \alias{PerformMetagenomeSeqAnal}
 \title{Main function to perform metagenome seq analysis}
 \usage{
-PerformMetagenomeSeqAnal(mbSetObj, variable, p.lvl, shotgunid, taxrank,
-  model)
+PerformMetagenomeSeqAnal(mbSetObj, variable, p.lvl, shotgunid, taxrank, model)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

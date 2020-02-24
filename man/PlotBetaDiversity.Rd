@@ -4,9 +4,22 @@
 \alias{PlotBetaDiversity}
 \title{Function to plot beta diversity.}
 \usage{
-PlotBetaDiversity(mbSetObj, plotNm, ordmeth, distName, colopt, metadata,
-  showlabel, taxrank, taxa, alphaopt, ellopt, format = "png", dpi = 72,
-  custom_col = "none")
+PlotBetaDiversity(
+  mbSetObj,
+  plotNm,
+  ordmeth,
+  distName,
+  colopt,
+  metadata,
+  showlabel,
+  taxrank,
+  taxa,
+  alphaopt,
+  ellopt,
+  format = "png",
+  dpi = 72,
+  custom_col = "none"
+)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

@@ -4,8 +4,22 @@
 \alias{PlotTaxaAundanceBar}
 \title{Function to plot bar charts for alpha diversity}
 \usage{
-PlotTaxaAundanceBar(mbSetObj, barplotName, taxalvl, metadata, facet,
-  imgOpt, feat_cnt, colpalopt, calcmeth, format = "png", dpi = 72)
+PlotTaxaAundanceBar(
+  mbSetObj,
+  barplotName,
+  taxalvl,
+  facet,
+  facet2,
+  imgOpt,
+  feat_cnt,
+  colpalopt,
+  calcmeth,
+  toptaxa,
+  abunTopTaxaOpt,
+  appendnm,
+  format = "png",
+  dpi = 72
+)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
@@ -14,9 +28,6 @@ PlotTaxaAundanceBar(mbSetObj, barplotName, taxalvl, metadata, facet,
 
 \item{taxalvl}{Character, input the taxonomic level to perform
 classification. For instance, "Genus" to use the Genus level.}
-
-\item{metadata}{If users wish to merge samples to groups in the stacked bar plot,
-set this to the preferred grouping.}
 
 \item{facet}{Character, set the group to separate the bar plots.}
 
@@ -43,6 +54,9 @@ format of the plot. By default it is set to "png".}
 
 \item{dpi}{Numeric, input the dots per inch. By default
 it is set to 72.}
+
+\item{metadata}{If users wish to merge samples to groups in the stacked bar plot,
+set this to the preferred grouping.}
 }
 \description{
 This functions plots bar charts of different taxonomic levels

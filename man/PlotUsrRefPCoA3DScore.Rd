@@ -4,8 +4,15 @@
 \alias{PlotUsrRefPCoA3DScore}
 \title{Function to plot 3D score plot.}
 \usage{
-PlotUsrRefPCoA3DScore(mbSetObj, imgName, format = "json", inx1, inx2,
-  inx3, variable)
+PlotUsrRefPCoA3DScore(
+  mbSetObj,
+  imgName,
+  format = "json",
+  inx1,
+  inx2,
+  inx3,
+  variable
+)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

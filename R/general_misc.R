@@ -21,6 +21,49 @@ GetBashFullPath<-function(){
   return(path);
 }
 
+# tell if window/mac/unix
+GetOS <- function(){
+  sysinf <- Sys.info()
+  if (!is.null(sysinf)){
+    os <- sysinf['sysname']
+    if (os == 'Darwin')
+      os <- "mac"
+  } else { ## mystery machine
+    os <- .Platform$OS.type
+    if (grepl("^darwin", R.version$os))
+      os <- "mac"
+    if (grepl("linux-gnu", R.version$os))
+      os <- "linux"
+  }
+  tolower(os)
+}
+
+UnzipUploadedFile<-function(zip_file){
+    dataName <- unzip(zip_file, list = TRUE)$Name;
+    if(length(dataName) > 1){
+      # test if "__MACOSX" or ".DS_Store"
+      osInx <- grep('MACOSX',dataName,perl=TRUE);
+      if(length(osInx) > 0){
+        dataName <- dataName[-osInx];
+      }
+      dsInx <- grep('DS_Store',dataName,perl=TRUE);
+      if(length(dsInx) > 0){
+        dataName <- dataName[-dsInx];
+      }
+      if(length(dataName) != 1){
+        current.msg <<- "More than one data files found in the zip file.";
+        print(dataName);
+        return("NA");
+      }
+    }
+    a <- try(unzip(zip_file));
+    if(class(a) == "try-error" | length(a)==0){
+      current.msg <<- "Failed to unzip the uploaded files!";
+      return ("NA");
+    }
+    return(dataName);
+}
+
 # get qualified inx with at least number of replicates
 GetDiscreteInx <- function(my.dat, min.rep=2){
   good.inx <- apply(my.dat, 2, function(x){
@@ -150,7 +193,6 @@ AddErrMsg <- function(msg){
   current.msg <<- msg;
   print(msg);
 }
-
 
 # this is to be validated (data.table), not done yet, very promising need to validate
 # https://github.com/joey711/phyloseq/issues/517
@@ -413,4 +455,288 @@ ComputeColorGradientCorr <- function(nd.vec, centered=TRUE){
   color <- c(grDevices::colorRampPalette(c("#003366", "#add8e6"))(50), grDevices::colorRampPalette(c("#FF9DA6", "#FF7783", "#E32636", "#BD0313"))(50));
   breaks <- generate_breaks(nd.vec, length(color), center = centered);
   return(scale_vec_colours(nd.vec, col = color, breaks = breaks));
+}
+
+
+# utility method to get anova results
+.do.anova<- function(cls, data, nonpar){
+  if(nonpar){
+    anova.res <- apply(as.matrix(data), 2, function(x){kruskal.test(x ~ cls)});
+    res <- unlist(lapply(anova.res, function(x) {c(x$statistic, x$p.value)}));
+    return(matrix(res, nrow=length(anova.res), byrow=T));
+  }else{
+    aov.res <- apply(as.matrix(data), 2, function(x){aov(x ~ cls)});
+    anova.res <- lapply(aov.res, anova);
+    res <- unlist(lapply(anova.res, function(x) { c(x["F value"][1,], x["Pr(>F)"][1,])}));
+    return(matrix(res, nrow=length(aov.res), byrow=T));
+  }
+}
+
+# utility method to get p values
+#'@import genefilter
+.do.ttests<- function(cls, data, nonpar=F){
+
+  data <- na.omit(data); 
+  inx1 <- which(cls==levels(cls)[1]);
+  inx2 <- which(cls==levels(cls)[2]); 
+  
+  if(nonpar){
+    my.fun <- function(x){
+      tmp <- try(wilcox.test(x[inx1], x[inx2]));
+      if(class(tmp) == "try-error") {
+        return(c(NA, NA));
+      }else{
+        return(c(tmp$statistic, tmp$p.value));
+      }
+    };
+  }else{
+    my.fun <- function(x) {
+      tmp <- try(t.test(x[inx1], x[inx2]));
+      if(class(tmp) == "try-error") {
+        return(c(NA, NA));
+      }else{
+        return(c(tmp$statistic, tmp$p.value));
+      }
+    };
+  }
+  res <- apply(data, 2, my.fun);
+  return(t(res));
+}
+
+PerformUnivTests <- function(cls, data, nonpar){
+    if(length(levels(cls)) > 2){
+        return(.do.anova(cls, data, nonpar));
+    }else{
+        return(.do.ttests(cls, data, nonpar));
+    }
+}
+
+## fast T-tests/F-tests using genefilter
+## It leverages RSclient to perform one-time memory intensive computing
+PerformFastUnivTests <- function(data, cls, var.equal=TRUE){
+    print("Peforming fast univariate tests ....");
+    library(RSclient);
+    rsc <- RS.connect();
+
+    RS.assign(rsc, "my.dir", getwd()); 
+    RS.eval(rsc, setwd(my.dir));
+        
+    data <- t(as.matrix(data));
+    dat.out <- list(data=data, cls=cls, var.equal=var.equal);
+
+    RS.assign(rsc, "dat.in", dat.out); 
+    my.fun <- function(){
+        if(length(levels(cls)) > 2){
+            res <- try(genefilter::rowFtests(dat.in$data, dat.in$cls, var.equal = dat.in$var.equal));
+        }else{
+            res <- try(genefilter::rowttests(dat.in$data, dat.in$cls));
+        }
+        if(class(res) == "try-error") {
+            res <- cbind(NA, NA);
+        }else{
+            res <- cbind(res$statistic, res$p.value);
+        }
+        return(res);
+    }
+    RS.assign(rsc, my.fun);
+    my.res <- RS.eval(rsc, my.fun());
+    RS.close(rsc);
+    return(my.res);
+}
+
+###
+
+# This function allows you to vectorise multiple `if` and `else if`
+# statements. It is an R equivalent of the SQL `CASE WHEN` statement
+#' https://github.com/s-fleck/lest/tree/master/R
+case_when <- function(...) {
+  formulas <- list(...)
+  n <- length(formulas)
+  
+  if (n == 0) {
+    stop("No cases provided")
+  }
+  
+  query <- vector("list", n)
+  value <- vector("list", n)
+  
+  for (i in seq_len(n)) {
+    f <- formulas[[i]]
+    if (!inherits(f, "formula") || length(f) != 3) {
+      stop(sprintf(
+        "Case %s (`%s`) must be a two-sided formula, not a %s",
+        i,
+        deparse_trunc(substitute(list(...))[[i + 1]]),
+        typeof(f)
+      ))
+    }
+    
+    env <- environment(f)
+    query[[i]] <- eval(f[[2]], env)
+    
+    if (!is.logical(query[[i]])) {
+      stop(sprintf(
+        "LHS of case %s (%s) must be a logical, not %s",
+        i,
+        backticks(deparse_trunc(f_lhs(f))),
+        typeof(query[[i]])
+      ))
+    }
+    
+    value[[i]] <- eval(f[[3]], env)
+  }
+  
+  lhs_lengths <- vapply(query, length, integer(1))
+  rhs_lengths <- vapply(value, length, integer(1))
+  all_lengths <- unique(c(lhs_lengths, rhs_lengths))
+  
+  if (length(all_lengths) <= 1) {
+    m <- all_lengths[[1]]
+  } else {
+    non_atomic_lengths <- all_lengths[all_lengths != 1]
+    m <- non_atomic_lengths[[1]]
+    if (length(non_atomic_lengths) > 1) {
+      inconsistent_lengths <- non_atomic_lengths[-1]
+      lhs_problems <- lhs_lengths %in% inconsistent_lengths
+      rhs_problems <- rhs_lengths %in% inconsistent_lengths
+      
+      bad_calls(
+        formulas[lhs_problems | rhs_problems],
+        inconsistent_lengths_message(inconsistent_lengths, m)
+      )
+    }
+  }
+  
+  out <- value[[1]][rep(NA_integer_, m)]
+  replaced <- rep(FALSE, m)
+  
+  for (i in seq_len(n)) {
+    out <- replace_with(out, query[[i]] & !replaced, value[[i]], NULL)
+    replaced <- replaced | (query[[i]] & !is.na(query[[i]]))
+  }
+  
+  out
+}
+
+replace_with <- function (
+  x,
+  i,
+  val,
+  name,
+  reason = NULL
+){
+  if (is.null(val)) {
+    return(x)
+  }
+  
+  assert_length_1_or_n(val, length(x), name, reason)
+  assert_equal_type(val, x, name)
+  assert_equal_class(val, x, name)
+  
+  i[is.na(i)] <- FALSE
+  if (length(val) == 1L) {
+    x[i] <- val
+  } else {
+    x[i] <- val[i]
+  }
+  x
+}
+
+assert_length_1_or_n <- function(
+  x,
+  n,
+  header,
+  reason
+){
+  chk <- check_length_1_or_n(x, n, header, reason)
+  
+  if (is.null(chk)){
+    TRUE
+  } else {
+    stop(chk)
+  }
+}
+
+check_length_1_or_n <- function(
+  x,
+  n,
+  header,
+  reason
+){
+  if (length(x) %in% c(1, n)){
+    return(NULL)
+  }
+  
+  
+  if (is.null(reason))
+    reason <- ""
+  else
+    reason <- paste0(" (", reason, ")")
+  
+  if (is.null(header))
+    header <- ""
+  else
+    header <- paste0(header, " ")
+  
+  
+  inconsistent_lengths_message(length(x), n, header = header, reason = reason)
+}
+
+inconsistent_lengths_message <- function(
+  length_is,
+  length_should,
+  header = "",
+  reason = ""
+){
+  if (length_should == 1) {
+    sprintf("%smust be length 1%s, not %s", header, reason, paste(length_is, collapse = ", "))
+  } else {
+    sprintf("%smust be length %s%s or one, not %s", header, length_should, reason, paste(length_is, collapse = ", "))
+  }
+}
+
+assert_equal_class <- function(
+  x,
+  template,
+  header
+){
+  if (!is.object(x)) {
+    return(TRUE)
+    
+  } else if (identical(class(x), class(template))) {
+    return(TRUE)
+    
+  } else {
+    
+    if (is.null(header))
+      header <- ""
+    else
+      header <- paste0(header, " ")
+    
+    
+    stop(
+      sprintf(
+        "%smust be %s, not %s",
+        header,
+        paste(class(template), collapse = "/"),
+        paste(class(x), collapse = "/")
+      )
+    )
+  }
+}
+
+assert_equal_type <- function(
+  x,
+  template,
+  header
+){
+  if (identical(typeof(x), typeof(template)))
+    return(TRUE)
+  
+  if (is.null(header))
+    header <- ""
+  else
+    header <- paste0(header, " ")
+  
+  stop(sprintf("%smust be type %s, not %s", header, typeof(template), typeof(x)))
 }

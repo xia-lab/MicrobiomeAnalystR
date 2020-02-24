@@ -4,8 +4,7 @@
 \alias{PlotDataPieFromPie}
 \title{Function to plot pie-chart data.}
 \usage{
-PlotDataPieFromPie(mbSetObj, taxalvl, metadata, clslevel, taxaposn,
-  lowtaxa)
+PlotDataPieFromPie(mbSetObj, taxalvl, metadata, clslevel, taxaposn, lowtaxa)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

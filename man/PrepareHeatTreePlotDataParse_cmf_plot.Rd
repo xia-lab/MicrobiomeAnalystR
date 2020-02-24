@@ -4,8 +4,16 @@
 \alias{PrepareHeatTreePlotDataParse_cmf_plot}
 \title{Function to prepare heat tree data}
 \usage{
-PrepareHeatTreePlotDataParse_cmf_plot(mbSetObj, color, layoutOpt,
-  comparison, wilcox.cutoff, imgName, format, dpi = 72)
+PrepareHeatTreePlotDataParse_cmf_plot(
+  mbSetObj,
+  color,
+  layoutOpt,
+  comparison,
+  wilcox.cutoff,
+  imgName,
+  format,
+  dpi = 72
+)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

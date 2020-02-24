@@ -4,18 +4,32 @@
 \alias{CoreMicrobeAnalysis}
 \title{Perform core microbiome analysis}
 \usage{
-CoreMicrobeAnalysis(mbSetObj, imgName, preval, detection, taxrank, palette,
-  viewOpt, analOpt, expFact, group, format = "png", dpi = 72,
-  width = NA)
+CoreMicrobeAnalysis(
+  mbSetObj,
+  imgName,
+  preval,
+  detection,
+  taxrank,
+  palette,
+  viewOpt,
+  analOpt,
+  expFact,
+  group,
+  format = "png",
+  dpi = 72,
+  width = NA
+)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
 
 \item{imgName}{Input the name of the core microbiome analysis plot.}
 
-\item{preval}{Numeric, input the sample prevalence cutoff.}
+\item{preval}{Numeric, input the sample prevalence cutoff. This is
+the minimum number of samples that share this microbe.}
 
-\item{detection}{Numeric, input the relative abundance cutoff.}
+\item{detection}{Numeric, input the relative abundance cutoff. This
+is the minimum detection threshold of X percent relative abundance.}
 
 \item{palette}{Character, input the color palette.
 "bwm" for the default color palette /(blue, white, red/), "gbr"

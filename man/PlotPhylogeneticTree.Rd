@@ -4,8 +4,16 @@
 \alias{PlotPhylogeneticTree}
 \title{Function to prepare data for phylogenetic tree.}
 \usage{
-PlotPhylogeneticTree(mbSetObj, color, shape, taxa, treeshape, imgName,
-  format = "png", dpi = 72)
+PlotPhylogeneticTree(
+  mbSetObj,
+  color,
+  shape,
+  taxa,
+  treeshape,
+  imgName,
+  format = "png",
+  dpi = 72
+)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

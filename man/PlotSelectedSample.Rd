@@ -4,8 +4,15 @@
 \alias{PlotSelectedSample}
 \title{Function to create a summary of a sample using a piechart at different tax level.}
 \usage{
-PlotSelectedSample(mbSetObj, imgNm, smplID, OtuIdType, rel_perct,
-  format = "png", dpi = 72)
+PlotSelectedSample(
+  mbSetObj,
+  imgNm,
+  smplID,
+  OtuIdType,
+  rel_perct,
+  format = "png",
+  dpi = 72
+)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
