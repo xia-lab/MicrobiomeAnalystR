@@ -2173,7 +2173,7 @@ PlotAlphaBoxData<-function(mbSetObj, boxplotName, distName, metadata, colors="de
   }
   
   box1 = box1 + stat_boxplot(geom ='errorbar', width=0.2) +
-    geom_boxplot(alpha=0.7, aes(outlier.shape = NA),
+    geom_boxplot(alpha=0.7, outlier.shape = NA,
                  position = position_dodge(width = 0), width=0.3) +
     geom_jitter(width = 0.1) + #reduce the width of jitter
     stat_summary(fun.y=mean, #add mean point

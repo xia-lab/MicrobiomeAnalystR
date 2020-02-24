@@ -17,7 +17,4 @@ knitr::opts_chunk$set(
 ```
 
 ```{r setup}
-library(MicrobiomeAnalystR)
-
-knitr::include_graphics("peaks_to_paths_0_dpi300.png")
 ```

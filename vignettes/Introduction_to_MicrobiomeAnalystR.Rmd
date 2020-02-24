@@ -56,7 +56,7 @@ The metadata file should be formatted so that the first column contains the samp
 
 The first step of any analysis is to read in the data. After initiating the mbSetObj, users will use the *SetAnalType* to specify that which workflow they would like to perform. If their data is marker gene data, use "markergene", if their data is shotgun metagenomics or transcriptomics data, use ""shotgun". If they will be performing the Projection with Public Data module, use "dataprojection". If they will be performing Taxon Set Enrichment Analysis, use "species". Next, use the *Read16SAbundData* function to read in the abundance file. Dependent on the data format, users will need to specify if their file is .txt ("text"), .biom ("biom"), or .shared ("mothur"). If the taxonomy lables are not included in the abundance file, use the *Read16STaxaTable* to read in the taxonomy table. Also, if metadata is not included in the abundance file, use the *ReadSampleTable* to read in the metadata file. Use the *ReadTreeFile* to read in your phylogenetic tree (optional). After uploading files, a data integrity check must be performed to verify that the data are suitable for downstream analysis using the *SanityCheckData* function. For instance, it will check that the sample names match (abundance table vs. metadata), that feature reads exist in more than 2 samples, and removes features with 0 variance.
 
-MicrobiomeAnalystR provides multiple example datasets for testing purposes available from the Tutorials page of the MicrobiomeAnalyst web-server (https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/faces/docs/Tutorial.xhtml). For this tutorial, we will use the IBD dataset which consists of 43 stool samples from pediatric Inflammatory Bowel Disease (IBD) patients and healthy controls from the Integrated Human Microbiome Project (iHMP) (https://www.hmpdacc.org/ihmp/). This data was preprocessed using the DADA2 pipeline integrated within the MicrobiomeAnalystR package. After the data integrity check, use the *CreatePhyloseqObj* function to create a phyloseq object from the mbSetObj. phyloseq (3) is the microbiome data analysis workhorse of the R environment, and MicrobiomeAnalystR is built upon this R package. The proc.phyobj contains the OTU table, taxonomy table, and metadata. The object can be found in the mbSetObj and is used downstream in many functions. 
+MicrobiomeAnalystR provides multiple example datasets for testing purposes available from the Tutorials page of the MicrobiomeAnalyst web-server (https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/faces/docs/Resources.xhtml). For this tutorial, we will use the IBD dataset which consists of 43 stool samples from pediatric Inflammatory Bowel Disease (IBD) patients and healthy controls from the Integrated Human Microbiome Project (iHMP) (https://www.hmpdacc.org/ihmp/). This data was preprocessed using the DADA2 pipeline integrated within the MicrobiomeAnalystR package. After the data integrity check, use the *CreatePhyloseqObj* function to create a phyloseq object from the mbSetObj. phyloseq (3) is the microbiome data analysis workhorse of the R environment, and MicrobiomeAnalystR is built upon this R package. The proc.phyobj contains the OTU table, taxonomy table, and metadata. The object can be found in the mbSetObj and is used downstream in many functions. 
 
 The set of functions below shows how to upload the example IBD data.
 
@@ -65,10 +65,11 @@ The set of functions below shows how to upload the example IBD data.
 mbSet<-Init.mbSetObj()
 
 # Set the analysis type
-SetAnalType("markergene")
+mbSet<-SetModuleType(mbSet, "mdp")
 
-# Read in the phylogenetic tree file
-mbSet<-ReadTreeFile(mbSet, dataName="ibd_tree.tre");
+# Read in the abundance file, file format is .txt, taxa labels not included in the abundance file,
+# taxonomy labels are Greengenes, metadata file is included separately, and the selected module is 16S.
+mbSet<-Read16SAbundData(mbSet, dataName="ibd_asv_table.txt", format="text", taxa_type="Greengenes", ismetafile="T");
 
 # Read in the metadata file
 mbSet<-ReadSampleTable(mbSet, dataName="ibd_meta.csv");
@@ -76,17 +77,14 @@ mbSet<-ReadSampleTable(mbSet, dataName="ibd_meta.csv");
 # Read in the taxonomy table
 mbSet<-Read16STaxaTable(mbSet, dataName="ibd_taxa.txt");
 
-# Read in the abundance file, file format is .txt, taxa labels not included in the abundance file,
-# taxonomy labels are Greengenes, metadata file is included separately, and the selected module is 16S.
-mbSet<-Read16SAbundData(mbSet, dataName="ibd_otu_table.txt", type="text", taxalabel="F", 
-                        taxa_type="Greengenes", ismetafile="T", module.type="16S");
+# Read in the phylogenetic tree file
+mbSet<-ReadTreeFile(mbSet, dataName="ibd_tree.tre");
 
 # Data integrity check
-mbSet<-SanityCheckData(mbSet, datatype="16S", filetype="text");
+mbSet<-SanityCheckData(mbSet, filetype="text");
 
 # Create phyloseq object
-mbSet<-CreatePhyloseqObj(mbSet, type="text", taxa_type="Greengenes", taxalabel"F", 
-                         ismetafile="F")
+mbSet<-CreatePhyloseqObj(mbSet, type="text", taxa_type="Greengenes", taxalabel="F")
 ```
 
 ## 2.0 Data Processing

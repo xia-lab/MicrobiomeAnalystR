@@ -19,10 +19,10 @@ MicrobiomeAnalystR supports the creation of stacked bar (PlotTaxaAlphaBar) or ar
 
 ```{r, eval=FALSE}
 # Stacked bar plot, percentage abundance, genus level, viridis color palette
-mbSet<-PlotTaxaAlphaBar(mbSet, barplotName="taxa_alpha_1", taxalvl="Genus", metadata="Class", facet="Class", imgOpt="barnorm", feat_cnt=10, colpalopt="viridis", calcmeth="sum", format="png", dpi=300);
+mbSet<-PlotTaxaAundanceBar(mbSet, "taxa_alpha_1","Genus","Group", "none", "barraw",10, "set3","sum",10, "bottom", "F", "png");
 
 # Stacked area plot, class level, viridis color palette
-mbSet<-PlotTaxaAlphaArea(mbSet, barplotName="taxa_alpha_2", viewOpt="overview", taxalvl="Class", metadata="Class", feat_cnt=10, colpalopt="viridis", calcmeth="sum", format="png", dpi=300);
+mbSet<-PlotTaxaAbundanceArea(mbSet, "taxa_alpha_3","overview","Genus","Group", 10, "viridis","sum",10,"bottom", "F", "png");
 ```
 
 **Pie Charts**
@@ -31,19 +31,9 @@ MicrobiomeAnalystR provides several functions to create pie charts from microbio
 
 ```{r, eval=FALSE}
 # Overall pie chart
-mbSet<-PlotOverallPieGraph(mbSet, taxalvl="Phylum", feat_cnt=10, calcmeth="sum");
+mbSet<-PlotOverallPieGraph(mbSet, "Phylum", 10,"sum", 10, "bottom");
 GetSeriesColors()
-mbSet<-SavePiechartImg(mbSet, taxalvl="Phylum", pieName="primary_piechart_1", format="png", dpi=300);
-
-# Group-wise pie chart
-mbSet<-PlotGroupPieGraph(mbSet, taxalvl="Family", metadata="Class", clslevel="CD", feat_cnt=10, calcmeth="sum");
-GetSeriesColors()
-mbSet<-SavePiechartImg(mbSet, taxalvl="Phylum", pieName="primary_piechart_1", format="png", dpi=300);
-
-# Sample-wise pie chart
-mbSet<-PlotSamplePieGraph(mbSet, taxalvl="Family", smplnm="206700", feat_cnt=10)
-GetSeriesColors()
-mbSet<-SavePiechartImg(mbSet, taxalvl="Phylum", pieName="primary_piechart_1", format="png", dpi=300);
+mbSet<-SavePiechartImg(mbSet, "Phylum","primary_piechart_0","png");
 ```
 
 **Heat Tree**
@@ -68,14 +58,13 @@ Alpha-diversity summarizes both the species richness (feature variety) and/or ev
 ```{r, eval=FALSE}
 # Create a dot plot of alpha diversity measures. Samples are grouped by the "Class" experimental factor and colored
 # using the viridis color palette.
-mbSet<-PlotAlphaData(mbSet, data.src="filt", bargraphName="alpha_diver_0", distName="Chao1", metadata="Class",
-                     taxrank="OTU", group = T, colors = "viridis", format="png");
+mbSet<-PlotAlphaData(mbSet, "filt","alpha_diver_0","Chao1","Class","OTU", "default", "png");
 
 # Create summary box plot of alpha diversity measures using the viridis color palette.
-mbSet<-PlotAlphaBoxData(mbSet, boxplotName="alpha_diverbox_0", distName="Chao1", metadata="Class", format="png", dpi=72, TRUE);
+mbSet<-PlotAlphaBoxData(mbSet, "alpha_diverbox_0","Chao1","Class","default", "png");
 
 # Calculate alpha-diversity significance using the parametric t-test (two groups).
-mbSet<-PerformAlphaDiversityComp(mbSet, opt="tt", metadata="Class")
+mbSet<-PerformAlphaDiversityComp(mbSet, "tt","Class");
 ```
 
 #### 1.22 Beta Diversity
@@ -94,11 +83,10 @@ mbSet<-PlotBetaDiversity(mbSet, plotNm="beta_diver_0", ordmeth="PCoA", distName=
                          dpi=72, custom_col="viridis");
 
 # Creates a json file for 3D PCoA, use the web to view the interactive 3D PCoA plot
-mbSet<-PCoA3D.Anal(mbSet, ordMeth="PCoA", distName="bray", datatype="16S", taxrank="OTU", colopt="expfac", variable="Class",
-                   taxa="null", alphaopt="Chao1", jsonNm="beta_diver3d_0.json")
+	mbSet<-PCoA3D.Anal(mbSet, "PCoA","bray","OTU","expfac","Group","","Chao1","beta_diver3d_0.json")
 
 # Calculate the beta-diversity significance
-mbSet<-PerformCategoryComp(mbSet, method="adonis", distnm="bray", variable="Class")
+mbSet<-PerformCategoryComp(mbSet, "OTU", "adonis","bray","Group");
 ```
 
 #### 1.23 Core Microbiome
@@ -107,8 +95,7 @@ The core microbiome refers to the set of taxa that are detected in a high fracti
 
 ```{r, eval=FALSE}
 # Create a core microbiome plot using the viridis color palette
-mbSet<-CoreMicrobeAnalysis(mbSet, imgName="core_micro_1", preval=0.2, detection=0.002, taxrank="Genus", palette="viridis",
-                           viewOpt="overview", format="png")
+mbSet<-CoreMicrobeAnalysis(mbSet, "core_micro_0",0.2,0.01,"OTU","bwm","overview", "all_samples", "Group", "CD", "png");
 ```
 
 ### 1.3 Clustering Analysis 
@@ -118,25 +105,20 @@ mbSet<-CoreMicrobeAnalysis(mbSet, imgName="core_micro_1", preval=0.2, detection=
 Use the *PlotHeatmap* to create a heatmap of microbiome data at a preferred taxonomic level. The function supports various clustering algorithms and distance measures for performing hierarchical clustering.
 
 ```{r, eval=FALSE}
-# Create a heatmap at the genus level using the plasma color palette
-mbSet<-PlotHeatmap(mbSet, plotNm="heatmap_1", smplDist="euclidean", clstDist="ward.D", palette="bwm", metadata="Class",
-                   taxrank="Genus", datatype="16S", viewOpt="overview", doclust="F", format="png", showfeatname="T", appendnm="F")
+# Create a heatmap at the OTU level using the plasma color palette
+mbSet<-PlotHeatmap(mbSet, "heatmap_0","euclidean","ward.D","bwm","Group","OTU","overview","F", "png","T","F");
 ```
 
 #### 1.32 Dendogram Analysis
 
 ```{r, eval=FALSE}
 # Create a dendogram of the microbiome data at the OTU level.
-mbSet<-PlotTreeGraph(mbSet, plotNm="plot_tree_0", distnm="bray", clstDist="ward.D", metadata="Class",
-                     datatype="16S", taxrank="OTU", format="png")
+mbSet<-PlotTreeGraph(mbSet, "plot_tree_0","bray","ward.D","Group","OTU", "default", "png");
 ```
 
 #### 1.33 Correlation Analysis
 
 ```{r, eval=FALSE}
-# Create a heatmap of the correlation between taxon at the Genus level.
-mbSet<-PlotCorrHeatMap(mbSet, imgName="corr_1", format="png", width=NA, cor.method="pearson", colors_cntrst="bwm", viewOpt="overview", 
-                       taxrank="Genus", fix.col=F, no.clst=F, top=F, topNum=999, datatype="16S")
 
 ```
 
@@ -145,11 +127,9 @@ mbSet<-PlotCorrHeatMap(mbSet, imgName="corr_1", format="png", width=NA, cor.meth
 MicrobiomeAnalystR supports the identification of patterns in user's data. Users can define the pattern using a specific taxa, a predefined profile, or a custom profile. First, use the *FeatureCorrelation* function to identify the patterns. This will output the "correlation_feature.csv" file in your working directory. Next, use the *PlotCorr* function to plot the results.
 
 ```{r, eval=FALSE}
-# Identify the pattern 
-mbSet<-FeatureCorrelation(mbSet, dist.name="pearson", taxrank="Genus", taxa="g__Bacteroides", variable="Class", datatype="16S", shotfeat="null", shotgunid="NA")
-
-# Plot the pattern
-mbSet<-PlotCorr(mbSet, imgName="ptn_1", format="png", width=NA)
+# Identify and plot the pattern 
+mbSet<-Match.Pattern(mbSet, "pearson", "1-2", "Genus", "Group")
+mbSet<-PlotCorr(mbSet, "ptn_1", "png", width=NA)
 ```
 
 ### 1.4 Univariate Analysis
@@ -162,12 +142,10 @@ Both parametric (T-test/ANOVA) and non-parametric (Mann-Whitney/Kruskall-Wallis)
 
 ```{r, eval=FALSE}
 # Classical non-parametric univariate analysis: Mann-Whitney/Kruskall Wallis
-mbSet<-PerformUnivarTest(mbSet, variable="Class", p.lvl=0.05, datatype="16S", shotgunid="NA", taxrank="Genus",
-                         statOpt="nonpar")
+mbSet<-PerformUnivarTest(mbSet, "Group",0.05,"NA","OTU","nonpar");
 
 # Classical parametric univariate analysis: T-test/ANOVA
-mbSet<-PerformUnivarTest(mbSet, variable="Class", p.lvl=0.05, datatype="16S", shotgunid="NA", taxrank="Genus",
-                         statOpt="tt")
+mbSet<-PerformUnivarTest(mbSet, "Group",0.05,"NA","OTU","tt");
 ```
 
 ### 1.42 Model-based Univariate Analysis
@@ -177,19 +155,18 @@ For RNA-seq data, differential analysis is applied to identify differentially ex
 #### 1.43 RNAseq Methods
 
 ```{r, eval=FALSE}
-# edgeR at the genus level
-mbSet<-PerformRNAseqDE(mbSet, opts="EdgeR", p.lvl=0.05, variable="Class", datatype="16S", shotgunid="NA", taxrank="Genus");
+# edgeR at the OTU level
+mbSet<-PerformRNAseqDE(mbSet, "EdgeR",0.05,"Group","NA","OTU");
 
-# DESeq2 at the genus level
-mbSet<-PerformRNAseqDE(mbSet, opts="DESeq2", p.lvl=0.05, variable="Class", datatype="16S", shotgunid="NA", taxrank="Genus");
+# deseq2 at OTU level
+mbSet<-PerformRNAseqDE(mbSet, "EdgeR",0.05,"Group","NA","OTU");
 ```
 
 #### 1.44 metagenomeSeq 
 
 ```{r, eval=FALSE}
 # metegenomeSeq using the zero-inflated Gaussian fit model
-mbSet<-PerformMetagenomeSeqAnal(mbSet, variable="Class", p.lvl=0.05, datatype="16S", shotgunid="NA",
-                                taxrank="Genus", model="zigfit");
+mbSet<-PerformMetagenomeSeqAnal(mbSet, "Group",0.05,"NA","OTU","zigfit");
 ```
 
 ### 1.5 Biomarker Analysis
@@ -202,11 +179,10 @@ Linear discriminant analysis effect size (LEfSe) is a non-parametric statistical
 
 ```{r, eval=FALSE}
 # First perform LefSe analysis
-mbSet<-PerformLefseAnal(mbSet, p.lvl=0.05, lda.lvl=2.0, variable="Class", isfunc="F", datatype="16S",
-                        datatype="NA", taxrank="Genus");
+mbSet<-PerformLefseAnal(mbSet, 0.1, "fdr", 2.0, "Group","F","NA","OTU");
 
 # Plot LefSe results
-mbSet<-PlotLEfSeSummary(mbSet, ldaFeature=15, imgName="bar_graph_1", format="png")
+mbSet<-PlotLEfSeSummary(mbSet, 15, "dot", "bar_graph_0","png");
 ```
 
 #### 1.52 Random Forest
@@ -215,13 +191,13 @@ Random Forest (RF) is a supervised machine-learning algorithm that has been appl
 
 ```{r, eval=FALSE}
 # First perform RF analysis
-mbSet<-RF.Anal(mbSet, treeNum=500, tryNum=7, randomOn=1, variable="Class", taxrank="OTU", datatype="16S")
+mbSet<-RF.Anal(mbSet, 500,7,1,"Group","OTU")
 
 # Plot the RF classification results
-mbSet<-PlotRF.Classify(mbSet, feature=15, imgName="rf_cls_0", format="png", width=NA)
+mbSet<-PlotRF.Classify(mbSet, 15, "rf_cls_0","png", width=NA)
 
 # Plot the RF Variable Importance Plot
-mbSet<-PlotRF.VIP(mbSet, feature=15, imgName="rf_imp_0", format="png", width=NA)
+mbSet<-PlotRF.VIP(mbSet, 15, "rf_imp_0","png", width=NA)
 ```
 
 ## References

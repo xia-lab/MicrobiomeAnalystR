@@ -2,7 +2,7 @@
   <img src="https://github.com/xia-lab/MicrobiomeAnalystR/blob/master/docs/microbiomeanalystr_logo.png" width="600">
 </p>
 
-## Note - MicrobiomeAnalystR is still in development stage, we cannot guarantee full functionality ## 
+### Note - MicrobiomeAnalystR is still under development - we cannot guarantee full functionality ### 
 
 ## Description 
 
@@ -59,7 +59,7 @@ R CMD INSTALL MicrobiomeAnalystR_*.tar.gz
 
 #### Option C) Manual download of MicrobiomeAnalystR.tar.gz and install locally - not yet available, stable release to come soon!!
 
-Manually download the .tar.gz file from [here](). The * must be replaced by what is actually downloaded and built.  
+Manually download the .tar.gz file from [here](https://www.dropbox.com/s/wk43rs9hswzypgt/MicrobiomeAnalystR_0.0.0.9000.tar.gz?dl=0). The * must be replaced by what is actually downloaded and built.  
 
 ```R
 cd ~/Downloads
@@ -71,7 +71,7 @@ R CMD INSTALL MicrobiomeAnalystR_*.tar.gz
 
 ### MicrobiomeAnalyst Workflow
 
-To showcase how to utilize MicrobiomeAnalystR , we provide a detailed tutorial to perform a comprehensive end-to-end workflow from raw sequence data preprocessing to knowledge-based analysis. The dataset showcased in the tutorial consists of a subset of pediatric IBD stool samples obtained from the Integrative Human Microbiome Project Consortium (https://ibdmdb.org/). The tutorial is available as a PDF [here]() and is also available inside the R package as a vignette.
+To showcase how to utilize MicrobiomeAnalystR , we provide a detailed tutorial to perform a comprehensive end-to-end workflow from raw sequence data preprocessing to knowledge-based analysis. The dataset showcased in the tutorial consists of a subset of pediatric IBD stool samples obtained from the Integrative Human Microbiome Project Consortium (https://ibdmdb.org/). The tutorial is available inside the R package as a vignette.
 
 ## Tutorials
 
