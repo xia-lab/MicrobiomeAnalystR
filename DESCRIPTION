@@ -35,7 +35,6 @@ Imports:
     reshape,
     stringr,
     ape,
-    Tax4Fun,
     grid,
     gridExtra,
     splitstackshape,
@@ -50,5 +49,6 @@ Suggests:
     rmarkdown,
     DECIPHER,
     phangorn,
-    dada2
+    dada2,
+    Tax4Fun
 VignetteBuilder: knitr

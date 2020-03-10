@@ -23,7 +23,7 @@ library(pacman)
 
 pacman::p_load(phyloseq, metacoder, pryr, biomformat, RColorBrewer, ggplot2, gplots, Cairo, igraph, 
 BiocParallel, randomForest, metagenomeSeq, MASS, DESeq2, vegan, RJSONIO, ggfortify, pheatmap, xtable, genefilter,
-data.table, reshape, stringr, ape, Tax4Fun, grid, gridExtra, splitstackshape, edgeR, globaltest, R.utils, viridis, ggrepel,
+data.table, reshape, stringr, ape, grid, gridExtra, splitstackshape, edgeR, globaltest, R.utils, viridis, ggrepel,
 ppcor)
 ```
 ### Step 2. Install the package 
