@@ -107,18 +107,7 @@ Read16STabData <- function(mbSetObj, dataName) {
     smpl_nm <- colnames(mydata[-1]);
     
 
-  # remove extra comments if any
-  dat.nms <- mydata[,1];
-  comment.inx <- grep("^#",dat.nms);
-    
-  if(sum(comment.inx) > 0){
-    mydata < -mydata[-comment.inx, ];
-    msg <- c(msg, paste("A total of", sum(comment.inx), "comment rows were removed from OTU table"));
-    dat.nms <- mydata[,1];
-  }
-
-  mydata <- data.matrix(mydata[,-1]);
-  rownames(mydata) <- dat.nms;
+  mydata <- .to.numeric.mat(mydata);
 
   # empty cell or NA cannot be tolerated in metadata
   na.inx  <- is.na(mydata);
@@ -184,6 +173,12 @@ Read16SBiomData <- function(mbSetObj, dataName, taxa_type, ismetadata){
   }
     
   taxa_table<-as.matrix(taxa_table);
+
+  if(ncol(taxa_table)==1){
+    AddErrMsg("Taxonomy table in .biom file is invalid!")
+    return(0)
+  }
+
   msg <- c(msg, "Taxonomy file is detected.");
 
   mbSetObj$dataSet$name <- basename(dataName);

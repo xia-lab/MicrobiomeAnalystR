@@ -13,28 +13,32 @@
 #'user data. It checks the grouping of samples, if a phylogenetic tree
 #'was uploaded.
 #'@param mbSetObj Input the name of the mbSetObj.
-#'@param datatype Character, input "16S" if the data is marker gene
-#'data and "metageno" if it is metagenomic data.
 #'@param filetype Character, "biom" if the uploaded data
 #'was .biom format, "mothur" if mothur format, or "txt" if
 #'as .txt or .csv format.
+#'@param disableFilter Boolean. Set to TRUE to bypass the hard-coded filter
+#'to remove features occuring in <2 samples.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-SanityCheckData <- function(mbSetObj, filetype){
+SanityCheckData <- function(mbSetObj, filetype, disableFilter = FALSE){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   feat.sums <- apply(mbSetObj$dataSet$data.orig, 1, function(x){sum(x>0, na.rm=T)});
-  gd.inx <- feat.sums > 1; # occur in at least 2 samples
   
-  if(length(which(gd.inx=="TRUE"))==0){
-    AddErrMsg("Reads occur in only one sample.  All these are considered as artifacts and have been removed from data. No data left after such processing.");
-    return(0);
+  if(disableFilter){
+    data.proc <- mbSetObj$dataSet$data.orig
+  }else{
+    gd.inx <- feat.sums > 1; # occur in at least 2 samples
+    if(length(which(gd.inx=="TRUE"))==0){
+      AddErrMsg("Reads occur in only one sample.  All these are considered as artifacts and have been removed from data. No data left after such processing.");
+      return(0);
+    }
+    data.proc <- mbSetObj$dataSet$data.orig[gd.inx, ]; 
   }
-  
-  data.proc <- mbSetObj$dataSet$data.orig[gd.inx, ]; 
+
   # filtering the constant features here
   # check for columns with all constant (var=0)
   varCol <- apply(data.proc, 1, var, na.rm=T);
@@ -48,8 +52,8 @@ SanityCheckData <- function(mbSetObj, filetype){
     return(0);
   }
   
-  saveRDS(data.proc, file="data.proc.orig"); # save an copy
-  saveRDS(data.proc, file="data.prefilt"); # save an copy
+  qs::qsave(data.proc, file="data.proc.orig"); # save an copy
+  qs::qsave(data.proc, file="data.prefilt"); # save an copy
   
   # now get stats
   taxa_no <- nrow(mbSetObj$dataSet$data.orig);
@@ -85,7 +89,7 @@ SanityCheckData <- function(mbSetObj, filetype){
     mbSetObj$dataSet$sample_data[, num_vars] <- sapply(mbSetObj$dataSet$sample_data[, num_vars],as.factor);
   }
   
-  if(file.exists("tree.RDS")){
+  if(file.exists("tree.qs")){
     tree_exist <- 1
   } else {
     tree_exist <- 0
@@ -102,9 +106,9 @@ SanityCheckData <- function(mbSetObj, filetype){
   samname_same_number <- sum(row.names(mbSetObj$dataSet$sample_data) %in% colnames(data.proc));
   
   # now store data.orig to RDS
-  saveRDS(mbSetObj$dataSet$data.orig, file="data.orig");
-  saveRDS(data.proc, file="data.proc");
-  saveRDS(mbSetObj$dataSet$sample_data, file = "data.sample_data")
+  qs::qsave(mbSetObj$dataSet$data.orig, file="data.orig");
+  qs::qsave(data.proc, file="data.proc");
+  qs::qsave(mbSetObj$dataSet$sample_data, file = "data.sample_data")
   mbSetObj$dataSet$data.orig <- NULL;
   mbSetObj$dataSet$tree <- tree_exist
   
@@ -145,7 +149,7 @@ ApplyAbundanceFilter <- function(mbSetObj, filt.opt, count, smpl.perc){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  data <- readRDS("data.prefilt");
+  data <- qs::qread("data.prefilt");
   msg <- NULL;
   
   #this data is used for sample categorial comparision further
@@ -171,7 +175,7 @@ ApplyAbundanceFilter <- function(mbSetObj, filt.opt, count, smpl.perc){
   }
   
   mbSetObj$dataSet$filt.data <- data[kept.inx, ];
-  saveRDS(mbSetObj$dataSet$filt.data, file="filt.data.orig"); # save an copy
+  qs::qsave(mbSetObj$dataSet$filt.data, file="filt.data.orig"); # save an copy
   current.msg <<- paste("A total of ", sum(!kept.inx), " low abundance features were removed based on ", filt.opt, ".", sep="");
   
   return(.set.mbSetObj(mbSetObj));
@@ -226,7 +230,7 @@ ApplyVarianceFilter <- function(mbSetObj, filtopt, filtPerct){
   
   data <- data[remain,];
   mbSetObj$dataSet$filt.data <- data;
-  saveRDS(mbSetObj$dataSet$filt.data, file="filt.data.orig"); # save an copy
+  qs::qsave(mbSetObj$dataSet$filt.data, file="filt.data.orig"); # save an copy
   rm.msg1 <- paste("A total of ", sum(!remain), " low variance features were removed based on ", filtopt, ".", sep="");
   rm.msg2 <- paste("The number of features remains after the data filtering step:", nrow(data));
   current.msg <<- paste(c(current.msg, rm.msg1, rm.msg2), collapse=" ");
@@ -254,15 +258,15 @@ UpdateSampleItems <- function(mbSetObj){
   }
   
   # read from saved original copy
-  data.proc.orig  <- readRDS("data.proc.orig");
-  proc.phyobj.orig <- readRDS("proc.phyobj.orig");
+  data.proc.orig  <- qs::qread("data.proc.orig");
+  proc.phyobj.orig <- qs::qread("proc.phyobj.orig");
   hit.inx <- colnames(data.proc.orig) %in% smpl.nm.vec;
   
   #preserving the rownames
   # read from saved prefilt copy
-  prefilt.data <- readRDS("data.prefilt");
+  prefilt.data <- qs::qread("data.prefilt");
   tax_nm <- rownames(prefilt.data);
-  data.proc <- readRDS("data.proc");
+  data.proc <- qs::qread("data.proc");
   modi_data <- data.proc[,hit.inx];
   prefilt.data <- modi_data;
   
@@ -274,7 +278,7 @@ UpdateSampleItems <- function(mbSetObj){
   mbSetObj$dataSet$remsam <- allnm[unmhit.indx];
   
   mbSetObj$dataSet$proc.phyobj <- prune_samples(colnames(prefilt.data),proc.phyobj.orig);
-  saveRDS(prefilt.data, file="data.prefilt")
+  qs::qsave(prefilt.data, file="data.prefilt")
   current.msg <<- "Successfully updated the sample items!";
   
   # need to update metadata info after removing samples
@@ -313,9 +317,9 @@ UpdateSampleItems <- function(mbSetObj){
 #'@import edgeR
 #'@import metagenomeSeq
 PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt){
-  
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  data <- readRDS("filt.data.orig");
+  data <- qs::qread("filt.data.orig");
   tax_nm <- rownames(data);
   msg <- NULL;
   
@@ -330,7 +334,7 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt){
     msg <- c(msg, paste("No data rarefaction was performed."));
   }
   
-  saveRDS(mbSetObj$dataSet$proc.phyobj, file="orig.phyobj"); # save original phylo.obj
+  qs::qsave(mbSetObj$dataSet$proc.phyobj, file="orig.phyobj"); # save original phylo.obj
   # now proc.phyobj is now filtered data
   mbSetObj$dataSet$proc.phyobj <- merge_phyloseq(otu_table(data,taxa_are_rows =TRUE), mbSetObj$dataSet$sample_data, mbSetObj$dataSet$taxa_table);
   
@@ -398,6 +402,7 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt){
     ranks <- "OTU"
   }else{
     ranks <- c(GetMetaTaxaInfo(mbSetObj), "OTU")
+    ranks <- unique(ranks)
   } 
   
   # start with lowest
@@ -412,7 +417,7 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt){
     count.table <- UtilMakeCountTables(phyloseq.obj, ranks[i])
     data.list$count_tables[[i]] <- count.table
   }
-  saveRDS(data.list, "phyloseq_objs.RDS")
+  qs::qsave(data.list, "phyloseq_objs.qs")
   
   return(.set.mbSetObj(mbSetObj));
 }
@@ -559,7 +564,7 @@ PlotLibSizeView <- function(mbSetObj, imgName, format="png", dpi=72){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  data.proc <- readRDS("data.proc");
+  data.proc <- qs::qread("data.proc");
   data_bef <- data.matrix(data.proc);
   smpl.sums <- colSums(data_bef);
   names(smpl.sums) <- colnames(data_bef);
@@ -603,13 +608,13 @@ PlotLibSizeView <- function(mbSetObj, imgName, format="png", dpi=72){
 #'@export
 #'@import phyloseq
 CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
-  
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   load_phyloseq();
   load_splitstackshape();
   
-  data.proc <- readRDS("data.proc");
+  data.proc <- qs::qread("data.proc");
   
   # do some sanity check here on sample and feature names
   smpl.nms <- colnames(data.proc);
@@ -703,12 +708,14 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
           }
           taxa_names(taxa_table)<-c(1:nrow(taxa_table));
         }else if(taxa_type=="GreengenesID"||taxa_type=="Others/Not_specific"){
-          
+
           # need to parse Taxonomy still!
           load_splitstackshape();               
           
-          feat_nm<-data.frame(mbSetObj$dataSet$feat_nm);
+          feat_nm <- data.frame(mbSetObj$dataSet$feat_nm);
+          feat_nm <- data.frame(apply(feat_nm, 1, function(x) gsub(";\\s;", ";", x))) # remove empty taxa
           names(feat_nm)<-"Rank";
+          
           taxonomy<-splitstackshape::cSplit(feat_nm,"Rank",";");
           taxmat= data.frame(matrix(NA, ncol = 7, nrow = nrow(taxonomy)));
           colnames(taxmat) <- classi.lvl;
@@ -737,6 +744,12 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
         gd.coords <- cbind(1:rowLn, maxInx);
         gd.nms <- tmat[gd.coords];
         mynames <- make.unique(gd.nms, sep="_");
+        
+        if(length(mynames) != nrow(tmat)){
+          AddErrMsg(paste("Errors with the taxonomy table! Please check if there are any names with all NA."));
+          return(0);
+        }
+        
         taxa_names(taxa_table)<-mynames;
         feat_nm<-NULL;
         mbSetObj$dataSet$taxa_table<-taxa_table;
@@ -760,7 +773,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
           # do the conversion and save 
           new.nms <- paste("ASV", 1:length(taxa.nms), sep="_");
           master.nms <- cbind("NewID"=new.nms, "OriginalID"=taxa.nms);
-          write.csv(master.nms, file="ASV_ID_mapping.csv");
+          fast.write(master.nms, file="ASV_ID_mapping.csv");
           
           # update the taxa and sample
           names(new.nms) <- taxa.nms;
@@ -769,9 +782,9 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
           
           # update tree file if uploaded
           if(mbSetObj$tree.uploaded){
-            pg_tree <- readRDS("tree.RDS");
+            pg_tree <- qs::qread("tree.qs");
             pg_tree$tip.label <- new.nms[pg_tree$tip.label];
-            saveRDS(pg_tree, "tree.RDS");
+            qs::qsave(pg_tree, "tree.qs");
           }
         }
         
@@ -805,7 +818,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
       # removing first KINGDOM OR DOMAIN column
       indx<-apply(mbSetObj$dataSet$taxa_table[,1], 2, function(x) which(x %in% c("k__Fungi", "Fungi", "k__Viruses", "Viruses",
                                                                                  "Bacteria", "Archaea", "k__Bacteria", "k__Archea", 
-                                                                                 "D_0__Bacteria", "D_0__Archea")));
+                                                                                 "D_0__Bacteria", "D_0__Archea", "d__Bacteria")));
       
       if(length(indx)>0){
         mbSetObj$dataSet$taxa_table<-mbSetObj$dataSet$taxa_table[,-1];
@@ -868,7 +881,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
       # removing first KINGDOM OR DOMAIN column
       indx<-apply(mbSetObj$dataSet$taxa_table[,1], 2, function(x) which(x %in% c("k__Fungi", "Fungi", "k__Viruses", "Viruses", 
                                                                                  "Bacteria","Archaea","k__Bacteria","k__Archea", 
-                                                                                 "D_0__Bacteria","D_0__Archea")));
+                                                                                 "D_0__Bacteria","D_0__Archea", "d__Bacteria")));
       
       if(length(indx)>0){
         mbSetObj$dataSet$taxa_table<-mbSetObj$dataSet$taxa_table[,-1];
@@ -906,6 +919,15 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
     
     taxa_names(mbSetObj$dataSet$taxa_table)<-taxa_names(data.proc)<-mynames1;
     mbSetObj$dataSet$sample_data<-sample_data(mbSetObj$dataSet$sample_data, errorIfNULL = TRUE);
+    
+    sd_names <- sample_names(mbSetObj$dataSet$sample_data)
+    name.match.inx <- sd_names %in% smpl.nms
+    
+    if(sum(as.numeric(name.match.inx)) == 0){
+      AddErrMsg("Issues with sample names in your files! Make sure names are not purely numeric (i.e. 1, 2, 3).");
+      return(0);
+    }
+    
     mbSetObj$dataSet$proc.phyobj <- merge_phyloseq(data.proc, mbSetObj$dataSet$sample_data, mbSetObj$dataSet$taxa_table);
     
     if(length(rank_names(mbSetObj$dataSet$proc.phyobj)) > 7){
@@ -913,9 +935,9 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
     }
     
     #also using unique names for our further data
-    prefilt.data <- readRDS("data.prefilt");
+    prefilt.data <- qs::qread("data.prefilt");
     rownames(prefilt.data)<-taxa_names(mbSetObj$dataSet$taxa_table);
-    saveRDS(prefilt.data, file="data.prefilt")
+    qs::qsave(prefilt.data, file="data.prefilt")
     
   }else if(mbSetObj$module.type == "sdp"){
     #constructing phyloseq object for aplha diversity.
@@ -934,7 +956,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
     mbSetObj$dataSet$proc.phyobj <- merge_phyloseq(data.proc, mbSetObj$dataSet$sample_data);
   }
   
-  saveRDS(mbSetObj$dataSet$proc.phyobj, file="proc.phyobj.orig");
+  qs::qsave(mbSetObj$dataSet$proc.phyobj, file="proc.phyobj.orig");
   #do some data cleaning
   mbSetObj$dataSet$data.prefilt <- NULL;
   mbSetObj$dataSet$taxa_type <- taxa_type;
@@ -971,12 +993,12 @@ edgeRnorm = function(x,method){
 ###########################################
 
 GetSamplNames<-function(){
-  prefilt.data <- readRDS("data.prefilt");
+  prefilt.data <- qs::qread("data.prefilt");
   return(colnames(prefilt.data));
 }
 
 GetGroupNames<-function(){
-  prefilt.data <- readRDS("data.prefilt");
+  prefilt.data <- qs::qread("data.prefilt");
   return(colnames(prefilt.data));
 }
 

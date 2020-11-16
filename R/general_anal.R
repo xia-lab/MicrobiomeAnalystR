@@ -57,7 +57,7 @@ RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank){
     data1 <- as.data.frame(t(otu_table(data)));
   }else{
     if(!exists("phyloseq_objs")){
-      phyloseq_objs <- readRDS("phyloseq_objs.RDS")
+      phyloseq_objs <- qs::qread("phyloseq_objs.qs")
     }
     
     if(taxrank=="OTU"){
@@ -77,7 +77,7 @@ RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank){
   impmat <- impmat[rev(order(impmat[,"MeanDecreaseAccuracy"])),]
   sigmat <- impmat[,"MeanDecreaseAccuracy", drop=F];
   sigmat <- signif(sigmat, 5);
-  write.csv(sigmat,file="randomforests_sigfeatures.csv");
+  fast.write(sigmat,file="randomforests_sigfeatures.csv");
   
   mbSetObj$analSet$cls <- cls;
   mbSetObj$analSet$rf <- rf_out;
@@ -239,7 +239,7 @@ PlotImpVar <- function(mbSetObj, imp.vec, xlbl, feature, color.BW=FALSE){
     rt.mrg <- 11;
   }
   op <- par(mar=c(5,9,2,rt.mrg)); # set right side margin with the number of class
-
+  
   feat.num = feature;
   if(feat.num <= 0){
     feat.num = 15;
@@ -368,7 +368,7 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, shotgunid, taxrank, sta
     data1 <- as.data.frame(t(otu_table(data)));
   }else{
     if(!exists("phyloseq_objs")){
-      phyloseq_objs <- readRDS("phyloseq_objs.RDS")
+      phyloseq_objs <- qs::qread("phyloseq_objs.qs")
     }
     
     if(taxrank=="OTU"){
@@ -395,7 +395,7 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, shotgunid, taxrank, sta
   resTable <- signif(resTable, digits = 5);
   resTable <- resTable[complete.cases(resTable), ];
   resTable <- resTable[,c(2,3,1)];
-  write.csv(resTable, file="univar_test_output.csv");
+  fast.write(resTable, file="univar_test_output.csv");
   
   sigHits <- resTable$FDR < p.lvl;
   de.Num <- sum(sigHits);
@@ -467,7 +467,7 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, shotgunid, taxrank, sta
   box_data <- data.frame(dat3t_boxplot[,sigfeat %in% nm_boxplot]);
   box_data$class <- claslbl_boxplot;
   mbSetObj$analSet$boxdata <- box_data;
-  write.csv(t(box_data), "uni_abund_data.csv")
+  fast.write(t(box_data), "uni_abund_data.csv")
   
   mbSetObj$analSet$anal.type <- "tt";
   mbSetObj$analSet$var.type <- variable;
@@ -477,7 +477,6 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, shotgunid, taxrank, sta
   mbSetObj$analSet$univar.taxalvl <- taxrank;
   
   return(.set.mbSetObj(mbSetObj));
-  
 }
 
 #######################################
@@ -504,7 +503,7 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, shotgunid, taxrank, sta
 #'@import metagenomeSeq
 
 PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank, model){
-  
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   load_metagenomeseq();
@@ -553,13 +552,35 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
   mod <- model.matrix(~phenoData(data)@data[,variable]);
   
   if(model=="zigfit"){
-    fit <- fitZig(data, mod);  
+    tryCatch(
+      {
+        fit <- fitZig(data, mod);  
+      }, warning = function(w){ print() },
+      error = function(e) {
+        current.msg <<- paste( "fitZig model failed to fit to your data! Consider a different model or further filtering your dataset!");
+      }, finally = {
+        if(!exists("fit")){
+          return(0);
+        }
+        fit <- fit
+      })
   }else{
     if(length(levels(cls)) > 2){
       current.msg <<- paste( "More than two groups present in your experimental factor. This model can only be used with two groups.");
       return(0);
     }else{
-      fit <-fitFeatureModel(data, mod);
+      tryCatch(
+        {
+          fit <-fitFeatureModel(data, mod);
+        }, warning = function(w){ print() },
+        error = function(e) {
+          current.msg <<- paste( "fitFeatureModel model failed to fit to your data! Consider a different model or further filtering your dataset!");
+        }, finally = {
+          if(!exists("fit")){
+            return(0);
+          }
+          fit <- fit
+        })
     }
   }
   
@@ -600,7 +621,7 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
   
   ord.inx <- order(resTable$Pvalues);
   resTable <- resTable[ord.inx, , drop=FALSE];
-  write.csv(resTable, file="metageno_de_output.csv");
+  fast.write(resTable, file="metageno_de_output.csv");
   
   if(nrow(resTable) > 500){
     resTable <- resTable[1:500, ];
@@ -669,7 +690,7 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
     dat3t <- as.data.frame(t(otu_table(data)));
   }else{
     if(!exists("phyloseq_objs")){
-      phyloseq_objs <- readRDS("phyloseq_objs.RDS")
+      phyloseq_objs <- qs::qread("phyloseq_objs.qs")
     }
     
     if(taxrank=="OTU"){
@@ -713,7 +734,7 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
   # it seems lda add ` around names containing dash "-", need to strip this off
   rawNms <- rownames(resTable);
   rownames(resTable) <- gsub("`", '', rawNms);
-  
+
   if(pvalOpt == "raw"){
     de.Num <- sum(rawpvalues<=p.lvl & ldamean$LDAscore>=lda.lvl)
   }else{
@@ -727,7 +748,7 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
   }
   
   # sort by p value
-  ord.inx <- order(resTable$Pvalues, resTable$LDAscore);
+  ord.inx <- order(resTable$Pvalues, rev(abs(resTable$LDAscore)));
   resTable <- resTable[ord.inx, ,drop=FALSE];
   #p-values column to appear first; then FDR and then others
   resTable <- resTable[,c(ncol(resTable),1:(ncol(resTable)-1))];
@@ -737,7 +758,12 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
   resTable <- signif(resTable, 5);
   
   #only getting the names of DE features
-  diff_ft <<- rownames(resTable)[1:de.Num];
+  if(pvalOpt == "raw"){
+    diff_ft <<- rownames(resTable)[(abs(resTable$LDAscore) > lda.lvl & resTable$Pvalues < p.lvl)]
+  }else{
+    diff_ft <<- rownames(resTable)[(abs(resTable$LDAscore) > lda.lvl & resTable$FDR < p.lvl)]
+  }
+
   resTable$max <- resTable$min <- NULL;
   #if only two groups are present in sample variable
   cls.lbls <- levels(claslbl);
@@ -749,7 +775,7 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
     resTable$LDAscore[indx]<--abs(resTable$LDAscore[indx]);
   }
   
-  write.csv(resTable, file="lefse_de_output.csv");
+  fast.write(resTable, file="lefse_de_output.csv");
   mbSetObj$analSet$lefse$resTable <- mbSetObj$analSet$resTable <- resTable;
   
   #subset dataset for bar plot visualization (LDA Score)
@@ -815,6 +841,14 @@ PlotLEfSeSummary <- function(mbSetObj, ldaFeature, layoutOptlf, imgName, format=
   imgName = paste(imgName, ".", format, sep="");
   ldabar <- ldabar;
   
+  if(nrow(ldabar) == 0){
+    Cairo::Cairo(file = imgName, unit="in", dpi=dpi, width=7, height=7, type=format, bg="white");
+    empty <- ggplot() + theme_void()
+    print(empty)
+    dev.off();
+    return(.set.mbSetObj(mbSetObj))
+  }
+  
   ldabar <-  ldabar[order(-abs(ldabar[[2]])), ];
   
   if(ldaFeature < nrow(ldabar)) {
@@ -823,7 +857,7 @@ PlotLEfSeSummary <- function(mbSetObj, ldaFeature, layoutOptlf, imgName, format=
   
   vip.score <- ldabar[[2]];
   names(vip.score) <- ldabar[[1]];
-
+  
   if(is.na(width)){
     
     sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
@@ -1013,6 +1047,8 @@ PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="defaul
   }
 }
 
+
+
 #######################################
 ###########EdgeR/DESeq2################
 #######################################
@@ -1036,11 +1072,106 @@ PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="defaul
 #'@import DESeq2
 
 PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank){
-  
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  
+  if(opts=="DESeq2"){
+    .prepare.deseq(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank);
+    .perform.computing();
+    res = .save.deseq.res();
+  }else{
+    data <- .prepare_rnaseq(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank)
+    res <- .perform_edger(variable, data, p.lvl)
+    
+  }
+  return(1)
+}
+
+.prepare.deseq<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank){
+  data <- .prepare_rnaseq(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank)
+  mbSetObj = .get.mbSetObj(mbSetObj);
   claslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
+  if(length(claslbl) > 100){
+    AddErrMsg("Only EdgeR is supported for sample size over 100.");
+    return(0);
+  }else{
+    dat.in <- list(data=data, variable=variable);
+    my.fun <- function(){
+      # create formula based on user selection
+      variable <- dat.in$variable;
+      my.formula <- as.formula(paste("~", variable));
+      
+      #converting from phyloslim object to deseq
+      library(phyloseq);
+      library(DESeq2);
+      diagdds <- phyloseq_to_deseq2(dat.in$data, my.formula);
+      geoMeans <- apply(counts(diagdds), 1, 
+                        function(x, na.rm=TRUE){exp(sum(log(x[x > 0]), na.rm=na.rm) / length(x))}
+      );
+      diagdds <- estimateSizeFactors(diagdds, geoMeans = geoMeans);
+      diagdds <- DESeq(diagdds, test="Wald", fitType="parametric");
+      res <- results(diagdds, independentFiltering = FALSE, cooksCutoff = Inf);
+      # make sure it is basic R, not DESeq2 obj
+      resTable <- data.frame(res[,c("log2FoldChange" ,"lfcSE","pvalue","padj")]); 
+      return(resTable);
+    }
+    dat.in <- list(data=data, variable=variable, my.fun=my.fun);
+    qs::qsave(dat.in, file="dat.in.qs");
+    return(1)
+  }
+return(1)
+}
+
+.save.deseq.res <- function(){
+  mbSetObj <-.get.mbSetObj("NA");
+  dat3t<- mbSetObj$analSet$rnaseq$data.rnaseq
   
+  dat.in <- qs::qread("dat.in.qs"); 
+  variable = dat.in$variable
+  claslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]])
+  p.lvl <- mbSetObj$analSet$rnaseq.plvl
+  resTable <- dat.in$my.res;
+  sigHits <- which(resTable$padj < p.lvl);
+  de.Num <- length(sigHits);
+  if(de.Num == 0){
+    current.msg <<- "No significant features were identified using the given p value cutoff.";
+  }else{
+    current.msg <<- paste("A total of", de.Num, "significant features were identified!");
+  }
+  print(current.msg);
+  
+  resTable <- signif(data.matrix(resTable), digits=5);
+  colnames(resTable) <- c("log2FC","lfcSE","Pvalues","FDR");
+  mbSetObj$analSet$anal.type <- "deseq";
+  
+  resTable <- as.data.frame(resTable);
+  ord.inx <- order(resTable$Pvalues);
+  resTable <- resTable[ord.inx, , drop=FALSE];
+  fast.write(resTable, file="rnaseq_de.csv");
+  
+  if(nrow(resTable) > 500){
+    resTable<-resTable[1:500, ];
+  }
+  
+  mbSetObj$analSet$rnaseq$resTable <- mbSetObj$analSet$resTable <- as.data.frame(resTable);
+  
+  #only getting the names of DE features
+  diff_ft <<- rownames(resTable)[1:de.Num];
+  
+  #individual boxplot for features
+  sigfeat <- rownames(resTable);
+  box_data <- as.data.frame(dat3t[ ,sigfeat]);
+  colnames(box_data) <- sigfeat;
+  box_data$class <- claslbl;
+  
+  mbSetObj$analSet$boxdata <- box_data;
+  mbSetObj$analSet$sig.count <- de.Num;      
+  tree_data <<- data;
+  .set.mbSetObj(mbSetObj)
+  return(1)
+}
+
+
+.prepare_rnaseq<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank){
+  mbSetObj <-.get.mbSetObj(mbSetObj);
+  taxrank <<- taxrank;
   # build phyloslim obj in fly
   filt.dataphy <- mbSetObj$dataSet$filt.data;
   filt.dataphy <- apply(filt.dataphy, 2, as.integer);
@@ -1084,88 +1215,47 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank){
     data <- merge_phyloseq(data1, sample_data(data));
     nm <- taxa_names(data);
   }
-  
+
   dat3t <- as.data.frame(t(otu_table(data)));
   colnames(dat3t) <- nm;
   
   mbSetObj$analSet$rnaseq$data.rnaseq <- dat3t
+  mbSetObj$analSet$var.type <- variable;
+  mbSetObj$analSet$id.type <- shotgunid;
+  mbSetObj$analSet$rnaseq.taxalvl <- taxrank;
+  mbSetObj$analSet$rnaseq.meth <- opts;
+  mbSetObj$analSet$rnaseq.plvl <- p.lvl
+  .set.mbSetObj(mbSetObj)
+  return(data)
+}
+
+.perform_edger<-function(variable,data, p.lvl){
+  mbSetObj <- .get.mbSetObj(mbSetObj)
+  dat3t<- mbSetObj$analSet$rnaseq$data.rnaseq
+  claslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   
-  if(opts=="DESeq2"){
-    # only for small data set (< 100)
-    if(length(claslbl) > 100){
-      AddErrMsg("Only EdgeR is supported for sample size over 100.");
-      return(0);
-    }else{
-      # use microservice
-      print("Peforming DESeq2 ....");
-      
-      library(RSclient);
-      rsc <- RS.connect();
-      
-      RS.assign(rsc, "my.dir", getwd()); 
-      RS.eval(rsc, setwd(my.dir));
-      
-      dat.out <- list(data=data, variable=variable);
-      RS.assign(rsc, "dat.in", dat.out); 
-      my.fun <- function(){
-        # create formula based on user selection
-        variable <- dat.in$variable;
-        my.formula <- as.formula(paste("~", variable));
-        
-        #converting from phyloslim object to deseq
-        library(phyloseq);
-        library(DESeq2);
-        diagdds <- phyloseq_to_deseq2(dat.in$data, my.formula);
-        geoMeans <- apply(counts(diagdds), 1, 
-                          function(x, na.rm=TRUE){exp(sum(log(x[x > 0]), na.rm=na.rm) / length(x))}
-        );
-        diagdds <- estimateSizeFactors(diagdds, geoMeans = geoMeans);
-        diagdds <- DESeq(diagdds, test="Wald", fitType="parametric");
-        res <- results(diagdds, independentFiltering = FALSE, cooksCutoff =  Inf);
-        # make sure it is basic R, not DESeq2 obj
-        resTable <- data.frame(res[,c("log2FoldChange" ,"lfcSE","pvalue","padj")]); 
-        return(resTable);
-      }
-      RS.assign(rsc, my.fun);
-      resTable <-  RS.eval(rsc, my.fun());
-      RS.close(rsc);
-      
-      sigHits <- which(resTable$padj < p.lvl);
-      de.Num <- length(sigHits);
-      if(de.Num == 0){
-        current.msg <<- "No significant features were identified using the given p value cutoff.";
-      }else{
-        current.msg <<- paste("A total of", de.Num, "significant features were identified!");
-      }
-      
-      resTable <- signif(data.matrix(resTable), digits=5);
-      colnames(resTable) <- c("log2FC","lfcSE","Pvalues","FDR");
-      mbSetObj$analSet$anal.type <- "deseq";
-    }
+  #using by filtered data ,RLE normalization within it.
+  dge <- phyloseq_to_edgeR(data, variable);
+  et = edgeR::exactTest(dge);
+  tt = edgeR::topTags(et, n=nrow(dge$table), adjust.method="BH", sort.by="PValue");
+  res = tt@.Data[[1]];
+  de.Num <- sum(res$FDR < p.lvl);
+  
+  if(de.Num == 0){
+    current.msg <<- "No significant features were identified using the given p value cutoff.";
   }else{
-    #using by filtered data ,RLE normalization within it.
-    dge <- phyloseq_to_edgeR(data, variable);
-    et = edgeR::exactTest(dge);
-    tt = edgeR::topTags(et, n=nrow(dge$table), adjust.method="BH", sort.by="PValue");
-    res = tt@.Data[[1]];
-    de.Num <- sum(res$FDR < p.lvl);
-    
-    if(de.Num == 0){
-      current.msg <<- "No significant features were identified using the given p value cutoff.";
-    }else{
-      current.msg <<- paste("A total of", de.Num, "significant features were identified!");
-    }
-    
-    resTable <- res[,c("logFC","logCPM","PValue","FDR")];
-    resTable <- signif(data.matrix(resTable), digits = 5);
-    colnames(resTable) <- c("log2FC","logCPM","Pvalues","FDR");
-    mbSetObj$analSet$anal.type <- "edgr";
+    current.msg <<- paste("A total of", de.Num, "significant features were identified!");
   }
+  
+  resTable <- res[,c("logFC","logCPM","PValue","FDR")];
+  resTable <- signif(data.matrix(resTable), digits = 5);
+  colnames(resTable) <- c("log2FC","logCPM","Pvalues","FDR");
+  mbSetObj$analSet$anal.type <- "edgr";
   
   resTable <- as.data.frame(resTable);
   ord.inx <- order(resTable$Pvalues);
   resTable <- resTable[ord.inx, , drop=FALSE];
-  write.csv(resTable, file="rnaseq_de.csv");
+  fast.write(resTable, file="rnaseq_de.csv");
   
   if(nrow(resTable) > 500){
     resTable<-resTable[1:500, ];
@@ -1185,16 +1275,11 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank){
   
   mbSetObj$analSet$boxdata <- box_data;
   mbSetObj$analSet$sig.count <- de.Num;
-  mbSetObj$analSet$var.type <- variable;
-  mbSetObj$analSet$id.type <- shotgunid;
-  mbSetObj$analSet$rnaseq.taxalvl <- taxrank;
-  mbSetObj$analSet$rnaseq.meth <- opts;
   
   tree_data <<- data;
-  return(.set.mbSetObj(mbSetObj));
-  
+  .set.mbSetObj(mbSetObj)
+  return(1);
 }
-
 
 ########################################################
 ###########Correlation Analysis (Pattern Hunter)########
@@ -1264,7 +1349,7 @@ FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, feat){
   }
   
   data1 <- t(data1);
-  saveRDS(data1, "match_data.RDS")
+  qs::qsave(data1, "match_data.qs")
   #making boxplot data
   
   sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
@@ -1304,7 +1389,7 @@ FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, feat){
   }
   
   fileName <- "correlation_feature.csv";
-  write.csv(sig.mat,file=fileName);
+  fast.write(sig.mat,file=fileName);
   mbSetObj$analSet$resTable <- as.data.frame(sig.mat);
   #removing Inf values from table
   is.na(mbSetObj$analSet$resTable) <- sapply(mbSetObj$analSet$resTable, is.infinite);
@@ -1346,7 +1431,7 @@ PlotCorr <- function(mbSetObj, imgName, format="png", dpi=72, width=NA){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   variable <- mbSetObj$analSet$pattern.var;
-  data <- readRDS("match_data.RDS")
+  data <- qs::qread("match_data.qs")
   sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
   
   if(is.null(variable)){
@@ -1560,7 +1645,7 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, 
   
   if(mbSetObj$module.type=="mdp"){
     if(!exists("phyloseq_objs")){
-      phyloseq_objs <- readRDS("phyloseq_objs.RDS")
+      phyloseq_objs <- qs::qread("phyloseq_objs.qs")
     }
     
     if(taxrank=="OTU"){
@@ -1575,7 +1660,7 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, 
   }
   
   data <- t(data);
-  saveRDS(data, "match_data.RDS")
+  qs::qsave(data, "match_data.qs")
   
   clslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   boxdata <- as.data.frame(data);
@@ -1585,7 +1670,7 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, 
   if(dist.name == "sparcc"){
     
     pattern.data <- cbind(data, new.template)
-    saveRDS(t(pattern.data), "pattern_data.RDS")
+    qs::qsave(t(pattern.data), "pattern_data.qs")
     permNum <- 100
     pvalCutoff <- 1 
     corrCutoff <- 0
@@ -1617,7 +1702,7 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, 
   }
   
   fileName <- "correlation_feature.csv";
-  write.csv(sig.mat, file=fileName);
+  fast.write(sig.mat, file=fileName);
   mbSetObj$analSet$resTable <- as.data.frame(sig.mat);
   #removing Inf values from table
   is.na(mbSetObj$analSet$resTable) <- sapply(mbSetObj$analSet$resTable, is.infinite);
@@ -1691,7 +1776,7 @@ RunFastSpar <- function(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, outp
   }
   
   if(opt == "pattern"){
-    data1 <- readRDS("pattern_data.RDS")
+    data1 <- qs::qread("pattern_data.qs")
   }else{
     # first get OTU table to BIOM TSV format
     if(mbSetObj$module.type=="sdp"){
@@ -1699,7 +1784,7 @@ RunFastSpar <- function(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, outp
       taxrank <- "OTU";
     }else if(mbSetObj$module.type=="mdp"){
       if(!exists("phyloseq_objs")){
-        phyloseq_objs <- readRDS("phyloseq_objs.RDS")
+        phyloseq_objs <- qs::qread("phyloseq_objs.qs")
       }
       
       if(taxrank=="OTU"){
@@ -1712,7 +1797,7 @@ RunFastSpar <- function(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, outp
   }
   
   if(opt=="corr"){
-    saveRDS(data1, "sparcc_full_data.RDS")  
+    qs::qsave(data1, "sparcc_full_data.qs")  
   }
   
   if(!is.null(mbSetObj$dataSet$selected.grps) & opt == "corr"){
@@ -1775,7 +1860,7 @@ RunFastSpar <- function(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, outp
   rownames(zero.output) <- rownames(data1)
   
   if(opt=="corr"){
-    saveRDS(zero.output, "sparcc_data.rds")
+    qs::qsave(zero.output, "sparcc_data.qs")
   }
   
   # add header
@@ -1823,10 +1908,10 @@ RunFastSpar <- function(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, outp
     
     sparcc_combo <- cbind(sparcc_corr, sparcc_pvals[,3])
     colnames(sparcc_combo) <- c("Taxon1", "Taxon2", "Correlation", "P.Value")
-    saveRDS(sparcc_combo, "network_correlation.rds")
+    qs::qsave(sparcc_combo, "network_correlation.qs")
     
     sparcc_combo <- sparcc_combo[(abs(sparcc_combo[,3]) > corrCutoff & sparcc_combo[,4] < pvalCutoff),]
-    write.csv(sparcc_combo, "correlation_table.csv", row.names = FALSE)
+    fast.write(sparcc_combo, "correlation_table.csv", row.names = FALSE)
     .set.mbSetObj(mbSetObj)
     return(sparcc_combo)
   }else if(output=="heatmap"){
@@ -1875,11 +1960,11 @@ PlotNetworkSummary <- function(mbSetObj, imgName, taxa, format, width=NA, dpi=72
   
   cor.method <- mbSetObj$dataSet$cor.method
   
-  network_results <- readRDS("network_correlation.rds")
+  network_results <- qs::qread("network_correlation.qs")
   
   if(cor.method != "sparcc"){
     network_results <- network_results[,1:4]
-    data <- readRDS("network_cor_data.rds") 
+    data <- qs::qread("network_cor_data.qs") 
     taxa_inx1 <- which(network_results$Taxon1 %in% taxa)
     taxa_inx2 <- which(network_results$Taxon2 %in% taxa)
     taxa_results1 <- network_results[taxa_inx1,]
@@ -1888,7 +1973,7 @@ PlotNetworkSummary <- function(mbSetObj, imgName, taxa, format, width=NA, dpi=72
     colnames(taxa_results2) <- colnames(taxa_results1)
     taxa_results <- rbind(taxa_results1, taxa_results2) 
   }else{
-    data <- readRDS("sparcc_full_data.RDS") 
+    data <- qs::qread("sparcc_full_data.qs") 
     data <- t(data)
     taxa_inx <- which(network_results$Taxon1 %in% taxa)
     taxa_results <- network_results[taxa_inx,]

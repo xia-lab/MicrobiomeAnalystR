@@ -83,10 +83,8 @@ PCoA3D.Anal <- function(mbSetObj, ordMeth, distName, taxrank, colopt, variable, 
     data<-data;
   }
   
-  datacolby <<- data;
-  
   if(distName=="wunifrac"){
-    pg_tree <- readRDS("tree.RDS");
+    pg_tree <- qs::qread("tree.qs");
     pg_tb <- tax_table(data);
     pg_ot <- otu_table(data);
     pg_sd <- sample_data(data);
@@ -107,7 +105,7 @@ PCoA3D.Anal <- function(mbSetObj, ordMeth, distName, taxrank, colopt, variable, 
     }
     GP.ord <-ordinate(data,ordMeth,"unifrac",weighted=TRUE);
   } else if (distName=="unifrac"){
-    pg_tree <- readRDS("tree.RDS");
+    pg_tree <- qs::qread("tree.qs");
     pg_tb <- tax_table(data);
     pg_ot <- otu_table(data);
     pg_sd <- sample_data(data);
@@ -144,14 +142,14 @@ PCoA3D.Anal <- function(mbSetObj, ordMeth, distName, taxrank, colopt, variable, 
   if(ordMeth=="NMDS"){
     pca3d$score$axis <- paste("NMDS", 1:3 , sep="");
     coord<-sum.pca$points;
-    write.csv(signif(coord,5), file="pcoa_score.csv");
+    fast.write(signif(coord,5), file="pcoa_score.csv");
     list2 <- rep(as.numeric(0),nrow(coord));
     coord <- cbind(coord, list2);
     coords <- data.frame(t(signif(coord[,1:3], 5)));
   }else{
     pca3d$score$axis <- paste("PC", 1:3, " (", 100*round(sum.pca$variance[1:3], 3), "%)", sep="");
     coords <- data.frame(t(signif(sum.pca$vectors[,1:3], 5)));
-    write.csv(signif(sum.pca$vectors,5), file="pcoa_score.csv");
+    fast.write(signif(sum.pca$vectors,5), file="pcoa_score.csv");
   }
   
   colnames(coords) <- NULL;
@@ -254,7 +252,7 @@ PlotTreeGraph <- function(mbSetObj, plotNm, distnm, clstDist, metadata, taxrank,
   
   # must call distance within the phyloslim package
   if(distnm == "unifrac" | distnm == "wunifrac"){
-    pg_tree <- readRDS("tree.RDS");
+    pg_tree <- qs::qread("tree.qs");
     pg_tb <- tax_table(data);
     pg_ot <- otu_table(data);
     pg_sd <- sample_data(data);
@@ -897,7 +895,7 @@ PerformPartialCorr <- function(mbSetObj, taxa.lvl="Phylum", variable=NA, alg = "
   resTable <- as.data.frame(pcor.results)
   ord.inx <- order(resTable$p.value);
   resTable <- resTable[ord.inx, , drop=FALSE];
-  write.csv(resTable, "partial_corr.csv", row.names = TRUE);
+  fast.write(resTable, "partial_corr.csv", row.names = TRUE);
   resTable$taxarank = row.names(pcor.results)
   
   if(.on.public.web){

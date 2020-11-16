@@ -195,7 +195,7 @@ PreparePCA4Shotgun <- function(mbSetObj, imgName,imgName2, format="json", inx1, 
   pca3d <- list();
   pca <- prcomp(t(dat), center=T, scale=T);
   imp.pca <- summary(pca)$importance;
-  write.csv(signif(pca$x,5), file="pca_score.csv");
+  fast.write(signif(pca$x,5), file="pca_score.csv");
   pca3d$score$axis <- paste("PC", 1:3, " (", 100*round(imp.pca[2,][1:3], 3), "%)", sep="");
   
   #3D
@@ -283,16 +283,16 @@ PlotFunctionStack<-function(mbSetObj, summaryplot, functionlvl, abundcal, geneid
   query <- otu_table(data)[,ord.inx];
 
   if(geneidtype=="cog"){
-    ko_higher_path <- .read.microbiomeanalyst.lib("cog_functioncount.rds", "ko");
+    ko_higher_path <- .read.microbiomeanalyst.lib.rds("cog_functioncount.rds", "ko");
   }else {
     if(functionlvl=="KEGG metabolism"){
-      ko_higher_path<-.read.microbiomeanalyst.lib("ko_higherpathway.rds", "ko");
+      ko_higher_path<-.read.microbiomeanalyst.lib.rds("ko_higherpathway.rds", "ko");
     }else if(functionlvl=="KEGG pathways"){
-      ko_higher_path<-.read.microbiomeanalyst.lib("ko_pathwaycount.rds", "ko");
+      ko_higher_path<-.read.microbiomeanalyst.lib.rds("ko_pathwaycount.rds", "ko");
     }else if(functionlvl=="KEGG modules"){
-      ko_higher_path<-.read.microbiomeanalyst.lib("ko_modulecount.rds", "ko");
+      ko_higher_path<-.read.microbiomeanalyst.lib.rds("ko_modulecount.rds", "ko");
     }else if(functionlvl=="COG Functional category"){
-      ko_higher_path<-.read.microbiomeanalyst.lib("ko_cogfunction.rds", "ko");
+      ko_higher_path<-.read.microbiomeanalyst.lib.rds("ko_cogfunction.rds", "ko");
     }
   }
 
@@ -348,7 +348,7 @@ PlotFunctionStack<-function(mbSetObj, summaryplot, functionlvl, abundcal, geneid
     result <- result[ rowSums(result)!=0, ];
   }
     
-  write.csv(result, file="funcprof_abund.csv");
+  fast.write(result, file="funcprof_abund.csv");
 
   # now plotting
   w <- 1000;
@@ -486,7 +486,7 @@ PerformKOmapping <- function(mbSetObj, geneIDs, type){
     gd.inx <- (!is.na(kos)) & gene.mat[,1] > 0;
     gene.mat <- gene.mat[gd.inx, ,drop=F];
     mbSetObj$analSet$ko.mapped <- mbSetObj$analSet$data <- gene.mat; # data will be updated, ko.map will keep intact
-    current.msg <<- paste("A total of unqiue", nrow(gene.mat), "KO genes were mapped to KEGG network!");
+    current.msg <<- paste("A total of unique", nrow(gene.mat), "KO genes were mapped to KEGG network!");
 
     return(.set.mbSetObj(mbSetObj));
   }
@@ -543,15 +543,75 @@ PrepareQueryJson <- function(mbSetObj){
 PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, file.nm){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
-  LoadKEGGKO_lib(category);
     
   if(enrich.type == "hyper"){
+  LoadKEGGKO_lib(category);
     PerformKOEnrichAnalysis_List(mbSetObj, file.nm);
   }else{
-    PerformKOEnrichAnalysis_Table(mbSetObj, file.nm);
+    .prepare.global(mbSetObj, category, file.nm);
+    .perform.computing();
+    .save.global.res();
   }
   return(.set.mbSetObj(mbSetObj))
+}
+
+.prepare.global<-function(mbSetObj, category, file.nm){
+  LoadKEGGKO_lib(category);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+
+  phenotype <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[selected.meta.data]]);
+  genemat <- as.data.frame(t(otu_table(mbSetObj$dataSet$norm.phyobj)));
+  # first, get the matched entries from current.geneset
+  hits <- lapply(current.geneset, function(x){x[x %in% colnames(genemat)]});
+  set.num <- unlist(lapply(current.geneset, length), use.names = FALSE);
+  dat.in <- list(cls=phenotype, data=genemat, subsets=hits, set.num=set.num, filenm=file.nm);
+
+  my.fun <- function(){
+        gt.obj <- globaltest::gt(dat.in$cls, dat.in$data, subsets=dat.in$subsets);
+        gt.res <- globaltest::result(gt.obj);
+
+        match.num <- gt.res[,5];
+        if(sum(match.num>0)==0){
+            return(NA);
+        }
+        raw.p <- gt.res[,1];
+
+        # add adjust p values
+        bonf.p <- p.adjust(raw.p, "holm");
+        fdr.p <- p.adjust(raw.p, "fdr");
+
+        res.mat <- cbind(set.num, match.num, gt.res[,2], gt.res[,3], raw.p, bonf.p, fdr.p);
+        rownames(res.mat) <- names(hits);
+        colnames(res.mat) <- c("Size", "Hits", "Statistic Q", "Expected Q", "Pval", "Holm p", "FDR");
+        hit.inx <- res.mat[,2]>0;
+        res.mat <- res.mat[hit.inx, ];
+        ord.inx <- order(res.mat[,5]);
+        res.mat <- res.mat[ord.inx,];
+        return(res.mat);
+    }
+    dat.in <- list(cls=phenotype, data=genemat, subsets=hits, set.num=set.num, filenm=file.nm , my.fun=my.fun);
+    qs::qsave(dat.in, file="dat.in.qs");
+    return(1);
+}
+
+.save.global.res <- function(){
+  mbSetObj = .get.mbSetObj("NA");
+  dat.in <- qs::qread("dat.in.qs"); 
+  hits = dat.in$subsets
+  file.nm = dat.in$filenm;
+  my.res <- dat.in$my.res;
+  if(length(my.res)==1 && is.na(my.res)){
+        AddErrMsg("No match was found to the selected metabolite set library!");
+        return(0);
+  }
+
+    # in R, sort list is by its name!, using pos order has issues!
+    nms <- rownames(my.res);
+    hits <- hits[nms];
+
+    Save2KEGGJSON(hits, my.res, file.nm);
+    .set.mbSetObj(mbSetObj);
+    return(1);
 }
 
 #'Perform KO Enrichment Analysis 
@@ -626,11 +686,11 @@ PerformKOEnrichAnalysis_Table <- function(mbSetObj, file.nm){
 LoadKEGGKO_lib<-function(category){
     
   if(category == "module"){
-    .load.microbiomeanalyst.lib("ko_modules.rda", "ko")
+    .read.microbiomeanalyst.lib.rda("ko_modules.rda", "ko")
     current.setlink <- kegg.anot$link;
     current.mset <- kegg.anot$sets$"Pathway module";
   }else{
-    .load.microbiomeanalyst.lib("ko_pathways.rda", "ko")
+    .read.microbiomeanalyst.lib.rda("ko_pathways.rda", "ko")
     current.setlink <- kegg.anot$link;
     current.mset <- kegg.anot$sets$Metabolism;
   }
@@ -870,7 +930,7 @@ Save2KEGGJSON <- function(hits.query, res.mat, file.nm){
   sink();
   
   # write csv
-  write.csv(resTable, file=paste(file.nm, ".csv", sep=""), row.names=F);
+  fast.write(resTable, file=paste(file.nm, ".csv", sep=""), row.names=F);
 }
 
 # Utility function
@@ -935,7 +995,7 @@ RemoveDuplicates <- function(data, lvlOpt, quiet=T){
 # return matched KO in the same order (NA if no match)
 doKOFiltering <- function(ko.vec, type){
   
-  ko.dic <- .read.microbiomeanalyst.lib("ko_dic.rds", "ko");
+  ko.dic <- .read.microbiomeanalyst.lib.rds("ko_dic.rds", "ko");
   
   if(type == "ko"){
     hit.inx <- match(ko.vec, ko.dic$KO);

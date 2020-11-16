@@ -71,7 +71,7 @@ Init.mbSetObj <- function(){
 #' @param ref Default set to "NA".
 
 # read binary RDS files
-.read.microbiomeanalyst.lib <- function(filenm, sub.dir = NULL, ref = NA){
+.read.microbiomeanalyst.lib.rds <- function(filenm, sub.dir = NULL, ref = NA){
   
   if(.on.public.web){
     if(is.null(sub.dir)){
@@ -153,7 +153,7 @@ Init.mbSetObj <- function(){
 
 # read binary RDA files (old style should be all RDS)
 # type should mset or kegg
-.load.microbiomeanalyst.lib <- function(libname, sub.dir=NULL){
+.read.microbiomeanalyst.lib.rda <- function(libname, sub.dir=NULL){
   
   destfile <- libname;
   if(.on.public.web){
@@ -234,6 +234,12 @@ ReadSampleTable<- function(mbSetObj, dataName) {
   
   # converting to character matrix as duplicate row names not allowed in data frame.
   mydata <- as.matrix(mydata[,-1]);
+
+  if(nrow(mydata)==1){
+    AddErrMsg("Only one sample in the dataset or the metadata file must be transposed!")
+    return(0);
+  }
+  
   rownames(mydata) <- smpl_nm;
   colnames(mydata) <- smpl_var;
   
@@ -297,7 +303,7 @@ ReadTreeFile <- function(mbSetObj, dataName) {
   })
   
   if(!is.null(tree)){
-    saveRDS(tree, "tree.RDS");
+    qs::qsave(tree, "tree.qs");
     mbSetObj$tree.uploaded <- TRUE;
     return(.set.mbSetObj(mbSetObj));
   }else{
@@ -397,6 +403,12 @@ GetMetaTaxaInfo <- function(mbSetObj){
   #drop taxa with only 1 level (i.e. Viruses at Phylum)
   gd.inx <- apply(taxa.tbl, 2, function(x) length(unique(x))!=1);
   taxa.tbl.update <- taxa.tbl[,gd.inx, drop=FALSE];
+  
+  if(ncol(taxa.tbl.update) == 0){
+    msg <- c("All taxa info are the same!")
+    return("OTU")
+  }
+  
   taxa.nms <- rank_names(taxa.tbl.update);
   return(taxa.nms[!is.na(taxa.nms)]);
 }
@@ -497,18 +509,18 @@ PrepareDownloadData <- function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   if(mbSetObj$module.type == "mdp" || mbSetObj$module.type == "sdp"){
     if(!is.null(mbSetObj$dataSet$data.orig)){
-      write.csv(mbSetObj$dataSet$data.orig, file="data_original.csv");
+      fast.write(mbSetObj$dataSet$data.orig, file="data_original.csv");
     }
     if(!is.null(mbSetObj$dataSet$filt.data)){
-      write.csv(mbSetObj$dataSet$filt.data, file="data_filtered.csv");
+      fast.write(mbSetObj$dataSet$filt.data, file="data_filtered.csv");
     }
     if(!is.null(otu_table(mbSetObj$dataSet$norm.phyobj,as.matrix()))){
-      write.csv(otu_table(mbSetObj$dataSet$norm.phyobj,as.matrix()), file="data_normalized.csv");
+      fast.write(otu_table(mbSetObj$dataSet$norm.phyobj,as.matrix()), file="data_normalized.csv");
     }
   }else if(mbSetObj$module.type == "ppd"){
-    write.csv(otu_table(userrefdata,as.matrix()), file="merge_otutable.csv");
-    write.csv(as.matrix(tax_table(userrefdata)), file="merge_taxtable.csv");
-    write.csv(as.data.frame(sample_data(userrefdata)), file="merge_sampletable.csv");
+    fast.write(otu_table(userrefdata,as.matrix()), file="merge_otutable.csv");
+    fast.write(as.matrix(tax_table(userrefdata)), file="merge_taxtable.csv");
+    fast.write(as.data.frame(sample_data(userrefdata)), file="merge_sampletable.csv");
   }
   return(.set.mbSetObj(mbSetObj));
 };
@@ -568,6 +580,6 @@ MakeRankedCountTables <- function(mbSetObj){
     count.table <- UtilMakeCountTables(phyloseq.obj, ranks[i])
     data.list$count_tables[[i]] <- count.table
   }
-  saveRDS(data.list, "phyloseq_objs.RDS")
+  qs::qsave(data.list, "phyloseq_objs.qs")
   return(.set.mbSetObj(mbSetObj))
 }

@@ -22,7 +22,7 @@ PerformAlphaDiversityComp<-function(mbSetObj, opt, metadata){
   mbSetObj <- .get.mbSetObj(mbSetObj); 
   
   data <- mbSetObj$analSet$alpha;
-  cls <- data[,metadata];
+  cls <- as.factor(data[,metadata]);
   x <- data$value;
   stat.info <- NULL;
   
@@ -95,7 +95,7 @@ PerformNetworkCorrelation <- function(mbSetObj, taxrank, cor.method="pearson", c
   }else{
     
     if(!exists("phyloseq_objs")){
-      phyloseq_objs <- readRDS("phyloseq_objs.RDS")
+      phyloseq_objs <- qs::qread("phyloseq_objs.qs")
     }
     
     if(taxrank=="OTU"){
@@ -106,7 +106,7 @@ PerformNetworkCorrelation <- function(mbSetObj, taxrank, cor.method="pearson", c
     }
     
     data <- t(data1);
-    saveRDS(data, "network_cor_data.rds")
+    qs::qsave(data, "network_cor_data.qs")
     
     data <- data[which(rownames(data) %in% mbSetObj$dataSet$selected.grps),]
     data[data==0|is.na(data)] <- .00001
@@ -132,12 +132,12 @@ PerformNetworkCorrelation <- function(mbSetObj, taxrank, cor.method="pearson", c
     }
     
     colnames(cor.results) <- c("Taxon1", "Taxon2", "Correlation", "P.value", "Statistic", "Method")
-    saveRDS(cor.results, "network_correlation.rds")
+    qs::qsave(cor.results, "network_correlation.qs")
     
     cor.results.filt <- cor.results[(abs(cor.results[,3]) > corrCutoff & cor.results[,4] < pvalCutoff),]
     cor.results.filt[,3] <- round(cor.results.filt[,3], digits=4)
     cor.results.filt[,4] <- round(cor.results.filt[,4], digits=4)
-    write.csv(cor.results.filt, "correlation_table.csv", row.names = FALSE)
+    fast.write(cor.results.filt, "correlation_table.csv", row.names = FALSE)
     mbSetObj$analSet$network_cor <- cor.results.filt;
   }
   
@@ -190,7 +190,7 @@ PerformNetworkCorrelation <- function(mbSetObj, taxrank, cor.method="pearson", c
   match.inx <- which(fc$tax_name %in% clean_feats_used)
   
   if(cor.method=="sparcc"){
-    abund_data <- readRDS("sparcc_data.rds")
+    abund_data <- qs::qread("sparcc_data.qs")
   }else{
     abund_data <- t(as.matrix(mbSetObj$analSet$netcorr_data))
   }
@@ -236,7 +236,6 @@ PerformNetworkCorrelation <- function(mbSetObj, taxrank, cor.method="pearson", c
         
         mbSetObj$analSet$mdi <- paste(groups, "MD-index:", MDI1)
       }
-      
     }
   }
   
@@ -339,7 +338,6 @@ PlotCorrHeatMap <- function(mbSetObj, imgName, format="png", cor.method,
   colnames(data)<-substr(colnames(data), 1, 18);
   
   if(cor.method=="sparcc"){
-    #corr.mat <- RunFastSpar(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, "heatmap")
     if(.on.public.web){
       corr.mat <- RunFastSpar_mem(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, "heatmap")
     }else{
@@ -460,7 +458,7 @@ PlotCorrHeatMap <- function(mbSetObj, imgName, format="png", cor.method,
   mbSetObj$analSet$colors<-colors;
   mbSetObj$analSet$corheat.taxalvl<-taxrank;
   mbSetObj$analSet$corheat.meth<-cor.method;
-  write.csv(signif(corr.mat,5), file="correlation_table.csv");
+  fast.write(signif(corr.mat,5), file="correlation_table.csv");
   
   if(cor.method=="sparcc"){
     method = "SparCC"
@@ -570,7 +568,7 @@ SparccToNet <- function(mbSetObj=NULL, corr.net.name){
     smpl <- data.frame(sample_data(mbSetObj$dataSet$proc.phyobj));
     subsmpl <- smpl[mbSetObj$dataSet$selected.grps,,drop=FALSE]
     if(mbSetObj$dataSet$cor.method == "sparcc"){
-      abund_data <- readRDS("sparcc_data.rds")
+      abund_data <- qs::qread("sparcc_data.qs")
     }else{
       abund_data <- t(as.matrix(mbSetObj$analSet$netcorr_data))
     }
@@ -594,16 +592,16 @@ SparccToNet <- function(mbSetObj=NULL, corr.net.name){
         tmp = r[which(r$ind == smp.nm),]
         tmp = tmp[which(tmp$meta == meta.nm),]
         if(abundOpt == "meanlog"){
-        vals = log(tmp$values, 10)
-        average = mean(vals)
+          vals = log(tmp$values, 10)
+          average = mean(vals)
         }else if(abundOpt == "medianlog"){
-        vals = log(tmp$values, 10)
-        average = median(vals)
+          vals = log(tmp$values, 10)
+          average = median(vals)
         }else if(abundOpt == "mean"){
-        total = sum(tmp$values)
-        average = total/length(tmp$values)
+          total = sum(tmp$values)
+          average = total/length(tmp$values)
         }else{
-        average=median(tmp$values)
+          average=median(tmp$values)
         }
         if(length(propList[[smp.nm]]) == 0){
           propList[[smp.nm]] = list()
@@ -685,7 +683,7 @@ SparccToNet <- function(mbSetObj=NULL, corr.net.name){
   # order 
   ord.inx <- order(nd.tbl[,3], nd.tbl[,4], decreasing = TRUE)
   nd.tbl <- nd.tbl[ord.inx, ];
-  write.csv(nd.tbl, file="node_table.csv", row.names=FALSE);
+  fast.write(nd.tbl, file="node_table.csv", row.names=FALSE);
   
   # covert to json
   require(RJSONIO);
@@ -753,8 +751,8 @@ PrepareCorrExpValues <- function(mbSetObj, meta, taxalvl, color, layoutOpt, comp
   if(comparison != "all"){
     grp.nms <- mbSetObj$corr.net$comparison;
     if(is.null(grp.nms)){
-        AddErrMsg("Please specify groups first!");
-        return(0);
+      AddErrMsg("Please specify groups first!");
+      return(0);
     }
     dm_samples_cmf <- dm_samples[dm_samples[[meta]] %in% grp.nms, ]; #subset sample data by meta variable
   }else{
@@ -971,7 +969,7 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
   core.nm <- data.frame(prevalence(data.compositional, detection = detection, sort = TRUE));
   colnames(core.nm)[1] <- "Prevelance";
   fileName <- "core_microbiome.csv";
-  write.csv(core.nm, file=fileName);
+  fast.write(core.nm, file=fileName);
   
   imgName = paste(imgName, ".", format, sep="");
   mbSetObj$imgSet$core <- imgName;
@@ -1128,8 +1126,8 @@ core_heatmap<-function(x, dets, cols, min.prev, taxa.order){
   
   load_datatable();
   
-  data <- x
-  #colours <- gray(seq(0, 1, length=5)),
+  data <- x;
+  
   DetectionThreshold <- Taxa <- Prevalence <- NULL
   # Prevalences with varying dets
   prev <- lapply(dets, function(th) {
@@ -1146,7 +1144,7 @@ core_heatmap<-function(x, dets, cols, min.prev, taxa.order){
   
   df <- as.data.frame(prev)
   df$ID <- rownames(prev)
-  df <- melt(df, "ID")
+  df <- data.table::melt(df, "ID");
   names(df) <- c("Taxa", "DetectionThreshold", "Prevalence")
   df$DetectionThreshold <- as.numeric(as.character(df$DetectionThreshold))
   df$Prevalence <- as.numeric(as.character(df$Prevalence))
@@ -1245,7 +1243,7 @@ PlotOverallPieGraph<-function(mbSetObj, taxalvl, feat_cnt, calcmeth, toptaxapie,
   #using filtered data
   data <- mbSetObj$dataSet$filt.data;
   
-  if(class(mbSetObj$dataSet$filt.data)=="matrix"){
+  if("matrix" %in% class(mbSetObj$dataSet$filt.data)){
     data <- otu_table(data, taxa_are_rows =TRUE);
   }
   
@@ -1350,7 +1348,7 @@ PlotOverallPieGraph<-function(mbSetObj, taxalvl, feat_cnt, calcmeth, toptaxapie,
   }
   piedata_write$percentage <- round((piedata_write$value / sum(piedata_write$value) * 100), digits = 2)
   colnames(piedata_write) <- c("Taxa", "Abundance", "Percentage")
-  write.csv(piedata_write, "piechart_abundances.csv");
+  fast.write(piedata_write, "piechart_abundances.csv");
   piedata <<- piedata;
   return(.set.mbSetObj(mbSetObj));
 }
@@ -1382,7 +1380,7 @@ PlotGroupPieGraph <- function(mbSetObj, taxalvl, metadata, clslevel,
   #using filtered data
   data <- mbSetObj$dataSet$filt.data;
   
-  if(class(mbSetObj$dataSet$filt.data)=="matrix"){
+  if("matrix" %in% class(mbSetObj$dataSet$filt.data)){
     data<-otu_table(data,taxa_are_rows =TRUE);
   }
   
@@ -1484,7 +1482,7 @@ PlotGroupPieGraph <- function(mbSetObj, taxalvl, metadata, clslevel,
   }
   piedata_write$percentage <- round((piedata_write$value / sum(piedata_write$value) * 100), digits = 2)
   colnames(piedata_write) <- c("Taxa", "Abundance", "Percentage")
-  write.csv(piedata_write, "piechart_abundances.csv");
+  fast.write(piedata_write, "piechart_abundances.csv");
   piedata <<- piedata;
   return(.set.mbSetObj(mbSetObj));
 }
@@ -1508,7 +1506,7 @@ PlotSamplePieGraph<-function(mbSetObj, taxalvl, smplnm, feat_cnt, toptaxapie, pi
   #using filtered data
   data <- mbSetObj$dataSet$filt.data;
   
-  if(class(mbSetObj$dataSet$filt.data)=="matrix"){
+  if("matrix" %in% class(mbSetObj$dataSet$filt.data)){
     data <- otu_table(data,taxa_are_rows =TRUE);
   }
   
@@ -1863,7 +1861,7 @@ PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName, metadata, ta
   set.seed(13133);
   
   if(data.src == "orig"){
-    data <- readRDS("orig.phyobj");
+    data <- qs::qread("orig.phyobj");
   }else{
     data <- mbSetObj$dataSet$proc.phyobj;
   }
@@ -1903,7 +1901,7 @@ PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName, metadata, ta
   }
   
   mbSetObj$analSet$alpha <- box$data;
-  write.csv(mbSetObj$analSet$alpha, file="alphadiversity.csv");
+  fast.write(mbSetObj$analSet$alpha, file="alphadiversity.csv");
   box = box + theme_bw() + theme(axis.text.x = element_text(angle = 45, hjust = 1,vjust= 1));
   box$layers <- box$layers[-1];
   box <- box + geom_point(size=3, alpha=0.7);
@@ -1934,19 +1932,19 @@ PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName, metadata, ta
 #'@export
 #'@import reshape
 PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
-                                    imgOpt, feat_cnt,toptaxa, abunTopTaxaOpt, 
+                                    imgOpt, feat_cnt, toptaxa, abunTopTaxaOpt, 
                                     appendnm, format="png", dpi=72){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
     load_reshape();
-    load_viridis();
   }
+  
   #using filtered data
   data <- mbSetObj$dataSet$filt.data;
   
-  if(class(mbSetObj$dataSet$filt.data)=="matrix"){
+  if("matrix" %in% class(mbSetObj$dataSet$filt.data)){
     data<-otu_table(data, taxa_are_rows =TRUE);
   }
   
@@ -2029,7 +2027,7 @@ PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
     }
     
     feat_no<-ncol(data);
-    write.csv(t(data), file="taxa_abund.csv");
+    fast.write(t(data), file="taxa_abund.csv");
     data$step <- factor(rownames(data));
     data <- melt(data,id='step');
     data$step <- as.numeric(data$step);
@@ -2042,7 +2040,7 @@ PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
       yLbl <- "Relative Abundance";
     }
     
-    write.csv(t(data), file="taxa_abund.csv");
+    fast.write(t(data), file="taxa_abund.csv");
     data$step <- factor(rownames(data));
     data <- melt(data,id='step');
     data$step <- as.numeric(data$step);
@@ -2315,7 +2313,7 @@ PlotBetaDiversity<-function(mbSetObj, plotNm, ordmeth, distName, colopt, metadat
   if(distName=="wunifrac"){
     
     load_ape();
-    pg_tree <- readRDS("tree.RDS");
+    pg_tree <- qs::qread("tree.qs");
     pg_tb <- tax_table(data);
     pg_ot <- otu_table(data);
     pg_sd <- sample_data(data);
@@ -2328,13 +2326,13 @@ PlotBetaDiversity<-function(mbSetObj, plotNm, ordmeth, distName, colopt, metadat
       return(0)
     }
     
-    saveRDS(data, "data_unifra.RDS");
+    qs::qsave(data, "data_unifra.qs");
     ord <- ordinate(data,method = ordmeth,"unifrac",weighted=TRUE);
     
   } else if (distName=="unifrac") {
     
     load_ape();      
-    pg_tree <- readRDS("tree.RDS");
+    pg_tree <- qs::qread("tree.qs");
     pg_tb <- tax_table(data);
     pg_ot <- otu_table(data);
     pg_sd <- sample_data(data);
@@ -2347,7 +2345,7 @@ PlotBetaDiversity<-function(mbSetObj, plotNm, ordmeth, distName, colopt, metadat
       return(0)
     }
     
-    saveRDS(data, "data_unifra.RDS");
+    qs::qsave(data, "data_unifra.qs");
     ord<-ordinate(data,method = ordmeth,"unifrac");
     
   }else{
@@ -2384,10 +2382,10 @@ PlotBetaDiversity<-function(mbSetObj, plotNm, ordmeth, distName, colopt, metadat
   #used for area color for ellipse
   if(colopt=="expfac"){
     sam_data <- as.data.frame(sample_data(data));
-    clsLbl <- sam_data[[metadata]];
+    clsLbl <- quo(sam_data[[metadata]]);
     
     if (ellopt=="yes"){
-      box = box + stat_ellipse(type="norm", linetype=2, geom = "polygon", alpha = 0.2, aes_string(fill = clsLbl), show.legend=FALSE);
+      box = box + stat_ellipse(type="norm", linetype=2, geom = "polygon", alpha = 0.2, aes(fill = !!clsLbl), show.legend=FALSE);
     }
   }
   
@@ -2434,10 +2432,10 @@ PlotFunAnotSummary<-function(mbSetObj, imgName, format="png", dpi=72){
   set.seed(280561499);
   
   if(is.null(mbSetObj$analSet$func.pred)){
-    result <- readRDS("func.pred");
+    result <- qs::qread("func.pred");
   }else{
     result <- mbSetObj$analSet$func.pred;
-    saveRDS(mbSetObj$analSet$func.pred, file="func.pred");
+    qs::qsave(mbSetObj$analSet$func.pred, file="func.pred");
     mbSetObj$analSet$func.pred <- NULL;
   }
   
@@ -2492,7 +2490,7 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
   
   #using filtered data
   data <- mbSetObj$dataSet$filt.data;
-  if(class(mbSetObj$dataSet$filt.data)=="matrix"){
+  if("matrix" %in% class(mbSetObj$dataSet$filt.data)){
     data <- otu_table(data,taxa_are_rows =TRUE);
   }
   
@@ -2638,7 +2636,7 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
     w <- min.w;
   }
   
-  write.csv(t(data), file="taxa_abund.csv");
+  fast.write(t(data), file="taxa_abund.csv");
   data$facetOpt <- as.character(clsLbl);
   data$step <- factor(rownames(data), levels = rownames(data));
   data <- melt(data,id=c('step', 'facetOpt'));
@@ -2769,7 +2767,7 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
   
   data <- mbSetObj$dataSet$filt.data;
   
-  if(class(mbSetObj$dataSet$filt.data)=="matrix"){
+  if("matrix" %in% class(mbSetObj$dataSet$filt.data)){
     data <- otu_table(data, taxa_are_rows =TRUE);
   }
   
@@ -2791,6 +2789,11 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
   
   smpl_nm <- sample_names(data1);
   clsLbl <- factor(sam[[facet]]);
+  
+  if(length(clsLbl)==0){
+    AddErrMsg("Invalid class label selected!")
+    return(0)
+  }
   
   if(length(levels(clsLbl)) > 9 && min(table(clsLbl)) < 3){
     AddErr("Too many facets to be displayed - please select a more meaningful facet option with at least 3 samples per group.");
@@ -2919,7 +2922,7 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
   data <- data[row.names(metalp), ]
   data[[get("facet")]] <- metalp[[get("facet")]]
   data$sample <- row.names(data);
-  write.csv(t(data), file="taxa_abund.csv");
+  fast.write(t(data), file="taxa_abund.csv");
   data <- melt(data, id = c("sample", get("facet")))
   tmp_df <- aggregate(data$value, by=list(data$variable), FUN=mean)
   var_level <- tmp_df[order(tmp_df$x, decreasing = TRUE), ][[1]]
@@ -2984,15 +2987,18 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
       facet_grid(as.formula(paste("variable2", "~", facet)), scales = "free", space = "free") 
   }
   
-  if(colpalopt=="set3"){
+  if(colpalopt %in% c("set1", "set2", "set3")){
     cols.needed <- length(unique(data$variable))
+    
+    colpalopt <- tools::toTitleCase(tolower(colpalopt))
+    
     if(cols.needed > 12){
-      col.func <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(12, "Set3"))
+      col.func <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(12, colpalopt))
       box <- box + scale_fill_manual(values=col.func(cols.needed), guide = guide_legend(direction = "horizontal", ncol=guide_num))
     }else{
-      box <- box + scale_fill_brewer(palette = "Set3", guide = guide_legend(direction = "horizontal", ncol=guide_num))
+      box <- box + scale_fill_brewer(palette = colpalopt, guide = guide_legend(direction = "horizontal", ncol=guide_num))
     }
-  }else if(colpalopt=="viridis"){
+  } else if(colpalopt=="viridis"){
     box <- box + viridis::scale_fill_viridis(discrete=TRUE) + guides(color=guide_legend(ncol=guide_num)) 
   }else if(colpalopt %in% c("magma","plasma","inferno")){
     box <- box + viridis::scale_fill_viridis(option=colpalopt, discrete=TRUE) + guides(color=guide_legend(ncol=guide_num))
@@ -3037,7 +3043,7 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable){
   load_vegan();
   
   if(distnm %in% c("wunifrac", "unifrac")) {
-    data <- readRDS("data_unifra.RDS");
+    data <- qs::qread("data_unifra.qs");
   } else {
     if(taxaLvl=="OTU"){
       data <- mbSetObj$dataSet$proc.phyobj;
@@ -3105,7 +3111,7 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
   }
   #using filtered data
   data <- mbSetObj$dataSet$filt.data;
-  if(class(mbSetObj$dataSet$filt.data)=="matrix"){
+  if("matrix" %in% class(mbSetObj$dataSet$filt.data)){
     data<-otu_table(data,taxa_are_rows =TRUE);
   }
   sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
@@ -3124,7 +3130,7 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
   }
   
   data <- aggregate(. ~variable,data,sum);
-  gp_nm <- rownames(data) <- data[,1];
+  rownames(data) <- data[,1];
   data <- data[,-1];
   data <- data[order(rownames(data)),];
   
@@ -3255,8 +3261,9 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
     }
   }
   
-  write.csv(t(data), file="taxa_abund.csv");
-  data$step <- factor(rownames(data));
+  fast.write(t(data), file="taxa_abund.csv");
+  data$step <- factor(rownames(data), levels = rownames(data));
+  gp_nm <- data$step
   data <- melt(data,id='step');
   data$step <- as.numeric(data$step);
   data <- data[order(data[,2]),];
@@ -3322,15 +3329,16 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
     box <- box + facet_grid(~variable2, scales = "free");
   }
   
-  if(colpalopt=="set3"){
+  if(colpalopt %in% c("set1", "set2", "set3")){
     cols.needed <- length(unique(data$variable))
+    colpalopt <- tools::toTitleCase(tolower(colpalopt))
     if(cols.needed > 12){
-      col.func <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(12, "Set3"))
+      col.func <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(12, colpalopt))
       box <- box + scale_fill_manual(values=col.func(cols.needed),
                                      guide = guide_legend(direction = "horizontal",
                                                           ncol = guide_num))
     } else {
-      box <- box + scale_fill_brewer(palette = "Set3",
+      box <- box + scale_fill_brewer(palette = colpalopt,
                                      guide = guide_legend(direction = "horizontal",
                                                           ncol = guide_num))
     }
@@ -3359,7 +3367,7 @@ PlotRarefactionCurve <- function(mbSetObj, data.src, linecolor, linetype, facet,
   mbSetObj <- .get.mbSetObj(mbSetObj);
   # should use unfiltered data
   if(data.src == "orig"){
-    data_rare <- readRDS("orig.phyobj");
+    data_rare <- qs::qread("orig.phyobj");
   }else{
     data_rare <- mbSetObj$dataSet$proc.phyobj;
   }
@@ -3372,7 +3380,7 @@ PlotRarefactionCurve <- function(mbSetObj, data.src, linecolor, linetype, facet,
   
   #get good's coverage index
   goods_coverage <- ComputeGoods(data_rare)
-  write.csv(goods_coverage, "goods_coverage.csv", row.names = FALSE, quote = FALSE);
+  fast.write(goods_coverage, "goods_coverage.csv", row.names = FALSE, quote = FALSE);
   
   feat_no <- nsamples(data_rare);
   
@@ -3433,7 +3441,7 @@ PlotPhylogeneticTree <-function(mbSetObj, color, shape, taxa, treeshape, imgName
   
   data <- mbSetObj$dataSet$filt.data;
   
-  if(class(mbSetObj$dataSet$filt.data)=="matrix"){
+  if("matrix" %in% class(mbSetObj$dataSet$filt.data)){
     data <- otu_table(data,taxa_are_rows =TRUE);
   }
   
@@ -3445,7 +3453,7 @@ PlotPhylogeneticTree <-function(mbSetObj, color, shape, taxa, treeshape, imgName
   }
   
   data1 <- merge_phyloseq(data,tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
-  pg_tree <- readRDS("tree.RDS");
+  pg_tree <- qs::qread("tree.qs");
   pg_tb <- tax_table(data1);
   pg_ot <- otu_table(data1);
   pg_sd <- sample_data(data1);
@@ -3708,9 +3716,9 @@ PrepareHeatTreePlotDataParse_cmf_diff_table <- function(PrepareHeatTreePlotDataP
                                   tax_diff_dm[, 8:9],
                                   tax_diff_dm[, 2:7]);
   
-  write.csv(tax_diff_dm, 
-            "tax_diff_dm.csv", 
-            row.names = FALSE, quote = FALSE);
+  fast.write(tax_diff_dm, 
+             "tax_diff_dm.csv", 
+             row.names = FALSE, quote = FALSE);
   
   return(tax_diff_dm);
 };
@@ -4057,7 +4065,7 @@ Perform16FunAnot<-function(mbSetObj, type, pipeline) {
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   mbSetObj$dataSet$type <- type;
-  merge.otu <- readRDS("data.orig");
+  merge.otu <- qs::qread("data.orig");
   merge.otu <- apply(merge.otu, 2, as.numeric);
   rownames(merge.otu) <- mbSetObj$dataSet$comp_taxnm;
   
@@ -4101,9 +4109,9 @@ Perform16FunAnot<-function(mbSetObj, type, pipeline) {
       colnames(merge.otu)[1]<-"X.OTU_IDs";
       
       if(.on.public.web){
-        otu.dic <<- readRDS("../../lib/picrust/greengenes_taxmap.rds");
+        otu.dic <<- qs::qread("../../lib/picrust/greengenes_taxmap.qs");
       }else{
-        otu.dic <<- .read.microbiomeanalyst.lib("greengenes_taxmap.rds", "ko");
+        otu.dic <<- .read.microbiomeanalyst.lib.rds("greengenes_taxmap.rds", "ko");
       }
       
       merge.otu[,1]<-as.character(merge.otu[,1]);
@@ -4121,9 +4129,9 @@ Perform16FunAnot<-function(mbSetObj, type, pipeline) {
     #normalizing by 16S copy number
     
     if(.on.public.web){
-      copyno <- readRDS("../../lib/picrust/16S_copyno.rds");
+      copyno <- qs::qread("../../lib/picrust/16S_copyno.qs");
     }else{
-      copyno <- .read.microbiomeanalyst.lib("16S_copyno.rds", "picrust");
+      copyno <- .read.microbiomeanalyst.lib.rds("16S_copyno.rds", "picrust");
     }
     
     result2<-merge(query,copyno, by ="row.names");
@@ -4138,9 +4146,9 @@ Perform16FunAnot<-function(mbSetObj, type, pipeline) {
     row.names(res) <- row.names(result2);
     
     if(.on.public.web){
-      pc.lib <- readRDS("../../lib/picrust/picrust_part1.rds");
+      pc.lib <- qs::qread("../../lib/picrust/picrust_part1.qs");
     }else{
-      pc.lib <- .read.microbiomeanalyst.lib("picrust_part1.rds", "picrust");
+      pc.lib <- .read.microbiomeanalyst.lib.rds("picrust_part1.rds", "picrust");
     }
     
     row.hits <- match(row.names(result2), rownames(pc.lib));
@@ -4148,36 +4156,36 @@ Perform16FunAnot<-function(mbSetObj, type, pipeline) {
     colnames(res)[1:1377] <- colnames(pc.lib);
     
     if(.on.public.web){
-      pc.lib <- readRDS("../../lib/picrust/picrust_part2.rds");
+      pc.lib <- qs::qread("../../lib/picrust/picrust_part2.qs");
     }else{
-      pc.lib <- .read.microbiomeanalyst.lib("picrust_part2.rds", "picrust");
+      pc.lib <- .read.microbiomeanalyst.lib.rds("picrust_part2.rds", "picrust");
     }
     
     res[, 1378:2754] <- pc.lib[row.hits,];
     colnames(res)[1378:2754] <- colnames(pc.lib);
     
     if(.on.public.web){
-      pc.lib <- readRDS("../../lib/picrust/picrust_part3.rds");
+      pc.lib <- qs::qread("../../lib/picrust/picrust_part3.qs");
     }else{
-      pc.lib <- .read.microbiomeanalyst.lib("picrust_part3.rds", "picrust");
+      pc.lib <- .read.microbiomeanalyst.lib.rds("picrust_part3.rds", "picrust");
     }
     
     res[, 2755:4131] <- pc.lib[row.hits,];
     colnames(res)[2755:4131] <- colnames(pc.lib);
     
     if(.on.public.web){
-      pc.lib <- readRDS("../../lib/picrust/picrust_part4.rds");
+      pc.lib <- qs::qread("../../lib/picrust/picrust_part4.qs");
     }else{
-      pc.lib <- .read.microbiomeanalyst.lib("picrust_part4.rds", "picrust");
+      pc.lib <- .read.microbiomeanalyst.lib.rds("picrust_part4.rds", "picrust");
     }
     
     res[, 4132:5508] <- pc.lib[row.hits,];
     colnames(res)[4132:5508] <- colnames(pc.lib);
     
     if(.on.public.web){
-      pc.lib <- readRDS("../../lib/picrust/picrust_part5.rds");
+      pc.lib <- qs::qread("../../lib/picrust/picrust_part5.qs");
     }else{
-      pc.lib <- .read.microbiomeanalyst.lib("picrust_part5.rds", "picrust");
+      pc.lib <- .read.microbiomeanalyst.lib.rds("picrust_part5.rds", "picrust");
     }
     
     res[, 5509:6885] <- pc.lib[row.hits,];
@@ -4215,12 +4223,12 @@ Perform16FunAnot<-function(mbSetObj, type, pipeline) {
     kos <- matrix(rownames(result))
     colnames(kos) <- "#NAME"
     tax4_feats <- cbind(kos, result)
-    write.csv(tax4_feats, file="functionalprof_tax4fun.csv", row.names = FALSE);
+    fast.write(tax4_feats, file="functionalprof_tax4fun.csv", row.names = FALSE);
   }else{
     kos <- matrix(rownames(result))
     colnames(kos) <- "#NAME"
     picrust_feats <- cbind(kos, result)
-    write.csv(picrust_feats, file="functionalprof_picrust.csv", row.names=FALSE);
+    fast.write(picrust_feats, file="functionalprof_picrust.csv", row.names=FALSE);
   }
   result <- result[!apply(result==0,1,all), ]; #filtering zero counts across all
   
@@ -4229,7 +4237,7 @@ Perform16FunAnot<-function(mbSetObj, type, pipeline) {
   samplenames <- matrix(rownames(meta))
   colnames(samplenames) <- "#NAME"
   meta_all <- cbind(samplenames, meta)  
-  write.csv(meta_all, file="metadata.csv", row.names = FALSE)
+  fast.write(meta_all, file="metadata.csv", row.names = FALSE)
   
   # save as RDS for memory saving
   mbSetObj$analSet$func.pred<-result;
@@ -4286,7 +4294,7 @@ ComputeGoods <-function(physeq_object){
 ggrare2 <- function(physeq_object, data.src, label = NULL, color = NULL, plot = TRUE, linetype = NULL, se = FALSE, step=5) {
   
   x <- methods::as(otu_table(physeq_object), "matrix")
-
+  
   if (taxa_are_rows(physeq_object)) { x <- t(x) }
   
   ## This script is adapted from vegan `rarecurve` function
@@ -4310,36 +4318,9 @@ ggrare2 <- function(physeq_object, data.src, label = NULL, color = NULL, plot = 
   }
   
   f_n <- paste(data.src, step, "rds", sep = ".");
- 
-
-  #if(data.src == "orig"){
-   #if(file.exists(f_n)){
-     # df <- readRDS(file = f_n);
-    #} else {
-     # out <- lapply(seq_len(nr), rarefun)
-     # df <- do.call(rbind, out);
-     # saveRDS(df, file = f_n);
-    #} 
-  #} else {
-    #out <- lapply(seq_len(nr), rarefun)
-    #df <- do.call(rbind, out);
-    #saveRDS(df, file = f_n);
-  #};
-
-
+  
   out <- lapply(seq_len(nr), rarefun)
   df <- do.call(rbind, out);
-
-
-  #if(file.exists(f_n)){
-    #df <- readRDS(file = f_n);
-  #} else {
-    #out <- lapply(seq_len(nr), rarefun)
-    #df <- do.call(rbind, out);
-    #saveRDS(df, file = f_n);
-  #}
-
-
   
   # Get sample data
   if (!is.null(sample_data(physeq_object, FALSE))) {
@@ -4349,7 +4330,6 @@ ggrare2 <- function(physeq_object, data.src, label = NULL, color = NULL, plot = 
     labels <- data.frame(x = tot, y = S, Sample = rownames(x))
     labels <- merge(labels, sdf, by = "Sample")
   }
-  
   
   # Add, any custom-supplied plot-mapped variables
   if (length(color) > 1) {

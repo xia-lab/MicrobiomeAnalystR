@@ -511,37 +511,25 @@ PerformUnivTests <- function(cls, data, nonpar){
     }
 }
 
-## fast T-tests/F-tests using genefilter
-## It leverages RSclient to perform one-time memory intensive computing
+## fast T-tests/F-tests using C++
 PerformFastUnivTests <- function(data, cls, var.equal=TRUE){
-    print("Peforming fast univariate tests ....");
-    library(RSclient);
-    rsc <- RS.connect();
+    print("Performing fast univariate tests ....");
 
-    RS.assign(rsc, "my.dir", getwd()); 
-    RS.eval(rsc, setwd(my.dir));
-        
+    # note, feature in rows for gene expression
     data <- t(as.matrix(data));
-    dat.out <- list(data=data, cls=cls, var.equal=var.equal);
+    if(length(levels(cls)) > 2){
+        res <- try(rowcolFt(data, cls, var.equal = var.equal));
+    }else{
+        res <- try(rowcoltt(data, cls, FALSE, 1L, FALSE));
+    }  
 
-    RS.assign(rsc, "dat.in", dat.out); 
-    my.fun <- function(){
-        if(length(levels(cls)) > 2){
-            res <- try(genefilter::rowFtests(dat.in$data, dat.in$cls, var.equal = dat.in$var.equal));
-        }else{
-            res <- try(genefilter::rowttests(dat.in$data, dat.in$cls));
-        }
-        if(class(res) == "try-error") {
-            res <- cbind(NA, NA);
-        }else{
-            res <- cbind(res$statistic, res$p.value);
-        }
-        return(res);
+    if(class(res) == "try-error") {
+        res <- cbind(NA, NA);
+    }else{
+        res <- cbind(res$statistic, res$p.value);
     }
-    RS.assign(rsc, my.fun);
-    my.res <- RS.eval(rsc, my.fun());
-    RS.close(rsc);
-    return(my.res);
+
+    return(res);
 }
 
 ###
@@ -739,4 +727,193 @@ assert_equal_type <- function(
     header <- paste0(header, " ")
   
   stop(sprintf("%smust be type %s, not %s", header, typeof(template), typeof(x)))
+}
+
+# in public web, this is done by microservice
+.perform.computing <- function(){
+    dat.in <- qs::qread("dat.in.qs"); 
+    dat.in$my.res <- dat.in$my.fun();
+    qs::qsave(dat.in, file="dat.in.qs");    
+}
+
+
+fast.write <- function(dat, file, row.names=TRUE, quote="auto"){
+
+    tryCatch(
+        {
+            if(is.data.frame(dat)){
+                data.table::fwrite(dat, file, row.names=row.names);
+            }else{
+                write.csv(dat, file, row.names=row.names); 
+            }
+        }, error=function(e){
+            print(e);
+            write.csv(dat, file, row.names=row.names);   
+        }, warning=function(w){
+            print(w);
+            write.csv(dat, file, row.names=row.names); 
+        });
+            
+}
+
+rowcolFt =  function(x, fac, var.equal, which = 1L) {
+  
+  if(!(which %in% c(1L, 2L)))
+    stop(sQuote("which"), " must be 1L or 2L.")
+  
+  if(which==2L)
+    x = t(x)
+
+  if (typeof(x) == "integer")
+      x[] <- as.numeric(x)
+
+  sqr = function(x) x*x
+  
+  stopifnot(length(fac)==ncol(x), is.factor(fac), is.matrix(x))
+  x   <- x[,!is.na(fac), drop=FALSE]
+  fac <- fac[!is.na(fac)]
+
+  ## Number of levels (groups)
+  k <- nlevels(fac)
+
+  ## xm: a nrow(x) x nlevels(fac) matrix with the means of each factor
+  ## level
+  xm <- matrix(
+     sapply(levels(fac), function(fl) rowMeans(x[,which(fac==fl), drop=FALSE])),
+     nrow = nrow(x),
+     ncol = nlevels(fac))
+
+  ## x1: a matrix of group means, with as many rows as x, columns correspond to groups 
+  x1 <- xm[,fac, drop=FALSE]
+
+  ## degree of freedom 1
+  dff    <- k - 1
+
+  if(var.equal){
+    ## x0: a matrix of same size as x with overall means
+    x0 <- matrix(rowMeans(x), ncol=ncol(x), nrow=nrow(x))
+  
+    ## degree of freedom 2
+    dfr    <- ncol(x) - dff - 1
+
+    ## mean sum of squares
+    mssf   <- rowSums(sqr(x1 - x0)) / dff
+    mssr   <- rowSums(sqr( x - x1)) / dfr
+
+    ## F statistic
+    fstat  <- mssf/mssr
+
+  } else{
+
+    ## a nrow(x) x nlevels(fac) matrix with the group size  of each factor
+    ## level
+    ni <- t(matrix(tapply(fac,fac,length),ncol=nrow(x),nrow=k))
+
+    ## wi: a nrow(x) x nlevels(fac) matrix with the variance * group size of each factor
+    ## level
+    sss <- sqr(x-x1)
+    x5 <- matrix(
+       sapply(levels(fac), function(fl) rowSums(sss[,which(fac==fl), drop=FALSE])),
+       nrow = nrow(sss),
+       ncol = nlevels(fac))          
+    wi <- ni*(ni-1) /x5
+
+    ## u : Sum of wi
+    u  <- rowSums(wi)
+
+    ## F statistic
+    MR <- rowSums(sqr((1 - wi/u)) * 1/(ni-1))*1/(sqr(k)-1)
+    fsno <- 1/dff * rowSums(sqr(xm - rowSums(wi*xm)/u) * wi)
+    fsdeno <- 1+ 2* (k-2)*MR
+    fstat <- fsno/fsdeno
+
+    ## degree of freedom 2: Vector with length nrow(x)
+    dfr <- 1/(3 * MR)
+  
+  }
+  
+  res = data.frame(statistic = fstat,
+                   p.value   = pf(fstat, dff, dfr, lower.tail=FALSE),
+                   row.names = rownames(x))
+
+  attr(res, "df") = c(dff=dff, dfr=dfr)
+  return(res)
+}
+
+rowcoltt =  function(x, fac, tstatOnly, which, na.rm) {
+    
+  if(.on.public.web){
+    dyn.load(.getDynLoadPath());
+  }
+
+  if (!missing(tstatOnly) && (!is.logical(tstatOnly) || is.na(tstatOnly)))
+      stop(sQuote("tstatOnly"), " must be TRUE or FALSE.")
+  
+  f = checkfac(fac)
+  if ((f$nrgrp > 2) || (f$nrgrp <= 0))
+    stop("Number of groups is ", f$nrgrp, ", but must be >0 and <=2 for 'rowttests'.")
+
+  if (typeof(x) == "integer")
+      x[] <- as.numeric(x)
+
+  cc = .Call("rowcolttests", x, f$fac, f$nrgrp, which-1L, na.rm)
+    
+  res = data.frame(statistic = cc$statistic,
+                   dm        = cc$dm,
+                   row.names = dimnames(x)[[which]])
+
+  if (!tstatOnly)
+    res = cbind(res, p.value = 2*pt(abs(res$statistic), cc$df, lower.tail=FALSE))
+
+  attr(res, "df") = cc$df    
+  return(res)
+}
+
+checkfac = function(fac) {
+
+  if(is.numeric(fac)) {
+    nrgrp = as.integer(max(fac, na.rm=TRUE)+1)
+    fac   = as.integer(fac)
+  }
+  ## this must precede the factor test
+  if(is.character(fac))
+    fac = factor(fac)
+
+  if (is.factor(fac)) {
+    nrgrp = nlevels(fac)
+    fac   = as.integer(as.integer(fac)-1)
+  } 
+  if(!is.integer(fac))
+    stop("'fac' must be factor, character, numeric, or integer.")
+  
+  if(any(fac<0, na.rm=TRUE))
+    stop("'fac' must not be negative.")
+    
+  return(list(fac=fac, nrgrp=nrgrp))
+}
+
+.getDynLoadPath <- function() {
+    path = "../../rscripts/networkanalystr/src/MicrobiomeAnalyst.so";
+    return(path)
+}
+
+# obtain a numeric matrix, exclude comments if any
+.to.numeric.mat <- function(dat1){
+  # now remove all comments in dat1
+  # assign rownames after covert to matrix as data.frame does not allow duplicate names
+  comments.inx <- grep("^#", dat1[,1]);
+  if(sum(comments.inx) > 0){
+    row.nms <- dat1[-comments.inx,1];
+    dat1 <- dat1[-comments.inx,-1];
+  }else{
+    row.nms <- dat1[,1];
+    dat1 <- dat1[,-1];
+  }
+  dimensions <- dim(dat1)
+  col.nms <- colnames(dat1)
+  dat1 <- sapply(dat1, as.numeric);
+  dat1 <- matrix(data=dat1, ncol=dimensions[2], nrow=dimensions[1])
+  rownames(dat1) <- row.nms;
+  colnames(dat1) <- col.nms;
+  return(dat1);
 }

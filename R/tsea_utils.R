@@ -95,7 +95,7 @@ CrossReferencing <- function(mbSetObj, q.type){
 SpeciesMappingExact<-function(qvec, q.type){
        
   # local variable to save memory
-  species.db <- .read.microbiomeanalyst.lib("microbe_db.rds", "tsea")
+  species.db <- .read.microbiomeanalyst.lib.rds("microbe_db.rds", "tsea")
        
   # variables to record results
   hit.inx = vector(mode='numeric', length=length(qvec)); # record hit index, initial 0
@@ -238,7 +238,7 @@ CalculateHyperScore <- function(mbSetObj){
   # download result
   mbSetObj$analSet$ora.mat = signif(res.mat[ord.inx,],3);
   mbSetObj$analSet$ora.hits = hits;
-  write.csv(mbSetObj$analSet$ora.mat, file="tsea_ora_result.csv");
+  fast.write(mbSetObj$analSet$ora.mat, file="tsea_ora_result.csv");
 
   return(.set.mbSetObj(mbSetObj));
   
@@ -269,7 +269,7 @@ GetFinalNameMap<-function(mbSetObj){
     hit.inx <- name.map$hit.inx;
     hit.values <- name.map$hit.values;
     match.state <- name.map$match.state;
-    species.db <- .read.microbiomeanalyst.lib("microbe_db.rds", "tsea");
+    species.db <- .read.microbiomeanalyst.lib.rds("microbe_db.rds", "tsea");
         
     for (i in 1:length(qvec)){
       hit <-species.db[hit.inx[i], ,drop=F];

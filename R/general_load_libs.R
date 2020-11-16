@@ -92,11 +92,6 @@ load_xtable <- function(){
   suppressMessages(library(xtable))
 }
 
-# Load genefilter
-load_genefilter <- function(){
-  suppressMessages(library(genefilter))
-}
-
 # Load data.table
 load_datatable <- function(){
   suppressMessages(library(data.table))

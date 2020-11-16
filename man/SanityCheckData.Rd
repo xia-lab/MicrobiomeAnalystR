@@ -4,7 +4,7 @@
 \alias{SanityCheckData}
 \title{Main function to sanity check on uploaded data}
 \usage{
-SanityCheckData(mbSetObj, filetype)
+SanityCheckData(mbSetObj, filetype, disableFilter = FALSE)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
@@ -13,8 +13,8 @@ SanityCheckData(mbSetObj, filetype)
 was .biom format, "mothur" if mothur format, or "txt" if
 as .txt or .csv format.}
 
-\item{datatype}{Character, input "16S" if the data is marker gene
-data and "metageno" if it is metagenomic data.}
+\item{disableFilter}{Boolean. Set to TRUE to bypass the hard-coded filter
+to remove features occuring in <2 samples.}
 }
 \description{
 This function performs a sanity check on the uploaded

@@ -14,17 +14,20 @@ To demonstrate this new functionality, we provide the "MicrobiomeAnalystR Workfl
 
 ### Step 1. Install package dependencies 
 
-To use MicrobiomeAnalystR , first install all package dependencies. Ensure that you are able to download packages from bioconductor. To install package dependencies, use the pacman R package (for those with >R 3.5.1). Note that some of these packages may require additional library dependencies that need to be installed prior to their own successful installation. For users who wish to perform raw sequence data processing, dada2 will also need to be installed.
+If you are using RStudio, ensure that it has been updated to the latest version for smoother installation of MicrobiomeAnalystR and overall better compatibility with all other R packages.
+
+To use MicrobiomeAnalystR , first install all package dependencies. Ensure that you are able to download packages from Bioconductor - the Bioconductor package ("BiocManager") and RTools should be pre-installed. To install package dependencies, one can use the pacman R package (for those with >R 3.5.1). Note that some of these packages may require additional library dependencies that need to be installed prior to their own successful installation. For users who wish to perform raw sequence data processing, dada2 will also need to be installed. 
+
+**MicrobiomeAnalystR will not be successfully installed until all package dependencies and their associated dependencies are also installed.** An example message signaling the R package installation failure is "non-zero exit status". The most common reason is that not all R package dependencies were successfully installed. If you are unable to run the pacman function, you will have to install each R package dependency one by one using **install.packages("x", dependencies = TRUE)** if the package is from CRAN or **BiocManager::install("x")** if the package is from BiocManager. Note to know where the package is deposited, simply google the R package - i.e. "phyloseq R" will return the Bioconductor page where you can follow the installation instructions for that R package.
+
+Note about Tax4Fun: We are in the progress of migrating to Tax4Fun2 - the older version is no longer supported on CRAN but can still be installed by ensuring the following dependencies are also installed - rhdf5; qiimer; joey711/biom.
 
 ```R
 install.packages("pacman")
 
 library(pacman)
 
-pacman::p_load(phyloseq, metacoder, pryr, biomformat, RColorBrewer, ggplot2, gplots, Cairo, igraph, 
-BiocParallel, randomForest, metagenomeSeq, MASS, DESeq2, vegan, RJSONIO, ggfortify, pheatmap, xtable, genefilter,
-data.table, reshape, stringr, ape, grid, gridExtra, splitstackshape, edgeR, globaltest, R.utils, viridis, ggrepel,
-ppcor)
+pacman::p_load(phyloseq, metacoder, pryr, biomformat, RColorBrewer, ggplot2, gplots, Cairo, igraph, BiocParallel, randomForest, metagenomeSeq, MASS, DESeq2, vegan, RJSONIO, ggfortify, pheatmap, xtable, genefilter, data.table, reshape, stringr, ape, grid, gridExtra, splitstackshape, edgeR, globaltest, R.utils, viridis, ggrepel, ppcor, qs)
 ```
 ### Step 2. Install the package 
 
@@ -49,7 +52,7 @@ devtools::install_github("xia-lab/MicrobiomeAnalystR", build = TRUE, build_opts 
 
 #### Option B) Clone Github and install locally
 
-The * must be replaced by what is actually downloaded and built.  
+The * must be replaced by what is actually downloaded and built. For instance, check yours Downloads folder to see what tar.gz file was downloaded. So if you download MicrobiomeAnalystR_1.0.1.tar.gz, replace the * with the downloaded version number.  
 
 ```R
 git clone https://github.com/xia-lab/MicrobiomeAnalystR.git
@@ -108,6 +111,7 @@ To inform us of any bugs or requests, please open a new issue or send an email t
 
 ## MicrobiomeAnalystR History & Updates
 
+11-16-2020 - Code update w. web + change files from .rds to .qs - users need to install qs R package now
 02-24-2020 - Code update w. web + added note about usage
 09-05-2019 - Bug fixing w. web
 08-07-2019 - Added function to import SILVA annotated biom files (handling Domain in taxonomy)

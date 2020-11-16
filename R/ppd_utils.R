@@ -49,8 +49,8 @@ PerformRefDataMapping <- function(mbSetObj, refdataNm, taxo_type, sample_var, bi
   refdatafile_otu <- paste("/",refdataNm, "/", refdataNm, "_otu.rds", sep="");
   refdatafile_tax <- paste("/",refdataNm, "/", refdataNm,"_tax.rds", sep="");
   
-  current.refset.otu <- .read.microbiomeanalyst.lib(refdatafile_otu, "ppd", refdataNm);
-  current.refset.tax <- .read.microbiomeanalyst.lib(refdatafile_tax, "ppd", refdataNm);
+  current.refset.otu <- .read.microbiomeanalyst.lib.rds(refdatafile_otu, "ppd", refdataNm);
+  current.refset.tax <- .read.microbiomeanalyst.lib.rds(refdatafile_tax, "ppd", refdataNm);
   
   # create phyloseq or phyloslim object
   
@@ -89,7 +89,7 @@ PerformRefDataMapping <- function(mbSetObj, refdataNm, taxo_type, sample_var, bi
     #taxonomy mapping file
     
     if(.on.public.web){
-      otu.dic <<- readRDS("../../lib/picrust/greengenes_taxmap.rds");
+      otu.dic <<- qs::qread("../../lib/picrust/greengenes_taxmap.qs");
     }else{
       otu.dic <<- readRDS("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/picrust/greengenes_taxmap.rds");
     }
@@ -203,19 +203,19 @@ PCoA3DAnal.16SRef <- function(mbSetObj, barplotNm, ordMeth, distName, taxrank, m
   
   GP.ord <- ordinate(data, ordMeth, distName);
   #creating 2D image for Report Generation
-  barplotNm = paste(barplotNm, ".", format, sep="");
-  mbSetObj$imgSet$ppd.2d<-barplotNm;
+  #barplotNm = paste(barplotNm, ".", format, sep="");
+  #mbSetObj$imgSet$ppd.2d<-barplotNm;
   
-  Cairo::Cairo(file=barplotNm, width=720, height=500, type=format, bg="white",dpi=dpi);
-  box = plot_ordination(data,GP.ord,color=metadata,shape="data");
-  box$layers <- box$layers[-1];
-  box=box+geom_point(size =4,alpha=0.8)+theme_bw();
+  #Cairo::Cairo(file=barplotNm, width=720, height=500, type=format, bg="white",dpi=dpi);
+  #box = plot_ordination(data,GP.ord,color=metadata,shape="data");
+  #box$layers <- box$layers[-1];
+  #box=box+geom_point(size =4,alpha=0.8)+theme_bw();
   #used for area color for ellipse
-  sam_data<-sample_data(data);
-  clsLbl<-sam_data[[metadata]];
-  box=box+ stat_ellipse(type="norm", linetype=2, geom = "polygon",alpha = 0.2, aes_string(fill = clsLbl), show.legend=FALSE);
-  print(box);
-  dev.off();
+  #sam_data<-sample_data(data);
+  #clsLbl<-sam_data[[metadata]];
+  #box=box+ stat_ellipse(type="norm", linetype=2, geom = "polygon",alpha = 0.2, aes_string(fill = clsLbl), show.legend=FALSE);
+  #print(box);
+  #dev.off();
   
   # obtain variance explained
   sum.pca<-GP.ord;
@@ -239,7 +239,7 @@ PCoA3DAnal.16SRef <- function(mbSetObj, barplotNm, ordMeth, distName, taxrank, m
 #'@export
 #'@import RJSONIO
 PlotUsrRefPCoA3DScore <- function(mbSetObj, imgName, format="json", inx1, inx2, inx3, variable){
-  
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   load_rjsonio();
