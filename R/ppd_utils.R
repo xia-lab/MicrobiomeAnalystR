@@ -11,7 +11,7 @@ PrepareMergedData <- function(mbSetObj, metadata, keepfeat){
   
   set.seed(1315);
   metadata <<- metadata;
-  data<-merged.data;
+  data<- qs::qread("merged.data.qs");
     
   if(keepfeat!="All features"){ # trim data
     feat_no<-round(ntaxa(data)*0.20);
@@ -156,7 +156,8 @@ PerformRefDataMapping <- function(mbSetObj, refdataNm, taxo_type, sample_var, bi
   merged.data <- merge_phyloseq(current.ref_userdata,current.ref_usersamdata);
   #data filteration and transformation
   merged.data <- transform_sample_counts(merged.data, function(x) x / sum(x) );
-  merged.data <<- merged.data;
+
+  qs::qsave(merged.data, "merged.data.qs");
   
   mbSetObj$dataSet$lib.msg <- current.msg <<- paste(msg, collapse=".");
 
@@ -203,19 +204,19 @@ PCoA3DAnal.16SRef <- function(mbSetObj, barplotNm, ordMeth, distName, taxrank, m
   
   GP.ord <- ordinate(data, ordMeth, distName);
   #creating 2D image for Report Generation
-  #barplotNm = paste(barplotNm, ".", format, sep="");
-  #mbSetObj$imgSet$ppd.2d<-barplotNm;
+  barplotNm = paste(barplotNm, ".", format, sep="");
+  mbSetObj$imgSet$ppd.2d<-barplotNm;
   
-  #Cairo::Cairo(file=barplotNm, width=720, height=500, type=format, bg="white",dpi=dpi);
-  #box = plot_ordination(data,GP.ord,color=metadata,shape="data");
-  #box$layers <- box$layers[-1];
-  #box=box+geom_point(size =4,alpha=0.8)+theme_bw();
-  #used for area color for ellipse
-  #sam_data<-sample_data(data);
-  #clsLbl<-sam_data[[metadata]];
-  #box=box+ stat_ellipse(type="norm", linetype=2, geom = "polygon",alpha = 0.2, aes_string(fill = clsLbl), show.legend=FALSE);
-  #print(box);
-  #dev.off();
+  Cairo::Cairo(file=barplotNm, width=720, height=500, type=format, bg="white",dpi=dpi);
+  box = plot_ordination(data,GP.ord,color=metadata,shape="data");
+  box$layers <- box$layers[-1];
+  box=box+geom_point(size =4,alpha=0.8)+theme_bw();
+  # used for area color for ellipse
+  sam_data<-sample_data(data);
+  clsLbl <- sam_data[[metadata]];
+  box=box+ stat_ellipse(type="norm", linetype=2, geom = "polygon",alpha = 0.2, aes_string(fill = quo(clsLbl)), show.legend=FALSE);
+  print(box);
+  dev.off();
   
   # obtain variance explained
   sum.pca<-GP.ord;

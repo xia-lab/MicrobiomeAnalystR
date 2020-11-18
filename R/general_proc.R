@@ -27,7 +27,7 @@ SanityCheckData <- function(mbSetObj, filetype, disableFilter = FALSE){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   feat.sums <- apply(mbSetObj$dataSet$data.orig, 1, function(x){sum(x>0, na.rm=T)});
-  
+
   if(disableFilter){
     data.proc <- mbSetObj$dataSet$data.orig
   }else{
@@ -708,24 +708,23 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
           }
           taxa_names(taxa_table)<-c(1:nrow(taxa_table));
         }else if(taxa_type=="GreengenesID"||taxa_type=="Others/Not_specific"){
-
+          
           # need to parse Taxonomy still!
           load_splitstackshape();               
           
           feat_nm <- data.frame(mbSetObj$dataSet$feat_nm);
           feat_nm <- data.frame(apply(feat_nm, 1, function(x) gsub(";\\s;", ";", x))) # remove empty taxa
-          names(feat_nm)<-"Rank";
-          
-          taxonomy<-splitstackshape::cSplit(feat_nm,"Rank",";");
-          taxmat= data.frame(matrix(NA, ncol = 7, nrow = nrow(taxonomy)));
+          names(feat_nm) <- "Rank";
+          taxonomy <- splitstackshape::cSplit(feat_nm,"Rank",";");
+          taxmat <- data.frame(matrix(NA, ncol = 7, nrow = nrow(taxonomy)));
           colnames(taxmat) <- classi.lvl;
-          taxmat[,1:ncol(taxonomy)]<-taxonomy;
-          taxmat<-taxmat[colSums(!is.na(taxmat))>0];
-          taxmat<-as.matrix(taxmat);
-          rownames(taxmat)<-c(1:nrow(taxmat));
+          taxmat[,1:ncol(taxonomy)] <- taxonomy;
+          taxmat <- taxmat[colSums(!is.na(taxmat))>0];
+          taxmat <- as.matrix(taxmat);
+          rownames(taxmat) <- c(1:nrow(taxmat));
           #phyloseq taxonomy object
           taxa_table <- tax_table(taxmat);
-          taxa_names(taxa_table)<-rownames(taxmat);
+          taxa_names(taxa_table) <- rownames(taxmat);
         }
         
         # making unique id for each OTU consist of lowest taxonomy level present followed by row number

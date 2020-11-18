@@ -69,7 +69,7 @@ RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank){
   }
   
   data.impfeat <<- data1;
-  cls <- sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]];
+  cls <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   variable <<- variable;
   rf_out <- randomForest(data1,cls, ntree = treeNum, mtry = tryNum, importance = TRUE, proximity = TRUE);
   # set up named sig table for display
@@ -169,7 +169,7 @@ PlotRF.VIP<-function(mbSetObj, feature, imgName, format="png", dpi=72, width=NA)
   imgName = paste(imgName, ".", format, sep="");
   mbSetObj$imgSet$rf.imp <- imgName;
   vip.score <- rev(sort(mbSetObj$analSet$rf$importance[,"MeanDecreaseAccuracy"]));
-  cls <- sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]];
+  cls <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   cls.length <- length(levels(cls))
   cls.width <- cls.length/2
   
@@ -222,8 +222,9 @@ PlotRF.VIP<-function(mbSetObj, feature, imgName, format="png", dpi=72, width=NA)
 PlotImpVar <- function(mbSetObj, imp.vec, xlbl, feature, color.BW=FALSE){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
-  cls.len <- length(levels(mbSetObj$analSet$cls));
+  cls <- as.factor(mbSetObj$analSet$cls);
+  cls.lbl <- levels(cls);
+  cls.len <- length(levels(cls));
   
   if(cls.len == 2){
     rt.mrg <- 5;
@@ -259,7 +260,7 @@ PlotImpVar <- function(mbSetObj, imp.vec, xlbl, feature, color.BW=FALSE){
   # mns is a list contains means of all vars at each level
   # conver the list into a matrix with each row contains var averages across different lvls
   data1 <- data.impfeat;
-  mns <- by(data1[, names(imp.vec)], mbSetObj$analSet$cls,
+  mns <- by(data1[, names(imp.vec)], cls,
             function(x){ # inner function note, by send a subset of dataframe
               apply(x, 2, mean, trim=0.1)
             });
@@ -298,8 +299,7 @@ PlotImpVar <- function(mbSetObj, imp.vec, xlbl, feature, color.BW=FALSE){
   for (m in 1:nrow(mns)){
     bg[m,] <- (col[nc:1])[rank(mns[m,])];
   }
-  
-  cls.lbl <- levels(mbSetObj$analSet$cls);
+ 
   
   for (n in 1:ncol(mns)){
     points(x,y, bty="n", pch=22, bg=bg[,n], cex=3);
@@ -862,7 +862,7 @@ PlotLEfSeSummary <- function(mbSetObj, ldaFeature, layoutOptlf, imgName, format=
     
     sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
     meta <- mbSetObj$analSet$meta
-    cls.len <- length(levels(sample_table[[meta]]));
+    cls.len <- length(levels(as.factor(sample_table[[meta]])));
     
     if(cls.len <= 4){
       w <- 9.25;
@@ -923,7 +923,7 @@ PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="defaul
   if(layoutOptlf == "dot") {
     
     sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
-    cls.len <- length(levels(sample_table[[meta]]));
+    cls.len <- length(levels(as.factor(sample_table[[meta]])));
     
     if(cls.len <= 3){
       rt.mrg <- 5;
@@ -997,7 +997,7 @@ PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="defaul
       bg[m,] <- (col[nc:1])[rank(mns[m,])];
     }
     
-    cls.lbl <- levels(sample_table[[meta]]);
+    cls.lbl <- levels(as.factor(sample_table[[meta]]));
     
     for (n in 1:ncol(mns)){
       points(x,y, bty="n", pch=22, bg=bg[,n], cex=3);
@@ -1481,7 +1481,7 @@ PlotCorr <- function(mbSetObj, imgName, format="png", dpi=72, width=NA){
     h <- w/0.85
   }
   
-  cls.len <- length(levels(sample_table[[variable]]));
+  cls.len <- length(levels(as.factor(sample_table[[variable]])));
   
   if(cls.len == 2){
     rt.mrg <- 7.75;
@@ -1556,7 +1556,7 @@ PlotCorr <- function(mbSetObj, imgName, format="png", dpi=72, width=NA){
     bg[m,] <- (col[nc:1])[rank(mns[m,])];
   }
   
-  cls.lbl <- levels(sample_table[[variable]]);
+  cls.lbl <- levels(as.factor(sample_table[[variable]]));
   
   for (n in 1:ncol(mns)){
     points(x,y, bty="n", pch=22, bg=bg[,n], cex=3);
@@ -1615,9 +1615,10 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(!.on.public.web){
-    clslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
+    clslbl <- sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]];
   }
   
+  clslbl <- as.factor(clslbl);
   if(is.null(pattern)){
     pattern <- paste(1:length(levels(clslbl)), collapse="-");
   }

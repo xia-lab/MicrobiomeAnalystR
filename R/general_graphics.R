@@ -166,11 +166,11 @@ PCoA3D.Anal <- function(mbSetObj, ordMeth, distName, taxrank, colopt, variable, 
     col.type <- "gradient";
     cols <- ComputeColorGradient(cls);
   }else{
-    cls <- factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
+    cls <- sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]];
     # now set color for each group
     cols <- unique(as.numeric(cls)) + 1;
   }
-  
+  cls <- as.factor(cls);
   pca3d$score$type <- col.type;
   pca3d$score$facA <- cls;
   rgbcols <- col2rgb(cols);
@@ -653,6 +653,211 @@ PlotHeatmap<-function(mbSetObj, plotNm, smplDist, clstDist, palette, metadata,
   return(.set.mbSetObj(mbSetObj))
 }
 
+
+#'Function to create circular bubble plots.
+#'@description This functions creates a circular bubble plot of the 
+#'relative abundance of taxa in each group. Each group will have their own
+#'plot outputted to the current working directory.
+#'@param mbSetObj Input the name of the mbSetObj.
+#'@param dataInput Character, use "norm" to use the normalized relative abundance
+#'or "filt" to use the filtered abundance.
+#'@param bubbleplotName Character, input the preferred name of the circular
+#'bubble plot to be created. Note that the name will be used with each group so if
+#'you input "bubble", the plot will be saved as "bubble_group1.png".
+#'@param facet Character, input the group label for the plot.
+#'@param appendnm Boolean. 
+#'@param taxaLvl Input the name of the taxonomic level to view the circular bubble
+#'plots.
+#'@param colpalopt Input whether the color palette will use R Color Brewer, "brewer",
+#'or for users who wish to use a color palette robust to colorblindness 
+#'/(https://cran.r-project.org/web/packages/viridis/vignettes/intro-to-viridis.html/), 
+#'use "viridis".
+#'@param colPalette Select the color palette options. "set3", 
+#'which is the Set3 from the R Color Brewer, "cont21" which is
+#'a set of 21 colors, "cont28" which is a set of 28 colors, and 
+#'"cont42" which is a set of 42 colors. 
+#'@param fontSize Numeric, input the font size to be used to label the nodes
+#'in the circular bubble plot. Default size is 2.5.
+#'@param fontColor Character, input the color of the font to label the nodes. Default
+#'color is set to "white".
+#'@param format Character, input the preferred
+#'format of the plot. By default it is set to "png".
+#'@param dpi Numeric, input the dots per inch. By default
+#'it is set to 72.
+#'@author Jasmine Chong, Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+#'@import ggiraph
+#'@import ggplot2
+#'@import viridis
+#'@import packcircles
+#'@import htmlwidgets
+#'@usage PlotCircularBubble(mbSet, "norm", "bubble", "Class", "OTU")
+
+PlotCircularBubble <- function(mbSetObj, dataInput, bubbleplotName, facet, appendnm = T,
+                               taxalvl = "OTU", colpalopt = "viridis", colPalette = "Set2", 
+                               fontSize = 2.5, fontColor = "white", format="png", dpi=72){
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  
+  if(dataInput == "norm"){
+    data <- mbSetObj$dataSet$norm.phyobj
+  }else{
+    data <- mbSetObj$dataSet$filt.data;
+  }
+  
+  if("matrix" %in% class(data)){
+    data <- otu_table(data, taxa_are_rows =TRUE);
+  }
+  
+  sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
+  data1 <- merge_phyloseq(data, tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
+  data <- as.data.frame(otu_table(data1));
+  
+  # reorder data based on groups
+  sam <- sample_data(data1);
+  sample_data(data1) <- sam
+  
+  metalp <- as(sample_data(data1), "data.frame") #extract metadata table
+  
+  smpl_nm <- sample_names(data1);
+  clsLbl <- factor(sam[[facet]]);
+  
+  if(length(clsLbl)==0){
+    AddErrMsg("Invalid class label selected!")
+    return(0)
+  }
+  
+  ord.inx <- order(clsLbl);
+  smpl_nm <- smpl_nm[ord.inx];
+  
+  clsLbl <- clsLbl[ord.inx];
+  colvec <- as.numeric(clsLbl)+1;
+  data <- t(data[,ord.inx]);
+  
+  data_tax <- tax_table(data1);
+  
+  if(taxalvl=="OTU"){
+    taxa_nm <- as.matrix(colnames(data));
+    rownames(taxa_nm) <- colnames(data);
+    rownames(taxa_nm) <- sub("^X", "", rownames(taxa_nm))
+  }else{
+    
+    taxa_nm <- as.character(data_tax[,taxalvl]);
+    
+    y <- which(is.na(taxa_nm)==TRUE);
+    #converting NA values to unassigned
+    taxa_nm[y] <- "Not_Assigned";
+    
+    if(appendnm=="T"){
+      all_nm <- colnames(tax_table(data1));
+      hg_nmindx <- which(all_nm==taxalvl)-1;
+      
+      if(hg_nmindx!=0){
+        nma <- as.character(tax_table(data1)[,hg_nmindx]);
+        y1 <- which(is.na(nma)==TRUE);
+        nma[y1] <- "Not_Assigned";
+        nm <- paste0(nma,"_",taxa_nm);
+        ind <- which(nm=="Not_Assigned_Not_Assigned");
+        nm[ind] <- "Not_Assigned";
+        nm <- gsub("_Not_Assigned", "",nm, perl = TRUE);
+        taxa_nm <- nm;
+      }
+    }
+  }
+  
+  #reshaping data
+  taxa_nm <- as.matrix(taxa_nm);
+  
+  if(appendnm=="T"){
+    y <- which(grepl("Not_Assigned", taxa_nm))
+  }else{
+    y <- which(is.na(taxa_nm)==TRUE);
+  }
+  
+  #converting NA values to unassigned; before order it to last position using ZZZ as its name
+  taxa_nm[y] <- "ZZZ";
+  colnames(data) <- taxa_nm[,1];
+  nms <- colnames(data);
+  data <- as.matrix(data);
+  data <- data %*% sapply(unique(nms),"==",nms);
+  data <- data.frame(data);
+  data <- data[ , order(names(data))];
+  indx <- which(colnames(data)=="ZZZ");
+  colnames(data)[indx] <- "NA";
+  
+  data <- data[row.names(metalp), ]
+  data[[get("facet")]] <- metalp[[get("facet")]]
+  data$sample <- row.names(data);
+  data <- melt(data, id = c("sample", get("facet")))
+  
+  tmp_df <- aggregate(data$value, by=list(data[[get("facet")]], data$variable), FUN=mean)
+  tmp_df <- split(tmp_df, tmp_df$Group.1)
+  
+  library(ggiraph)
+  library(ggplot2)
+  library(viridis)
+  library(packcircles)
+  
+  for(i in 1:length(tmp_df)){
+    
+    groupName <- names(tmp_df[i])
+    
+    tmp_df2 <- tmp_df[[i]][tmp_df[[i]]$x != 0,]
+    tmp_df2 <- tmp_df2[,-1]
+    packing <- packcircles::circleProgressiveLayout(tmp_df2, sizecol = "x")
+    text.data <- cbind(label = tmp_df2$Group.2, packing)
+    dat.gg <- packcircles::circleLayoutVertices(packing)
+    
+    if(plotType == "static"){
+      
+      p <- ggplot(data = dat.gg) + geom_polygon(aes(x, y, group = id, fill = id),
+                                                colour = "black", show.legend = FALSE, alpha = 0.75) + 
+        theme_void() + 
+        theme(legend.position="none", plot.margin=unit(c(0,0,0,0),"cm") ) + 
+        coord_equal() +
+        geom_text(data = text.data, aes(x, y, label = label), size = fontSize, color = fontColor)
+      
+      if(colpalopt == "viridis"){
+        p <- p + scale_fill_viridis() 
+      }else if(colpalopt == "brewer"){
+        p <- p + scale_fill_distiller(palette = colPalette, direction = 1)
+      }
+      
+      bubbleplotName2 = paste(bubbleplotName, "_", groupName, ".", format, sep="");
+      ggsave(bubbleplotName2, dpi = 150)
+      
+    }else{
+      p <- ggplot(data = dat.gg) + ggiraph::geom_polygon_interactive(aes(x, y, group = id, fill = id, tooltip = text.data$label[id], data_id = id),
+                                                                     colour = "black", alpha = 0.75, show.legend = FALSE) + 
+        theme_void() + 
+        theme(legend.position="none", plot.margin=unit(c(0,0,0,0),"cm") ) + 
+        coord_equal() +
+        geom_text(data = text.data, aes(x, y, label = label), size = fontSize, color = fontColor)
+      
+      if(colpalopt == "viridis"){
+        p <- p + scale_fill_viridis() 
+      }else if(colpalopt == "brewer"){
+        p <- p + scale_fill_distiller(palette = colPalette, direction = 1)
+      }
+      
+      widg <- ggiraph(ggobj = p, width_svg = 7, height_svg = 7)
+      
+      bubbleplotName2 = paste(getwd(), "/", bubbleplotName, "_", groupName, ".html", sep="");
+      
+      library(htmlwidgets)
+      saveWidget(widg, file = bubbleplotName2)
+    }
+    
+  }
+  return(.set.mbSetObj(mbSetObj));
+}
+
+#########################
+### Utility Functions ###
+#########################
+
 #'Function to get color palette for graphics.
 #'@description This function is called to create a color palette
 #'based on the number of groups. It returns a vector of color
@@ -705,237 +910,6 @@ GetColorSchema <- function(mbSetObj, grayscale=F){
     }
   }
   return (colors);
-}
-
-#'Function to create box plots of important features
-#'@description This functions plots box plots of a selected feature.
-#'@param mbSetObj Input the name of the mbSetObj.
-#'@param boxplotName Character, input the name of the 
-#'box plot.
-#'@param feat Character, input the name of the selected 
-#'feature.
-#'@param format Character, by default the plot format
-#'is "png".
-#'@param dpi Dots per inch. Numeric, by default
-#'it is set to 72.
-#'@parm colorPal Character, input the name of the preferred color palette.
-#'Use "default" for the RColor brewer Set1 palette, "virdis" for the viridis color palette, and
-#'"dark" for the RColor brewer Dark2 palette.
-#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
-#'McGill University, Canada
-#'License: GNU GPL (>= 2)
-#'@export
-#'@import grid
-#'@import gridExtra
-PlotBoxDataCorr<-function(mbSetObj, boxplotName, feat, format="png", dpi=72, colorPal = "dark"){
-  
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  
-  load_ggplot();
-  load_grid();
-  load_gridExtra();
-  
-  variable <-  mbSetObj$analSet$var.typecor 
-  
-  data <- mbSetObj$analSet$boxdatacor;
-  a <- data[,feat];
-  ind <- which(a=="0");
-  a[ind] <- 0.1;
-  data$log_feat <- log(a);
-  boxplotName = paste(boxplotName,".",format, sep="");
-  
-  numGrps <- length(levels(data$class))
-  
-  if(numGrps == 2){
-    width <- 325
-  }else if(numGrps < 4){
-    width <- 350
-  }else if(numGrps < 6){
-    width <- 375
-  }else{
-    width <- 400
-  }
-  
-  Cairo::Cairo(file=boxplotName, width=width, height=300, type=format, bg="white", dpi=dpi);
-  
-  box <- ggplot(data, aes(x=data$class, y = data$log_feat, fill=as.factor(class))) + stat_boxplot(geom ='errorbar') + 
-    geom_boxplot(outlier.shape = NA) + geom_jitter() + theme_bw() + labs(y="Log-transformed Counts\n", x=paste0("\n",variable), fill=variable) +
-    ggtitle(feat) + theme(plot.title = element_text(hjust=0.5, size=13, face="bold"), axis.title=element_text(size=11), legend.title=element_text(size=11), axis.text=element_text(size=10));
-  #remove grid
-  box <- box + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), panel.border = element_rect(colour = "#787878", fill=NA, size=0.5))
-  
-  if(colorPal == "viridis"){
-    box <- box + scale_fill_viridis_d()
-  }else if(colorPal == "set1"){
-    box <- box + scale_fill_brewer(palette="Set1")
-  }else if(colorPal == "dark"){
-    box <- box + scale_fill_brewer(palette="Dark2")
-  }
-  
-  print(box)
-  dev.off();
-  return(.set.mbSetObj(mbSetObj))
-}
-
-#' Perform Partial Correlation Analysis
-#' @description Function to perform and plot
-#' partial correlations between all taxonomic features,
-#' the outcome, and selected confounders.
-#' NOTE: All metadata must be numeric
-#' @param mbSetObj Input the name of the mbSetObj.
-#' @param taxa.lvl Character, input the taxonomic level
-#' to perform partial correlation analysis.
-#' @param variable Character, input the selected variable.
-#' @param alg Use "kendall" or "spearman" for non-parametric and 
-#' "pearson" for parametric.
-#' @export
-#' @import ppcor
-PerformPartialCorr <- function(mbSetObj, taxa.lvl="Phylum", variable=NA, alg = "pearson", pval.cutoff = 0.05){
-  
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  
-  load_ppcor()
-  load_viridis()
-  
-  # retrieve sample info
-  metadata <- data.frame(sample_data(mbSet$dataSet$proc.phyobj), check.names=F, stringsAsFactors = FALSE);
-  confounders <- mbSetObj$dataSet$confs
-  
-  # get list of confounders to consider
-  if(length(confounders)==0){
-    current.msg <<- "No confounders inputted!"
-    return(0);
-  }
-  
-  #check that confounders do not include variable
-  check <- variable %in% confounders
-  
-  if(check){
-    current.msg <<- "Invalid confounders! Variable included."
-    return(0)
-  }
-  
-  check2 <- "NA" %in% confounders
-  
-  if(check2){
-    current.msg <<- "NA included as a confounder!"
-    return(0)
-  }
-  
-  # create list of confounders
-  meta.subset <- metadata[, confounders]
-  
-  if(class(meta.subset) == "data.frame"){
-    meta.subset <- data.frame(apply(meta.subset, 2, function(x) as.numeric(as.character(x))))
-    meta.subset <- as.list(meta.subset)
-  }else{
-    meta.subset <- as.numeric(meta.subset)
-    meta.subset <- as.list(as.data.frame(meta.subset))
-  }
-  
-  # check variable is numeric
-  var <- metadata[,variable]
-  
-  if(class(levels(var))=="character"){
-    var <- as.numeric(var)
-  }
-  
-  # now get otu data
-  if(taxa.lvl=="OTU"){
-    taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
-    data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj, taxa_table);
-    data1 <- as.matrix(otu_table(data));
-  }else{
-    #get otu table
-    taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
-    data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj, taxa_table);
-    #merging at taxonomy levels
-    data <- fast_tax_glom_first(data,taxa.lvl);
-    nm <- as.character(tax_table(data)[,taxa.lvl]);
-    #converting NA values to unassigned
-    nm[is.na(nm)] <- "Not_Assigned";
-    data1 <- as.matrix(otu_table(data));
-    rownames(data1) <- nm;
-    #all NA club together
-    data1 <- as.matrix(t(sapply(by(data1, rownames(data1), colSums), identity)));
-  }
-  
-  otu.table <- t(data1);
-  mbSetObj$analSet$abund_data <- otu.table;
-  
-  #replace 0s and NAs with small number
-  otu.table[otu.table==0|is.na(otu.table)] <- .00001
-  
-  #more than 1 imp.feat, convert to named list of vectors then perform partial correlation
-  if(class(otu.table)=="numeric"){
-    otu.subset <- otu.table
-    # first calculate corr
-    cor.result <- cor.test(otu.subset, var, method=alg)
-    cor.results <- data.frame(cor_pval=cor.result$p.value, cor_est=cor.result$estimate)
-    # calculate pcorr
-    pcor.results <- ppcor::pcor.test(otu.subset, var, meta.subset, method = alg)
-    pcor.results <- cbind(cor.results, pcor.results)
-  }else{
-    otu.subset <- lapply(seq_len(ncol(otu.table)), function(i) otu.table[,i])
-    
-    # first calculate corr
-    cor.results <- do.call(rbind, lapply(otu.subset, function(x){
-      cor.result <- cor.test(x, var, method = alg);
-      data.frame(cor_pval=cor.result$p.value, cor_est=cor.result$estimate)}))  
-    row.names(cor.results) <- colnames(otu.table)
-    
-    # calculate pcorr
-    pcor.fun <- function(feats){ ppcor::pcor.test(feats, var, meta.subset, method = alg) }
-    pcor.results <- do.call("rbind", lapply(otu.subset, pcor.fun))
-    pcor.results <- cbind(cor.results, pcor.results)
-  }
-  
-  #order results by p.value
-  row.names(pcor.results) <- colnames(otu.table)
-  resTable <- as.data.frame(pcor.results)
-  ord.inx <- order(resTable$p.value);
-  resTable <- resTable[ord.inx, , drop=FALSE];
-  fast.write(resTable, "partial_corr.csv", row.names = TRUE);
-  resTable$taxarank = row.names(pcor.results)
-  
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj)
-    return(1);
-  }else{
-    return(.set.mbSetObj(mbSetObj))
-  }
-}
-
-#'Function to update confounders used for partial correlation
-#'@description This function updates which confounders will be
-#'used to calculate partial correlation.
-#'@param mbSetObj Input the name of the mbSetObj.
-#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
-#'McGill University, Canada
-#'License: GNU GPL (>= 2)
-#'@export
-UpdateConfItems <- function(mbSetObj){
-  
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  
-  if(!exists("conf.vec")){
-    current.msg <<- "Cannot find the current list of available metadata!";
-    return (0);
-  }
-  
-  #double check validity of metadata
-  metadata <- colnames(mbSetObj$dataSet$sample_data)
-  check <- metadata[(which(metadata %in% conf.vec))]
-  mbSetObj$dataSet$confs <- check
-  
-  current.msg <<- "Successfully updated selected confounders!";
-  
-  if(.on.public.web){
-    .set.mbSetObj(mbSetObj)
-    return(1);
-  }else{
-    return(.set.mbSetObj(mbSetObj))
-  }
 }
 
 CleanTaxaNames <- function(mbSetObj, names){

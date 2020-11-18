@@ -504,6 +504,7 @@ ComputeColorGradientCorr <- function(nd.vec, centered=TRUE){
 }
 
 PerformUnivTests <- function(cls, data, nonpar){
+    cls <- as.factor(cls);
     if(length(levels(cls)) > 2){
         return(.do.anova(cls, data, nonpar));
     }else{
@@ -517,6 +518,7 @@ PerformFastUnivTests <- function(data, cls, var.equal=TRUE){
 
     # note, feature in rows for gene expression
     data <- t(as.matrix(data));
+    cls <- as.factor(cls);
     if(length(levels(cls)) > 2){
         res <- try(rowcolFt(data, cls, var.equal = var.equal));
     }else{

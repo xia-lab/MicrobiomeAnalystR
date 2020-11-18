@@ -150,37 +150,6 @@ Init.mbSetObj <- function(){
   return(my.lib)
 }
 
-
-# read binary RDA files (old style should be all RDS)
-# type should mset or kegg
-.read.microbiomeanalyst.lib.rda <- function(libname, sub.dir=NULL){
-  
-  destfile <- libname;
-  if(.on.public.web){
-    if(is.null(sub.dir)){
-      destfile <- paste("../../lib/", libname, sep="");
-    }else{
-      destfile <- paste("../../lib/", sub.dir, "/", libname, sep="");
-    }
-  }else{
-    lib.download <- FALSE;
-    if(!file.exists(destfile)){
-      lib.download <- TRUE;
-    }else{
-      time <- file.info(destfile)
-      diff_time <- difftime(Sys.time(), time[,"mtime"], unit="days") 
-      if(diff_time>30){
-        lib.download <- TRUE;
-      }
-    }
-    if(lib.download){
-      libPath <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/", libname, sep="");
-      download.file(libPath, destfile);
-    }
-  }
-  load(destfile, .GlobalEnv);  
-}
-
 #'Function to set analysis type
 #'@description This functions sets the module name.
 #'@param analType Input the analysis type. If the data is marker gene data, 
@@ -403,12 +372,12 @@ GetMetaTaxaInfo <- function(mbSetObj){
   #drop taxa with only 1 level (i.e. Viruses at Phylum)
   gd.inx <- apply(taxa.tbl, 2, function(x) length(unique(x))!=1);
   taxa.tbl.update <- taxa.tbl[,gd.inx, drop=FALSE];
-  
+
   if(ncol(taxa.tbl.update) == 0){
-    msg <- c("All taxa info are the same!")
+    msg <- c("All taxa info for the remaining features are the same!")
     return("OTU")
   }
-  
+
   taxa.nms <- rank_names(taxa.tbl.update);
   return(taxa.nms[!is.na(taxa.nms)]);
 }

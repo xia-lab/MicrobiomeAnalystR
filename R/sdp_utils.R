@@ -228,17 +228,17 @@ PreparePCA4Shotgun <- function(mbSetObj, imgName,imgName2, format="json", inx1, 
   if(showlabel=="samnm"){
     label = TRUE;
     box <- autoplot(pca,data=sam_data,colour=variable,size=4,alpha =0.8,label = label) + theme_bw()
-    box <- box + stat_ellipse(type="norm", linetype=2, geom = "polygon",alpha = 0.2, aes_string(fill = clsLbl), show.legend=FALSE)
+    box <- box + stat_ellipse(type="norm", linetype=2, geom = "polygon",alpha = 0.2, aes_string(fill = quo(clsLbl)), show.legend=FALSE)
     box <- box + labs(x = pca3d$score$axis[1], y = pca3d$score$axis[2]);
   } else if(showlabel=="none") {
     box <- autoplot(pca,data=sam_data,colour=variable,size=4,alpha =0.8,label = label) + theme_bw()
-    box <- box + stat_ellipse(type="norm", linetype=2, geom = "polygon",alpha = 0.2, aes_string(fill = clsLbl), show.legend=FALSE)
+    box <- box + stat_ellipse(type="norm", linetype=2, geom = "polygon",alpha = 0.2, aes_string(fill = quo(clsLbl)), show.legend=FALSE)
     box <- box + labs(x = pca3d$score$axis[1], y = pca3d$score$axis[2]);
   } else {
     grplbl <<- sam_data[ ,showlabel];
     clsLbl <<- clsLbl;
     box <- autoplot(pca,data=sam_data,colour=variable,size=4,alpha =0.8,label = label) + geom_text(aes(label=grplbl,colour=clsLbl))
-    box <- box + theme_bw()+ stat_ellipse(type="norm", linetype=2, geom = "polygon",alpha = 0.2, aes_string(fill = clsLbl), show.legend=FALSE)
+    box <- box + theme_bw()+ stat_ellipse(type="norm", linetype=2, geom = "polygon",alpha = 0.2, aes_string(fill = quo(clsLbl)), show.legend=FALSE)
     box <- box + labs(x = pca3d$score$axis[1], y = pca3d$score$axis[2]);
   }
   print(box);
@@ -686,11 +686,11 @@ PerformKOEnrichAnalysis_Table <- function(mbSetObj, file.nm){
 LoadKEGGKO_lib<-function(category){
     
   if(category == "module"){
-    .read.microbiomeanalyst.lib.rda("ko_modules.rda", "ko")
+    kegg.anot <- .read.microbiomeanalyst.lib.rds("ko_modules.rds", "ko")
     current.setlink <- kegg.anot$link;
     current.mset <- kegg.anot$sets$"Pathway module";
   }else{
-    .read.microbiomeanalyst.lib.rda("ko_pathways.rda", "ko")
+    kegg.anot <- .read.microbiomeanalyst.lib.rds("ko_pathways.rds", "ko")
     current.setlink <- kegg.anot$link;
     current.mset <- kegg.anot$sets$Metabolism;
   }
