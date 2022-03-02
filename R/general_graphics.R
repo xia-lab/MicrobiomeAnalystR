@@ -463,7 +463,7 @@ PlotBoxData <- function(mbSetObj, boxplotName, feat, format="png", dpi=72){
 
 
 PlotHeatmap<-function(mbSetObj, plotNm, smplDist, clstDist, palette, metadata,
-                      taxrank, viewOpt, doclust, format="png",  colname,rowname, fontsize_row, fontsize_col,
+                      taxrank, viewOpt, doclust, format="png",  colname,rowname, fontsize_col, fontsize_row,
                       appendnm="F", rowV=F, colV=T, var.inx=NA, border=T, width=NA, dpi=72){
   
   
