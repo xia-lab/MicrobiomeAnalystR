@@ -441,8 +441,10 @@ PlotBoxData <- function(mbSetObj, boxplotName, feat, format="png", dpi=72){
 #'@param doclust Logicial, default set to "F".
 #'@param format Character, input the preferred
 #'format of the plot. By default it is set to "png".
-#'@param showfeatname Logical, "T" to show feature names and 
-#'"F" to not.
+#'@param showfeatname Character, specify the column and/or row names are be shown. "both","none","column","row",
+#'default set to "both"
+#'@param fontsize_row Numeric, fontsize for rownames 
+#'@param fontsize_col Numeric, fontsize for colnames
 #'@param appendnm Logical, "T" to prepend higher taxon names.
 #'@param rowV Logical, default set to "F".
 #'@param colV Logical, default set to "T".
@@ -459,9 +461,10 @@ PlotBoxData <- function(mbSetObj, boxplotName, feat, format="png", dpi=72){
 #'@import pheatmap
 #'@import viridis
 
+
 PlotHeatmap<-function(mbSetObj, plotNm, smplDist, clstDist, palette, metadata,
-                      taxrank, viewOpt, doclust, format="png", showfeatname,
-                      appendnm, rowV=F, colV=T, var.inx=NA, border=T, width=NA, dpi=72){
+                      taxrank, viewOpt, doclust, format,  showfeatname, fontsize_row=8, fontsize_col=8,
+                      appendnm="F", rowV=F, colV=T, var.inx=NA, border=T, width=NA, dpi=72){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -531,7 +534,7 @@ PlotHeatmap<-function(mbSetObj, plotNm, smplDist, clstDist, palette, metadata,
   ind <- which(colnames(annotation)!=metadata && colnames(annotation)!="sample_id");
   
   if(length(ind)>0){
-    ind1 <- ind[1];
+    ind1 <- ind[1]
     annotation <- annotation[order(annotation[,metadata],annotation[,ind1]),];
   }else{
     annotation <- annotation[order(annotation[,metadata]),];
@@ -569,11 +572,21 @@ PlotHeatmap<-function(mbSetObj, plotNm, smplDist, clstDist, palette, metadata,
     colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdBu"))(256));
   }
   
-  if(showfeatname=="T"){
-    showfeatname<-T;
+  if(showfeatname=="both"){
+    show_rowname<-T;
+    show_colname<- T;
     min.margin <- 360;
-  } else {
-    showfeatname<-F;
+  } else if(showfeatname=="column"){
+    show_rowname<-F;
+    show_colname<- T;
+    min.margin <- 360;
+  } else if(showfeatname=="row"){
+    show_rowname<-T;
+    show_colname<- F;
+    min.margin <- 360;
+  }else {
+    show_rowname<-F;
+    show_colname<- F;
     min.margin <- 200;
   }
   
@@ -631,16 +644,18 @@ PlotHeatmap<-function(mbSetObj, plotNm, smplDist, clstDist, palette, metadata,
   
   pheatmap::pheatmap(data1,
                      annotation=annotation,
-                     fontsize=8, fontsize_row=8,
+                     fontsize_col =fontsize_col, fontsize_row=fontsize_row,
                      clustering_distance_rows = smplDist,
                      clustering_distance_cols = smplDist,
                      clustering_method = clstDist,
-                     show_rownames = showfeatname,
+                     show_rownames = show_rowname,
+                     show_colnames = show_colname,
                      border_color = border.col,
                      cluster_rows = colV,
                      cluster_cols = rowV,
                      scale= "row",
                      color = colors
+                     
   );
   
   dev.off();
@@ -652,8 +667,6 @@ PlotHeatmap<-function(mbSetObj, plotNm, smplDist, clstDist, palette, metadata,
   mbSetObj$analSet$heat.taxalvl<-taxrank;
   return(.set.mbSetObj(mbSetObj))
 }
-
-
 #'Function to create circular bubble plots.
 #'@description This functions creates a circular bubble plot of the 
 #'relative abundance of taxa in each group. Each group will have their own
