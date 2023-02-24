@@ -194,15 +194,15 @@ To inform us of any bugs or requests, please open a new issue or send an email t
 
 ## MicrobiomeAnalystR History & Updates
 
-02-23-2023 - Initial commit of MicrobiomeAnalyst 2.0 - prepping for stable release
+02-23-2023 - Initial commit of MicrobiomeAnalyst 2.0 - prepping for stable release\
 11-16-2020 - Code update w. web + change files from .rds to .qs - users need to install qs R package now
-02-24-2020 - Code update w. web + added note about usage
-09-05-2019 - Bug fixing w. web
-08-07-2019 - Added function to import SILVA annotated biom files (handling Domain in taxonomy)
-07-11-2019 - Added volcano + dot plots for RNAseq analysis
-07-08-2019 - Testing R code for local use + creating vignettes
-07-03-2019 - Updating R code + documentation
-06-22-2019 - Prepping R package for stable release
+02-24-2020 - Code update w. web + added note about usage\
+09-05-2019 - Bug fixing w. web\
+08-07-2019 - Added function to import SILVA annotated biom files (handling Domain in taxonomy)\
+07-11-2019 - Added volcano + dot plots for RNAseq analysis\
+07-08-2019 - Testing R code for local use + creating vignettes\
+07-03-2019 - Updating R code + documentation\
+06-22-2019 - Prepping R package for stable release\
 
 
 
