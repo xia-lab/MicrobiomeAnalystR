@@ -4,7 +4,7 @@
 \alias{PlotFunAnotSummary}
 \title{Plot functional annotation summary}
 \usage{
-PlotFunAnotSummary(mbSetObj, imgName, format = "png", dpi = 72)
+PlotFunAnotSummary(mbSetObj, imgName, format = "png", funanno, dpi = 72)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

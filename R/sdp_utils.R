@@ -68,12 +68,10 @@ ReadShotgunTabData <- function(mbSetObj, dataName, geneidtype, datatype) {
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
   mydata <- .readDataTable(dataName);
-    
   if(any(is.na(mydata)) || class(mydata) == "try-error"){
     AddErrMsg("Failed to read in the abundance data! Please make sure the gene abundance table is in the right format and do not have empty cells or NA.");
     return(0);
   }
-
   # look for #NAME, store in a list
   #just to check the name of labels.
   sam.nm <- substr(colnames(mydata[1]),1,5);
@@ -89,13 +87,19 @@ ReadShotgunTabData <- function(mbSetObj, dataName, geneidtype, datatype) {
 
   dat.nms <- mydata[,1];
   mydata <- as.matrix(mydata[,-1]);
-    
+  #print(head(mydata))
   if(mode(mydata)=="character"){
     AddErrMsg(paste("Errors in parsing your data as numerics - possible reason: comma as decimal separator?"));
     return(0);
   }
   
   rownames(mydata) <- dat.nms;
+ if(mbSetObj$module.type=="mmp"){
+
+   mbSetObj$module.type.mic = "ko"
+}else{
+  mbSetObj$module.type.mic = "na"
+}
 
   mbSetObj$dataSet$name <- basename(dataName);
   mbSetObj$dataSet$data.orig <- mydata;
@@ -104,7 +108,7 @@ ReadShotgunTabData <- function(mbSetObj, dataName, geneidtype, datatype) {
   mbSetObj$dataSet$read.msg<-current.msg;
   mbSetObj$dataSet$data.type<-"text";
   mbSetObj$dataSet$gene.id<-geneidtype;
-  
+
   return(.set.mbSetObj(mbSetObj));
 
 }
@@ -155,12 +159,13 @@ ReadShotgunBiomData <- function(mbSetObj, dataName, geneidtype, module.type, ism
       ismetafile<-"F";
       return(0);
     }
-    mbSetObj$dataSet$sample_data<-as.data.frame(sample_data);
+    mbSetObj$dataSet$sample_data<-as.data.frame(sample_data,check.names=FALSE);
     msg <- c(msg, "Metadata file is also detected in your biom file.");
   }
 
   msg <- c(msg, paste("A total of ",ncol(mydata) , " samples and ", nrow(mydata), " metagenomic features were found."));
   current.msg <<- paste(msg, collapse="; ");
+
   mbSetObj$dataSet$read.msg<-current.msg;
   mbSetObj$dataSet$data.type<-"biom";
   mbSetObj$module.type<-module.type;
@@ -178,14 +183,12 @@ ReadShotgunBiomData <- function(mbSetObj, dataName, geneidtype, module.type, ism
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-#'@import RJSONIO
 #'@import ggfortify
 PreparePCA4Shotgun <- function(mbSetObj, imgName,imgName2, format="json", inx1, inx2, inx3,
                               variable, showlabel, format2d="png", dpi=72){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  load_rjsonio();
   load_ggfortify();
   
   imgName2 = paste(imgName2, ".", format2d, sep="");
@@ -199,12 +202,12 @@ PreparePCA4Shotgun <- function(mbSetObj, imgName,imgName2, format="json", inx1, 
   pca3d$score$axis <- paste("PC", 1:3, " (", 100*round(imp.pca[2,][1:3], 3), "%)", sep="");
   
   #3D
-  coords <- data.frame(t(signif(pca$x[,1:3], 5)));
+  coords <- data.frame(t(signif(pca$x[,1:3], 5)),check.names=FALSE);
   colnames(coords) <- NULL;
   pca3d$score$type <- "factor";
   pca3d$score$xyz <- coords;
   pca3d$score$name <- sample_names(mbSetObj$dataSet$norm.phyobj);
-  sam_data <- data.frame(sample_data(mbSetObj$dataSet$norm.phyobj));
+  sam_data <- data.frame(sample_data(mbSetObj$dataSet$norm.phyobj),check.names=FALSE);
   cls <- as.character(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   clsLbl <- sam_data[[variable]];
   pca3d$score$facA <- cls;
@@ -216,7 +219,7 @@ PreparePCA4Shotgun <- function(mbSetObj, imgName,imgName2, format="json", inx1, 
   cols <- apply(rgbcols, 2, function(x){paste("rgb(", paste(x, collapse=","), ")", sep="")});
   pca3d$score$colors <- cols;
   
-  json.obj <- RJSONIO::toJSON(pca3d);
+  json.obj <- rjson::toJSON(pca3d);
   sink(imgName);
   cat(json.obj);
   sink();
@@ -263,6 +266,11 @@ PlotFunctionStack<-function(mbSetObj, summaryplot, functionlvl, abundcal, geneid
                             colpalopt, format="png", dpi=72){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
+
+  if(geneidtype == "ec"){
+    AddErrMsg("ECs are not supported for functional profiling!")
+    return(0)
+  }
 
   summaryplot <- paste(summaryplot, ".", format, sep="");
   
@@ -316,7 +324,7 @@ PlotFunctionStack<-function(mbSetObj, summaryplot, functionlvl, abundcal, geneid
     
   myList <- vector('list', length(indx2));
   for (i in 1:length(indx2)) {
-    myList[[i]] <- as.data.frame(colSums(result2[indx1]*result2[,indx2[i]]));
+    myList[[i]] <- as.data.frame(colSums(result2[indx1]*result2[,indx2[i]]),check.names=FALSE);
   }
 
   MyMerge<- function(x, y){
@@ -334,7 +342,7 @@ PlotFunctionStack<-function(mbSetObj, summaryplot, functionlvl, abundcal, geneid
 
   if(abundcal=="norm_hit"){
     #getting the size of categories
-    categ_size <- as.data.frame(colSums(ko_higher_path));
+    categ_size <- as.data.frame(colSums(ko_higher_path),check.names=FALSE);
     colnames(categ_size) <- "size";
     result <- merge(result,categ_size, by ="row.names");
     result[indx2] <- result[indx2]/result[['size']];
@@ -372,7 +380,7 @@ PlotFunctionStack<-function(mbSetObj, summaryplot, functionlvl, abundcal, geneid
 
   nms <- colnames(data);
   data <- data %*% sapply(unique(nms),"==",nms);
-  data <- data.frame(data);
+  data <- data.frame(data,check.names=FALSE);
 
   data$facetOpt <- as.character(clsLbl_new);
   data$step <- factor(rownames(data), levels = rownames(data));
@@ -499,31 +507,30 @@ PerformKOmapping <- function(mbSetObj, geneIDs, type){
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-#'@import RJSONIO
 
 PrepareQueryJson <- function(mbSetObj){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
-  load_rjsonio();
 
   if(enrich.type == "hyper"){
     exp.vec <- mbSetObj$analSet$data[,1]; # drop dim for json
   }else{
     # for global test, all KO measured should be highlighted
-    genemat <- as.data.frame(t(otu_table(mbSetObj$dataSet$norm.phyobj)));
+    genemat <- as.data.frame(t(otu_table(mbSetObj$dataSet$norm.phyobj)),check.names=FALSE);
     exp.vec <- rep(2, ncol(genemat));
     names(exp.vec) <- colnames(genemat);
   }
-    
+
   edge.mat <- MapKO2KEGGEdges(exp.vec);
+
   row.names(edge.mat) <- eids <- rownames(edge.mat);
   query.ko <- edge.mat[,1];
   net.orig <- edge.mat[,2];
   query.res <- edge.mat[,3];# abundance
   names(query.res) <- eids; # named by edge
 
-  json.mat <- RJSONIO::toJSON(query.res, .na='null');
+
+  json.mat <- rjson::toJSON(query.res);
   sink("network_query.json");
   cat(json.mat);
   sink();
@@ -543,7 +550,7 @@ PrepareQueryJson <- function(mbSetObj){
 PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, file.nm){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-    
+ 
   if(enrich.type == "hyper"){
   LoadKEGGKO_lib(category);
     PerformKOEnrichAnalysis_List(mbSetObj, file.nm);
@@ -560,8 +567,9 @@ PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, file.nm){
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
   phenotype <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[selected.meta.data]]);
-  genemat <- as.data.frame(t(otu_table(mbSetObj$dataSet$norm.phyobj)));
+  genemat <- as.data.frame(t(otu_table(mbSetObj$dataSet$norm.phyobj)),check.names=FALSE);
   # first, get the matched entries from current.geneset
+
   hits <- lapply(current.geneset, function(x){x[x %in% colnames(genemat)]});
   set.num <- unlist(lapply(current.geneset, length), use.names = FALSE);
   dat.in <- list(cls=phenotype, data=genemat, subsets=hits, set.num=set.num, filenm=file.nm);
@@ -595,7 +603,7 @@ PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, file.nm){
 }
 
 .save.global.res <- function(){
-  mbSetObj = .get.mbSetObj("NA");
+  mbSetObj <- .get.mbSetObj("NA");
   dat.in <- qs::qread("dat.in.qs"); 
   hits = dat.in$subsets
   file.nm = dat.in$filenm;
@@ -627,7 +635,7 @@ PerformKOEnrichAnalysis_Table <- function(mbSetObj, file.nm){
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
   phenotype <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[selected.meta.data]]);
-  genemat <- as.data.frame(t(otu_table(mbSetObj$dataSet$norm.phyobj)));
+  genemat <- as.data.frame(t(otu_table(mbSetObj$dataSet$norm.phyobj)),check.names=FALSE);
   # first, get the matched entries from current.geneset
   hits <- lapply(current.geneset, function(x){x[x %in% colnames(genemat)]});
   set.num <- unlist(lapply(current.geneset, length), use.names = FALSE);
@@ -791,10 +799,9 @@ MapKO2KEGGEdges<- function(kos, net="ko01100"){
     }
     ko.edge.map <<- .readDataTable(ko.edge.path);
   }
-  
   all.hits <- ko.edge.map$gene %in% names(kos) & ko.edge.map$net == net;
   my.map <- ko.edge.map[all.hits, ];
-  q.map <- data.frame(gene=names(kos), expr=as.numeric(kos));
+  q.map <- data.frame(gene=names(kos), expr=as.numeric(kos),check.names=FALSE);
   
   # first merge to get ko abundance to each edge
   dat <- merge(my.map, q.map, by="gene");
@@ -884,12 +891,9 @@ PerformKOEnrichAnalysis_List <- function(mbSetObj, file.nm){
 
 # Utility function
 # for KO01100
-#'@import RJSONIO
 Save2KEGGJSON <- function(hits.query, res.mat, file.nm){
-  
-  load_rjsonio();
-  
-  resTable <- data.frame(Pathway=rownames(res.mat), res.mat);
+
+  resTable <- data.frame(Pathway=rownames(res.mat), res.mat,check.names=FALSE);
   current.msg <<- "Functional enrichment analysis was completed";
   
   if(!exists("ko.edge.map")){
@@ -916,14 +920,14 @@ Save2KEGGJSON <- function(hits.query, res.mat, file.nm){
   fun.pval = resTable$Pval; if(length(fun.pval) ==1) { fun.pval <- matrix(fun.pval) };
   hit.num = resTable$Hits; if(length(hit.num) ==1) { hit.num <- matrix(hit.num) };
   fun.ids <- as.vector(current.setids[names(hits.query)]); if(length(fun.ids) ==1) { fun.ids <- matrix(fun.ids) };
-  
+
   json.res <- list(hits.query = hits.query,
                    hits.edge = hits.edge,
-                   path.id = fun.ids,
+                   path.ids = fun.ids,
                    fun.pval = fun.pval,
                    hit.num = hit.num);
   
-  json.mat <- RJSONIO::toJSON(json.res, .na='null');
+  json.mat <- rjson::toJSON(json.res);
   json.nm <- paste(file.nm, ".json", sep="");
   sink(json.nm)
   cat(json.mat);

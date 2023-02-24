@@ -4,7 +4,13 @@
 \alias{PerformNormalization}
 \title{Function to perform normalization}
 \usage{
-PerformNormalization(mbSetObj, rare.opt, scale.opt, transform.opt)
+PerformNormalization(
+  mbSetObj,
+  rare.opt,
+  scale.opt,
+  transform.opt,
+  isAutoScale = F
+)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

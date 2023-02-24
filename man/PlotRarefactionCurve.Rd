@@ -10,14 +10,40 @@ PlotRarefactionCurve(
   linecolor,
   linetype,
   facet,
-  step,
+  step = 5,
   imgName,
   format = "png",
-  dpi = 72
+  dpi = 72,
+  interactive = FALSE
 )
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{data.src}{Character, use "orig" to use the original data or
+"proc" to use the processed data.}
+
+\item{linecolor}{Character, input the metadata you wish to 
+group the sample line colors.}
+
+\item{linetype}{Character, input the metadata you wish to 
+group the sample line types.}
+
+\item{facet}{Character, input the metadata you wish to 
+group the samples.}
+
+\item{step}{Numeric, input the step number. Default is set to 5.}
+
+\item{imgName}{Character, input the name of the plot to be saved.}
+
+\item{format}{Character, input the type of plot to be saved. Default is 
+set to png.}
+
+\item{dpi}{Numeric, input the dpi for the plot to be saved. Default
+is set to 72.}
+
+\item{interactive}{Boolean, if set to TRUE, saves the plot
+as an interactive html plot.}
 }
 \description{
 This functions plots rarefraction curves.

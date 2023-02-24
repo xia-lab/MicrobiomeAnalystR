@@ -7,6 +7,8 @@
 PlotHeatmap(
   mbSetObj,
   plotNm,
+  dataOpt = "norm",
+  scaleOpt = "row",
   smplDist,
   clstDist,
   palette,
@@ -15,8 +17,13 @@ PlotHeatmap(
   viewOpt,
   doclust,
   format = "png",
-  showfeatname,
-  appendnm,
+  colname,
+  rowname,
+  fontsize_col,
+  fontsize_row,
+  annoPer,
+  fzAnno,
+  appendnm = "F",
   rowV = F,
   colV = T,
   var.inx = NA,
@@ -59,8 +66,13 @@ heatmap (< 1500 features).}
 \item{format}{Character, input the preferred
 format of the plot. By default it is set to "png".}
 
-\item{showfeatname}{Logical, "T" to show feature names and 
-"F" to not.}
+\item{colname}{Logical, specify the if column name is shown, default set to "T",}
+
+\item{rowname}{Logical, specify the if row name is shown, default set to "T",}
+
+\item{fontsize_col}{Numeric, fontsize for colnames}
+
+\item{fontsize_row}{Numeric, fontsize for rownames}
 
 \item{appendnm}{Logical, "T" to prepend higher taxon names.}
 

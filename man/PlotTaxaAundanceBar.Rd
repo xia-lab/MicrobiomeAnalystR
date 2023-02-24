@@ -18,7 +18,8 @@ PlotTaxaAundanceBar(
   abunTopTaxaOpt,
   appendnm,
   format = "png",
-  dpi = 72
+  dpi = 72,
+  interactive = FALSE
 )
 }
 \arguments{
@@ -54,6 +55,9 @@ format of the plot. By default it is set to "png".}
 
 \item{dpi}{Numeric, input the dots per inch. By default
 it is set to 72.}
+
+\item{interactive}{Boolean, if TRUE, will save an interactive
+version of the Stacked Bar plot using plotly.}
 
 \item{metadata}{If users wish to merge samples to groups in the stacked bar plot,
 set this to the preferred grouping.}

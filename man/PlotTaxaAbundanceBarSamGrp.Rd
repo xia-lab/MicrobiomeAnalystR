@@ -18,7 +18,8 @@ PlotTaxaAbundanceBarSamGrp(
   abunTopTaxaOpt,
   appendnm,
   format = "png",
-  dpi = 72
+  dpi = 72,
+  interactive = FALSE
 )
 }
 \arguments{

@@ -72,11 +72,6 @@ load_vegan <- function(){
   suppressMessages(library(vegan))
 }
 
-# Load RJSONIO
-load_rjsonio <- function(){
-  suppressMessages(library(RJSONIO))
-}
-
 # Load ggfortify
 load_ggfortify <- function(){
   suppressMessages(library(ggfortify))
@@ -85,6 +80,9 @@ load_ggfortify <- function(){
 # Load pheatmap
 load_pheatmap <- function(){
   suppressMessages(library(pheatmap))
+}
+load_iheatmapr <- function(){
+  suppressMessages(library(iheatmapr))
 }
 
 # Load xtable
@@ -150,4 +148,14 @@ load_viridis <- function(){
 # Load ppcor
 load_ppcor <- function(){
   suppressMessages(library(ppcor))
+}
+
+# Load ggraph
+load_ggraph <- function(){
+  suppressMessages(library(ggraph))
+}
+
+# Load visNetwork
+load_visNetwork <- function(){
+  suppressMessages(library(visNetwork))
 }

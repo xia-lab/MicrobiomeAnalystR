@@ -17,7 +17,8 @@ CoreMicrobeAnalysis(
   group,
   format = "png",
   dpi = 72,
-  width = NA
+  width = NA,
+  interactive = FALSE
 )
 }
 \arguments{
@@ -44,6 +45,9 @@ format of the plot. By default it is set to "png".}
 
 \item{dpi}{Numeric, input the dots per inch. By default
 it is set to 72.}
+
+\item{interactive}{Boolean, if set to TRUE, saves the plot
+as an interactive html plot.}
 }
 \description{
 This functions performs core microbiome analysis.

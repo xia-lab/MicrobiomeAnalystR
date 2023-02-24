@@ -12,6 +12,7 @@ PrepareHeatTreePlot(
   layoutOpt,
   comparison,
   wilcox.cutoff,
+  switchCmpDirection,
   imgName,
   format = "png",
   dpi = 72

@@ -13,11 +13,49 @@ PerformNetworkCorrelation(
   pvalCutoff = 0.05,
   corrCutoff = 0.3,
   abundOpt = "mean",
-  corr.net.name
+  corr.net.name,
+  plotNet = FALSE,
+  netType = "static",
+  netLayout = "kk",
+  netTextSize = 2.5
 )
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{taxrank}{Character, input the taxonomic level
+to perform partial correlation analysis.}
+
+\item{cor.method}{Character, input the correlation method.
+Supported methods are pearson, spearman, kendall and sparcc.}
+
+\item{colorOpt}{Character, input what to color the nodes by. Default
+the nodes will be colored by their expression levels.}
+
+\item{permNum}{Numeric, input the number of permutations to perform. Default
+is set to 100.}
+
+\item{pvalCutoff}{Numeric, input the p-value cutoff. Default is set to 0.05.}
+
+\item{corrCutoff}{Numeric, input the correlation cutoff. Default is set to 0.3.}
+
+\item{abundOpt}{Character, default is set to "mean".}
+
+\item{corr.net.name}{Character, input the name of the plot to save.}
+
+\item{plotNet}{Boolean. Set to TRUE if you would like a network visualization
+outputted to your current working directory.}
+
+\item{netLayout}{Character, layout from ggraph. "kk" for the spring-based algorithm by Kamada and Kawai
+as default. "drl" for force directed algorithm from the DrL toolbox. "lgl" for Large Graph Layout. "fr" for
+force-directed of Fruchterman and Reingold.}
+
+\item{netTextSize}{Numeric, input the preferred font size to be used in the network
+plot.}
+
+\item{networkType}{Character, "static" to create a static image or
+"interactive" to create an interactive network saved as an html 
+in your working directory.}
 }
 \description{
 This function runs the fastspar or cor.test

@@ -8,7 +8,7 @@
 # filter zeros and singletons this is not good enough ==> single occurance
 # reads occur in only one sample should be treated as artifacts and removed
 
-#'Main function to sanity check on uploaded data
+#'Main function to sanity check on uploaded microbiome data
 #'@description This function performs a sanity check on the uploaded
 #'user data. It checks the grouping of samples, if a phylogenetic tree
 #'was uploaded.
@@ -25,9 +25,11 @@
 SanityCheckData <- function(mbSetObj, filetype, disableFilter = FALSE){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
+  dataName <- mbSetObj$dataSet$name;
+  module.type <- mbSetObj$module.type;
   
   feat.sums <- apply(mbSetObj$dataSet$data.orig, 1, function(x){sum(x>0, na.rm=T)});
-
+  
   if(disableFilter){
     data.proc <- mbSetObj$dataSet$data.orig
   }else{
@@ -38,7 +40,7 @@ SanityCheckData <- function(mbSetObj, filetype, disableFilter = FALSE){
     }
     data.proc <- mbSetObj$dataSet$data.orig[gd.inx, ]; 
   }
-
+  
   # filtering the constant features here
   # check for columns with all constant (var=0)
   varCol <- apply(data.proc, 1, var, na.rm=T);
@@ -52,9 +54,16 @@ SanityCheckData <- function(mbSetObj, filetype, disableFilter = FALSE){
     return(0);
   }
   
-  qs::qsave(data.proc, file="data.proc.orig"); # save an copy
-  qs::qsave(data.proc, file="data.prefilt"); # save an copy
-  
+  saveDataQs(data.proc, "data.proc.orig", module.type, dataName);
+  saveDataQs(data.proc, "data.prefilt", module.type, dataName);
+
+  if(module.type == "meta"){
+    sanCheck <- .checkSampleConsistencyMeta(mbSetObj,dataName);
+    if(sanCheck == 0){
+        return(0);
+    }
+  }
+
   # now get stats
   taxa_no <- nrow(mbSetObj$dataSet$data.orig);
   
@@ -67,7 +76,7 @@ SanityCheckData <- function(mbSetObj, filetype, disableFilter = FALSE){
     samplemeta_no <- sample_no;
   }
   
-  if(mbSetObj$module.type!="ppd"){
+  if(!mbSetObj$module.type %in% c("ppd") ){
     mbSetObj$dataSet$sample_data <- mbSetObj$dataSet$sample_data[sapply(mbSetObj$dataSet$sample_data, function(col) length(unique(col))) > 1];
   }
   
@@ -91,10 +100,19 @@ SanityCheckData <- function(mbSetObj, filetype, disableFilter = FALSE){
   
   if(file.exists("tree.qs")){
     tree_exist <- 1
+    tree<-qs::qread("tree.qs")  
+    
+    if(length(intersect(rownames(data.proc),tree$tip.label))==nrow(data.proc)){
+      tree_tip <- 1
+    }else{
+      tree_tip <- 0
+      AddErrMsg("The tip labels of the tree are not matched with your feature names in the abundance table!");
+      
+    }
   } else {
     tree_exist <- 0
+    tree_tip <- 0
   }
-  
   if(identical(sort(row.names(mbSetObj$dataSet$sample_data)),
                sort(colnames(data.proc)))){
     samname_same <- 1;
@@ -104,17 +122,30 @@ SanityCheckData <- function(mbSetObj, filetype, disableFilter = FALSE){
   
   sample_no_in_outfile <- ncol(data.proc);
   samname_same_number <- sum(row.names(mbSetObj$dataSet$sample_data) %in% colnames(data.proc));
+   if(samname_same_number){
+      mis.num <- length(which(!row.names(mbSetObj$dataSet$sample_data) %in% colnames(data.proc)))
+     if(mis.num==1){
+     current.msg <<- paste0("One sample name was not included in the OTU/ASV abundance table.");
+
+   }else{
+   current.msg <<- paste0("A total of ",mis.num," sample names were not included in the OTU/ASV abundance table.");
+
+   }
+
+  }
   
   # now store data.orig to RDS
-  qs::qsave(mbSetObj$dataSet$data.orig, file="data.orig");
-  qs::qsave(data.proc, file="data.proc");
-  qs::qsave(mbSetObj$dataSet$sample_data, file = "data.sample_data")
-  mbSetObj$dataSet$data.orig <- NULL;
+  saveDataQs(mbSetObj$dataSet$data.orig, "data.orig", module.type, dataName);
+  saveDataQs(data.proc,"data.proc", module.type, dataName);
+  saveDataQs(mbSetObj$dataSet$sample_data, "data.sample_data", module.type, dataName);
+  
+  #mbSetObj$dataSet$data.orig <- NULL;
   mbSetObj$dataSet$tree <- tree_exist
   
   vari_no <- ncol(mbSetObj$dataSet$sample_data);
   disc_no <- sum(mbSetObj$dataSet$meta_info$disc.inx);
   cont_no <- sum(mbSetObj$dataSet$meta_info$cont.inx);
+  vari_dup_no <- disc_no + cont_no
   smpl.sums <- apply(data.proc, 2, sum);
   tot_size <- sum(smpl.sums);
   smin <- min(smpl.sums)
@@ -122,14 +153,102 @@ SanityCheckData <- function(mbSetObj, filetype, disableFilter = FALSE){
   smax <- max(smpl.sums);
   gd_feat <- nrow(data.proc);
   
+  if(exists("current.proc")){
+  current.proc$mic$data.proc<<-data.proc
+}
+
   if(.on.public.web){
     .set.mbSetObj(mbSetObj)
-    return(c(1,taxa_no,sample_no,vari_no, smin,smean,smax,gd_feat,samplemeta_no,tot_size, tree_exist, samname_same, samname_same_number, sample_no_in_outfile, disc_no, cont_no));
+    return(c(1,taxa_no,sample_no,vari_no, smin,smean,smax,gd_feat,samplemeta_no,tot_size, tree_exist, samname_same, samname_same_number, sample_no_in_outfile, disc_no, cont_no,vari_dup_no,tree_tip));
   }else{
     print("Sanity check passed!")
+    
     return(.set.mbSetObj(mbSetObj))
   }
 }
+
+#'Function to sanity check on uploaded metabolomics data
+#'@description This function performs a sanity check on the uploaded
+#'user data. It checks the grouping of samples, if a phylogenetic tree
+#'was uploaded.
+#'@param mbSetObj Input the name of the mbSetObj.
+#'@param disableFilter Booleanmetabo. Set to TRUE to bypass the hard-coded filter
+#'to remove features occuring in <2 samples.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+
+
+SanityCheckMetData <- function(mbSetObj,isNormMetInput, disableFilter = FALSE){
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  
+  feat.sums <- apply(mbSetObj$dataSet$metabolomics$data.orig, 1, function(x){sum(x>0, na.rm=T)});
+  
+  if(disableFilter){
+    data.proc <-mbSetObj$dataSet$metabolomics$data.orig
+  }else{
+    gd.inx <- feat.sums > 1; # occur in at least 2 samples
+    if(length(which(gd.inx=="TRUE"))==0){
+      AddErrMsg("Reads occur in only one sample.  All these are considered as artifacts and have been removed from data. No data left after such processing.");
+      return(0);
+    }
+    data.proc <- mbSetObj$dataSet$metabolomics$data.orig[gd.inx, ]; 
+  }
+  
+  # filtering the constant features here
+  # check for columns with all constant (var=0)
+  varCol <- apply(data.proc, 1, var, na.rm=T);
+  constCol <- varCol == 0 | is.na(varCol);
+  
+  # making copy of data.proc
+  data.proc <- data.proc[!constCol, ];
+  
+  if(length(data.proc)==0){
+    AddErrMsg("All features are found to be constant and have been removed from data. No data left after such processing.");
+    return(0);
+  }
+  
+  # check zero, NA values
+  totalCount <- nrow(data.proc)*ncol(data.proc);
+  naCount <- sum(is.na(data.proc));
+  naPercent <- round(100*naCount/totalCount,1)
+  #  print(naCount)
+  mbSetObj$dataSet$metabolomics$missingCount <- naCount;
+  
+  msg<-paste("A total of ", naCount, " (", naPercent, "%) missing values were detected.", sep="");
+  
+  
+  #Reset to default
+  mbSetObj$dataSet$metabolomics$data.filt<-  mbSetObj$dataSet$metabolomics$edit <- NULL;
+  
+  # replace zero and missing values using Detection Limit for each variable 
+  int.mat <- t(ReplaceMissingByLoD(t(data.proc)));   ##notice that samples in column and features in row
+  
+  mbSetObj$dataSet$metabolomics$proc.feat.num <- ncol(int.mat);
+  
+  msg<-c(msg, paste("Zero or missing values were replaced by 1/5 of the min positive value for each variable."));
+  
+  
+  mbSetObj$dataSet$metabolomics$check.msg <- msg;
+  mbSetObj$dataSet$metabolomics$isNormInput <- isNormMetInput;
+  samname_same_number <- sum(row.names(mbSetObj$dataSet$sample_data) %in% colnames(data.proc));
+  # now store data.orig to RDS
+  qs::qsave(mbSetObj$dataSet$metabolomics$data.orig, file="metabo.data.orig.qs");
+  qs::qsave(int.mat, file="metabo.data.init.qs");
+  current.proc$met$data.proc<<-int.mat
+
+  if(.on.public.web){
+    .set.mbSetObj(mbSetObj)
+    return(c(1,length(feat.sums),nrow(data.proc),naPercent,samname_same_number));
+  }else{
+    print("Sanity check passed!")
+    
+    return(.set.mbSetObj(mbSetObj))
+  }
+}
+
 
 #'Function to filter uploaded data
 #'@description This function filters data based on low counts in high percentage samples.
@@ -149,8 +268,10 @@ ApplyAbundanceFilter <- function(mbSetObj, filt.opt, count, smpl.perc){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  data <- qs::qread("data.prefilt");
-  msg <- NULL;
+  dataName <- mbSetObj$dataSet$name;
+  module.type <- mbSetObj$module.type;
+  data <- readDataQs("data.prefilt", module.type, dataName);
+  #data <- qs::qread("data.prefilt");
   
   #this data is used for sample categorial comparision further
   rmn_feat <- nrow(data);
@@ -174,8 +295,22 @@ ApplyAbundanceFilter <- function(mbSetObj, filt.opt, count, smpl.perc){
     }
   }
   
+  if(sum(kept.inx)==0){
+    AddErrMsg(paste0("No samples have counts less than ", count, "! If your data has already been normalized, please turn off count filter (0)."))
+    return(0)
+  }
+  
   mbSetObj$dataSet$filt.data <- data[kept.inx, ];
-  qs::qsave(mbSetObj$dataSet$filt.data, file="filt.data.orig"); # save an copy
+  
+  if(exists("current.proc")){
+    
+    current.proc$mic$data.proc<<-mbSetObj$dataSet$filt.data
+
+  }
+  
+  
+  saveDataQs(mbSetObj$dataSet$filt.data, "filt.data.orig", module.type, dataName);
+  #qs::qsave(mbSetObj$dataSet$filt.data, file="filt.data.orig"); # save an copy
   current.msg <<- paste("A total of ", sum(!kept.inx), " low abundance features were removed based on ", filt.opt, ".", sep="");
   
   return(.set.mbSetObj(mbSetObj));
@@ -196,9 +331,9 @@ ApplyAbundanceFilter <- function(mbSetObj, filt.opt, count, smpl.perc){
 ApplyVarianceFilter <- function(mbSetObj, filtopt, filtPerct){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
+  dataName <- mbSetObj$dataSet$name;
+  module.type <- mbSetObj$module.type;
   data <- mbSetObj$dataSet$filt.data;
-  msg <- NULL;
   
   rmn_feat <- nrow(data);
   
@@ -229,16 +364,121 @@ ApplyVarianceFilter <- function(mbSetObj, filtopt, filtPerct){
   }
   
   data <- data[remain,];
+  
+  if(nrow(data) == 0){
+    AddErrMsg("No samples remaining after variance filtering!")
+    return(0)
+  }
+  
   mbSetObj$dataSet$filt.data <- data;
-  qs::qsave(mbSetObj$dataSet$filt.data, file="filt.data.orig"); # save an copy
+  if(exists("current.proc")){ 
+    current.proc$mic$data.proc<<-data
+  }
+  
+  #qs::qsave(mbSetObj$dataSet$filt.data, file="filt.data.orig"); # save an copy
+  saveDataQs(mbSetObj$dataSet$filt.data, "filt.data.orig", module.type, dataName);
+  
   rm.msg1 <- paste("A total of ", sum(!remain), " low variance features were removed based on ", filtopt, ".", sep="");
   rm.msg2 <- paste("The number of features remains after the data filtering step:", nrow(data));
   current.msg <<- paste(c(current.msg, rm.msg1, rm.msg2), collapse=" ");
   mbSetObj$dataSet$filt.msg <- current.msg;
-  
   return(.set.mbSetObj(mbSetObj));
   
 }
+
+#'Function to filter uploaded metabolomic data
+#'@description .
+#'Note, this is applied after abundance filter.
+#'@param mbSetObj Input the name of the mbSetObj.
+#'@param filtopt Character, input the low variance filter option. "iqr" for 
+#'inter-quantile range, "sd" for standard deviation, and "cov" for coefficient of variation.
+#'@param filtPerct Numeric, input the percentage cutoff for low variance. 
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+
+ApplyMetaboFilter <- function(mbSetObj=NA, filter,  rsd){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  
+  data <- mbSetObj$dataSet$metabolomics$data.orig;
+  int.mat <- t(data) ;
+  
+  
+  feat.num <- ncol(int.mat);
+  feat.nms <- colnames(int.mat);
+  nm <- NULL;
+  msg <- "";
+  if(filter == "none" && feat.num < 5000) { # only allow for less than 4000
+    remain <- rep(TRUE, feat.num);
+    msg <- paste(msg, "No filtering was applied");
+  }else {
+    if (filter == "rsd"){
+      sds <- apply(int.mat, 2, sd, na.rm=T);
+      mns <- apply(int.mat, 2, mean, na.rm=T);
+      filter.val <- abs(sds/mns);
+      nm <- "Relative standard deviation";
+    }else if (filter == "nrsd" ){
+      mads <- apply(int.mat, 2, mad, na.rm=T);
+      meds <- apply(int.mat, 2, median, na.rm=T);
+      filter.val <- abs(mads/meds);
+      nm <- "Non-paramatric relative standard deviation";
+    }else if (filter == "mean"){
+      filter.val <- apply(int.mat, 2, mean, na.rm=T);
+      nm <- "mean";
+    }else if (filter == "sd"){
+      filter.val <- apply(int.mat, 2, sd, na.rm=T);
+      nm <- "standard deviation";
+    }else if (filter == "mad"){
+      filter.val <- apply(int.mat, 2, mad, na.rm=T);
+      nm <- "Median absolute deviation";
+    }else if (filter == "median"){
+      filter.val <- apply(int.mat, 2, median, na.rm=T);
+      nm <- "median";
+    }else{ # iqr
+      filter.val <- apply(int.mat, 2, IQR, na.rm=T);
+      nm <- "Interquantile Range";
+    }
+    
+    # get the rank of the filtered variables
+    rk <- rank(-filter.val, ties.method='random');
+    
+    
+    if(feat.num < 250){ # reduce 5%
+      remain <- rk < feat.num*0.95;
+      msg <- paste(msg, "Further feature filtering based on", nm,". A total of ",sum(!remain), "features were removed.");
+    }else if(feat.num < 500){ # reduce 10%
+      remain <- rk < feat.num*0.9;
+      msg <- paste(msg, "Further feature filtering based on", nm,". A total of ",sum(!remain), "features were removed.");
+    }else if(feat.num < 1000){ # reduce 25%
+      remain <- rk < feat.num*0.75;
+      msg <- paste(msg, "Further feature filtering based on", nm,". A total of ",sum(!remain), "features were removed.");
+    }else{ # reduce 40%, if still over 5000, then only use top 5000
+      remain <- rk < feat.num*0.6;
+      msg <- paste(msg, "Further feature filtering based on", nm);
+      
+      if(sum(remain) > 5000){
+        remain <- rk < 5000;
+        msg <- paste(msg, paste("Reduced to", 5000, "features based on", nm,""));
+      }
+    }
+    
+  }
+  
+  # save a copy for user 
+  #fast.write.csv(cbind(filter=filter.val, t(int.mat)), file=paste0("data_prefilter_", filter, ".csv"));
+  
+  
+  filt.res=int.mat[, remain]
+  mbSetObj$dataSet$metabolomics$filt.data <- t(filt.res); 
+  current.proc$met$data.proc<<-t(filt.res)
+  qs::qsave(mbSetObj$dataSet$metabolomics$filt.data, file="metabo.filt.data"); # save an copy
+  current.msg <<- msg
+ 
+  return(.set.mbSetObj(mbSetObj));
+  
+}
+
 
 #'Function to update samples
 #'@description This function prunes samples to be included 
@@ -251,6 +491,8 @@ ApplyVarianceFilter <- function(mbSetObj, filtopt, filtPerct){
 UpdateSampleItems <- function(mbSetObj){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
+  dataName <- mbSetObj$dataSet$name;
+  module.type <- mbSetObj$module.type;
   
   if(!exists("smpl.nm.vec")){
     AddErrMsg("Cannot find the current sample names!");
@@ -264,9 +506,9 @@ UpdateSampleItems <- function(mbSetObj){
   
   #preserving the rownames
   # read from saved prefilt copy
-  prefilt.data <- qs::qread("data.prefilt");
+  prefilt.data <- readDataQs("data.prefilt", module.type, dataName);
   tax_nm <- rownames(prefilt.data);
-  data.proc <- qs::qread("data.proc");
+  data.proc <- readDataQs("data.proc", module.type, dataName);
   modi_data <- data.proc[,hit.inx];
   prefilt.data <- modi_data;
   
@@ -292,7 +534,7 @@ UpdateSampleItems <- function(mbSetObj){
   }
   
   mbSetObj$dataSet$sample_data <- my.meta
-  
+   
   return(.set.mbSetObj(mbSetObj));
   
 }
@@ -316,12 +558,19 @@ UpdateSampleItems <- function(mbSetObj){
 #'@export
 #'@import edgeR
 #'@import metagenomeSeq
-PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt){
+PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,isAutoScale=F){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  data <- qs::qread("filt.data.orig");
+  dataName <- mbSetObj$dataSet$name;
+  module.type <- mbSetObj$module.type;
+  data <- readDataQs("filt.data.orig", module.type, dataName);
+  saveDataQs(mbSetObj$dataSet$proc.phyobj, "orig.phyobj", module.type, dataName);  
+
+  # now proc.phyobj is now filtered data
   tax_nm <- rownames(data);
   msg <- NULL;
+  
+  #rarefying (should?) affect filt.data in addition to norm 
   
   if(rare.opt != "none"){
     data <- PerformRarefaction(mbSetObj, data, rare.opt);
@@ -333,72 +582,15 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt){
   }else{
     msg <- c(msg, paste("No data rarefaction was performed."));
   }
-  
-  qs::qsave(mbSetObj$dataSet$proc.phyobj, file="orig.phyobj"); # save original phylo.obj
-  # now proc.phyobj is now filtered data
-  mbSetObj$dataSet$proc.phyobj <- merge_phyloseq(otu_table(data,taxa_are_rows =TRUE), mbSetObj$dataSet$sample_data, mbSetObj$dataSet$taxa_table);
-  
-  if(scale.opt != "none"){
-    if(scale.opt=="colsum"){
-      data <- sweep(data, 2, colSums(data), FUN="/")
-      data <- data*10000000;
-      msg <- c(msg, paste("Performed total sum normalization."));
-    }else if(scale.opt=="upperquartile"){
-      load_edgeR();
-      otuUQ <- edgeRnorm(data,method="upperquartile");
-      data <- as.matrix(otuUQ$counts);
-      msg <- c(msg, paste("Performed upper quartile normalization"));
-    }else if(scale.opt=="CSS"){
-      load_metagenomeseq();
-      #biom and mothur data also has to be in class(matrix only not in phyloseq:otu_table)
-      data1 <- as(data,"matrix");
-      dataMR <- newMRexperiment(data1);
-      data <- cumNorm(dataMR,p=cumNormStat(dataMR));
-      data <- MRcounts(data,norm = T);
-      msg <- c(msg, paste("Performed cumulative sum scaling normalization"));
-    }else{
-      print(paste("Unknown scaling parameter:", scale.opt));
-    }
-  }else{
-    msg <- c(msg, paste("No data scaling was performed."));
-  }
-  
-  if(transform.opt != "none"){
-    if(transform.opt=="rle"){
-      load_edgeR();            
-      otuRLE <- edgeRnorm(data,method="RLE");
-      data <- as.matrix(otuRLE$counts);
-      msg <- c(msg, paste("Performed RLE Normalization"));
-    }else if(transform.opt=="TMM"){
-      load_edgeR();   
-      otuTMM <- edgeRnorm(data,method="TMM");
-      data <- as.matrix(otuTMM$counts);
-      msg <- c(msg, paste("Performed TMM Normalization"));
-    }else if(transform.opt=="clr"){
-      data <- apply(data, 2, clr_transform);
-      msg <- "Performed centered-log-ratio normalization.";
-    }else{
-      print(paste("Unknown scaling parameter:", transform.opt));
-    }
-  }else{
-    msg <- c(msg, paste("No data transformation was performed."));
-  }
-  #this step has to be done after all the normalization step
-  otu.tab <- otu_table(data,taxa_are_rows =TRUE);
-  taxa_names(otu.tab) <- tax_nm;
-  
+
   # create phyloseq obj
   mbSetObj$dataSet$sample_data$sample_id <- rownames(mbSetObj$dataSet$sample_data);
   sample_table <- sample_data(mbSetObj$dataSet$sample_data, errorIfNULL=TRUE);
-  phy.obj <- merge_phyloseq(otu.tab, sample_table);
-  
-  #using this object for plotting
-  mbSetObj$dataSet$norm.phyobj <- phy.obj;
-  current.msg <<- paste(msg, collapse=" ");
-  mbSetObj$dataSet$norm.msg <- current.msg;
+  mbSetObj$dataSet$proc.phyobj<- merge_phyloseq(otu_table(data,taxa_are_rows =TRUE), sample_table, mbSetObj$dataSet$taxa_table);
+ 
   
   #make hierarchies
-  if(mbSetObj$module.type=="sdp"){
+  if(mbSetObj$module.type=="sdp" | mbSetObj$module.type.mic=="ko"){
     ranks <- "OTU"
   }else{
     ranks <- c(GetMetaTaxaInfo(mbSetObj), "OTU")
@@ -410,17 +602,286 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt){
   data.list$merged_obj <- vector(length = length(ranks), "list")
   data.list$count_tables <- vector(length = length(ranks), "list")
   names(data.list$count_tables) <- names(data.list$merged_obj) <- ranks
-  
+
   for(i in 1:length(ranks)){
     phyloseq.obj <- UtilMakePhyloseqObjs(mbSetObj, ranks[i])
     data.list$merged_obj[[i]] <- phyloseq.obj
     count.table <- UtilMakeCountTables(phyloseq.obj, ranks[i])
     data.list$count_tables[[i]] <- count.table
   }
-  qs::qsave(data.list, "phyloseq_objs.qs")
+  
+  ##### The prenorm object is the filter result of the raw counts and also affected by the rarefy option 
+### Note the counts table have different row numbers with the merged_obj as the otus without taxonomy assignment at a certain level will be merged in the count table.
+  saveDataQs(data.list, "phyloseq_prenorm_objs.qs", module.type, dataName);  
+ 
+  
+  for(i in 1:length(ranks)){
+    
+    data <- data.list$count_tables[[i]]
+     if(scale.opt != "none"){
+      if(scale.opt=="colsum"){
+        data <- sweep(data, 2, colSums(data), FUN="/")
+        data <- data*10000000;
+        if(i==1){
+          msg <- c(msg, paste("Performed total sum normalization."));
+        }
+      }else if(scale.opt=="upperquartile"){
+        load_edgeR();
+        otuUQ <- edgeRnorm(data,method="upperquartile");
+        data <- as.matrix(otuUQ$counts);
+        if(i==1){
+          msg <- c(msg, paste("Performed upper quartile normalization"));
+        }
+      }else if(scale.opt=="CSS"){
+        load_metagenomeseq();
+        #biom and mothur data also has to be in class(matrix only not in phyloseq:otu_table)
+        data1 <- as(data,"matrix");
+        dataMR <- newMRexperiment(data1);
+        data <- cumNorm(dataMR,p=cumNormStat(dataMR));
+        data <- MRcounts(data,norm = T);
+        if(i==1){
+          msg <- c(msg, paste("Performed cumulative sum scaling normalization"));
+        }
+      }else{
+        if(scale.opt!="auto" & i==1){
+          print(paste("Unknown scaling parameter:", scale.opt));
+        }
+      }
+    }else{
+      if(i==1){
+        msg <- c(msg, paste("No data scaling was performed."));
+      }
+    }
+    
+    if(transform.opt != "none"){
+      if(transform.opt=="rle"){
+        load_edgeR();            
+        otuRLE <- edgeRnorm(data,method="RLE");
+        data <- as.matrix(otuRLE$counts);
+        if(i==1){        
+          msg <- c(msg, paste("Performed RLE Normalization"));
+        }
+      }else if(transform.opt=="TMM"){
+        load_edgeR();   
+        otuTMM <- edgeRnorm(data,method="TMM");
+        data <- as.matrix(otuTMM$counts);
+        if(i==1){        
+          msg <- c(msg, paste("Performed TMM Normalization"));
+        }
+      }else if(transform.opt=="clr"){
+        data <- apply(data, 2, clr_transform);
+        if(i==1){        
+          msg <- "Performed centered-log-ratio normalization."
+        }
+      }else{
+        if(scale.opt!="auto" & i==1){
+          print(paste("Unknown scaling parameter:", transform.opt));
+        }
+      }
+    }else{
+      if(i==1){        
+        msg <- c(msg, paste("No data transformation was performed."));
+      }
+    }
+   data.list$count_tables[[i]] <- data
+
+    if(ranks[i]=="OTU"){
+      otu.tab <- otu_table(data,taxa_are_rows =TRUE);
+      data.list$merged_obj[[i]] <- merge_phyloseq(otu.tab, sample_data(data.list$merged_obj[[i]]), mbSetObj$dataSet$taxa_table);
+    }else{
+      otu.tab <- otu_table(data,taxa_are_rows =TRUE);
+      tax.tab <- tax_table(data.list$merged_obj[[i]])
+      nm <- as.character(tax.tab[,ranks[i]])
+      nm[is.na(nm)|nm==""] <- "Not_Assigned";
+      rownames(tax.tab) <- nm
+      tax.tab <- tax.tab[!(duplicated(nm)),] 
+      tax.tab[which(rownames(tax.tab)=="Not_Assigned"),] <- NA
+      data.list$merged_obj[[i]] <- merge_phyloseq(otu.tab, sample_data(data.list$merged_obj[[i]]), tax.tab);
+ 
+    }
+    
+  }
+
+  #using the OTU level for plotting when first initialize
+  mbSetObj$dataSet$norm.phyobj <- data.list$merged_obj[["OTU"]];
+  current.msg <<- paste(msg, collapse=" ");
+  mbSetObj$dataSet$norm.msg <- current.msg;
+  
+  ### prepare for mmp module
+  if(exists("current.proc")){
+    qs::qsave(data.list,"prescale.phyobj.qs")
+    if(isAutoScale=="true" | scale.opt == "auto"){
+      data.list$count_tables <- lapply(data.list$count_tables,function(df) t(AutoScale(t(df))))
+    }  
+    current.proc$mic$data.proc<<- data.list$count_tables[["OTU"]]
+    
+  }
+  
+  ### Normalized object for each taxonomy level
+  saveDataQs(data.list, "phyloseq_objs.qs", module.type, dataName); 
+
+  return(.set.mbSetObj(mbSetObj));
+}
+
+
+#'Function to perform normalization on metabolomics data
+#'@description This function performs normalization on the uploaded metabolomics
+#'data.
+#@param rowNorm Select the option for row-wise normalization, "QuantileNorm" for Quantile Normalization, 
+#'"SumNorm" for Normalization to constant sum, 
+#'"MedianNorm" for Normalization to sample median, and 
+#'@param transNorm Select option to transform the data, "LogNorm" for Log Normalization,
+#'and "CrNorm" for Cubic Root Transformation. 
+#'@param scaleNorm Select option for scaling the data, "MeanCenter" for Mean Centering,
+#'"AutoNorm" for Autoscaling, "ParetoNorm" for Pareto Scaling, amd "RangeNorm" for Range Scaling.
+#'@param ref Input the name of the reference sample or the reference feature, use " " around the name.  
+#'@param ratio This option is only for biomarker analysis.
+#'@param ratioNum Relevant only for biomarker analysis.  
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+#'@import edgeR
+#'@import metagenomeSeq
+PerformMetaboNormalization <- function(mbSetObj, rowNorm, transNorm, scaleNorm,isAutoScale){
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  data <-t(mbSetObj$dataSet$metabolomics$filt.data);
+  # now proc.phyobj is now filtered data
+
+  msg <- "";
+  
+  colNames <- colnames(data);
+  rowNames <- rownames(data);
+  
+  # row-wise normalization
+  if(rowNorm=="QuantileNorm"){
+    
+    data<-t(preprocessCore::normalize.quantiles(t(data), copy=FALSE));
+    # this can introduce constant variables if a variable is 
+    # at the same rank across all samples (replaced by its average across all)
+    varCol <- apply(data, 2, var, na.rm=T);
+    constCol <- (varCol == 0 | is.na(varCol));
+    constNum <- sum(constCol, na.rm=T);
+    if(constNum > 0){
+      print(paste("After quantile normalization", constNum, "features with a constant value were found and deleted."));
+      data <- data[,!constCol, drop=FALSE];
+      colNames <- colnames(data);
+      rowNames <- rownames(data);
+    }
+    rownm<-"Quantile Normalization";
+  }else if(rowNorm=="SumNorm"){
+    data<-t(apply(data, 1, function(x){
+      1000*x/sum(x, na.rm=T);
+    }));
+    rownm<-"Normalization to constant sum";
+  }else if(rowNorm=="MedianNorm"){
+    data<-t(apply(data, 1, function(x){
+      x/median(x, na.rm=T);
+    }));
+    rownm<-"Normalization to sample median";
+  }else{
+    # nothing to do
+    rownm<-"N/A";
+  }
+  
+  if(rownm!="N/A"){
+    msg <- paste(rownm,"performed.")
+    
+  }
+  # use apply will lose dimension info (i.e. row names and colnames)
+  rownames(data)<-rowNames;
+  colnames(data)<-colNames;
+  
+  # record row-normed data for fold change analysis (b/c not applicable for mean-centered data)
+  row.norm <- as.data.frame(CleanData(data, T, T)); #moved below ratio 
+  qs::qsave(row.norm, file="metabo.row.norm.qs");
+  # transformation
+  # may not be able to deal with 0 or negative values
+  if(transNorm=='LogNorm'){
+    min.val <- min(abs(data[data!=0]))/10;
+    data<-apply(data, 2, LogNorm, min.val);
+    transnm<-"Log10 Normalization";
+  }else if(transNorm=='SrNorm'){
+    min.val <- min(abs(data[data!=0]))/10;
+    data<-apply(data, 2, SquareRootNorm, min.val);
+    transnm<-"Square Root Transformation";
+  }else if(transNorm=='CrNorm'){
+    norm.data <- abs(data)^(1/3);
+    norm.data[data<0] <- - norm.data[data<0];
+    data <- norm.data;
+    transnm<-"Cubic Root Transformation";
+  }else{
+    transnm<-"N/A";
+  }
+  
+  if(transnm!="N/A"){
+    msg <- paste(msg,paste(transnm,"performed."))
+    
+  }
+  # scaling
+  if(scaleNorm=='MeanCenter'){
+    data<-apply(data, 2, function(x){
+      x - mean(x);
+    });
+    scalenm<-"Mean Centering";
+  }else if(scaleNorm=='AutoNorm'| isAutoScale == "true"){
+    data<-apply(data, 2, function(x){
+      (x - mean(x))/sd(x, na.rm=T);
+    });
+    scalenm<-"Autoscaling";
+  }else if(scaleNorm=='ParetoNorm'){
+    data<-apply(data, 2, function(x){
+      (x - mean(x))/sqrt(sd(x, na.rm=T));
+    });
+    scalenm<-"Pareto Scaling";
+  }else if(scaleNorm=='RangeNorm'){
+    data<-apply(data, 2, function(x){
+      if(max(x) == min(x)){
+        x;
+      }else{
+        (x - mean(x))/(max(x)-min(x));
+      }
+    });
+    scalenm<-"Range Scaling";
+  }else{
+    scalenm<-"N/A";
+  }
+  
+  if(scalenm!="N/A"){
+    msg <- paste(msg,paste(scalenm,"performed."))
+    
+  }
+  # note after using "apply" function, all the attribute lost, need to add back
+  rownames(data)<-rowNames;
+  colnames(data)<-colNames;
+
+  # need to do some sanity check, for log there may be Inf values introduced
+  data <- CleanData(data, T, F);
+  
+  
+  mbSetObj$dataSet$metabolomics$norm.data <- t(as.data.frame(data)); ## feature in row and sample in column
+  
+  qs::qsave( mbSetObj$dataSet$metabolomics$norm.data, file="metabo.complete.norm.qs");
+  
+  current.proc$met$data.proc<<-t(as.data.frame(data))
+  
+  mbSetObj$dataSet$metabolomics$rownorm.method <- rownm;
+  mbSetObj$dataSet$metabolomics$trans.method <- transnm;
+  mbSetObj$dataSet$metabolomics$scale.method <- scalenm;
+  
+  #using this object for plotting
+  if(rownm=="N/A" & transnm=="N/A" & scalenm=="N/A"){
+    current.msg <<- "No normalization was performed";
+  }else{
+    current.msg <<-msg
+  }
+  
+  mbSetObj$dataSet$metabolomics$norm.msg <- current.msg;
   
   return(.set.mbSetObj(mbSetObj));
 }
+
 
 #'Utility function to perform rarefraction (used by PerformNormalization)
 #'@description This function performs rarefraction on the uploaded
@@ -461,7 +922,8 @@ PerformRarefaction <- function(mbSetObj, data, rare.opt){
     phy.obj <- rarefy_even_depth(phy.obj, replace=FALSE,rngseed = T);
     msg <- c(msg, paste("Rarefaction without replacement to minimum library depth."));
   }
-  
+  msg <- paste(msg, collapse=" ");
+  print(msg);
   cleanMem();
   otu.tab <- otu_table(phy.obj);
   return(otu.tab);
@@ -535,7 +997,7 @@ PlotRareCurve <- function(mbSetObj, graphName, variable){
   }
   
   raremax <- min(unlist(lapply(grp.data, sum)));
-  grp.data <- data.frame(grp.data);
+  grp.data <- data.frame(grp.data,check.names=FALSE);
   dist.cols <- 1:grp.num + 1;
   # now plot
   rarecurve(t(grp.data), step = 20, sample = raremax, col = dist.cols, lwd = 2, cex=1.5, xlab = "Sequencing depth", ylab = "Observed Species");
@@ -559,16 +1021,42 @@ PlotRareCurve <- function(mbSetObj, graphName, variable){
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-
-PlotLibSizeView <- function(mbSetObj, imgName, format="png", dpi=72){
-  
+PlotLibSizeView <- function(mbSetObj, imgName,format="png", dpi=72, dataName=""){
   mbSetObj <- .get.mbSetObj(mbSetObj);
+
+  if(dataName != ""){
+    # plot single dataset or not, in metaanal
+    ind <- T; 
+  }else{
+    dataName <- mbSetObj$dataSet$name;
+    ind <- F;
+  }
+  module.type <- mbSetObj$module.type;
   
-  data.proc <- qs::qread("data.proc");
-  data_bef <- data.matrix(data.proc);
-  smpl.sums <- colSums(data_bef);
-  names(smpl.sums) <- colnames(data_bef);
-  smpl.sums <- sort(smpl.sums);
+  if(mbSetObj$module.type == "meta" && !ind){
+    sums.list <- list();
+    for(i in 1:length(mbSetObj$dataSets)){
+      dataName <- mbSetObj$dataSets[[i]]$name;
+      data.proc <- readDataQs("data.proc", module.type, dataName);
+      data_bef <- data.matrix(data.proc);
+      smpl.sums <- colSums(data_bef);
+      names(smpl.sums) <- colnames(data_bef);
+      smpl.sums <- sort(smpl.sums);
+      sums.list[[i]] <- smpl.sums
+    }
+    smpl.sums  <- unlist(sums.list)
+  }else{
+    data.proc <- readDataQs("data.proc", module.type, dataName);
+    data_bef <- data.matrix(data.proc);
+    smpl.sums <- colSums(data_bef);
+    names(smpl.sums) <- colnames(data_bef);
+    smpl.sums <- sort(smpl.sums);
+  }
+  
+  
+  # save the full lib size 
+  fast.write(cbind(Size=smpl.sums), file="norm_libsizes.csv");
+  
   smpl.sums <- rev(smpl.sums);
   vip.nms <- names(smpl.sums);
   names(smpl.sums) <- NULL;
@@ -581,12 +1069,153 @@ PlotLibSizeView <- function(mbSetObj, imgName, format="png", dpi=72){
   xlim.ext <- GetExtendRange(smpl.sums, 10);
   par(mar=c(4,7,2,2));
   dotchart(smpl.sums, col="forestgreen", xlim=xlim.ext, pch=19, xlab="Read Counts", main="Library Size Overview");
-  mtext(side=2, at=1:length(vip.nms), vip.nms, las=2, line=1)
+  mtext(side=2, at=1:length(vip.nms), vip.nms, las=2, line=1);
   text(x=smpl.sums,y=1:length(smpl.sums),labels= round(smpl.sums), col="blue", pos=4, xpd=T);
   dev.off();
   
   return(.set.mbSetObj(mbSetObj))
 }
+
+#'Plot PCA plot for multi-omics samples
+#'@description 
+#'@param imgNm name of the image to output
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+#'
+
+
+PlotPCAView <- function(imgName, format="png", dpi=72,init){
+  require("ggsci")
+  
+  #dpi<-as.numeric(dpi)
+  imgName = paste(imgName,".", format, sep="");
+  
+  fig.list <- list()
+  pca.list<- list()
+  pct <- list();
+  
+  for(i in 1:2){
+    if(i==1){
+      data.proc <- current.proc$mic$data.proc;
+      x <- data.matrix(data.proc);
+      type="Microbiome"
+    }else{
+      data.proc <- current.proc$met$data.proc;
+      x <- data.matrix(data.proc);
+      type="Metabolomics"
+    }
+    pca <- prcomp(t(na.omit(x)), center=T, scale=T);
+    imp.pca<-summary(pca)$importance;
+    xlabel <- paste0("PC1"," (", 100*round(imp.pca[2,][1], 3), "%)")
+    ylabel <- paste0("PC2"," (", 100*round(imp.pca[2,][2], 3), "%)")
+    names <- colnames(x);
+    pca.res <- as.data.frame(pca$x);
+    pca.res <- pca.res[,c(1,2)]
+    
+    xlim <- GetExtendRange(pca.res$PC1);
+    ylim <- GetExtendRange(pca.res$PC2);
+    
+    metaFile <- qs::qread("data.sample_data")
+    Factor <- metaFile[,1]
+    pca.rest <- pca.res
+    pca.rest$Conditions <- Factor
+    pca.rest$names <- rownames(pca.res)
+    
+    pcafig <- ggplot(pca.rest, aes(x=PC1, y=PC2,  color=Conditions)) +
+      geom_point(size=3, alpha=0.7) + 
+      scale_color_npg()+
+      xlim(xlim) + 
+      ylim(ylim) + 
+      xlab(xlabel) + 
+      ylab(ylabel) +
+      theme_bw()
+    fig.list[[i]] <- pcafig
+    
+    pos.xyz = data.frame(x=pca$x[,1], y=pca$x[,2], z=pca$x[,3]);
+    loading.pos.xyz = data.frame(pca$rotation[,c(1:3)]);
+    loadingNames = rownames(pca$rotation);
+    
+    pos.xyz <- as.data.frame(pos.xyz);
+    pos.xyz <- unitAutoScale(pos.xyz);
+    
+    loadingNames <- rownames(loading.pos.xyz);
+    loading.pos.xyz <- as.data.frame(loading.pos.xyz);
+    loading <- unitAutoScale(loading.pos.xyz);
+    rownames(loading) <- loadingNames;
+    nm <- paste0("pca_", type);
+    pca.list[[nm]][["score"]] <- pos.xyz * 1000;
+    pca.list[[nm]][["loading"]] <- loading* 1000;    
+    
+    pct[[nm]] <- unname(round(imp.pca[2,],3))[c(1:3)]*100;
+  }
+  pca.list$pct2 <- pct;
+  qs::qsave(pca.list, file="pca.scatter.qs");
+  
+  h<-6*round(length(fig.list)/2)
+  Cairo::Cairo(file=imgName, width=14, height=h, type=format, bg="white", unit="in", dpi=dpi);
+  library("ggpubr")
+  p1 <- ggarrange(plotlist=fig.list, ncol = 2, nrow = round(length(fig.list)/2), labels=c("Microbiome","Metabolomics"))
+  print(p1)
+  dev.off();
+  return(1)
+  
+}
+
+
+PlotDensityView <- function(imgName, format="png",  init=0, autoScale=T,dpi=72){
+
+ # dpi <- as.numeric(dpi)
+  imgName = paste(imgName,".", format, sep="");
+  fig.list <- list()
+  merged.df <- data.frame
+   
+  df.list <- list()
+  for(i in 1:2){
+    
+    if(i==1){
+      data.proc <- current.proc$mic$data.proc;
+      dat <- data.matrix(data.proc);
+      if(init==0){dat= t(AutoScale(t(data.proc))) }
+      st <- stack(as.data.frame(dat))
+      st$type <- "Microbiome"
+      merged.df <- st
+    }else{
+      data.proc <- current.proc$met$data.proc;
+      dat <- data.matrix(data.proc);
+      if(init==0){dat = t(AutoScale(t(data.proc)))}
+      st <- stack(as.data.frame(dat))
+      st$type <- "Metabolomics"
+      merged.df <-rbind(merged.df, st)
+    } 
+    
+  }
+  
+
+ 
+  type<-merged.df$type
+   merged.df$ind <- paste0(merged.df$ind, "_", merged.df$type)
+  #if(init==0){
+  # merged.df$values[which(merged.df$values==0)] <- 10^-3
+  # merged.df$values <- log((merged.df$values),base=2)
+
+# }
+
+  Cairo::Cairo(file=imgName, width=10, height=6, type=format, bg="white", dpi=dpi, unit="in");
+  g <- ggplot(merged.df, aes(x=values)) + 
+    geom_line(aes(color=type, group=ind), stat="density", alpha=0.1) + 
+    geom_line(aes(color=type), stat="density", alpha=0.7, linewidth=3) +
+    scale_color_manual(values=c("#E64B35B2","#00A087B2"))+
+    theme_bw()
+  print(g)
+  dev.off();
+  
+
+  return(1)
+}
+
+
 
 ################################################
 ###########Phyloseq object creation#############
@@ -607,14 +1236,15 @@ PlotLibSizeView <- function(mbSetObj, imgName, format="png", dpi=72){
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import phyloseq
-CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
-
+CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
   mbSetObj <- .get.mbSetObj(mbSetObj);
+  dataName <- mbSetObj$dataSet$name;
+  module.type <- mbSetObj$module.type;
   
   load_phyloseq();
   load_splitstackshape();
   
-  data.proc <- qs::qread("data.proc");
+  data.proc <- readDataQs("data.proc", module.type, dataName);
   
   # do some sanity check here on sample and feature names
   smpl.nms <- colnames(data.proc);
@@ -628,7 +1258,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
   }
   
   # check for uniqueness of taxon names for metagenomic data only
-  if(mbSetObj$module.type == "sdp"){
+  if(mbSetObj$module.type == "sdp" | mbSetObj$module.type.mic =="ko"){
     if(length(unique(taxa.nms))!=length(taxa.nms)){
       dup.tax.nms <- paste(taxa.nms[duplicated(taxa.nms)], collapse="; ");
       AddErrMsg(paste(c("Duplicate taxon names are not allowed:"), dup.tax.nms, collapse=" "));
@@ -663,7 +1293,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
   #standard name to be used
   classi.lvl<- c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species");
   
-  if(mbSetObj$module.type == "mdp" | mbSetObj$module.type == "ppd"){
+  if(mbSetObj$module.type == "mdp" || mbSetObj$module.type.mic =="otu" |mbSetObj$module.type == "ppd" |mbSetObj$module.type == "meta" ){
     if(type=="text"){
       # prepare data for phyloseq visualization.
       # if features names are present in specific taxonomy format (greengenes or silva).
@@ -671,60 +1301,77 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
         feat_nm <- rownames(data.proc);
         mbSetObj$dataSet$feat_nm <- feat_nm;
         
-        if(taxa_type=="SILVA"){
-          
-          load_splitstackshape();
-          
-          feat_nm<-data.frame(mbSetObj$dataSet$feat_nm);
-          names(feat_nm)<-"Rank";
-          taxonomy<-splitstackshape::cSplit(feat_nm,"Rank",";");
-          taxmat= data.frame(matrix(NA, ncol = 7, nrow = nrow(taxonomy)));
-          colnames(taxmat) <- classi.lvl;
-          taxmat[,1:ncol(taxonomy)]<-taxonomy;
-          taxmat<-taxmat[colSums(!is.na(taxmat))>0];
-          taxmat<-as.matrix(taxmat);
+        if(!(is.null(mbSetObj$dataSet$sglTax))){
+          idxsgl <- match(toupper(mbSetObj$dataSet$sglTax),toupper(classi.lvl))
+          feat_nm<-data.frame(mbSetObj$dataSet$feat_nm,check.names=FALSE);
+          names(feat_nm)<-classi.lvl[idxsgl];
+          #sanity check: no of sample of both abundance and metadata should match.
+          taxmat<-as.matrix(feat_nm);
           rownames(taxmat)<-c(1:nrow(taxmat));
-          #phyloseq taxonomy object
+          
           taxa_table <- tax_table(taxmat);
           taxa_names(taxa_table)<-rownames(taxmat);
-        }else if(taxa_type=="Greengenes"||taxa_type=="QIIME"){
-          my.parser<-lapply(feat_nm, parse_taxonomy_qiime); # note, this functions will remove empty strings, replace with NA!?
-          taxa_table<-build_tax_table(my.parser);
           
-          if(taxa_type=="Greengenes"){
-            #additional columns are added(starting with Rank1 etc; has to be removed)
-            indx<-grep("^Rank",colnames(taxa_table));
-            # need to test if still columns left (could be that users specified wrong tax format)
-            if(ncol(taxa_table) == length(indx)){
-              AddErrMsg("Error with parsing Greengenes Taxonomy Labels. Please make sure the taxonomy label was specified correctly during data upload.");
-              return(0);
+        }else{
+          
+          
+          if(taxa_type=="SILVA"){
+            
+            load_splitstackshape();
+            
+            feat_nm<-data.frame(mbSetObj$dataSet$feat_nm,check.names=FALSE);
+            names(feat_nm)<-"Rank";
+            taxonomy<-splitstackshape::cSplit(feat_nm,"Rank",";");
+            taxmat= data.frame(matrix(NA, ncol = 7, nrow = nrow(taxonomy)),check.names=FALSE);
+            colnames(taxmat) <- classi.lvl;
+            taxmat[,1:ncol(taxonomy)]<-taxonomy;
+            taxmat<-taxmat[colSums(!is.na(taxmat))>0];
+            taxmat<-as.matrix(taxmat);
+            rownames(taxmat)<-c(1:nrow(taxmat));
+            #phyloseq taxonomy object
+            taxa_table <- tax_table(taxmat);
+            taxa_names(taxa_table)<-rownames(taxmat);
+          }else if(taxa_type=="Greengenes"||taxa_type=="QIIME"){
+            my.parser<-lapply(feat_nm, parse_taxonomy_qiime); # note, this functions will remove empty strings, replace with NA!?
+            taxa_table<-build_tax_table(my.parser);
+            
+            if(taxa_type=="Greengenes"){
+              #additional columns are added(starting with Rank1 etc; has to be removed)
+              indx<-grep("^Rank",colnames(taxa_table));
+              # need to test if still columns left (could be that users specified wrong tax format)
+              if(ncol(taxa_table) == length(indx)){
+                AddErrMsg("Error parsing Greengenes Taxonomy Labels - you may try <b>Greengenes OTU ID</b> or <b>Not Specific /Other</b> in data upload.");
+                return(0);
+              }
+              if(length(indx) > 0){
+                taxa_table<-taxa_table[,-indx];
+              }
+              #if all taxa ranks of an taxa are NA with pase_taxonomy_qiime function #covert to Not_assigned
+              ind<-which(apply(taxa_table,1, function(x)all(is.na(x)))==TRUE);
+              taxa_table[ind,]<-rep("Not_Assigned",ncol(taxa_table));
             }
-            if(length(indx) > 0){
-              taxa_table<-taxa_table[,-indx];
-            }
-            #if all taxa ranks of an taxa are NA with pase_taxonomy_qiime function #covert to Not_assigned
-            ind<-which(apply(taxa_table,1, function(x)all(is.na(x)))==TRUE);
-            taxa_table[ind,]<-rep("Not_Assigned",ncol(taxa_table));
+            taxa_names(taxa_table)<-c(1:nrow(taxa_table));
+          }else if(taxa_type=="GreengenesID"||taxa_type=="Others/Not_specific"){
+            
+            # need to parse Taxonomy still!
+            load_splitstackshape();               
+            
+            feat_nm <- data.frame(mbSetObj$dataSet$feat_nm,check.names=FALSE);
+            feat_nm <- data.frame(apply(feat_nm, 1, function(x) gsub(";\\s;", ";", x)),check.names=FALSE) # remove empty taxa
+            names(feat_nm) <- "Rank";
+            taxonomy <- splitstackshape::cSplit(feat_nm,"Rank",";");
+            taxmat <- data.frame(matrix(NA, ncol = 7, nrow = nrow(taxonomy)),check.names=FALSE);
+            colnames(taxmat) <- classi.lvl;
+            taxmat[,1:ncol(taxonomy)] <- taxonomy;
+            taxmat <- taxmat[colSums(!is.na(taxmat))>0];
+            taxmat <- as.matrix(taxmat);
+            rownames(taxmat) <- c(1:nrow(taxmat));
+            #phyloseq taxonomy object
+            taxa_table <- tax_table(taxmat);
+            taxa_names(taxa_table) <- rownames(taxmat);
           }
-          taxa_names(taxa_table)<-c(1:nrow(taxa_table));
-        }else if(taxa_type=="GreengenesID"||taxa_type=="Others/Not_specific"){
           
-          # need to parse Taxonomy still!
-          load_splitstackshape();               
           
-          feat_nm <- data.frame(mbSetObj$dataSet$feat_nm);
-          feat_nm <- data.frame(apply(feat_nm, 1, function(x) gsub(";\\s;", ";", x))) # remove empty taxa
-          names(feat_nm) <- "Rank";
-          taxonomy <- splitstackshape::cSplit(feat_nm,"Rank",";");
-          taxmat <- data.frame(matrix(NA, ncol = 7, nrow = nrow(taxonomy)));
-          colnames(taxmat) <- classi.lvl;
-          taxmat[,1:ncol(taxonomy)] <- taxonomy;
-          taxmat <- taxmat[colSums(!is.na(taxmat))>0];
-          taxmat <- as.matrix(taxmat);
-          rownames(taxmat) <- c(1:nrow(taxmat));
-          #phyloseq taxonomy object
-          taxa_table <- tax_table(taxmat);
-          taxa_names(taxa_table) <- rownames(taxmat);
         }
         
         # making unique id for each OTU consist of lowest taxonomy level present followed by row number
@@ -738,7 +1385,9 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
         }
         
         na.inx <- is.na(tmat);
+        blank.inx <- which(tmat=="")
         num.mat[na.inx] <- 0;
+        num.mat[blank.inx] <- 0;
         maxInx <- apply(num.mat, 1, max);
         gd.coords <- cbind(1:rowLn, maxInx);
         gd.nms <- tmat[gd.coords];
@@ -756,6 +1405,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
         #sanity check: features name of taxonomy table should match feature names in OTU abundance table,
         # Only features in filtered OTU tables are selected additional are removed.
         taxa_table <- mbSetObj$dataSet$taxa_table;
+        
         indx<-match(rownames(data.proc), rownames(taxa_table));
         
         if(sum(is.na(indx)) > 0){
@@ -773,7 +1423,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
           new.nms <- paste("ASV", 1:length(taxa.nms), sep="_");
           master.nms <- cbind("NewID"=new.nms, "OriginalID"=taxa.nms);
           fast.write(master.nms, file="ASV_ID_mapping.csv");
-          
+          mbSetObj$dataSet$master.nms = master.nms;
           # update the taxa and sample
           names(new.nms) <- taxa.nms;
           rownames(data.proc) <- new.nms[rownames(data.proc)];
@@ -803,7 +1453,9 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
       }
       
       # creating phyloseq object
-      data.proc<-apply(data.proc,2,as.integer);
+      if(isNormInput=="false"){
+       data.proc<-apply(data.proc,2,as.integer);
+      }   
       data.proc<-otu_table(data.proc,taxa_are_rows =TRUE);
       taxa_names(data.proc)<-taxa_names(mbSetObj$dataSet$taxa_table);
       # removing constant column and making standard names
@@ -815,7 +1467,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
       }
       
       # removing first KINGDOM OR DOMAIN column
-      indx<-apply(mbSetObj$dataSet$taxa_table[,1], 2, function(x) which(x %in% c("k__Fungi", "Fungi", "k__Viruses", "Viruses",
+      indx<-apply(mbSetObj$dataSet$taxa_table[,1], 2, function(x) which(x %in% c("k__Fungi", "Fungi", "k__Viruses", "Viruses","k_Bacteria",
                                                                                  "Bacteria", "Archaea", "k__Bacteria", "k__Archea", 
                                                                                  "D_0__Bacteria", "D_0__Archea", "d__Bacteria")));
       
@@ -839,10 +1491,45 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
       #cleaning up the names#deleting [] if present; and substituting (space,.,/ with underscore(_))
       mbSetObj$dataSet$taxa_table<- gsub("[[:space:]./_-]", "_",mbSetObj$dataSet$taxa_table);
       mbSetObj$dataSet$taxa_table<- gsub("\\[|\\]","",mbSetObj$dataSet$taxa_table);
-      
-      #sometimes after removal of such special characters rownames beacame non unique; so make it unique
+if(mbSetObj$module.type=="mmp" &  taxalabel=="T"){# for mapping to the database in mmp module
+  if("Species" %in% colnames( mbSetObj$dataSet$taxa_table)){
+    sps = data.frame(mbSetObj$dataSet$taxa_table@.Data[,c('Genus','Species')])
+    if(grepl("^g__",sps[1,"Genus"])){
+      sps$Species = gsub("^s__","",sps$Species)
+      if(all(!grepl(" ",sps$Species)) & all(!grepl("_",sps$Species))){
+        sps$Genus =gsub("^g__","",sps$Genus)
+        idxsp = which(!is.na(sps$Genus) & !is.na(sps$Species) & sps$Genus!="" & sps$Species!="")
+        sps$Species[idxsp] = paste0("s__",sps$Genus[idxsp],"_",sps$Species[idxsp])
+      }
+    }else if(grepl("^g_",sps[1,"Genus"])){
+      sps$Species = gsub("^s_","",sps$Species)
+      if(all(!grepl(" ",sps$Species)) & all(!grepl("_",sps$Species))){
+        sps$Genus =gsub("^g_","",sps$Genus)
+        idxsp = which(!is.na(sps$Genus) & !is.na(sps$Species) & sps$Genus!="" & sps$Species!="")
+        sps$Species[idxsp] = paste0("s__",sps$Genus[idxsp],"_",sps$Species[idxsp])
+      }
+    }else if(grepl("^g_0__",sps[1,"Genus"])){
+      sps$Species = gsub("^s_0__","",sps$Species)
+      if(all(!grepl(" ",sps$Species)) & all(!grepl("_",sps$Species))){
+        sps$Genus =gsub("^g_0__","",sps$Genus)
+        idxsp = which(!is.na(sps$Genus) & !is.na(sps$Species) & sps$Genus!="" & sps$Species!="")
+        sps$Species[idxsp] = paste0("s_0__",sps$Genus[idxsp],"_",sps$Species[idxsp])
+      }
+  }else{
+    if(all(!grepl(" ",sps$Species)) & all(!grepl("_",sps$Species))){
+      idxsp = which(!is.na(sps$Genus) & !is.na(sps$Species) & sps$Genus!="" & sps$Species!="")
+      sps$Species[idxsp] = paste0(sps$Genus[idxsp],"_",sps$Species[idxsp])
+    }
+  }
+  mbSetObj$dataSet$taxa_table@.Data[,'Species'] <- sps$Species
+  
+}
+
+}
+
+#sometimes after removal of such special characters rownames beacame non unique; so make it unique
       mynames1<- gsub("[[:space:]./_-]", "_",taxa_names(mbSetObj$dataSet$taxa_table));
-      mynames1<-gsub("\\[|\\]","",mynames1);
+      mynames1<- gsub("\\[|\\]","",mynames1);
       
       if(length(unique(mynames1))< length(taxa_names(mbSetObj$dataSet$taxa_table))){
         mynames1 <- make.unique(mynames1, sep="_");
@@ -856,7 +1543,9 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
     } else if(type == "biom"||type == "mothur"){
       # creating phyloseq object
       feat_nm<-rownames(data.proc);
-      data.proc<-apply(data.proc,2,as.integer);
+       if(isNormInput=="false"){
+       data.proc<-apply(data.proc,2,as.integer);
+      }
       data.proc<-otu_table(data.proc,taxa_are_rows =TRUE);
       taxa_names(data.proc)<-feat_nm;
       #sanity check: features name of taxonomy table should match feature names in OTU abundance table,Only features in filtered OTU tables are selected additional are removed.
@@ -878,7 +1567,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
       }
       
       # removing first KINGDOM OR DOMAIN column
-      indx<-apply(mbSetObj$dataSet$taxa_table[,1], 2, function(x) which(x %in% c("k__Fungi", "Fungi", "k__Viruses", "Viruses", 
+      indx<-apply(mbSetObj$dataSet$taxa_table[,1], 2, function(x) which(x %in% c("k__Fungi", "Fungi", "k__Viruses", "Viruses", "k_Bacteria",
                                                                                  "Bacteria","Archaea","k__Bacteria","k__Archea", 
                                                                                  "D_0__Bacteria","D_0__Archea", "d__Bacteria")));
       
@@ -918,7 +1607,6 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
     
     taxa_names(mbSetObj$dataSet$taxa_table)<-taxa_names(data.proc)<-mynames1;
     mbSetObj$dataSet$sample_data<-sample_data(mbSetObj$dataSet$sample_data, errorIfNULL = TRUE);
-    
     sd_names <- sample_names(mbSetObj$dataSet$sample_data)
     name.match.inx <- sd_names %in% smpl.nms
     
@@ -926,7 +1614,6 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
       AddErrMsg("Issues with sample names in your files! Make sure names are not purely numeric (i.e. 1, 2, 3).");
       return(0);
     }
-    
     mbSetObj$dataSet$proc.phyobj <- merge_phyloseq(data.proc, mbSetObj$dataSet$sample_data, mbSetObj$dataSet$taxa_table);
     
     if(length(rank_names(mbSetObj$dataSet$proc.phyobj)) > 7){
@@ -934,11 +1621,11 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
     }
     
     #also using unique names for our further data
-    prefilt.data <- qs::qread("data.prefilt");
+    prefilt.data <- readDataQs("data.prefilt", module.type, dataName);
     rownames(prefilt.data)<-taxa_names(mbSetObj$dataSet$taxa_table);
-    qs::qsave(prefilt.data, file="data.prefilt")
+    saveDataQs(prefilt.data, "data.prefilt", module.type, dataName);
     
-  }else if(mbSetObj$module.type == "sdp"){
+  }else if(mbSetObj$module.type == "sdp"| mbSetObj$module.type.mic =="ko"){
     #constructing phyloseq object for aplha diversity.
     data.proc<-otu_table(data.proc, taxa_are_rows = TRUE);
     taxa_names(data.proc)<-rownames(data.proc);
@@ -955,13 +1642,80 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel){
     mbSetObj$dataSet$proc.phyobj <- merge_phyloseq(data.proc, mbSetObj$dataSet$sample_data);
   }
   
-  qs::qsave(mbSetObj$dataSet$proc.phyobj, file="proc.phyobj.orig");
+  #qs::qsave(mbSetObj$dataSet$proc.phyobj,"/Users/lzy/Documents/MicrobiomeAnalystR-master/guest/proc.phyobj.orig.rds")
+  saveDataQs(mbSetObj$dataSet$proc.phyobj, "proc.phyobj.orig", module.type, dataName);
   #do some data cleaning
   mbSetObj$dataSet$data.prefilt <- NULL;
   mbSetObj$dataSet$taxa_type <- taxa_type;
   
+  if(module.type == "meta"){
+    mbSetObj$dataSet$proc.phyobj <- mbSetObj$dataSet$proc.phyobj;
+    mbSetObj$dataSet$norm.phyobj <-mbSetObj$dataSet$proc.phyobj;
+  }
+
   return(.set.mbSetObj(mbSetObj));
 }
+
+
+###########################################################################
+## Function to make the fake objects for normalized input ##
+###########################################################################
+### This function is used to create fake objects for
+### normalized input to make sure all the function can work properly
+
+CreateFakeFile <- function(mbSetObj,isNormalized="true",isNormalizedMet,module.type){
+
+mbSetObj <- .get.mbSetObj(mbSetObj);
+
+if(isNormalized=="false" & isNormalizedMet=="false"){
+
+ AddErrMsg("Please make sure your data has been normalized properly!");
+return(0)
+
+}
+mbSetObj$dataSet$filt.data <- mbSetObj$dataSet$data.orig
+mbSetObj$dataSet$filt.msg <- "No filtration has been performed since the input data has been transformed."
+
+mbSetObj$dataSet$norm.phyobj <- mbSetObj$dataSet$proc.phyobj
+mbSetObj$dataSet$norm.msg <- "No normalization has been performed since the input data has been transformed."
+
+    #make hierarchies
+  if(mbSetObj$module.type=="sdp" | mbSetObj$module.type.mic=="ko"){
+    ranks <- "OTU"
+  }else if(mbSetObj$module.type=="meta"){ #temporary
+    ranks <- "OTU"
+  }else{
+    ranks <- c(GetMetaTaxaInfo(mbSetObj), "OTU")
+    ranks <- unique(ranks)
+  } 
+
+
+ data.list <- list()
+  data.list$merged_obj <- vector(length = length(ranks), "list")
+  data.list$count_tables <- vector(length = length(ranks), "list")
+  names(data.list$count_tables) <- names(data.list$merged_obj) <- ranks
+
+for(i in 1:length(ranks)){
+    phyloseq.obj <- UtilMakePhyloseqObjs(mbSetObj, ranks[i])
+    data.list$merged_obj[[i]] <- phyloseq.obj
+    count.table <- UtilMakeCountTables(phyloseq.obj, ranks[i])
+    data.list$count_tables[[i]] <- count.table
+  }
+
+if(exists("current.proc")){
+  qs::qsave(data.list,"prescale.phyobj.qs")
+
+current.proc$mic$data.proc<<- data.list$count_tables[["OTU"]]
+
+}
+ mbSetObj$dataSet$sample_data$sample_id <- rownames(mbSetObj$dataSet$sample_data);
+
+saveDataQs(data.list, "phyloseq_prenorm_objs.qs",module.type, mbSetObj$dataSet$name);  
+  saveDataQs(data.list, "phyloseq_objs.qs",module.type, mbSetObj$dataSet$name);  
+
+  return(.set.mbSetObj(mbSetObj));
+}
+
 
 ###########################################
 ## Utilty function to perform edgeR norm ##
@@ -987,22 +1741,144 @@ edgeRnorm = function(x,method){
   return(z)
 }
 
+
+###########################################
+##################Scale##################
+###########################################
+scale_rows = function(x){
+  m = apply(x, 1, mean, na.rm = T)
+  s = apply(x, 1, sd, na.rm = T)
+  return((x - m) / s)
+}
+scale_mat = function(mat, scale){
+  if(!(scale %in% c("none", "row", "column"))){
+    stop("scale argument shoud take values: 'none', 'row' or 'column'")
+  }
+  mat = switch(scale, none = mat, row = scale_rows(mat), column = t(scale_rows(t(mat))))
+  return(mat)
+}
+
+GetExtendRange<-function(vec, unit=10){
+  var.max <- max(vec, na.rm=T);
+  var.min <- min(vec, na.rm=T);
+  exts <- (var.max - var.min)/unit;
+  c(var.min-exts, var.max+exts);
+}
+
+unitAutoScale <- function(df){
+  df <- as.data.frame(df)
+  row.nms <- rownames(df);
+  col.nms <- colnames(df);
+  df<-apply(df, 2, AutoNorm);
+  rownames(df) <- row.nms;
+  colnames(df) <- col.nms;
+  maxVal <- max(abs(df))
+  df<- df/maxVal
+  return(df)
+}
+AutoNorm<-function(x){
+  (x - mean(x))/sd(x, na.rm=T);
+}
+
+#######################################################################
+###Help function for processing metabolomics data##################
+#######################################################################
+
+# Limit of detection (1/5 of min for each var)
+.replace.by.lod <- function(x){
+  lod <- min(x[x>0], na.rm=T)/5;
+  x[x==0|is.na(x)] <- lod;
+  return(x);
+}
+
+ReplaceMissingByLoD <- function(int.mat=data.proc){
+  int.mat <- as.matrix(int.mat);
+  
+  rowNms <- rownames(int.mat);
+  colNms <- colnames(int.mat);
+  int.mat <- apply(int.mat, 2, .replace.by.lod);
+  rownames(int.mat) <- rowNms;
+  colnames(int.mat) <- colNms;
+  return (int.mat);
+}
+
+
+#'Perform data cleaning
+#'@description Cleans data and removes -Inf, Inf, NA, negative and 0s.
+#'@param bdata Input data to clean
+#'@param removeNA Logical, T to remove NAs, F to not. 
+#'@param removeNeg Logical, T to remove negative numbers, F to not. 
+#'@param removeConst Logical, T to remove samples/features with 0s, F to not. 
+#'@author Jeff Xia\email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: MIT License
+#'
+
+CleanData <-function(bdata, removeNA=T, removeNeg=T, removeConst=T){
+  
+  if(sum(bdata==Inf, na.rm=TRUE)>0){
+    inx <- bdata == Inf;
+    bdata[inx] <- NA;
+    bdata[inx] <- max(bdata, na.rm=T)*2
+  }
+  if(sum(bdata==-Inf, na.rm=TRUE)>0){
+    inx <- bdata == -Inf;
+    bdata[inx] <- NA;
+    bdata[inx] <- min(bdata, na.rm=T)/2
+  }
+  if(removeNA){
+    if(sum(is.na(bdata))>0){
+      bdata[is.na(bdata)] <- min(bdata, na.rm=T)/2
+    }
+  }
+  if(removeNeg){
+    if(sum(as.numeric(bdata<=0)) > 0){
+      inx <- bdata <= 0;
+      bdata[inx] <- NA;
+      bdata[inx] <- min(bdata, na.rm=T)/2
+    }
+  }
+  if(removeConst){
+    varCol <- apply(data.frame(bdata), 2, var, na.rm=T); # getting an error of dim(X) must have a positive length, fixed by data.frame
+    constCol <- (varCol == 0 | is.na(varCol));
+    constNum <- sum(constCol, na.rm=T);
+    if(constNum > 0){
+      bdata <- data.frame(bdata[,!constCol, drop=FALSE], check.names = F); # got an error of incorrect number of dimensions, added drop=FALSE to avoid vector conversion
+    }
+  }
+  bdata;
+}
+
+LogNorm<-function(x, min.val){
+  log10((x + sqrt(x^2 + min.val^2))/2)
+}
+
+
+# square root, tolerant to negative values
+SquareRootNorm<-function(x, min.val){
+  ((x + sqrt(x^2 + min.val^2))/2)^(1/2);
+}
+
 ###########################################
 ##################Getters##################
 ###########################################
 
-GetSamplNames<-function(){
-  prefilt.data <- qs::qread("data.prefilt");
+GetSamplNames<-function(dataName, module.type){
+  prefilt.data <- readDataQs("data.prefilt", module.type, dataName);
   return(colnames(prefilt.data));
 }
 
-GetGroupNames<-function(){
-  prefilt.data <- qs::qread("data.prefilt");
-  return(colnames(prefilt.data));
-}
-
-GetSampleNamesaftNorm<-function(mbSetObj){
+GetSampleNamesaftNorm<-function(mbSetObj, dataName){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  return(sample_names(mbSetObj$dataSet$norm.phyobj));
+  if(mbSetObj$module.type == "meta"){
+    if(dataName != ""){
+      data <- readDataset(dataName);
+    }else{
+      data <- qs::qread("merged.data.raw.qs");
+      data <- subsetPhyloseqByDataset(mbSetObj, data);
+    }
+    return(sample_names(data));
+  }else{
+    return(sample_names(mbSetObj$dataSet$norm.phyobj));
+  }
 }
-

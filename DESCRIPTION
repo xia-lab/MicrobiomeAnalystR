@@ -1,16 +1,16 @@
 Package: MicrobiomeAnalystR
 Title: MicrobiomeAnalystR - A comprehensive R package for statistical, visual, and functional analysis of the microbiome.
-Version: 0.0.0.9000
-Authors@R: c(person("Jianguo", "Xia", email = "jeff.xia@mcgill.ca", role = "aut"), person("Jasmine", "Chong", email = "jasmine.chong@mail.mcgill.ca", role=c("aut", "cre")), person("Peng", "Liu", email = "peng.liu@mail.mcgill.ca", role=c("aut")))
-Author: Jianguo Xia [aut], Jasmine Chong [aut, cre], Peng Liu [aut]
-Maintainer: Jasmine Chong <jasmine.chong@mail.mcgill.ca>
+Version: 2.0
+Authors@R: c(person("Jianguo", "Xia", email = "jeff.xia@mcgill.ca", role = "aut"), person("Yao", "Lu", email = "yao.lu@mail.mcgill.ca", role=c("aut", "cre")), person("Zhiqiang", "Pang", email = "zhiqiang.pang@mail.mcgill.ca", role=c("aut")), person("Guangyan", "Zhou", email = "guangyan.zhou@mail.mcgill.ca", role=c("aut")), person("Jasmine", "Chong", email = "jasmine.chong@mail.mcgill.ca", role=c("aut")), person("Peng", "Liu", email = "peng.liu@mail.mcgill.ca", role=c("aut")))
+Author: Jianguo Xia [aut], Yao Lu[aut, cre], Guangyan Zhou[aut],Zhiqiang Pang[aut], Jasmine Chong [aut], Peng Liu [aut]
+Maintainer: Yao Lu <yao.lu@mail.mcgill.ca>
 Description: This package contains the entire underlying R functionality of the web-based tool MicrobiomeAnalyst. It also provides a workflow for raw sequencing preprocessing using the DADA2 pipeline.
-Depends: R (>= 3.5.3),
+Depends: R (>= 4.2.2),
          phyloseq
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.1.1
+RoxygenNote: 7.2.3
 Imports: 
     metacoder,
     pryr,
@@ -33,23 +33,56 @@ Imports:
     genefilter,
     data.table,
     reshape,
+    reshape2,
     stringr,
     ape,
     grid,
     gridExtra,
     splitstackshape,
-    edgeR,
-    globaltest,
     R.utils,
     viridis,
     taxa,
     ggrepel,
-    qs
+    qs,
+    Tax4Fun,
+    ppcor,
+    dplyr,
+    limma,
+    memoise,
+    tidyverse
 Suggests: 
     knitr,
     rmarkdown,
     DECIPHER,
     phangorn,
     dada2,
-    Tax4Fun
+    MASS,
+    MMUPHin,
+    RSclient,
+    alphashape3d,
+    cowplot,
+    doRNG,
+    energy,
+    geomtextpath,
+    ggfortify,
+    ggpubr,
+    ggraph,
+    ggrepel,
+    ggsci,
+    globaltest,
+    gplots,
+    gridGraphics,
+    htmlwidgets,
+    iheatmapr,
+    ks,
+    mixOmics,
+    omicade4,
+    parmigene,
+    plotly,
+    psych,
+    randomForest,
+    rgl,
+    tibble,
+    tidyr,
+    edgeR
 VignetteBuilder: knitr

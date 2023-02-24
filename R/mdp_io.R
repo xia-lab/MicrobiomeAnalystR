@@ -19,8 +19,7 @@ SetCurrentSelectedTaxLevel<-function(taxLvl){
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import phyloseq
-Read16SAbundData <- function(mbSetObj, dataName, format, taxa_type, ismetafile) {
-  
+Read16SAbundData <- function(mbSetObj, dataName, format, taxa_type, ismetafile, is.normalized) {
   load_phyloseq();
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -38,17 +37,9 @@ Read16SAbundData <- function(mbSetObj, dataName, format, taxa_type, ismetafile) 
     }
     
   }else if(format=="biom"){
-    if(.on.public.web){
-      if(Read16SBiomData(mbSetObj, dataName, taxa_type, ismetafile)==0){
-        return(0);
-      } 
-    }else{
-      # offline
-      mbSetObj <- Read16SBiomData(mbSetObj, dataName, taxa_type, ismetafile);
-      if(!mbSetObj$dataSet$read){
-        return(0);
-      }
-    }
+    if(Read16SBiomData(mbSetObj, dataName, taxa_type, ismetafile)==0){
+      return(0);
+    } 
   }
   
   #need to refetch mbSetObj
@@ -60,14 +51,22 @@ Read16SAbundData <- function(mbSetObj, dataName, format, taxa_type, ismetafile) 
     AddErrMsg(paste("Errors in parsing your data as numerical - possible reason: comma as decimal separator?"));
     return(0);
   }
-  
+  if(mbSetObj$module.type=="mmp"){
+   mbSetObj$module.type.mic = "otu"
+  }else{
+  mbSetObj$module.type.mic = "na"
+}
+
   #storing whole taxonomy label(used for PICRUST & Tax4Fun; reference data mapping)
-  mbSetObj$dataSet$comp_taxnm <- rownames(data.orig);
+  if(is.null(mbSetObj$dataSet$comp_taxnm)){
+  mbSetObj$dataSet$comp_taxnm <- rownames(data.orig)
+  }
   current.msg <<- paste("A total of",ncol(data.orig) ,"samples and ", nrow(data.orig), "features or taxa are present.");
   mbSetObj$dataSet$read.msg <- current.msg;
   mbSetObj$dataSet$data.type <- format;
   mbSetObj$dataSet$taxa.type <- taxa_type;
-  
+  mbSetObj$dataSet$is.normalized <- is.normalized;
+
   return(.set.mbSetObj(mbSetObj));
 
 }
@@ -92,33 +91,53 @@ Read16STabData <- function(mbSetObj, dataName) {
     AddErrMsg("Failed to read in the OTU abundance data! Please make sure the data is in the right format and do not have empty cells or NA.");
     return(0);
   }
-
-
-    # note dateSet$sample_data already set
-    # getting NAME label
+  
+  # note dateSet$sample_data already set
+  # getting NAME label
+  if(mbSetObj$module.type=="mmp" |mbSetObj$module.type=="meta" ){
+     sam.nm <- substr(colnames(mydata[1]),1,5);
+    sam.nm <- tolower(sam.nm);
+    sam.inx <- grep("^#name",sam.nm);
+    
+    if(length(sam.inx) == 0){
+      
+      sam.nm <- tolower(colnames(mydata[1]));
+      if(sam.nm %in% c("#phylum","#class","#order","#family","#genus","#species") ){
+        mbSetObj$dataSet$sglTax <- gsub("#","",sam.nm)
+      }else{
+  
+        AddErrMsg("No labels ID found in your otu/asv table!");
+        return(0);
+      }
+    
+    } 
+  
+  }else{
+    
     sam.nm <- substr(colnames(mydata[1]),1,5);
     sam.nm <- tolower(sam.nm);
     sam.inx <- grep("^#name",sam.nm);
-        
+    
     if(length(sam.inx) == 0){
       AddErrMsg("No labels #NAME found in your data!");
       return(0);
-    }   
-    smpl_nm <- colnames(mydata[-1]);
-    
-
+    }  
+  }
+  
+  smpl_nm <- colnames(mydata[-1]);
+  
+  
   mydata <- .to.numeric.mat(mydata);
-
+  
   # empty cell or NA cannot be tolerated in metadata
   na.inx  <- is.na(mydata);
-    
+  
   if(sum(na.inx) > 0){
     mydata[na.inx] <- "Unknown";
     msg <- c(msg, paste("A total of", sum(na.inx), "empty or NA values were replaced by zeros."));
   }
-
-  msg <<- paste(msg, collapse="; ");
-
+  
+  current.msg <<- paste(msg, collapse="; ");
   mbSetObj$dataSet$name <- basename(dataName);
   mbSetObj$dataSet$smpl_nm <- smpl_nm;
   mbSetObj$dataSet$data.orig <- data.matrix(mydata);
@@ -137,7 +156,7 @@ Read16STabData <- function(mbSetObj, dataName) {
 #'@export
 #'@import phyloseq
 Read16SBiomData <- function(mbSetObj, dataName, taxa_type, ismetadata){
-  
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   load_phyloseq();
@@ -146,11 +165,67 @@ Read16SBiomData <- function(mbSetObj, dataName, taxa_type, ismetadata){
   msg <- NULL;
 
   if(taxa_type=="Greengenes"||taxa_type=="GreengenesID"){
-    mydata <- import_biom(dataName,parseFunction = parse_taxonomy_greengenes);
+    
+    mydata <- tryCatch( 
+      
+      { # try
+        import_biom(dataName,parseFunction = parse_taxonomy_greengenes)
+      },
+      
+      error = function(error_cond){
+        
+        test <- read_biom(dataName)
+        test <- is.null(observation_metadata(test))
+        
+        if(test){
+          AddErrMsg("Biom file does not contain taxonomic information!");
+          return(0);
+        }
+      })
+    
   }else if(taxa_type == "SILVA"){
-    mydata <- import_biom(dataName,parseFunction = parse_taxonomy_silva_128);
+    
+    mydata <- tryCatch( 
+      
+      { # try
+        import_biom(dataName,parseFunction = parse_taxonomy_silva_128);
+      },
+      
+      error = function(error_cond){
+        
+        test <- read_biom(dataName)
+        test <- is.null(observation_metadata(test))
+        
+        if(test){
+          AddErrMsg("Biom file does not contain taxonomic information!");
+          return(0);
+        }
+      })
+
   }else{
-    mydata <- import_biom(dataName,parseFunction = parse_taxonomy_default);
+    
+    mydata = tryCatch( 
+      
+      { # try
+        import_biom(dataName,parseFunction = parse_taxonomy_default);
+      },
+      
+      error = function(error_cond){
+        
+        test <- read_biom(dataName)
+        test <- is.null(observation_metadata(test))
+        
+        if(test){
+          AddErrMsg("Biom file does not contain taxonomic information!");
+          return(0);
+        }
+      }
+    )
+  }
+
+  if(class(mydata) == "numeric"){
+    AddErrMsg("Verify that the uploaded biom file has both abundance and taxonomic information!");
+    return(0)
   }
     
   #reading data separately(abundance;taxonomy is must and sample data can be uploaded separately)
@@ -188,7 +263,7 @@ Read16SBiomData <- function(mbSetObj, dataName, taxa_type, ismetadata){
   #sample data
   if(ismetadata=="T"){
     sample_data <- sample_data(mydata,errorIfNULL = FALSE);
-    sample_data <- as.data.frame(sample_data);
+    sample_data <- as.data.frame(sample_data,check.names=FALSE);
         
     if(length(sample_data)==0){
       AddErrMsg("Metadata file not detected in your biom file. Please upload metadata file seperately.");
@@ -202,28 +277,37 @@ Read16SBiomData <- function(mbSetObj, dataName, taxa_type, ismetadata){
     
     disc.inx <- GetDiscreteInx(sample_data);
     if(sum(disc.inx) == 0){ # all class labels are unique! 
-      na.msg <- c(na.msg, "It seems that all your meta data values are unique! MicrobiomeAnalyst requires some biological replicates for robust analysis");
-      mbSetObj$poor.replicate <- TRUE;
-      mbSetObj$dataSet$sample_data <- sample_data
+       
+        AddErrMsg("It seems that your meta data values are unique! MicrobiomeAnalyst requires some biological replicates for robust analysis");
+        msg <- c(msg, "It seems that all your meta data values are unique! MicrobiomeAnalyst requires some biological replicates for robust analysis");
+        mbSetObj$poor.replicate <- TRUE;
+        mbSetObj$dataSet$sample_data <- sample_data
+       return(0)
     }else{
-      mbSetObj$dataSet$meta_info$disc.inx <- disc.inx;
-      mbSetObj$dataSet$sample_data <- sample_data[,disc.inx, drop=FALSE];
+        if(sum(disc.inx) == length(disc.inx)){
+            msg <- c(msg, "All metadata columns are OK.");
+        }else{
+            bad.meta<- paste(names(disc.inx)[!disc.inx], collapse="; ");
+            msg <- c(msg, paste0("The following metadata columns are excluded: <font style=\"color:red\"><b>", bad.meta, "</b></font>"));
+        }
+        mbSetObj$dataSet$meta_info$disc.inx <- disc.inx;
+        mbSetObj$dataSet$sample_data <- sample_data[,disc.inx, drop=FALSE];
       
-      cont.inx <- GetNumbericalInx(sample_data);
-      cont.inx <- !disc.inx & cont.inx; # discrete is first
-      mbSetObj$dataSet$meta_info$cont.inx <- cont.inx;
+        cont.inx <- GetNumbericalInx(sample_data);
+        cont.inx <- !disc.inx & cont.inx; # discrete is first
+        mbSetObj$dataSet$meta_info$cont.inx <- cont.inx;
       
-      if(sum(cont.inx)>0){
-        # make sure the discrete data is on the left side
-        mbSetObj$dataSet$sample_data <- cbind(mbSetObj$dataSet$sample_data, sample_data[,cont.inx, drop=FALSE]);
-      }
+        if(sum(cont.inx)>0){
+            # make sure the discrete data is on the left side
+            mbSetObj$dataSet$sample_data <- cbind(mbSetObj$dataSet$sample_data, sample_data[,cont.inx, drop=FALSE]);
+        }
+        }
+        msg <- paste(msg, "The sample data contains a total of ", nrow(sample_data), "samples and  ", ncol(sample_data), " sample variables.", collapse=" ");
     }
-    msg <<- paste(msg, "The sample data contains a total of ", nrow(sample_data), "samples and  ", ncol(sample_data), " sample variables.", collapse=" ");
-  }
-  current.msg <<- paste(msg, collapse=". ");
-  
-  mbSetObj$dataSet$read <- TRUE;
-  return(.set.mbSetObj(mbSetObj));
+    current.msg <<- paste(msg, collapse="; ");
+    mbSetObj$dataSet$smpl.msg <- current.msg;
+    mbSetObj$dataSet$read <- TRUE;
+    return(.set.mbSetObj(mbSetObj));
   
 }
 
@@ -286,7 +370,7 @@ ReadMothurData<-function(mbSetObj, dataName, taxdataNm, taxa_type){
   }
     
   taxa_names(tax_data) <- taxa_names(mydata);
-  tax_tabdata <- fread(taxdataNm, header=TRUE, check.names=FALSE, data.table=FALSE);
+  tax_tabdata <- .readDataTable(taxdataNm);
   comp_taxnm <- tax_tabdata$Taxonomy;
   taxa_table <- tax_table(tax_data,errorIfNULL = FALSE);
     
@@ -307,16 +391,16 @@ ReadMothurData<-function(mbSetObj, dataName, taxdataNm, taxa_type){
     AddErrMsg("Please make sure that features name of taxonomy table should match feature names in OTU abundance table.");
     return(0);
   }
+
+  msg <- c(msg,paste("A total of ",ncol(mydata) , " samples and ", nrow(mydata), "features were found."));
+  current.msg <<- paste(msg, collapse="; ");
     
   taxa_table <- taxa_table[indx,];
   rownames(taxa_table) <- rownames(mydata);
-
   mbSetObj$dataSet$name <- basename(dataName);
   mbSetObj$dataSet$data.orig <- mydata;
   mbSetObj$dataSet$taxa_table <- taxa_table;
   mbSetObj$dataSet$comp_taxnm <- comp_taxnm;
-  msg <- c(msg,paste("A total of ",ncol(mydata) , " samples and ", nrow(mydata), "features were found."));
-  current.msg <<- paste(msg, collapse="; ");
   mbSetObj$dataSet$read.msg <- current.msg;
   mbSetObj$dataSet$data.type <- "mothur";
   mbSetObj$dataSet$taxa.type <- taxa_type;
@@ -334,10 +418,8 @@ ReadMothurData<-function(mbSetObj, dataName, taxdataNm, taxa_type){
 #'License: GNU GPL (>= 2)
 #'@export
 Read16STaxaTable <- function(mbSetObj, dataName) {
-  
   msg <- NULL;
   mydata <- .readDataTable(dataName);
-    
   if(is.null(mydata) || class(mydata) == "try-error"){
     AddErrMsg("Failed to read in the taxonomic data! Please make sure the data is in the right format.");
     return(0);
@@ -355,16 +437,192 @@ Read16STaxaTable <- function(mbSetObj, dataName) {
     AddErrMsg("Failed to read in the taxonomic data! Please make sure the data is in the right format.");
     return(0);
   }
-    
+
   # converting to character matrix as duplicate row names not allowed in data frame.
   mydata <- as.matrix(mydata[,-1]);
   rownames(mydata) <- tax_nm;
   colnames(mydata) <- tax_rank;
   current.msg <<- paste("Taxonomy file has total of ",nrow(mydata),"features and",ncol(mydata), "taxonomic rank. Additional features which are not present in abundance table has been removed if present.");
+
   mbSetObj <- .get.mbSetObj(mbSetObj);   
-  mbSetObj$dataSet$taxa_table <- mydata;
+ 
+
+if("Species" %in% colnames( mydata)){# for mapping to the database in mmp module and save the taxanm for function pediction
+  sps = data.frame(mydata[,c('Genus','Species')])
+  if(grepl("^g__",sps[1,"Genus"])){
+    sps$Species = gsub("^s__","",sps$Species)
+    if(all(!grepl(" ",sps$Species)) & all(!grepl("_",sps$Species))){
+      sps$Genus =gsub("^g__","",sps$Genus)
+      idxsp = which(!is.na(sps$Genus) & !is.na(sps$Species) & sps$Genus!="" & sps$Species!="")
+      sps$Species[idxsp] = paste0("s__",sps$Genus[idxsp],"_",sps$Species[idxsp])
+    }
+  }else if(grepl("^g_",sps[1,"Genus"])){
+    sps$Species = gsub("^s_","",sps$Species)
+    if(all(!grepl(" ",sps$Species)) & all(!grepl("_",sps$Species))){
+      sps$Genus =gsub("^g_","",sps$Genus)
+      idxsp = which(!is.na(sps$Genus) & !is.na(sps$Species) & sps$Genus!="" & sps$Species!="")
+      sps$Species[idxsp] = paste0("s__",sps$Genus[idxsp],"_",sps$Species[idxsp])
+    }
+  }else if(grepl("^g_0__",sps[1,"Genus"])){
+    sps$Species = gsub("^s_0__","",sps$Species)
+    if(all(!grepl(" ",sps$Species)) & all(!grepl("_",sps$Species))){
+      sps$Genus =gsub("^g_0__","",sps$Genus)
+      idxsp = which(!is.na(sps$Genus) & !is.na(sps$Species) & sps$Genus!="" & sps$Species!="")
+      sps$Species[idxsp] = paste0("s_0__",sps$Genus[idxsp],"_",sps$Species[idxsp])
+    }
+    
+  }else{
+    if(all(!grepl(" ",sps$Species)) & all(!grepl("_",sps$Species))){
+      idxsp = which(!is.na(sps$Genus) & !is.na(sps$Species) & sps$Genus!="" & sps$Species!="")
+      sps$Species[idxsp] = paste0(sps$Genus[idxsp],"_",sps$Species[idxsp])
+    }
+  }
+  mydata[,'Species'] <- sps$Species
   
+}
+
+ mbSetObj$dataSet$comp_taxnm <- apply(mydata,1,function(x) paste(x[!is.na(x)],collapse = ";"))
+  mbSetObj$dataSet$taxa_table <- mydata;
+
   return(.set.mbSetObj(mbSetObj));
+}
+
+#'Main function to read metabolomics table
+#'@description This is the main function read in the metabolomics data
+#'into the mbSetObj.
+#'@param mbSetObj Input the name of the mbSetObj.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'@param metType whether a peak or metabolite intensity table
+#'@param idType One of compound name,KEGG or HMDB ID. Only applicable when the metType is metabolite. 
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+
+ReadMetabolicTable <- function(mbSetObj, dataName, metType, idType) {
+
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  mbSetObj$dataSet$metabolomics <- list()
+
+  msg <- NULL;
+  mydata <- .readDataTable(dataName);
+
+  if(any(is.na(mydata)) || class(mydata) == "try-error"){
+    AddErrMsg("Failed to read in the metabolomics abundance table! Missing values detected in your metabolomics data! Please make sure the data is in the right format.");
+    return(0);
+  }
+  
+  # getting NAME label
+  sam.nm <- substr(colnames(mydata[1]),1,5);
+  sam.nm <- tolower(sam.nm);
+  sam.inx <- grep("^#name",sam.nm);
+  
+  if(length(sam.inx) == 0){
+    
+    AddErrMsg("No labels #NAME found in your data!");
+    return(0);
+  }   
+  
+  #smpl_nm <- colnames(mydata[-1]);
+  
+  
+  mydata <- .to.numeric.mat(mydata);
+
+  
+  mbSetObj$dataSet$metabolomics$name <- basename(dataName);
+  #mbSetObj$dataSet$metabolomics$smpl_nm <- smpl_nm;
+  mbSetObj$dataSet$metabolomics$data.orig <- data.matrix(mydata);
+  mbSetObj$dataSet$metabolomics$comp_metnm <- rownames(mydata);
+  mbSetObj$dataSet$metabolomics$feature.type <- metType;
+  mbSetObj$dataSet$metabolomics$id.type <- idType;
+  mbSetObj$dataSet$metabolomics$read <- TRUE
+  
+  current.msg <<- paste("A total of",ncol(mydata) ,"metabolomics samples and ", nrow(mydata), metType," are present.");
+  
+ 
+
+  return(.set.mbSetObj(mbSetObj));
+  
+}
+
+
+ReadPeakList <- function(mbSetObj=NA, dataName = NA, rankOpt="pval",rtOpt,mode,instrumentOpt) {
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+
+  mydata <- data.frame(.readDataTable(dataName));
+
+  if(is.null(mydata) || class(mydata) == "try-error"){
+    AddErrMsg("Failed to read in the peak list! Please make sure the data is in the right format.");
+    return(0);
+  }
+  
+  user_cols <- gsub("[^[:alnum:]]", "", colnames(mydata));
+  mummi.cols <- c("m.z", "p.value", "t.score", "r.t","logfc")
+
+  # next check what column names are there
+  hit <- "mz" %in% user_cols;
+  
+  if(sum(hit) < 1){
+    AddErrMsg("Missing information, data must contain a 'm.z' column!");
+    return(0);
+  }
+  
+  
+  if(current.proc$mumRT  & ! "rt" %in% user_cols){
+     AddErrMsg("Missing information, r.t was not found in your data!");
+    return(0);
+  }
+
+  if(current.proc$mumRT  & ! "rt" %in% user_cols){
+    AddErrMsg("Missing information, r.t was not found in your data!");
+    return(0);
+  }
+  
+  if(current.proc$mode =="mixed"){
+    if(! mode %in% user_cols){
+      AddErrMsg("Missing information, mode was not found in your data which is mandatory for mixed mode!");
+      return(0);
+    }else{
+      current.proc$pos_inx = mydata$mode == "positive"
+      mydata <- subset(mydata, select=-mode)
+      user_cols <- gsub("[^[:alnum:]]", "", colnames(mydata))
+    }
+   
+  }
+
+  
+  if(rankOpt == "pvalue"){
+    if( ! "pvalue" %in% user_cols){
+      AddErrMsg("Missing information, p.values were not found in your data!");
+      return(0);
+    }else{
+      current.proc$rankopt = "p.value"
+    }
+  }
+  
+  if(rankOpt == "tscore"){
+    if( ! "tscore" %in% user_cols){
+      AddErrMsg("Missing information, t-scores were not found in your data!");
+      return(0);
+    }else{
+      current.proc$rankopt = "tscore"
+    }
+  }
+  if(rankOpt == "fc"){
+    if( ! "logfc" %in% user_cols){
+      AddErrMsg("Missing information, fold changes were not found in your data!");
+      return(0);
+    }else{
+      current.proc$rankopt = "tscore"
+    }
+  }
+ 
+  mbSetObj$dataSet$metabolomics$name <- basename(dataName);
+  mbSetObj$dataSet$metabolomics$data.orig <- data.matrix(mydata);
+  mbSetObj$dataSet$metabolomics$feature.type <- "peak";
+  mbSetObj$dataSet$metabolomics$read <- TRUE
+
+return(.set.mSet(mbSetObj));
 }
 
 #'Function to create a summary of a sample using a piechart at different tax level.
@@ -387,12 +645,10 @@ PlotSelectedSample <-function(mbSetObj, imgNm, smplID, OtuIdType, rel_perct, for
   }else{
     txlvl <- current.selected.tax;
   }
-
+ 
   if(mbSetObj$module.type=="mdp"){
     data <- mbSetObj$dataSet$norm.phyobj;
-    mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
-    data <- merge_phyloseq(data, mbSetObj$dataSet$taxa_table);
-  }else{
+   }else{
     data <- userrefdata;
   }
     
@@ -454,7 +710,7 @@ GetDataForPie<-function(data_n, datataxa, txlvl, OtuIdType, feat_cnt){
   
   #using reduce names
   data_new <- otu_table(data_n);
-  data_new <- data.frame(data_new);
+  data_new <- data.frame(data_new,check.names=FALSE);
   data_new <- t(data_new);
 
   if(txlvl=="OTU"){
@@ -462,7 +718,7 @@ GetDataForPie<-function(data_n, datataxa, txlvl, OtuIdType, feat_cnt){
     rownames(taxa_nm) <- colnames(data);
     rownames(taxa_nm) <- sub("^X", "", rownames(taxa_nm))
   }else{
-    taxa_nm <- as.data.frame(datataxa[,txlvl]);
+    taxa_nm <- as.data.frame(datataxa[,txlvl],check.names=FALSE);
   }
     
   if(OtuIdType=="GreengenesID"){
@@ -489,7 +745,7 @@ GetDataForPie<-function(data_n, datataxa, txlvl, OtuIdType, feat_cnt){
   colnames(data_new)<-taxa_nm[,1];
   nms <-colnames(data_new);
   data_new<-data_new %*% sapply(unique(nms),"==",nms);
-  data_new<-data.frame(data_new);
+  data_new<-data.frame(data_new,check.names=FALSE);
   data_new$step<-factor(rownames(data_new));
   data_new<-melt(data_new,id='step');
   data_new$step<-as.numeric(data_new$step);

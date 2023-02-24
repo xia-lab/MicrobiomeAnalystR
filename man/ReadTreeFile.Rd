@@ -4,7 +4,7 @@
 \alias{ReadTreeFile}
 \title{Function to read in tree files.}
 \usage{
-ReadTreeFile(mbSetObj, dataName)
+ReadTreeFile(mbSetObj, fileName, dataName = "", module.type)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

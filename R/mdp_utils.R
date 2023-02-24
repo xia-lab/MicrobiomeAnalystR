@@ -53,7 +53,6 @@ PerformAlphaDiversityComp<-function(mbSetObj, opt, metadata){
     .set.mbSetObj(mbSetObj)
     return(stat.info);
   }else{
-    print(stat.info);
     return(.set.mbSetObj(mbSetObj))
   }
 }
@@ -65,634 +64,125 @@ PerformAlphaDiversityComp<-function(mbSetObj, opt, metadata){
 #'Function to call for correlation network
 #'@description This function runs the fastspar or cor.test 
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param taxrank Character, input the taxonomic level
+#' to perform partial correlation analysis.
+#'@param cor.method Character, input the correlation method.
+#'Supported methods are pearson, spearman, kendall and sparcc.
+#'@param colorOpt Character, input what to color the nodes by. Default
+#'the nodes will be colored by their expression levels.
+#'@param permNum Numeric, input the number of permutations to perform. Default
+#'is set to 100.
+#'@param pvalCutoff Numeric, input the p-value cutoff. Default is set to 0.05.
+#'@param corrCutoff Numeric, input the correlation cutoff. Default is set to 0.3.
+#'@param abundOpt Character, default is set to "mean".
+#'@param corr.net.name Character, input the name of the plot to save.
+#'@param plotNet Boolean. Set to TRUE if you would like a network visualization
+#'outputted to your current working directory. 
+#'@param networkType Character, "static" to create a static image or
+#'"interactive" to create an interactive network saved as an html 
+#'in your working directory.
+#'@param netLayout Character, layout from ggraph. "kk" for the spring-based algorithm by Kamada and Kawai
+#'as default. "drl" for force directed algorithm from the DrL toolbox. "lgl" for Large Graph Layout. "fr" for
+#'force-directed of Fruchterman and Reingold.
+#'@param netTextSize Numeric, input the preferred font size to be used in the network
+#'plot.
 #'@import ppcor
 #'@import igraph
 #'@export
+
 PerformNetworkCorrelation <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr", 
-                                      permNum=100, pvalCutoff=0.05, corrCutoff=0.3,abundOpt="mean", corr.net.name){
-  
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  mbSetObj$dataSet$cor.method <- cor.method
-  mbSetObj$analSet$abund.opt <- abundOpt
-  if(.on.public.web){
-    load_ppcor();
-    load_igraph();
+                                      permNum=100, pvalCutoff=0.05, corrCutoff=0.3, abundOpt="mean", 
+                                      corr.net.name, plotNet = FALSE, netType="static", netLayout="kk",
+                                      netTextSize = 2.5){
+  if(!exists("my.corr.net")){ # public web on same user dir
+    .load.scripts.on.demand("utils_corrnet.Rc");    
   }
-  
-  if(cor.method == "sparcc"){
-    if(.on.public.web){
-      sparcc_results <- RunFastSpar_mem(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, "network")
-    }else{
-      sparcc_results <- RunFastSpar(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, "network")
-    }
-    
-    if(nrow(sparcc_results)==0){
-      AddErrMsg("No correlations meet the p-value and correlation thresholds!")
-      return(0)
-    }else{
-      mbSetObj$analSet$network_cor <- sparcc_results
-    }
-  }else{
-    
-    if(!exists("phyloseq_objs")){
-      phyloseq_objs <- qs::qread("phyloseq_objs.qs")
-    }
-    
-    if(taxrank=="OTU"){
-      data1 <- phyloseq_objs$count_tables$OTU
-    }else{
-      taxrank.inx <- which(names(phyloseq_objs$count_tables) %in% taxrank)
-      data1 <- phyloseq_objs$count_tables[[taxrank.inx]]
-    }
-    
-    data <- t(data1);
-    qs::qsave(data, "network_cor_data.qs")
-    
-    data <- data[which(rownames(data) %in% mbSetObj$dataSet$selected.grps),]
-    data[data==0|is.na(data)] <- .00001
-    
-    if(ncol(data) > 1000){
-      filter.val <- apply(data.matrix(data), 2, IQR, na.rm=T);
-      rk <- rank(-filter.val, ties.method='random');
-      data <- as.data.frame(data[,rk <=1000]);
-    }
-    
-    mbSetObj$analSet$netcorr_data <- data;
-    vars = data.frame(t(combn(colnames(data), 2)), stringsAsFactors = FALSE)
-    
-    if(cor.method == "spearman"){
-      cor.results <- do.call(rbind, mapply(SpearmanCorrFunc, vars[,1], vars[,2], MoreArgs = list(data=data), SIMPLIFY = FALSE))
-    }else if(cor.method == "kendall"){
-      cor.results <- do.call(rbind, mapply(KendallCorrFunc, vars[,1], vars[,2], MoreArgs = list(data=data), SIMPLIFY = FALSE))
-    }else if(cor.method == "pearson"){
-      cor.results <- do.call(rbind, mapply(PearsonCorrFunc, vars[,1], vars[,2], MoreArgs = list(data=data), SIMPLIFY = FALSE))
-    }else{
-      AddErrMsg("Invalid correlation method!")
-      return(0)
-    }
-    
-    colnames(cor.results) <- c("Taxon1", "Taxon2", "Correlation", "P.value", "Statistic", "Method")
-    qs::qsave(cor.results, "network_correlation.qs")
-    
-    cor.results.filt <- cor.results[(abs(cor.results[,3]) > corrCutoff & cor.results[,4] < pvalCutoff),]
-    cor.results.filt[,3] <- round(cor.results.filt[,3], digits=4)
-    cor.results.filt[,4] <- round(cor.results.filt[,4], digits=4)
-    fast.write(cor.results.filt, "correlation_table.csv", row.names = FALSE)
-    mbSetObj$analSet$network_cor <- cor.results.filt;
-  }
-  
-  mbSetObj$dataSet$corr.pval.cutoff <- pvalCutoff
-  mbSetObj$analSet$corr_color_opt <- colorOpt;
-  
-  #network building only needed for web
-  if(.on.public.web){
-    all.taxons = unique(c(mbSetObj$analSet$network_cor[,1] , mbSetObj$analSet$network_cor[,2]))
-    taxColNms = vector();
-    
-    if(taxrank == "OTU"){
-      tax.tbl = as.data.frame(matrix(mbSetObj$dataSet$taxa_table[,1:7],ncol=7))
-      colnames(tax.tbl) = colnames(mbSetObj$dataSet$taxa_table[,1:7])
-      colnames(tax.tbl)[7] = "OTU"
-      tax.tbl[,7]=rownames(mbSetObj$dataSet$taxa_table)
-      taxColNms = colnames(tax.tbl)
-      tax.tbl = as.data.frame(tax.tbl[which(tax.tbl[,simpleCap(taxrank)] %in% all.taxons),])
-      colnames(tax.tbl) = taxColNms
-    }else{
-      tax.tbl = data.frame(mbSetObj$dataSet$taxa_table[,1:which( colnames(mbSetObj$dataSet$taxa_table)== simpleCap(taxrank))])
-      taxColNms = colnames(mbSetObj$dataSet$taxa_table[,1:which( colnames(mbSetObj$dataSet$taxa_table)== simpleCap(taxrank))])
-      colnames(tax.tbl) = taxColNms
-      tax.tbl = as.data.frame(tax.tbl[which(tax.tbl[,simpleCap(taxrank)] %in% all.taxons),])
-      colnames(tax.tbl) = taxColNms
-    }
-    
-    inx = !duplicated(tax.tbl[,simpleCap(taxrank)])
-    filt.taxa.table = data.frame(tax.tbl[inx,])
-    colnames(filt.taxa.table) = taxColNms
-    mbSetObj$analSet$filt.taxa.table = filt.taxa.table 
-    .set.mbSetObj(mbSetObj);
-    res <- SparccToNet(mbSetObj, corr.net.name);
-    if(res == 0){
-      AddErrMsg(paste0("Errors during creating correlation network:", current.msg))
-      return(0);
-    }
-  }
-  
-  if(cor.method=="sparcc"){
-    method = "SparCC"
-  }else{
-    method = paste(cor.method, "correlation"); 
-  }
-  
-  # calculate microbial dysbiosis index
-  feats_used <- unique(mbSetObj$analSet$network_cor[,1], mbSetObj$analSet$network_cor[,2]) 
-  fc <- mbSetObj$analSet$diff_table
-  clean_feats_used <- sub("^[^_]*__", "", unique(feats_used))
-  match.inx <- which(fc$tax_name %in% clean_feats_used)
-  
-  if(cor.method=="sparcc"){
-    abund_data <- qs::qread("sparcc_data.qs")
-  }else{
-    abund_data <- t(as.matrix(mbSetObj$analSet$netcorr_data))
-  }
-  
-  abund.inx <- which(rownames(abund_data) %in% feats_used)
-  abund_data.filt <- abund_data[abund.inx,]
-  smpl <- data.frame(sample_data(mbSetObj$dataSet$proc.phyobj));
-  
-  if(length(match.inx)!=0){
-    
-    fc.filt <- fc[match.inx,]
-    
-    if(length(mbSetObj$dataSet$comparison) > 2){ # only calculate mdi for 2 groups
-      
-      mbSetObj$analSet$mdi <- ""
-      
-    }else{ # for only 2 groups
-      if(length(unique(fc.filt$tax_name)) < length(fc.filt$tax_name)){
-        # need to delete doubles in fc.filt
-        keep <- c(TRUE, head(fc.filt$tax_name, -1) != tail(fc.filt$tax_name, -1))
-        fc.filt <- fc.filt[keep,]
-      }
-      
-      smpls.used <- rownames(smpl[smpl[mbSetObj$dataSet$meta]==fc.filt$treatment_1,,drop=FALSE])
-      abund_data.filt <- abund_data.filt[,match(smpls.used, colnames(abund_data.filt))]
-      
-      log2fc <- fc.filt$log2_median_ratio
-      names(log2fc) <- fc.filt$tax_name
-      
-      inc <- which(log2fc > 0) # total abundance increased in X
-      dec <- which(log2fc < 0) # total abundance decreased in X
-      
-      if(length(inc)==0 | length(dec)==0){
-        mbSetObj$analSet$mdi <- "MD-index could not be calculated."
-      }else{
-        abund <- c(sum(abund_data.filt[inc,]), sum(abund_data.filt[dec,]))
-        abund[abund==0] <- 0.1
-        
-        MDI1 <- round(log(abund[1]/abund[2]), digits = 4) 
-        first <- unique(fc.filt$treatment_1)
-        second <- unique(fc.filt$treatment_2)
-        groups <- paste(first, "/", second, sep="")
-        
-        mbSetObj$analSet$mdi <- paste(groups, "MD-index:", MDI1)
-      }
-    }
-  }
-  
-  if(current.msg == "Only the top 500 features are kept, ranked by their variance!"){
-    current.msg <<- paste(current.msg, method, "performed successfully!")
-  }else{
-    current.msg <<- paste(method, "performed successfully!")
-  }
-  return(.set.mbSetObj(mbSetObj));
+  return(my.corr.net(mbSetObj, taxrank, cor.method, colorOpt, permNum, pvalCutoff, corrCutoff, abundOpt, corr.net.name, plotNet, netType, netLayout,netTextSize));
 }
 
-#'Function to create correlation heat map
-#'@description This function creates the correlation heat map
+#'Function to create box plots of important features
+#'@description This functions plots box plots of a selected feature.
 #'@param mbSetObj Input the name of the mbSetObj.
-#'@param imgName Character, input the name
-#'of the plot.
-#'@param format Character, input the preferred
-#'format of the plot. By default it is set to "png".
-#'@param width Numeric, input the width of the plot. By
-#'default it is set to NA.
-#'@param cor.method Input the distance measure. Input "pearson" for 
-#'Pearson R, "spearman" for Spearman rank correlation, and "kendall"
-#'for Kendall rank correlation.
-#'@param colors_cntrst Set the colors of the heatmap. By default it 
-#'is set to "bwm", blue, white, to red. Use "gbr" for green, black, red, use
-#'"heat" for red to yellow, "topo" for blue to yellow, "gray" for 
-#'white to black, and "byr" for blue, yellow, red. Use "viridis"
-#'for the viridis color palette and "plasma" for the plasma color palette from
-#'the viridis R package.
-#'@param viewOpt Character, "overview" to view an overview
-#'of the heatmap, and "detail" to iew a detailed view of the
-#'heatmap (< 1500 features).
-#'@param taxrank Character, input the taxonomic level to perform
-#'classification. For instance, "OTU-level" to use OTUs.
-#'@param fix.col Logical, default set to FALSE.
-#'@param no.clst Logical, default set to FALSE.
-#'@param top Logical, default set to FALSE.
-#'@param topNum Numeric, set the number of top features
-#'to include.
-#'@param datatype If the data is marker gene, input "16S". If the
-#'data is metagenomic, use "metageno".
+#'@param boxplotName Character, input the name of the 
+#'box plot.
+#'@param feat Character, input the name of the selected 
+#'feature.
+#'@param format Character, by default the plot format
+#'is "png".
+#'@param dpi Dots per inch. Numeric, by default
+#'it is set to 72.
+#'@parm colorPal Character, input the name of the preferred color palette.
+#'Use "default" for the RColor brewer Set1 palette, "virdis" for the viridis color palette, and
+#'"dark" for the RColor brewer Dark2 palette.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-#'@import RColorBrewer
-#'@import gplots
-#'@import pheatmap
-
-PlotCorrHeatMap <- function(mbSetObj, imgName, format="png", cor.method,
-                            colors_cntrst, viewOpt, taxrank, 
-                            topNum, permNum=100, pvalCutoff=0.05, corrCutoff=0.3){
-  
-  fix.col="F"; 
-  no.clst="F"; 
-  top="F"
-  width ="NA"
+#'@import grid
+#'@import gridExtra
+PlotBoxDataCorr<-function(mbSetObj, boxplotName, feat, format="png", sel.meta="", dpi=72){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  load_viridis();
+  colorPal <- "dark";
   
-  main <- xlab <- ylab <- NULL;
-  
-  if(mbSetObj$module.type=="sdp"){
-    data <- mbSetObj$dataSet$norm.phyobj;
-    data1 <- as.matrix(otu_table(data));
-    taxrank <- "OTU";
-  }else if(mbSetObj$module.type=="mdp"){
-    if(taxrank=="OTU"){
-      taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
-      data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj, taxa_table);
-      data1 <- as.matrix(otu_table(data));
-    }else{
-      taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
-      data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj, taxa_table);
-      #merging at taxonomy levels
-      data <- fast_tax_glom_mem(data,taxrank);
-      if(is.null(data)){
-        AddErrMsg("Errors in projecting to the selected taxanomy level!");
-        return(0);
-      }
-      nm <- as.character(tax_table(data)[,taxrank]);
-      #converting NA values to unassigned
-      nm[is.na(nm)] <- "Not_Assigned";
-      data1 <- as.matrix(otu_table(data));
-      rownames(data1) <- nm;
-      #all NA club together
-      data1 <- as.matrix(t(sapply(by(data1, rownames(data1), colSums), identity)));
-    }
-  }
-  
-  data <- t(data1);
-  mbSetObj$analSet$abund_data <- data;
-  
-  if(ncol(data) > 1000){
-    filter.val <- apply(data.matrix(data), 2, IQR, na.rm=T);
-    rk <- rank(-filter.val, ties.method='random');
-    data <- as.data.frame(data[,rk <=1000]);
-  }
-  
-  colnames(data)<-substr(colnames(data), 1, 18);
-  
-  if(cor.method=="sparcc"){
-    if(.on.public.web){
-      corr.mat <- RunFastSpar_mem(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, "heatmap")
-    }else{
-      corr.mat <- RunFastSpar(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, "heatmap")
-    }
-  }else{
-    corr.mat<-cor(data, method=cor.method);
-  }
-  
-  # use total abs(correlation) to select
-  if(top){
-    cor.sum <- apply(abs(corr.mat), 1, sum);
-    cor.rk <- rank(-cor.sum);
-    var.sel <- cor.rk <= topNum;
-    corr.mat <- corr.mat[var.sel, var.sel];
-  }
-  
-  # set up parameter for heatmap
-  load_rcolorbrewer();
-  load_gplots();
-  
-  if(colors_cntrst=="gbr"){
-    colors <- grDevices::colorRampPalette(c("green", "black", "red"), space="rgb")(256);
-  }else if(colors_cntrst == "heat"){
-    colors <- grDevices::heat.colors(256);
-  }else if(colors_cntrst == "topo"){
-    colors <- grDevices::topo.colors(256);
-  }else if(colors_cntrst == "gray"){
-    colors <- grDevices::colorRampPalette(c("grey90", "grey10"))(256);
-  }else if(colors_cntrst == "byr"){
-    colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdYlBu"))(256));
-  }else if(colors_cntrst == "viridis") {
-    colors <- rev(viridis::viridis(10))
-  }else if(colors_cntrst == "plasma") {
-    colors <- rev(viridis::plasma(10))
-  }else{
-    colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdBu"))(256));
-  }
-  
-  #used for network edges
-  first_color <- colors[1];
-  last_color <- colors[length(colors)];
-  imgName = paste(imgName, ".", format, sep="");
-  
-  if(viewOpt == "overview"){
-    if(is.na(width)){
-      w <- 9;
-    }else if(width == 0){
-      w <- 7.2;
-      mbSetObj$imgSet$heatmap <-imgName;
-    }else{
-      w <- 7.2;
-    }
-    h <- w;
-  }else{
-    if(ncol(corr.mat) > 50){
-      myH <- ncol(corr.mat)*12 + 40;
-    }else if(ncol(corr.mat) > 20){
-      myH <- ncol(corr.mat)*12 + 60;
-    }else{
-      myH <- ncol(corr.mat)*12 + 120;
-    }
-    h <- round(myH/72,2);
+  load_ggplot();
+  load_grid();
+  load_gridExtra();
+  if(mbSetObj$module.type == "meta"){
+    merged <- qs::qread("merged.data.qs");
+    merged <- subsetPhyloseqByDataset(mbSetObj, merged);
+    data <- t(as.data.frame(as(otu_table(merged), "matrix"),check.names=FALSE));
+    data <- as.data.frame(data);
+    variable <- sel.meta;
+    data$class <- as.vector(as.matrix(sample_data(merged))[,sel.meta])
     
-    if(is.na(width)){
-      w <- h;
-    }else if(width == 0){
-      w <- h <- 7.2;
-      mbSetObj$imgSet$corr.heatmap <-imgName;
-    }else{
-      w <- h <- 7.2;
-    }
-    
-    # to prevent too small
-    min.w <- 4.8;
-    
-    if(w < min.w){
-      w <- h <- min.w;
-    }
-  }
-  
-  if(format=="pdf"){
-    grDevices::pdf(file = imgName, width=w, height=h, bg="white", onefile=FALSE);
+    a <- as.numeric(data[,feat]);
   }else{
-    #Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
-    Cairo::Cairo(file = imgName, unit="in", dpi=72, width=w, height=h, type=format, bg="white");
+    variable <- mbSetObj$analSet$var.typecor;
+    data <- mbSetObj$analSet$boxdatacor;
+    a <- as.numeric(data[,feat]);
   }
+  min.val <- min(abs(a[a!=0]))/5;
+  data$log_feat <- log2((a + sqrt(a^2 + min.val))/2);
+  boxplotName = paste(boxplotName,".",format, sep="");
   
-  mbSetObj$imgSet$cor.heat<-imgName;
+  numGrps <- length(levels(data$class))
   
-  if(no.clst){
-    rowv = FALSE;
-    colv = FALSE;
-    dendro = "none";
+  if(numGrps == 2){
+    width <- 325
+  }else if(numGrps < 4){
+    width <- 350
+  }else if(numGrps < 6){
+    width <- 375
   }else{
-    rowv = TRUE;
-    colv = TRUE;
-    dendro = "both";
+    width <- 400
   }
   
-  load_pheatmap();
+  Cairo::Cairo(file=boxplotName, width=width, height=300, type=format, bg="white", dpi=dpi);
   
-  if(fix.col){
-    breaks <- seq(from = -1, to = 1, length = 257);
-    pheatmap::pheatmap(corr.mat, fontsize=8, fontsize_row=8, cluster_rows = colv,
-                       cluster_cols = rowv, color = colors, breaks = breaks);
-  }else{
-    pheatmap::pheatmap(corr.mat, fontsize=8, fontsize_row=8, cluster_rows = colv,
-                       cluster_cols = rowv, color = colors);
+  box <- ggplot(data, aes(x=data$class, y = data$log_feat, fill=as.factor(class))) + stat_boxplot(geom ='errorbar') + 
+    geom_boxplot(outlier.shape = NA) + geom_jitter() + theme_bw() + labs(y="Log-transformed Counts\n", x=paste0("\n",variable), fill=variable) +
+    ggtitle(feat) + theme(plot.title = element_text(hjust=0.5, size=13, face="bold"), axis.title=element_text(size=11), legend.title=element_text(size=11), axis.text=element_text(size=10));
+  #remove grid
+  box <- box + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), panel.border = element_rect(colour = "#787878", fill=NA, size=0.5))
+  
+  if(colorPal == "viridis"){
+    box <- box + scale_fill_viridis_d()
+  }else if(colorPal == "set1"){
+    box <- box + scale_fill_brewer(palette="Set1")
+  }else if(colorPal == "dark"){
+    box <- box + scale_fill_brewer(palette="Dark2")
   }
   
+  print(box)
   dev.off();
-  
-  mbSetObj$analSet$cor.heatmat<-corr.mat;
-  mbSetObj$analSet$colors_cntrst<-colors_cntrst;
-  mbSetObj$analSet$edge_col_low<-first_color;
-  mbSetObj$analSet$edge_col_high<-last_color;
-  mbSetObj$analSet$colors<-colors;
-  mbSetObj$analSet$corheat.taxalvl<-taxrank;
-  mbSetObj$analSet$corheat.meth<-cor.method;
-  fast.write(signif(corr.mat,5), file="correlation_table.csv");
-  
-  if(cor.method=="sparcc"){
-    method = "SparCC"
-  }else{
-    method = "Correlation"
-  }
-  
-  current.msg <<- paste(method, "performed successfully!") 
-  return(.set.mbSetObj(mbSetObj));
+  return(.set.mbSetObj(mbSetObj))
 }
 
-SparccToNet <- function(mbSetObj=NULL, corr.net.name){
-  
-  library(igraph)
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  abundOpt <- mbSetObj$analSet$abund.opt;
-  edge.list <- mbSetObj$analSet$network_cor;
-  edge.list <- edge.list[,c("Taxon1", "Taxon2"), drop=FALSE];
-  g <- graph_from_data_frame(edge.list, directed = FALSE, vertices = NULL);
-  E(g)$weight <- abs(mbSetObj$analSet$network_cor[, "Correlation"]);
-  E(g)$correlation <- mbSetObj$analSet$network_cor[, "Correlation"];
-  colnames(edge.list) <- c("Source", "Target");
-  nodes <- unique(c(edge.list[,1], edge.list[,2]));
-  node.list <- data.frame(Id=nodes, Name=nodes);
-  
-  abundance_table <- mbSetObj$analSet$boxdatacor[,-length(colnames(mbSetObj$analSet$boxdatacor))]
-  ab <- apply(abundance_table,2,function(x){sum(x)/length(x)})  
-  taxa <- mbSetObj$analSet$filt.taxa.table;
-  
-  colorOpt <- mbSetObj$analSet$corr_color_opt;
-  
-  
-  # annotation
-  nms <- V(g)$name;
-  inx <- !nms %in% taxa[,length(colnames(taxa))]
-  toDelete = nms[inx]
-  g <- delete_vertices(g, toDelete);
-  nms <- V(g)$name;
-  taxa <- taxa[match(nms, taxa[,length(colnames(taxa))]),]
-  
-  if(!colorOpt %in% colnames(taxa) && colorOpt != "expr"){
-    
-    current.msg <<- "Invalid taxa is selected for coloring (must be same or higher taxonomy level of selected taxa used for correlation calculation)"
-    return(0);
+SparccToNet <- function(mbSetObj=NULL, corr.net.name, networkType="static", netLayout="kk", netTextSize){
+  if(!exists("my.sparcc.net")){ # public web on same user dir
+    .load.scripts.on.demand("utils_sparcc.Rc");    
   }
-  
-  hit.inx <- match(nms, node.list[,1]);
-  lbls <- node.list[hit.inx, 2];
-  
-  # setup shape (gene circle, other squares)
-  shapes <- rep("circle", length(nms));
-  itypes <- rep("circle", length(nms));
-  seeds <- rep("circle", length(nms));
-  
-  # get edge data
-  edge.mat <- get.edgelist(g);
-  edge.mat1 <- data.frame(edge.mat)
-  edge.mat1$color <- ComputeColorGradientCorr(E(g)$correlation);
-  edge.mat1 <- as.matrix(edge.mat1)
-  
-  edge.mat <- cbind(id=1:nrow(edge.mat), source=edge.mat[,1], target=edge.mat[,2], color = edge.mat1[,3], weight=E(g)$weight, correlation = E(g)$correlation);
-  
-  # now get coords
-  pos.xy <- PerformLayOut(g);
-  # get the note data
-  node.btw <- as.numeric(betweenness(g));
-  node.eig <- eigen_centrality(g);
-  node.eig <- as.numeric(node.eig$vector);
-  node.tra <- transitivity(g,type=c("local"))
-  node.dgr <- as.numeric(degree(g));
-  node.exp <- as.numeric(get.vertex.attribute(g, name="abundance", index = V(g)));
-  
-  # node size to abundance values
-  if(vcount(g)>500){
-    min.size = 1;
-  }else if(vcount(g)>200){
-    min.size = 2;
-  }else{
-    min.size = 2;
-  }
-  
-  abundance <- unname(ab[nms])
-  node.sizes <- as.numeric(rescale2NewRange((log(abundance+1))^2, min.size, 15));
-  
-  # update node color based on betweenness
-  require("RColorBrewer");
-  topo.val <- log(node.btw+1);
-  exp_table <- mbSetObj$analSet$diff_table;
-  colVecNms <- rep("NA", length(topo.val))
-  nms2=nms
-  if(colorOpt == "expr"){
-    nms1 = strsplit(nms, "__")
-    if(length(nms1[[2]])>1){
-      l = unlist(lapply(nms1, function(x) unlist(x[2])));
-      inx = is.na(l)
-      if(length(which(inx == T))>0){
-        l[inx]= paste0(nms1[[which(inx == T)]][1],"__")
-      }
-      nms2=l
-    }else{
-      nms2 = nms
-    }
-    exp_table = exp_table[match(nms2, exp_table$tax_name), ]
-    topo.colsb <- topo.colsb1 <-ComputeColorGradientCorr(exp_table$median_diff);
-    topo.colsw <- topo.colsw1 <-ComputeColorGradientCorr(exp_table$median_diff);
-    
-    smpl <- data.frame(sample_data(mbSetObj$dataSet$proc.phyobj));
-    subsmpl <- smpl[mbSetObj$dataSet$selected.grps,,drop=FALSE]
-    if(mbSetObj$dataSet$cor.method == "sparcc"){
-      abund_data <- qs::qread("sparcc_data.qs")
-    }else{
-      abund_data <- t(as.matrix(mbSetObj$analSet$netcorr_data))
-    }
-    grp.vec = factor(subsmpl[,mbSetObj$dataSet$meta])
-    filt_data = abund_data[,mbSetObj$dataSet$selected.grps]
-    filt_data = as.data.frame(t(filt_data))
-    meta_vec = rep(grp.vec, ncol(filt_data))
-    r = stack(filt_data)
-    r$meta = meta_vec
-    
-    smp.nms = as.character(unique(r$ind))
-    meta.nms = as.character(unique(r$meta))
-    
-    abundColor = generateColorArr(length(meta.nms));
-    
-    propList = list()
-    for(i in 1:length(smp.nms)){
-      smp.nm = as.character(smp.nms[i])
-      for(j in 1:length(meta.nms)){
-        meta.nm = as.character(unique(r$meta)[j])
-        tmp = r[which(r$ind == smp.nm),]
-        tmp = tmp[which(tmp$meta == meta.nm),]
-        if(abundOpt == "meanlog"){
-          vals = log(tmp$values, 10)
-          average = mean(vals)
-        }else if(abundOpt == "medianlog"){
-          vals = log(tmp$values, 10)
-          average = median(vals)
-        }else if(abundOpt == "mean"){
-          total = sum(tmp$values)
-          average = total/length(tmp$values)
-        }else{
-          average=median(tmp$values)
-        }
-        if(length(propList[[smp.nm]]) == 0){
-          propList[[smp.nm]] = list()
-        }
-        propList[[smp.nm]][[meta.nm]]=average
-      }
-    }
-    
-  }else{
-    color_var <- as.character(unique(taxa[,colorOpt]));
-    colVec=generateColorArr(length(color_var));
-    names(colVec) = unique(taxa[,colorOpt])
-    colVecNms<-names(colVec[as.character(taxa[,colorOpt])])
-    topo.colsb  <- unname(colVec[as.character(taxa[,colorOpt])])
-    topo.colsw  <- topo.colsb
-    propList = "NA"
-    abundColor = "NA"
-  }
-  
-  # color based on expression
-  bad.inx <- is.na(node.exp) | node.exp==0;
-  if(!all(bad.inx)){
-    exp.val <- node.exp;
-    node.colsb.exp <- ComputeColorGradientCorr(exp.val); 
-    node.colsw.exp <- ComputeColorGradientCorr(exp.val);
-    node.colsb.exp[bad.inx] <- "#d3d3d3"; 
-    node.colsw.exp[bad.inx] <- "#c6c6c6"; 
-  }else{
-    node.colsb.exp <- rep("#D3D3D3",length(node.dgr)); 
-    node.colsw.exp <- rep("#C6C6C6",length(node.dgr)); 
-  }
-  
-  network_prop = list();
-  for(i in 1:length(node.sizes)){
-    network_prop[[i]]  <- list(
-      eigen = node.eig[i],
-      transitivity = node.tra[i]
-    )
-  }
-  
-  type <- rep(FALSE,length(node.dgr));
-  node_attr <- list.vertex.attributes(g);
-  node_attr <- node_attr[which(node_attr!="names")] 
-  
-  # now create the json object
-  nodes <- vector(mode="list");
-  for(i in 1:length(node.sizes)){
-    nodes[[i]] <- list(
-      id=nms[i], 
-      idx=i,
-      label=nms2[i],
-      size=node.sizes[i], 
-      tsize=node.sizes[i],
-      type="gene",
-      itype=itypes[i],
-      taxon=colVecNms[i],
-      color=topo.colsb[i],
-      colorb=topo.colsb[i],
-      colorw=topo.colsw[i],
-      topocolb=topo.colsb[i],
-      topocolw=topo.colsw[i],
-      expcolb=node.colsb.exp[i],
-      expcolw=node.colsw.exp[i],
-      x=pos.xy[i,1],
-      y= pos.xy[i,2],
-      user =network_prop[[i]],
-      attributes=list(
-        degree=node.dgr[i], 
-        between=node.btw[i],
-        expr = exp_table$mean_diff[i],
-        eigen = node.eig[i],
-        transitivity = node.tra[i]
-      )
-    );
-  }
-  
-  # save node table
-  nd.tbl <- data.frame(Id=nms, Label=lbls, Degree=node.dgr, Betweenness=round(node.btw,2));
-  # order 
-  ord.inx <- order(nd.tbl[,3], nd.tbl[,4], decreasing = TRUE)
-  nd.tbl <- nd.tbl[ord.inx, ];
-  fast.write(nd.tbl, file="node_table.csv", row.names=FALSE);
-  
-  # covert to json
-  require(RJSONIO);
-  taxNodes <- list(tax=colVecNms,colors=topo.colsb);
-  netData <- list(nodes=nodes, abund=propList, abundColor=abundColor, edges=edge.mat, taxa=taxa, taxaNodes = taxNodes)#, modules = modules, taxaNodes = list(tax=colVecNms,colors=topo.colsb));
-  sink(corr.net.name);
-  cat(toJSON(netData));
-  sink();
-  return(.set.mbSetObj(mbSetObj));
+  return(my.sparcc.net(mbSetObj, corr.net.name, networkType, netLayout, netTextSize));
 }
 
 simpleCap <- function(x) {
@@ -734,13 +224,13 @@ rescale2NewRange <- function(qvec, a, b){
 }
 
 PrepareCorrExpValues <- function(mbSetObj, meta, taxalvl, color, layoutOpt, comparison, wilcox.cutoff){
-  
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
   load_metacoder();
   tax_o <- taxalvl;
   dm <- mbSetObj$dataSet$proc.phyobj;
   dims <- ncol(tax_table(dm))
-  tax_table_new = data.frame("Kingdom" = "Root", as(tax_table(dm), "matrix")[, 1:dims]) # add root to tax table
+  tax_table_new = data.frame("Kingdom" = "Root", as(tax_table(dm), "matrix")[, 1:dims],check.names=FALSE) # add root to tax table
   tax_table(dm) <- as.matrix(tax_table_new);
   
   dm_samples = as(sample_data(dm), "data.frame");
@@ -760,8 +250,8 @@ PrepareCorrExpValues <- function(mbSetObj, meta, taxalvl, color, layoutOpt, comp
     dm_samples_cmf <- dm_samples
   }
   
-  otu_dm <- as.data.frame(as(otu_table(dm), "matrix"));
-  tax_dm <- as.data.frame(as(tax_table(dm), "matrix"));
+  otu_dm <- as.data.frame(as(otu_table(dm), "matrix"),check.names=FALSE);
+  tax_dm <- as.data.frame(as(tax_table(dm), "matrix"),check.names=FALSE);
   tax_dm[] <- lapply(tax_dm, as.character);#make sure characters in tax_dm;
   
   depth <- ncol(tax_dm)
@@ -810,10 +300,10 @@ PrepareCorrExpValues <- function(mbSetObj, meta, taxalvl, color, layoutOpt, comp
   mbSetObj$dataSet$selected.grps = dm_samples_cmf$sample_id
   mbSetObj$dataSet$comparison = grp.nms 
   mbSetObj$dataSet$meta = meta
-  cls = data.frame(dm_obj_cmf$data$class_data)
+  cls = data.frame(dm_obj_cmf$data$class_data,check.names=FALSE)
   cls = cls[!duplicated(cls$taxon_id),]
   cls = cls[,c(1,4)]
-  diff_table = data.frame(dm_obj_cmf$data$diff_table)
+  diff_table = data.frame(dm_obj_cmf$data$diff_table,check.names=FALSE)
   df = merge(diff_table, cls, by="taxon_id")
   df = df[which(df$tax_name != "Root"),]
   df = df[order(df$tax_name),]
@@ -880,11 +370,11 @@ PrepareBoxPlot <- function(mbSetObj, taxrank, variable){
   }
   
   nm_boxplot <- taxa_names(data_boxplot);
-  dat3t_boxplot <- as.data.frame(t(otu_table(data_boxplot)));
+  dat3t_boxplot <- as.data.frame(t(otu_table(data_boxplot)),check.names=FALSE);
   colnames(dat3t_boxplot) <- nm_boxplot; 
   
   #individual boxplot for features
-  box_data <- as.data.frame(dat3t_boxplot[which(rownames(dat3t_boxplot) %in% selSamples),]);
+  box_data <- as.data.frame(dat3t_boxplot[which(rownames(dat3t_boxplot) %in% selSamples),],check.names=FALSE);
   box_data$class <- claslbl_boxplot;
   mbSetObj$analSet$boxdatacor <- box_data;
   mbSetObj$analSet$var.typecor <- variable;
@@ -915,6 +405,8 @@ PrepareBoxPlot <- function(mbSetObj, taxrank, variable){
 #'format of the plot. By default it is set to "png".
 #'@param dpi Numeric, input the dots per inch. By default
 #'it is set to 72.
+#'@param interactive Boolean, if set to TRUE, saves the plot
+#'as an interactive html plot.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -922,7 +414,8 @@ PrepareBoxPlot <- function(mbSetObj, taxrank, variable){
 #'@import RColorBrewer
 #'@import viridis
 CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
-                              palette, viewOpt, analOpt, expFact, group, format="png", dpi=72, width=NA){
+                              palette, viewOpt, analOpt, expFact, group, 
+                              format="png", dpi=72, width=NA, interactive = FALSE){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -966,7 +459,7 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
   #transform data to relative abundances, then obtain full phyloseq obj of just core microbiota
   data.compositional <- transform_sample_counts(data,function(x) x / sum(x));
   data.core <- core(data.compositional, detection = detection, prevalence = preval);
-  core.nm <- data.frame(prevalence(data.compositional, detection = detection, sort = TRUE));
+  core.nm <- data.frame(prevalence(data.compositional, detection = detection, sort = TRUE),check.names=FALSE);
   colnames(core.nm)[1] <- "Prevelance";
   fileName <- "core_microbiome.csv";
   fast.write(core.nm, file=fileName);
@@ -1025,14 +518,30 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
     colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdBu"))(10));
   }
   
-  p <- plot_core(data.core, plot.type = "heatmap",colours = colors, prevalences = seq(.05, 1, .05), detections = 10^seq(log10(detection), log10(max(abundances(data.core))), length = 10)) + 
-    ylab(paste0("\n", taxrank)) + xlab("\nDetection Threshold (Relative Abundance (%))") + guides(fill = guide_legend(keywidth = 1.5, keyheight = 1)) + theme(axis.text=element_text(size=10), axis.title=element_text(size=11.5), legend.title=element_text(size=11));
+  p <- plot_core(data.core, plot.type = "heatmap", colours = colors, prevalences = seq(.05, 1, .05), 
+                 detections = 10^seq(log10(detection), log10(max(abundances(data.core))), length = 10)) + 
+    ylab(paste0("\n", taxrank)) + xlab("\nDetection Threshold (Relative Abundance (%))") + 
+    guides(fill = guide_legend(keywidth = 1.5, keyheight = 1)) + 
+    theme(axis.text=element_text(size=10), axis.title=element_text(size=11.5), legend.title=element_text(size=11));
   
   print(p);
   
   mbSetObj$analSet$core<-as.matrix(core.nm);
   mbSetObj$analSet$core.taxalvl<-taxrank;
   dev.off();
+  
+  if(interactive){
+    library(plotly)
+    library(htmlwidgets)
+    ax <- list(
+      zeroline = FALSE,
+      showline = FALSE,
+      showgrid = FALSE
+    )
+    p <- plotly::ggplotly(p)
+    p <- p %>% layout(xaxis = ax, yaxis = ax)
+    htmlwidgets::saveWidget(p, "core_interactive.html")
+  }
   
   return(.set.mbSetObj(mbSetObj));
 }
@@ -1100,10 +609,12 @@ abundances<-function(x, transform="identity") {
 plot_core<-function(x, prevalences=seq(.1, 1, 0.1), detections=20,
                     plot.type="lineplot", colours=NULL, # gray(seq(0, 1, length=5)),
                     min.prevalence=NULL, taxa.order=NULL, horizontal=FALSE) {
+  
   if (length(detections) == 1) {
     detections <- 10^seq(log10(0.001), log10(max(abundances(x),
                                                  na.rm=TRUE)), length=detections)
   }
+  
   if (plot.type == "lineplot") {
     # Calculate the core matrix (prevalences x abundance thresholds)
     coremat <- core_matrix(x, prevalences, detections)
@@ -1142,7 +653,7 @@ core_heatmap<-function(x, dets, cols, min.prev, taxa.order){
                  colMeans(prev > min.prev) > 0]
   }
   
-  df <- as.data.frame(prev)
+  df <- as.data.frame(prev,check.names=FALSE)
   df$ID <- rownames(prev)
   df <- data.table::melt(df, "ID");
   names(df) <- c("Taxa", "DetectionThreshold", "Prevalence")
@@ -1235,8 +746,11 @@ prevalence_nsamples <- function(x) {
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import reshape
-PlotOverallPieGraph<-function(mbSetObj, taxalvl, feat_cnt, calcmeth, toptaxapie, pietoptaxaopt){
+PlotOverallPieGraph<-function(mbSetObj, taxalvl, feat_cnt, calcmeth, 
+                              toptaxapie, pietoptaxaopt){
+  
   mbSetObj <- .get.mbSetObj(mbSetObj);
+  
   load_reshape();
   set.seed(28053448);
   
@@ -1252,7 +766,7 @@ PlotOverallPieGraph<-function(mbSetObj, taxalvl, feat_cnt, calcmeth, toptaxapie,
   
   #using reduce names
   data <- otu_table(datapie);
-  data <- data.frame(data);
+  data <- data.frame(data,check.names=FALSE);
   data_tax <- tax_table(datapie);
   
   #reshaping data
@@ -1272,9 +786,8 @@ PlotOverallPieGraph<-function(mbSetObj, taxalvl, feat_cnt, calcmeth, toptaxapie,
   taxa_nm[y] <- "Not_Assigned";
   colnames(data) <- taxa_nm[,1];
   nms <- colnames(data);
-  data <- data.frame(data %*% sapply(unique(nms),"==",nms));
+  data <- data.frame(data %*% sapply(unique(nms),"==",nms),check.names=FALSE);
   colnames(data)<- gsub("\\."," ",colnames(data));
-  
   
   if(pietoptaxaopt == "bottom"){
     if(calcmeth=="sum"){
@@ -1292,7 +805,7 @@ PlotOverallPieGraph<-function(mbSetObj, taxalvl, feat_cnt, calcmeth, toptaxapie,
     
     if(length(ind1)>0){
       colnames(data)[ind1] <- "Others";
-      data <- as.data.frame(do.call(cbind, by(t(data),INDICES=names(data),FUN=colSums)));
+      data <- as.data.frame(do.call(cbind, by(t(data),INDICES=names(data),FUN=colSums)),check.names=FALSE);
     }
     
     data$step <- factor(rownames(data));
@@ -1314,7 +827,7 @@ PlotOverallPieGraph<-function(mbSetObj, taxalvl, feat_cnt, calcmeth, toptaxapie,
     
     data <- data[, order_taxa];
     data <- data.frame("variable" = names(data),
-                       "value" = apply(data, 2, sum));
+                       "value" = apply(data, 2, sum),check.names=FALSE);
     row.names(data) <- NULL;
     data$variable <- as.character(data$variable);
     
@@ -1328,7 +841,7 @@ PlotOverallPieGraph<-function(mbSetObj, taxalvl, feat_cnt, calcmeth, toptaxapie,
         top_piedata <- head(piedata, n = toptaxapie);
         bottom_piedata <- tail(piedata, n = nrow(piedata) - toptaxapie);
         other_piedata <- data.frame("variable" = "Others", 
-                                    "value" = sum(bottom_piedata$value));
+                                    "value" = sum(bottom_piedata$value),check.names=FALSE);
         piedata <- rbind.data.frame(top_piedata, other_piedata);
       } else {
         if(nrow(piedata) == toptaxapie + 1){
@@ -1339,17 +852,20 @@ PlotOverallPieGraph<-function(mbSetObj, taxalvl, feat_cnt, calcmeth, toptaxapie,
           top_piedata <- head(piedata, n = toptaxapie);
           bottom_piedata <- tail(piedata, n = nrow(piedata) - toptaxapie);
           other_piedata <- data.frame("variable" = "Others", 
-                                      "value" = sum(bottom_piedata$value));
+                                      "value" = sum(bottom_piedata$value),check.names=FALSE);
           piedata <- rbind.data.frame(top_piedata, other_piedata, not_assigned_piedata);
         }
       }
     }
     piedata <- piedata[order(piedata$value, decreasing = TRUE), ];
   }
+  
   piedata_write$percentage <- round((piedata_write$value / sum(piedata_write$value) * 100), digits = 2)
   colnames(piedata_write) <- c("Taxa", "Abundance", "Percentage")
   fast.write(piedata_write, "piechart_abundances.csv");
+  
   piedata <<- piedata;
+  
   return(.set.mbSetObj(mbSetObj));
 }
 
@@ -1384,7 +900,7 @@ PlotGroupPieGraph <- function(mbSetObj, taxalvl, metadata, clslevel,
     data<-otu_table(data,taxa_are_rows =TRUE);
   }
   
-  smpl <- data.frame(sample_data(mbSetObj$dataSet$proc.phyobj));
+  smpl <- data.frame(sample_data(mbSetObj$dataSet$proc.phyobj),check.names=FALSE);
   smpl1 <- sample_data(subset(smpl,smpl[metadata]==clslevel));
   data <- prune_samples(sample_names(smpl1), data);
   data <- merge_phyloseq(data, smpl1);
@@ -1392,7 +908,7 @@ PlotGroupPieGraph <- function(mbSetObj, taxalvl, metadata, clslevel,
   datapie <<- merge_phyloseq(data, mbSetObj$dataSet$taxa_table);
   
   #using reduce names
-  data <- t(data.frame(otu_table(datapie)));
+  data <- t(data.frame(otu_table(datapie),check.names=FALSE));
   data_tax <- tax_table(datapie);
   
   if(taxalvl=="OTU"){
@@ -1407,7 +923,7 @@ PlotGroupPieGraph <- function(mbSetObj, taxalvl, metadata, clslevel,
   y <- which(is.na(taxa_nm)==TRUE);
   taxa_nm[y] <- "Not_Assigned";
   nms <- colnames(data) <- taxa_nm[,1];
-  data <- data.frame(data %*% sapply(unique(nms),"==",nms));
+  data <- data.frame(data %*% sapply(unique(nms),"==",nms),check.names=FALSE);
   colnames(data) <- gsub("\\."," ",colnames(data));
   
   if(pietoptaxaopt == "bottom"){
@@ -1426,7 +942,7 @@ PlotGroupPieGraph <- function(mbSetObj, taxalvl, metadata, clslevel,
     
     if(length(ind1)>0){
       colnames(data)[ind1] <- "Others";
-      data <- as.data.frame(do.call(cbind, by(t(data),INDICES=names(data),FUN=colSums)));
+      data <- as.data.frame(do.call(cbind, by(t(data),INDICES=names(data),FUN=colSums)),check.names=FALSE);
     }
     
     data$step <- factor(rownames(data));
@@ -1448,7 +964,7 @@ PlotGroupPieGraph <- function(mbSetObj, taxalvl, metadata, clslevel,
     
     data <- data[, order_taxa];
     data <- data.frame("variable" = names(data),
-                       "value" = apply(data, 2, sum));
+                       "value" = apply(data, 2, sum),check.names=FALSE);
     row.names(data) <- NULL;
     data$variable <- as.character(data$variable);
     
@@ -1462,7 +978,7 @@ PlotGroupPieGraph <- function(mbSetObj, taxalvl, metadata, clslevel,
         top_piedata <- head(piedata, n = toptaxapie);
         bottom_piedata <- tail(piedata, n = nrow(piedata) - toptaxapie);
         other_piedata <- data.frame("variable" = "Others", 
-                                    "value" = sum(bottom_piedata$value));
+                                    "value" = sum(bottom_piedata$value),check.names=FALSE);
         piedata <- rbind.data.frame(top_piedata, other_piedata);
       } else {
         if(nrow(piedata) == toptaxapie + 1){
@@ -1473,7 +989,7 @@ PlotGroupPieGraph <- function(mbSetObj, taxalvl, metadata, clslevel,
           top_piedata <- head(piedata, n = toptaxapie);
           bottom_piedata <- tail(piedata, n = nrow(piedata) - toptaxapie);
           other_piedata <- data.frame("variable" = "Others", 
-                                      "value" = sum(bottom_piedata$value));
+                                      "value" = sum(bottom_piedata$value),check.names=FALSE);
           piedata <- rbind.data.frame(top_piedata, other_piedata, not_assigned_piedata);
         }
       }
@@ -1524,9 +1040,9 @@ PlotSamplePieGraph<-function(mbSetObj, taxalvl, smplnm, feat_cnt, toptaxapie, pi
   
   #using reduce names
   data <- otu_table(datapie);
-  data <- data.frame(data);
+  data <- data.frame(data,check.names=FALSE);
   zero_row <- which(data[[1]] != 0);
-  data_tmp <- as.data.frame(data[zero_row, ])
+  data_tmp <- as.data.frame(data[zero_row, ],check.names=FALSE)
   row.names(data_tmp) <- row.names(data)[zero_row];
   names(data_tmp) <- smplnm;
   data <- data_tmp;
@@ -1550,7 +1066,7 @@ PlotSamplePieGraph<-function(mbSetObj, taxalvl, smplnm, feat_cnt, toptaxapie, pi
   taxa_nm[y] <- "Not_Assigned";
   colnames(data) <- taxa_nm[,1];
   nms <- colnames(data);
-  data <- data.frame(data %*% sapply(unique(nms),"==",nms));
+  data <- data.frame(data %*% sapply(unique(nms),"==",nms),check.names=FALSE);
   colnames(data) <- gsub("\\."," ",colnames(data));
   
   if(pietoptaxaopt == "bottom"){
@@ -1564,7 +1080,7 @@ PlotSamplePieGraph<-function(mbSetObj, taxalvl, smplnm, feat_cnt, toptaxapie, pi
     
     if(length(ind1)>0){
       colnames(data)[ind1] <- "Others";
-      data<-as.data.frame(t(rowsum(t(data),group = colnames(data))));
+      data<-as.data.frame(t(rowsum(t(data),group = colnames(data))),check.names=FALSE);
     }
     
     data$step <- factor(rownames(data));
@@ -1577,7 +1093,7 @@ PlotSamplePieGraph<-function(mbSetObj, taxalvl, smplnm, feat_cnt, toptaxapie, pi
     piedata <- piedata[ord.inx,];
   } else {
     piedata <- data.frame("variable" = colnames(data),
-                          "value" = t(data)[, 1])
+                          "value" = t(data)[, 1],check.names=FALSE)
     # order by abundance
     ord.inx <- order(piedata$value, decreasing = TRUE);
     piedata <- piedata[ord.inx,];
@@ -1589,7 +1105,7 @@ PlotSamplePieGraph<-function(mbSetObj, taxalvl, smplnm, feat_cnt, toptaxapie, pi
         top_piedata <- head(piedata, n = toptaxapie);
         bottom_piedata <- tail(piedata, n = nrow(piedata) - toptaxapie);
         other_piedata <- data.frame("variable" = "Others", 
-                                    "value" = sum(bottom_piedata$value));
+                                    "value" = sum(bottom_piedata$value),check.names=FALSE);
         piedata <- rbind.data.frame(top_piedata, other_piedata);
       } else {
         if(nrow(piedata) == toptaxapie + 1){
@@ -1600,7 +1116,7 @@ PlotSamplePieGraph<-function(mbSetObj, taxalvl, smplnm, feat_cnt, toptaxapie, pi
           top_piedata <- head(piedata, n = toptaxapie);
           bottom_piedata <- tail(piedata, n = nrow(piedata) - toptaxapie);
           other_piedata <- data.frame("variable" = "Others", 
-                                      "value" = sum(bottom_piedata$value));
+                                      "value" = sum(bottom_piedata$value),check.names=FALSE);
           piedata <- rbind.data.frame(top_piedata, other_piedata, not_assigned_piedata);
         }
       }
@@ -1641,7 +1157,7 @@ PlotDataPieFromPie<-function(mbSetObj, taxalvl, metadata, clslevel,
   subsettax_table <- tax_table(subset(datataxa,datataxa[,taxalvl]==high_taxa));
   data1 <- prune_taxa(taxa_names(subsettax_table),datapie);
   datapietaxatab <<- data_tax <- tax_table(data1);
-  datapietaxa <<- data <- t(data.frame(otu_table(data1)));
+  datapietaxa <<- data <- t(data.frame(otu_table(data1),check.names=FALSE));
   taxa_nm <- data.matrix(data_tax[,lowlvl_nm]);
   
   #converting NA values to unassigned
@@ -1649,7 +1165,7 @@ PlotDataPieFromPie<-function(mbSetObj, taxalvl, metadata, clslevel,
   taxa_nm[y] <- "Not_Assigned";
   colnames(data) <- taxa_nm[,1];
   nms <- colnames(data);
-  data <- data.frame(data %*% sapply(unique(nms),"==",nms));
+  data <- data.frame(data %*% sapply(unique(nms),"==",nms),check.names=FALSE);
   
   if(length(nms)==1){
     colnames(data)<-nms;
@@ -1696,7 +1212,7 @@ UpdatePieData<-function(mbSetObj, lowtaxa){
   data_tax <- datapietaxatab;
   high_taxa <- high_taxa;
   lowlvl_nm <<- lowtaxa;
-  taxa_nm <- as.data.frame(data_tax[,lowlvl_nm]);
+  taxa_nm <- as.data.frame(data_tax[,lowlvl_nm],check.names=FALSE);
   taxa_nm <- as.matrix(taxa_nm);
   y <- which(is.na(taxa_nm)==TRUE);
   
@@ -1705,7 +1221,7 @@ UpdatePieData<-function(mbSetObj, lowtaxa){
   colnames(data) <- taxa_nm[,1];
   nms <- colnames(data);
   data <- data %*% sapply(unique(nms),"==",nms);
-  data <- data.frame(data);
+  data <- data.frame(data,check.names=FALSE);
   
   if(length(nms)==1){
     colnames(data)<-nms;
@@ -1730,6 +1246,7 @@ UpdatePieData<-function(mbSetObj, lowtaxa){
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@param taxalvl Character, input the taxonomic level to perform
 #'classification. For instance, "Genus" to use the Genus level.
+#'@param pieName Character, input the name of the pie chart plot.
 #'@param format Character, input the preferred
 #'format of the plot. By default it is set to "png".
 #'@param dpi Numeric, input the dots per inch. By default
@@ -1763,10 +1280,12 @@ SavePiechartImg <- function(mbSetObj, taxalvl, pieName, format="png", dpi=72) {
     geom_text(aes(x=1.6,label = scales::percent(round(value,2))), check_overlap = T,size=3,position = position_stack(vjust = 0.5),color="grey48") +
     theme(legend.position="right",axis.text = element_blank(),axis.ticks = element_blank(),panel.grid  = element_blank(), plot.title = element_text(hjust=0.5, face="bold"),legend.text=element_text(color="grey48")) +
     labs(x="", y="",fill="");
+  
   print(box);
   mbSetObj$analSet$pie<-piedataimg;
   mbSetObj$analSet$pie.taxalvl<-taxalvl;
   dev.off();
+  
   return(.set.mbSetObj(mbSetObj))
 }
 
@@ -1855,15 +1374,25 @@ PlotPiechart <- function(mbSetObj, rel_perct, pieName, format="png", dpi=72) {
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import viridis
-PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName, metadata, taxrank, colors = "default", format="png", dpi=72){
-  
+PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName, metadata, 
+                        taxrank, colors = "default", format="png", dpi=72, interactive = FALSE){
+
   mbSetObj <- .get.mbSetObj(mbSetObj);  
   set.seed(13133);
   
-  if(data.src == "orig"){
-    data <- qs::qread("orig.phyobj");
+  dataName <- mbSetObj$dataSet$name;
+  module.type <- mbSetObj$module.type;
+  
+  if(module.type == "meta"){
+    data <- qs::qread("merged.data.raw.qs");
+    data <- subsetPhyloseqByDataset(mbSetObj, data);
+
   }else{
-    data <- mbSetObj$dataSet$proc.phyobj;
+    if(data.src == "orig"){
+      data <- readDataQs("orig.phyobj", module.type, dataName);
+    }else{
+      data <- mbSetObj$dataSet$proc.phyobj;
+    }
   }
   
   if(taxrank!="OTU"){
@@ -1891,7 +1420,7 @@ PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName, metadata, ta
   
   bargraphName = paste(bargraphName, ".", format, sep="");
   mbSetObj$imgSet$alpha <- bargraphName;  
-  Cairo::Cairo(file=bargraphName, width, height=450, type=format, bg="white", dpi=dpi);
+  
   box = plot_richness(data, color = metadata, measures = distName) + scale_x_discrete(limits=c(smplord));
   
   if(colors == "viridis"){
@@ -1907,12 +1436,29 @@ PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName, metadata, ta
   box <- box + geom_point(size=3, alpha=0.7);
   #getting scale for plot (using same for boxplot also)
   ylimits <<- layer_scales(box)$y$range$range;
-  print(box);
   
+  Cairo::Cairo(file=bargraphName, width, height=450, type=format, bg="white", dpi=dpi);
+
+  if(mbSetObj$module.type == "meta"){
+     box <- box + facet_grid(. ~ dataset, scales = "free", space = "free");
+  }
+  print(box);
   dev.off();
+  
   mbSetObj$analSet$alpha.meth <- distName;
   mbSetObj$analSet$alpha.metadata <- metadata;
   mbSetObj$analSet$alpha.taxalvl <- taxrank;
+  
+  if(interactive){
+    library(plotly)
+    library(htmlwidgets)
+    p <- plotly::ggplotly(box)
+    p[["x"]][["layout"]][["annotations"]][[1]][["y"]] <- -0.075 # Samples
+    p[["x"]][["layout"]][["annotations"]][[2]][["x"]] <- -0.06 # Alpha
+    p <- p %>% layout(margin = list(l = 20, r = 20, b = 20, t = 40))
+    htmlwidgets::saveWidget(p, "alpha_richness_interactive.html")
+  }
+  
   return(.set.mbSetObj(mbSetObj))
 }
 
@@ -2001,7 +1547,7 @@ PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
   colnames(data) <- taxa_nm[,1];
   nms <- colnames(data);
   data <- data %*% sapply(unique(nms),"==",nms);
-  data <- data.frame(data);
+  data <- data.frame(data,check.names=FALSE);
   data <- data[ , order(names(data))];
   indx <- which(colnames(data)=="ZZZ");
   colnames(data)[indx] <- "NA";
@@ -2017,12 +1563,12 @@ PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
     
     if(length(ind1)>0){
       colnames(data)[ind1] <- "Others";
-      data <- as.data.frame(t(rowsum(t(data),group = colnames(data))));
+      data <- as.data.frame(t(rowsum(t(data),group = colnames(data))),check.names=FALSE);
     }
     
     if(imgOpt=="barnorm"){
-      data <- as.data.frame(apply(data,1, function(x) x/sum(x)));
-      data <- as.data.frame(t(data));
+      data <- as.data.frame(apply(data,1, function(x) x/sum(x)),check.names=FALSE);
+      data <- as.data.frame(t(data),check.names=FALSE);
       yLbl <- "Relative Abundance";
     }
     
@@ -2035,8 +1581,8 @@ PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
     data <- data[,-1];
   } else {
     if(imgOpt=="barnorm"){
-      data <- as.data.frame(apply(data,1, function(x) x/sum(x)));
-      data <- as.data.frame(t(data));
+      data <- as.data.frame(apply(data,1, function(x) x/sum(x)),check.names=FALSE);
+      data <- as.data.frame(t(data),check.names=FALSE);
       yLbl <- "Relative Abundance";
     }
     
@@ -2059,7 +1605,7 @@ PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
         data <- head(data, n = toptaxa);
         bottom_data <- tail(data, n = nrow(data) - toptaxa);
         other_data <- data.frame("variable" = "Others", 
-                                 "value" = sum(bottom_data$value));
+                                 "value" = sum(bottom_data$value),check.names=FALSE);
         data <- rbind.data.frame(top_data, other_data);
       } else {
         if(nrow(data) == toptaxa + 1){
@@ -2070,7 +1616,7 @@ PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
           top_data <- head(data, n = toptaxa);
           bottom_data <- tail(data, n = nrow(data) - toptaxa);
           other_data <- data.frame("variable" = "Others", 
-                                   "value" = sum(bottom_data$value));
+                                   "value" = sum(bottom_data$value),check.names=FALSE);
           data <- rbind.data.frame(top_data, other_data, not_assigned_data);
         }
       }
@@ -2101,8 +1647,10 @@ PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
   }
   
   #sorting by descending
+  jsonName = paste(barplotName, ".json", sep="")
   barplotName = paste(barplotName, ".",format, sep="");
   mbSetObj$imgSet$stack<-barplotName;
+  
   
   Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
   box <- ggplot(data, aes(x=reorder(variable,value),y=value))+geom_bar(stat="identity",width=0.6,fill="steelblue")+theme_bw()+
@@ -2112,6 +1660,9 @@ PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
           panel.grid.major = element_blank(), panel.grid.minor = element_blank(),legend.position="none");
   print(box);
   dev.off();
+
+  save(box,file="plotly.rda");
+
   mbSetObj$analSet$stack<-data;
   mbSetObj$analSet$stack.taxalvl<-taxalvl;
   mbSetObj$analSet$plot<-"Stacked Bar";
@@ -2140,65 +1691,70 @@ PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
 #'@export
 #'@import ggplot2
 #'@import viridis
-PlotAlphaBoxData<-function(mbSetObj, boxplotName, distName, metadata, colors="default", format="png", dpi=72){
   
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  
-  load_viridis();
-  
-  set.seed(1313397);
-  data <- mbSetObj$analSet$alpha;
-  CLASS <- data[,metadata];
-  boxplotName = paste(boxplotName, ".", format, sep="");
-  mbSetObj$imgSet$alpha.box<-boxplotName;
-  
-  grp_size <- length(levels(CLASS))
-  
-  if(grp_size <= 2){
-    width <- 300
-  }else if(grp_size >= 3 & grp_size < 6){
-    width <- 400
-  }else{
-    width <- 500
+  PlotAlphaBoxData<-function(mbSetObj, boxplotName, distName, metadata, 
+                             colors="default", format="png", dpi=72){
+    mbSetObj <- .get.mbSetObj(mbSetObj);
+    load_viridis();
+    
+    set.seed(1313397);
+    data <- mbSetObj$analSet$alpha;
+    CLASS <- data[,metadata];
+    vals <- data[,"value"]
+    boxplotName = paste(boxplotName, ".", format, sep="");
+    mbSetObj$imgSet$alpha.box<-boxplotName;
+    
+    grp_size <- length(levels(CLASS))
+    
+    if(grp_size <= 2){
+      width <- 500;
+    }else if(grp_size >= 3 & grp_size < 6){
+      width <- 600;
+    }else{
+      width <- 700;
+    }
+    
+    if(colors %in% c("magma","plasma","inferno","viridis")){
+      box1 = ggplot(data, aes(CLASS, vals, fill = CLASS))
+    }else{
+      box1 = ggplot(data, aes(CLASS, vals, color = CLASS))
+    }
+    
+    box1 = box1 + stat_boxplot(geom ='errorbar', width=0.2) +
+      geom_boxplot(alpha=0.7, outlier.shape = NA,
+                   position = position_dodge(width = 0), width=0.3) +
+      geom_jitter(width = 0.1) + #reduce the width of jitter
+      stat_summary(fun.y=mean, #add mean point
+                   geom = "point",
+                   shape = 18,
+                   size = 4,
+                   color = "black") +
+      theme_bw() +
+      theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 11),
+            axis.text.y = element_text(size = 11),
+            legend.text = element_text(size = 11)) + #adjust titles
+      labs(title = "",
+           y= paste("Alpha-diversity Index:", as.character(data$variable[[1]]), sep = " "),
+           x="") + #remove x = CLASS, add title name, change y name
+      theme(axis.title.y = element_text(size=14)) + 
+      coord_cartesian(ylim = c(ylimits[1], ylimits[2]));
+    
+    if(colors == "viridis"){
+      box1 <- box1 + viridis::scale_fill_viridis(discrete = TRUE);
+    }else if(colors %in% c("magma","plasma","inferno")){
+      box1 <- box1 + viridis::scale_fill_viridis(option=colors, discrete=TRUE)
+    }
+    
+    Cairo::Cairo(file=boxplotName, width=width, height=400, type=format, bg="white", dpi=dpi);
+    if(mbSetObj$module.type == "meta"){
+      box1 <- box1 + facet_grid(. ~ dataset, scales = "free", space = "free");
+    }
+    print(box1);
+    dev.off();
+    
+    return(.set.mbSetObj(mbSetObj))
   }
   
-  Cairo::Cairo(file=boxplotName, width, height=400, type=format, bg="white", dpi=dpi);
-  
-  if(colors %in% c("magma","plasma","inferno","viridis")){
-    box1 = ggplot(data, aes(data[,metadata], data$value, fill = CLASS))
-  }else{
-    box1 = ggplot(data, aes(data[,metadata], data$value, color = CLASS))
-  }
-  
-  box1 = box1 + stat_boxplot(geom ='errorbar', width=0.2) +
-    geom_boxplot(alpha=0.7, outlier.shape = NA,
-                 position = position_dodge(width = 0), width=0.3) +
-    geom_jitter(width = 0.1) + #reduce the width of jitter
-    stat_summary(fun.y=mean, #add mean point
-                 geom = "point",
-                 shape = 18,
-                 size = 4,
-                 color = "black") +
-    theme_bw() +
-    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 11),
-          axis.text.y = element_text(size = 11),
-          legend.text = element_text(size = 11)) + #adjust titles
-    labs(title = "",
-         y= paste("Alpha-diversity Index:", as.character(data$variable[[1]]), sep = " "),
-         x="") + #remove x = CLASS, add title name, change y name
-    theme(axis.title.y = element_text(size=14)) + 
-    coord_cartesian(ylim = c(ylimits[1], ylimits[2]));
-  
-  if(colors == "viridis"){
-    box1 = box1 + viridis::scale_fill_viridis(discrete = TRUE);
-  }else if(colors %in% c("magma","plasma","inferno")){
-    box1 <- box1 + viridis::scale_fill_viridis(option=colors, discrete=TRUE)
-  }
-  
-  print(box1);
-  dev.off();
-  return(.set.mbSetObj(mbSetObj))
-}
 
 ######################################
 ###########Beta-diversity#############
@@ -2235,134 +1791,247 @@ PlotAlphaBoxData<-function(mbSetObj, boxplotName, distName, metadata, colors="de
 #'@param custom_col Set to "none" to use the default color palette, "viridis" to use the 
 #'default viridis color palette, "plasma" to use the plasma viridis color palette and
 #'"magma" to use the magma color palette.
+#'@param interactive Boolean, if set to TRUE, saves the plot
+#'as an interactive html plot.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import data.table
 #'@import ape
-PlotBetaDiversity<-function(mbSetObj, plotNm, ordmeth, distName, colopt, metadata, 
-                            showlabel, taxrank, taxa, alphaopt, ellopt, format="png", dpi=72,
-                            custom_col = "none"){
-  
+
+PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, metadata, 
+                                 showlabel, taxrank, taxa, alphaopt, ellopt, comp.method, format="png", dpi=72,
+                                 custom_col = "none", interactive = FALSE){
+  combined <- F;
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
+  module.type <- mbSetObj$module.type;
   load_datatable();
   load_viridis();
   
   set.seed(13134);
-  metadata <- metadata;
   
-  #using normalized data
-  if(taxrank=="OTU"){
-    taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
-    data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj, taxa_table);
+  if(module.type == "meta" && !combined){
+    mdata.all <- mbSetObj$mdata.all;
+    sel.nms <- names(mdata.all)[mdata.all==1];
+    dataNames <- sel.nms;
   }else{
-    taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
-    data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj, taxa_table);
-    #merging at taxonomy levels
-    data <- fast_tax_glom_mem(data,taxrank);
+    dataNames <- mbSetObj$dataSet$name
+  }
+  ord.list <- list();
+  for(i in 1:length(dataNames)){
+    dataName <- dataNames[i];
+    if(module.type == "meta"){
+      mbSetObj$dataSet <- readDataset(dataName);
+    }
+    if(module.type == "meta" && combined){
+      proc.phyobj <- qs::qread("merged.data.raw.qs");
+      norm.phyobj <- qs::qread("merged.data.qs");
+      proc.phyobj <- subsetPhyloseqByDataset(mbSetObj, proc.phyobj);
+      norm.phyobj <- subsetPhyloseqByDataset(mbSetObj, norm.phyobj);
+      
+    }else{
+      proc.phyobj <- mbSetObj$dataSet$proc.phyobj;
+      norm.phyobj <- mbSetObj$dataSet$norm.phyobj;
+    }    
+    #using normalized data
+    
+    phyloseq_objs <- readDataQs("phyloseq_objs.qs",mbSetObj$module.type,dataName)
+    data <- phyloseq_objs$merged_obj[[taxrank]]
     if(is.null(data)){
       AddErrMsg("Errors in projecting to the selected taxanomy level!");
       return(0);
     }
-  }
-  
-  if(colopt=="taxa"){
-    if(taxrank=="OTU"){
-      data1 <- as.matrix(otu_table(data));
-      feat_data <- as.numeric(data1[taxa,]);
-    }else{
-      nm <- as.character(tax_table(data)[,taxrank]);
-      if(sum(is.na(nm))/length(nm) > 0.7){
-        AddErrMsg("More than 70% values are missing at this taxa!");
-        return(0);
+    
+    if(colopt=="taxa"){
+      if(taxrank=="OTU"){
+        data1 <- as.matrix(otu_table(data));
+        feat_data <- as.numeric(data1[taxa,]);
+      }else{
+        nm <- as.character(tax_table(data)[,taxrank]);
+        if(sum(is.na(nm))/length(nm) > 0.7){
+          AddErrMsg("More than 70% values are missing at this taxa!");
+          return(0);
+        }
+        #converting NA values to unassigned
+        nm[is.na(nm)] <- "Not_Assigned";
+        data1 <- as.matrix(otu_table(data));
+        rownames(data1) <- nm;
+        #all NA club together
+        data1 <- as.matrix(t(sapply(by(data1, rownames(data1), colSums), identity)));
+        feat_data <- data1[taxa,];
       }
-      #converting NA values to unassigned
-      nm[is.na(nm)] <- "Not_Assigned";
-      data1 <- as.matrix(otu_table(data));
-      rownames(data1) <- nm;
-      #all NA club together
-      data1 <- as.matrix(t(sapply(by(data1, rownames(data1), colSums), identity)));
-      feat_data <- data1[taxa,];
+      sample_data(data)$taxa <- feat_data;
+      indx <- which(colnames(sample_data(data))=="taxa");
+      colnames(sample_data(data))[indx] <- taxa;
+      taxa1 <- colnames(sample_data(data))[indx];
+      taxaorig <- taxa;
+      #if the taxa names are numeric then X is appending to column name
+      
+      if(!is.na(as.numeric(taxa))=="TRUE"){
+        taxa <- paste("X",taxa, sep = "", collapse = NULL);
+      }
+    }else if(colopt=="alphadiv") {
+      data1 <- proc.phyobj;
+      box <- plot_richness(data1, measures = alphaopt);
+      alphaboxdata <- box$data;
+      sam_nm <- sample_names(data);
+      alphaboxdata <- alphaboxdata[alphaboxdata$samples %in% sam_nm,];
+      alphaval <- alphaboxdata$value;
+      sample_data(data)$alphaopt <- alphaval;
+      indx <- which(colnames(sample_data(data))=="alphaopt");
+      colnames(sample_data(data))[indx] <- alphaopt;
+    }else if(colopt=="continuous") {
+      require("MMUPHin");
+      require("vegan");
+      
+      data <- proc.phyobj;
+      #sub_sam_data <- sam_data[which(sam_data[,metadata] == meta.grp), ]
+      #sub_data <- data@otu_table[, rownames(sub_sam_data)];
+      sub_sam_data <- sample_data(data); 
+      
+      sub_data <- as.matrix(otu_table(data)); #data@otu_table[, rownames(sub_sam_data)];
+      sub_data <- apply(sub_data, 2, function(x) x / sum(x))
+      dist.data <- vegdist(t(sub_data));
+      
+      fit_continuous <- continuous_discover(feature_abd = sub_data,
+                                            batch = "dataset",
+                                            data = sub_sam_data,
+                                            control = list(var_perc_cutoff = 0.5,
+                                                           verbose = FALSE));
+      
+      loading <- data.frame(feature = rownames(fit_continuous$consensus_loadings),
+                            loading1 = fit_continuous$consensus_loadings[, 1]);
+      sample_data(data)$loading <- fit_continuous$consensus_scores[, 1];
+      oldDF <- as(sample_data(data), "data.frame");
+      newDF <- oldDF[oldDF$dataset %in% dataName, ];
+      sample_data(data) <- sample_data(newDF);
+      
+    }else{
+      data<-data;
     }
-    sample_data(data)$taxa <- feat_data;
-    indx <- which(colnames(sample_data(data))=="taxa");
-    colnames(sample_data(data))[indx] <- taxa;
-    taxa1 <- colnames(sample_data(data))[indx];
-    taxaorig <- taxa;
-    #if the taxa names are numeric then X is appending to column name
+    if(distName=="wunifrac"){
+      
+      load_ape();
+      pg_tree <- qs::qread("tree.qs");
+      pg_tb <- tax_table(data);
+      pg_ot <- otu_table(data);
+      pg_sd <- sample_data(data);
+      pg_tree <- prune_taxa(taxa_names(pg_ot), pg_tree);
+      data <- merge_phyloseq(pg_tb, pg_ot, pg_sd, pg_tree);
+      
+      # check if pg_tree is null
+      if(is.null(data@phy_tree)){
+        AddErrMsg("Tree tip labels do not match feature names in the OTU/taxonomic tables!");
+        return(0)
+      }
+      
+      qs::qsave(data, "data_unifra.qs");
+      ord <- ordinate(data,method = ordmeth,"unifrac",weighted=TRUE);
+      
+    } else if (distName=="unifrac") {
+      
+      load_ape();      
+      pg_tree <- qs::qread("tree.qs");
+      pg_tb <- tax_table(data);
+      pg_ot <- otu_table(data);
+      pg_sd <- sample_data(data);
+      pg_tree <- prune_taxa(taxa_names(pg_ot), pg_tree);
+      data <- merge_phyloseq(pg_tb, pg_ot, pg_sd, pg_tree);
+      
+      # check if pg_tree is null
+      if(is.null(data@phy_tree)){
+        AddErrMsg("Tree tip labels do not match feature names in the OTU/taxonomic tables!");
+        return(0)
+      }
+      
+      qs::qsave(data, "data_unifra.qs");
+      ord <- ordinate(data, method = ordmeth,"unifrac");
+    }else{
+      ord <- ordinate(data, method = ordmeth,distName);
+    }
+
+      if(ordmeth == "NMDS"){
+        ord$vectors <- ord$points;
+        colnames(ord$vectors) <- c("Axis.1", "Axis.2")
+      }
+
+    if(colopt == "continuous"){
+      ord$vectors <- as.data.frame(ord$vectors);
+      ord$vectors <- cbind(sample_data(data)$loading, ord$vectors);
+      colnames(ord$vectors)[1] <- "loading"
+    }else if(colopt == "alphadiv" && module.type == "meta"){
+      ord$vectors <- as.data.frame(ord$vectors);
+      
+      ord$vectors <- cbind(sample_data(data)[,alphaopt], ord$vectors);
+      colnames(ord$vectors)[1] <- alphaopt
+      
+    }
+    .set.mbSetObj(mbSetObj);
+    PerformCategoryComp(mbSetObj, taxrank, comp.method,distName, metadata);
+    mbSetObj <- .get.mbSetObj(mbSetObj);
+    ord$stat.info <- mbSetObj$analSet$stat.info;
     
-    if(!is.na(as.numeric(taxa))=="TRUE"){
-      taxa <- paste("X",taxa, sep = "", collapse = NULL);
-    }
-  }else if(colopt=="alphadiv") {
-    data1 <- mbSetObj$dataSet$proc.phyobj;
-    box <- plot_richness(data1, measures = alphaopt);
-    alphaboxdata <- box$data;
-    sam_nm <- sample_names(data);
-    alphaboxdata <- alphaboxdata[alphaboxdata$samples %in% sam_nm,];
-    alphaval <- alphaboxdata$value;
-    sample_data(data)$alphaopt <- alphaval;
-    indx <- which(colnames(sample_data(data))=="alphaopt");
-    colnames(sample_data(data))[indx] <- alphaopt;
-  }else{
-    data<-data;
+    ord.list[[dataName]] <- ord;
+    
   }
-  
-  if(distName=="wunifrac"){
-    
-    load_ape();
-    pg_tree <- qs::qread("tree.qs");
-    pg_tb <- tax_table(data);
-    pg_ot <- otu_table(data);
-    pg_sd <- sample_data(data);
-    pg_tree <- prune_taxa(taxa_names(pg_ot), pg_tree);
-    data <- merge_phyloseq(pg_tb, pg_ot, pg_sd, pg_tree);
-    
-    # check if pg_tree is null
-    if(is.null(data@phy_tree)){
-      AddErrMsg("Tree tip labels do not match feature names in the OTU/taxonomic tables!");
-      return(0)
-    }
-    
-    qs::qsave(data, "data_unifra.qs");
-    ord <- ordinate(data,method = ordmeth,"unifrac",weighted=TRUE);
-    
-  } else if (distName=="unifrac") {
-    
-    load_ape();      
-    pg_tree <- qs::qread("tree.qs");
-    pg_tb <- tax_table(data);
-    pg_ot <- otu_table(data);
-    pg_sd <- sample_data(data);
-    pg_tree <- prune_taxa(taxa_names(pg_ot), pg_tree);
-    data <- merge_phyloseq(pg_tb, pg_ot, pg_sd, pg_tree);
-    
-    # check if pg_tree is null
-    if(is.null(data@phy_tree)){
-      AddErrMsg("Tree tip labels do not match feature names in the OTU/taxonomic tables!");
-      return(0)
-    }
-    
-    qs::qsave(data, "data_unifra.qs");
-    ord<-ordinate(data,method = ordmeth,"unifrac");
-    
-  }else{
-    ord<-ordinate(data,method = ordmeth,distName);
-  }
-  
   plotNm = paste(plotNm, ".", format, sep="");
   mbSetObj$imgSet$beta2d<-plotNm;
   
-  Cairo::Cairo(file=plotNm, width=720, height=500, type=format, bg="white",dpi=dpi);
-  
-  if(colopt=="taxa"){
-    box = plot_ordination(data, ord, color=taxa) + labs(aesthetic=taxaorig) + scale_colour_gradient(low="green", high="red");
-  }else if(colopt=="alphadiv") {
-    box = plot_ordination(data, ord, color=alphaopt)+ scale_colour_gradient(low="green", high="red");
+  if(module.type == "meta" && !combined){
+    dat.num <- length(ord.list);
+    if(dat.num > 3){
+      colNum=2;
+    }else{
+      colNum=1;
+    }
+    require(plyr);
+    merged.data <- qs::qread("merged.data.qs");
+    merged.data <- subsetPhyloseqByDataset(mbSetObj, merged.data);
+    sam_data <- sample_data(merged.data);
+    pdataframe = ldply(ord.list, function(x){
+      df = sam_data;
+      return(x$vectors)
+    })
+    pdataframe <- cbind(sam_data, pdataframe);
+    res <- lapply(ord.list, function(x){ return(x$stat.info)})
+    stats <- unlist(res);
+    for(i in 1:length(stats)){
+      stats[i] <- paste0(dataNames[i], ": ", stats[i]);
+    }
+    names(stats) <- dataNames;
+    
+    if(colopt =="continuous") {
+      box <- ggplot(pdataframe, aes(Axis.1, Axis.2, color=loading)) + scale_colour_gradient2(low="green",mid="black", high="red");
+    }else if(colopt =="alphadiv"){
+      box <- ggplot(pdataframe, aes(Axis.1, Axis.2, color=pdataframe[,alphaopt])) + scale_colour_gradient2(low="green", high="red") + labs(color = alphaopt);
+    }else{
+      box <- ggplot(pdataframe, aes(Axis.1, Axis.2, color=study_condition, fill=study_condition));
+    }
+    box <- box + geom_point(size=4) +
+      facet_wrap(~dataset, scales="free", ncol= colNum, labeller = labeller(dataset = stats));
+    if(colNum == 1){
+      height.multiplier <- dat.num;
+      width <- 720;
+    }else{
+      height.multiplier <- ceiling(dat.num/2)
+      width <- 1220;
+    }
+    height <- 100 + 400 * height.multiplier;
+    
   }else{
-    box = plot_ordination(data, ord, color=metadata);
+    sam_data <- as.data.frame(sample_data(data),check.names=FALSE);
+    if(colopt=="taxa"){
+      box = plot_ordination(data, ord, color=taxa) + labs(aesthetic=taxaorig) + scale_colour_gradient(low="green", high="red");
+    }else if(colopt=="alphadiv") {
+      box = plot_ordination(data, ord, color=alphaopt)+ scale_colour_gradient(low="green", high="red");
+    }else if(colopt=="continuous") {
+      box = plot_ordination(data, ord, color="loading")+ scale_colour_gradient2(low="green", high="red");
+    }else{
+      box = plot_ordination(data, ord, color=metadata);
+    }  
+    height <- 500;
+    width <- 720;
   }
   
   box$layers <- box$layers[-1];
@@ -2374,14 +2043,13 @@ PlotBetaDiversity<-function(mbSetObj, plotNm, ordmeth, distName, colopt, metadat
     box=box+geom_point(size=4, alpha=0.8) + theme_bw();
   }else{
     showlabel <<- showlabel;
-    bx_data <<- data.frame(box$data);
+    bx_data <<- data.frame(box$data,check.names=FALSE);
     box = box + geom_text(aes(label=bx_data[ ,showlabel]), hjust=0.5, vjust=2, size=3, fontface="bold");
     box = box + geom_point(size=4, alpha=0.6) + theme_bw();
   }
   
   #used for area color for ellipse
   if(colopt=="expfac"){
-    sam_data <- as.data.frame(sample_data(data));
     clsLbl <- quo(sam_data[[metadata]]);
     
     if (ellopt=="yes"){
@@ -2397,6 +2065,9 @@ PlotBetaDiversity<-function(mbSetObj, plotNm, ordmeth, distName, colopt, metadat
     box = box + viridis::scale_color_viridis(option="magma", discrete = TRUE) + viridis::scale_fill_viridis(option="magma", discrete = TRUE)
   }
   
+  box = box + theme(strip.text.x = element_text(size = 12));
+
+  Cairo::Cairo(file=plotNm, width=width, height=height, type=format, bg="white",dpi=dpi);
   print(box);
   dev.off();
   
@@ -2410,7 +2081,6 @@ PlotBetaDiversity<-function(mbSetObj, plotNm, ordmeth, distName, colopt, metadat
   if(ordmeth == "NMDS"){
     mbSetObj$analSet$beta.stress <- paste("[NMDS] Stress =", signif(ord$stress, 5));
   }
-  
   return(.set.mbSetObj(mbSetObj))
 }
 
@@ -2425,22 +2095,33 @@ PlotBetaDiversity<-function(mbSetObj, plotNm, ordmeth, distName, colopt, metadat
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotFunAnotSummary<-function(mbSetObj, imgName, format="png", dpi=72){
+PlotFunAnotSummary<-function(mbSetObj, imgName, format="png",funanno, dpi=72){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   set.seed(280561499);
+   
+  if(funanno=="gg12"){
+   func.file = "func.pred.gg12"
+  }else if(funanno=="gg13"){
+    func.file = "func.pred.gg13"
+  }else if(funanno =="tax4fun2"){
+ func.file = "func.pred.tax4fun2"
+ }else{
+ func.file = "func.pred.tax4fun"
+
+}
   
-  if(is.null(mbSetObj$analSet$func.pred)){
-    result <- qs::qread("func.pred");
+  if(is.null(mbSetObj$analSet[[func.file]])){
+    result <- qs::qread(func.file);
   }else{
-    result <- mbSetObj$analSet$func.pred;
-    qs::qsave(mbSetObj$analSet$func.pred, file="func.pred");
-    mbSetObj$analSet$func.pred <- NULL;
+    result <- mbSetObj$analSet[[func.file]];
+    qs::qsave(mbSetObj$analSet[[func.file]], file=func.file);
+    mbSetObj$analSet[[func.file]] <- NULL;
   }
-  
+ 
   imgName = paste(imgName, ".",format, sep="");
-  mbSetObj$imgSet$func.pred <- imgName;
+  mbSetObj$imgSet[[func.file]] <- imgName;
   Cairo::Cairo(file=imgName, width=900, height=480, type=format, bg="white",dpi=dpi);
   box <- ggplot(stack(log(result)), aes(x = factor(ind, levels = names(result)), y=values)) + labs(x=NULL, y="log (KO Counts)") + geom_boxplot() + theme(axis.text.x = element_text(angle = 90, hjust = 1))
   print(box);
@@ -2482,24 +2163,33 @@ PlotFunAnotSummary<-function(mbSetObj, imgName, format="png", dpi=72){
 PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadata,
                                 feat_cnt, colpalopt, calcmeth, toptaxa, abunTopTaxaOpt, 
                                 appendnm=FALSE, format="png", dpi=72){
-  
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
   load_reshape();
   load_viridis();
   
-  #using filtered data
-  data <- mbSetObj$dataSet$filt.data;
-  if("matrix" %in% class(mbSetObj$dataSet$filt.data)){
-    data <- otu_table(data,taxa_are_rows =TRUE);
+  if(mbSetObj$module.type == "meta"){
+    if(viewOpt=="smpl_grp"){
+      AddErrMsg("Taxa area can not be plotted for merged samples.");
+      return(0);
+    }
+    data1 <- qs::qread("merged.data.raw.qs");
+    data1 <- subsetPhyloseqByDataset(mbSetObj, data1);
+
+    sample_table <- sample_data(data1);
+    data <- as.data.frame(t(otu_table(data1)),check.names=FALSE);
+  }else{
+    #using filtered data
+    data <- mbSetObj$dataSet$filt.data;
+    if("matrix" %in% class(mbSetObj$dataSet$filt.data)){
+      data <- otu_table(data,taxa_are_rows =TRUE);
+    }
+    sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
+    data1 <- merge_phyloseq(data, tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
   }
   
-  sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
-  
-  data1 <- merge_phyloseq(data, tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
-  
   if(viewOpt=="smpl_grp"){
-    data <- as.data.frame(t(otu_table(data1)));
+    data <- as.data.frame(t(otu_table(data1)),check.names=FALSE);
     data <- cbind(data,variable=data1@sam_data[[metadata]]);
     data <- aggregate(. ~variable,data,sum);
     gp_nm <- rownames(data)<-data[,1];
@@ -2508,7 +2198,7 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
     clsLbl <- sort(unique(factor(data1@sam_data[[metadata]])));
     colvec <- NULL;
   }else {
-    data <- data.frame(otu_table(data1));
+    data <- data.frame(otu_table(data1),check.names=FALSE);
     
     # reorder data based on groups
     sam <- sample_data(data1);
@@ -2576,7 +2266,7 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
   nms <- colnames(data);
   data <- as.matrix(data);
   data <- data %*% sapply(unique(nms),"==",nms);
-  data <- data.frame(data);
+  data <- data.frame(data,check.names=FALSE);
   data <- data[ ,order(names(data))];
   indx <- which(colnames(data)=="ZZZ");
   colnames(data)[indx] <- "NA";
@@ -2605,7 +2295,7 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
   
   if(length(ind1)>0){
     colnames(data)[ind1] <- "Others";
-    data<- as.data.frame(do.call(cbind, by(t(data),INDICES=names(data),FUN=colSums)));
+    data<- as.data.frame(do.call(cbind, by(t(data),INDICES=names(data),FUN=colSums)),check.names=FALSE);
   }
   
   feat_no<-ncol(data);
@@ -2641,9 +2331,10 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
   data$step <- factor(rownames(data), levels = rownames(data));
   data <- melt(data,id=c('step', 'facetOpt'));
   data$step <- as.numeric(data$step);
+  # data$sample <- data$step;
   data <- data[order(data[,3]),];
   data <- data[,-1];
-  
+
   if(viewOpt=="smpl_grp"){
     data$step <- rep(1:length(gp_nm),feat_no);
     lbl <- gp_nm;
@@ -2657,6 +2348,9 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
   data$variable <- factor(data$variable,
                           levels = var_level) # change the factor level of taxa
   levels(data$variable) <- sub("^X", "", levels(data$variable)) 
+  
+  
+  data$facetOpt <- factor(data$facetOpt,levels=(unique(data$facetOpt)) )
   
   #color schema
   color_var <- levels(factor(data$variable));
@@ -2674,10 +2368,12 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
     x.colors <- rep(custom_col42,length.out=x);
   }
   
+  jsonName = paste(barplotName, ".json", sep="");
   barplotName = paste(barplotName, ".",format, sep="");
   mbSetObj$imgSet$stack <- barplotName;
   
   Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
+  
   box <- ggplot(data,aes(x=step,y=value)) + theme_bw() +
     theme(axis.text.x = element_text(angle = 90, hjust =1,vjust=0.5)) +
     geom_area(aes(fill=variable), position='fill') +
@@ -2710,9 +2406,15 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
   if(metadata == "newnewnew"){
     box <- box + theme(strip.text.x = element_blank())
   }
+  if(mbSetObj$module.type == "meta"){
+    #box <- box + facet_grid(. ~ dataset  , scales = "free", space = "free");
+  }
   
   print(box);
   dev.off();
+  # for plotly
+  save(box,file="plotly.rda");
+  
   mbSetObj$analSet$stack<-data;
   mbSetObj$analSet$stack.taxalvl<-taxalvl;
   mbSetObj$analSet$plot<-"Stacked Area";
@@ -2720,6 +2422,7 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
   return(.set.mbSetObj(mbSetObj));
   
 }
+
 #'Function to plot bar charts for alpha diversity
 #'@description This functions plots bar charts of different taxonomic levels
 #'for alpha diversity.
@@ -2748,6 +2451,8 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
 #'format of the plot. By default it is set to "png".
 #'@param dpi Numeric, input the dots per inch. By default
 #'it is set to 72.
+#'@param interactive Boolean, if TRUE, will save an interactive
+#'version of the Stacked Bar plot using plotly.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
@@ -2755,26 +2460,29 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
 #'@import reshape
 #'@import ggplot2
 #'@import viridis
+
 PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, imgOpt, 
                               feat_cnt, colpalopt, calcmeth, toptaxa, abunTopTaxaOpt, 
-                              appendnm, format="png", dpi=72){
-  
+                              appendnm, format="png", dpi=72, interactive = FALSE){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
   load_reshape();
   load_ggplot();
   load_viridis();
-  
-  data <- mbSetObj$dataSet$filt.data;
-  
-  if("matrix" %in% class(mbSetObj$dataSet$filt.data)){
-    data <- otu_table(data, taxa_are_rows =TRUE);
+  if(mbSetObj$module.type == "meta"){
+    data1 <- qs::qread("merged.data.raw.qs");
+    #data1 <- subsetPhyloseqByDataset(mbSetObj, data1);
+    sample_table <- sample_data(data1);
+    data <- as.data.frame(otu_table(data1),check.names=FALSE);
+    #facet2="dataset";
+  }else{
+    data <- mbSetObj$dataSet$filt.data;
+    if("matrix" %in% class(mbSetObj$dataSet$filt.data)){
+      data <- otu_table(data, taxa_are_rows =TRUE);
+    }
+    sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
+    data1 <- merge_phyloseq(data, tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
+    data <- as.data.frame(otu_table(data1),check.names=FALSE);
   }
-  
-  sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
-  data1 <- merge_phyloseq(data, tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
-  data <- as.data.frame(otu_table(data1));
-  
   # reorder data based on groups
   sam <- sample_data(data1);
   
@@ -2783,15 +2491,9 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
     facet <- "newnewnew";
   }
   
-  sample_data(data1) <- sam
-  
-  metalp <- as(sample_data(data1), "data.frame") #extract metadata table
-  
-  smpl_nm <- sample_names(data1);
   clsLbl <- factor(sam[[facet]]);
-  
   if(length(clsLbl)==0){
-    AddErrMsg("Invalid class label selected!")
+    AddErrMsg("Invalid class label! Ensure there are no special characters (i.e. punctuation marks) in your group names!")
     return(0)
   }
   
@@ -2800,15 +2502,19 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
     return(0);
   }
   
+  sample_data(data1) <- sam;
+  
+  metalp <- as(sample_data(data1), "data.frame") #extract metadata table
+  smpl_nm <- sample_names(data1);
+  
   ord.inx <- order(clsLbl);
   smpl_nm <- smpl_nm[ord.inx];
-  
   clsLbl <- clsLbl[ord.inx];
   colvec <- as.numeric(clsLbl)+1;
   data <- t(data[,ord.inx]);
   
   data_tax <- tax_table(data1);
-  
+
   if(taxalvl=="OTU"){
     taxa_nm <- as.matrix(colnames(data));
     rownames(taxa_nm) <- colnames(data);
@@ -2816,9 +2522,9 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
   }else{
     
     taxa_nm <- as.character(data_tax[,taxalvl]);
+    y <- which(is.na(taxa_nm)==TRUE | taxa_nm == "");
     
-    y <- which(is.na(taxa_nm)==TRUE);
-    #converting NA values to unassigned
+    #converting NA and empty values to unassigned
     taxa_nm[y] <- "Not_Assigned";
     
     if(appendnm=="T"){
@@ -2826,8 +2532,8 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
       hg_nmindx <- which(all_nm==taxalvl)-1;
       
       if(hg_nmindx!=0){
-        nma <- as.character(tax_table(data1)[,hg_nmindx]);
-        y1 <- which(is.na(nma)==TRUE);
+        nma <- as.character(tax_table(data1)[,hg_nmindx]);    
+        y1 <- which(is.na(nma)==TRUE | nma == "");
         nma[y1] <- "Not_Assigned";
         nm <- paste0(nma,"_",taxa_nm);
         ind <- which(nm=="Not_Assigned_Not_Assigned");
@@ -2844,19 +2550,21 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
   if(appendnm=="T"){
     y <- which(grepl("Not_Assigned", taxa_nm))
   }else{
-    y <- which(is.na(taxa_nm)==TRUE);
+    y <- which(is.na(taxa_nm)==TRUE | taxa_nm== "");
   }
-  
   #converting NA values to unassigned; before order it to last position using ZZZ as its name
   taxa_nm[y] <- "ZZZ";
   colnames(data) <- taxa_nm[,1];
   nms <- colnames(data);
   data <- as.matrix(data);
   data <- data %*% sapply(unique(nms),"==",nms);
-  data <- data.frame(data);
+  data <- data.frame(data,check.names=FALSE);
+  
   data <- data[ , order(names(data))];
   indx <- which(colnames(data)=="ZZZ");
+  
   colnames(data)[indx] <- "NA";
+  
   
   if(abunTopTaxaOpt == "top"){
     if(calcmeth=="sum"){
@@ -2882,19 +2590,19 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
   
   if(length(ind1)>0){
     colnames(data)[ind1] <- "Others";
-    data <- as.data.frame(do.call(cbind, by(t(data),INDICES=names(data),FUN=colSums)));
+    data <- as.data.frame(do.call(cbind, by(t(data),INDICES=names(data),FUN=colSums)),check.names=FALSE);
   }
   
   yLbl <- "Actual Abundance";
   
   if(imgOpt=="barnorm"){
-    data <- as.data.frame(apply(data,1, function(x) x/sum(x)));
-    data<-as.data.frame(t(data));
+    data <- as.data.frame(apply(data,1, function(x) x/sum(x)),check.names=FALSE);
+    data<-as.data.frame(t(data),check.names=FALSE);
     yLbl <- "Relative Abundance";
   }
   
   feat_no <- ncol(data);
-  h <- 550;
+  h <- 630;
   if(feat_no < 10){
     h <- h;
   } else if (feat_no < 20){
@@ -2902,24 +2610,13 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
   } else if (feat_no < 50){
     h <- h+200;
   } else if (feat_no < 100){
-    h <- h+400;
-  } else if (feat_no > 100){
-    h <- h+500;
+    h <- h+300;
+  } else {
+    h <- 1100;
   }
-  
-  # width calculation
-  a <- nsamples(data1);
-  min.w <- 540;
-  if(length(a)<50){
-    w <- a*35;
-  }else{
-    w <- a*25;
-  }
-  if(w < min.w){
-    w <- min.w;
-  }
-  
-  data <- data[row.names(metalp), ]
+  w <- h + 100;
+
+  data <- data[row.names(metalp),]
   data[[get("facet")]] <- metalp[[get("facet")]]
   data$sample <- row.names(data);
   fast.write(t(data), file="taxa_abund.csv");
@@ -2951,7 +2648,9 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
     x.colors <- rep(custom_col42,length.out=x);
   }
   
+  jsonName = paste(barplotName,".json", sep="")
   barplotName = paste(barplotName, ".",format, sep="");
+  
   mbSetObj$imgSet$stack <- barplotName;
   
   Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
@@ -2988,12 +2687,20 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
   }
   
   if(colpalopt %in% c("set1", "set2", "set3")){
-    cols.needed <- length(unique(data$variable))
     
+    cols.needed <- length(unique(data$variable))
     colpalopt <- tools::toTitleCase(tolower(colpalopt))
     
-    if(cols.needed > 12){
-      col.func <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(12, colpalopt))
+    if(colpalopt == "Set1"){
+      n.cols <- 9
+    }else if(colpalopt == "Set2"){
+      n.cols <- 8
+    }else{
+      n.cols <- 12
+    }
+    
+    if(cols.needed > n.cols){
+      col.func <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(n.cols, colpalopt))
       box <- box + scale_fill_manual(values=col.func(cols.needed), guide = guide_legend(direction = "horizontal", ncol=guide_num))
     }else{
       box <- box + scale_fill_brewer(palette = colpalopt, guide = guide_legend(direction = "horizontal", ncol=guide_num))
@@ -3012,12 +2719,16 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
   
   print(box);
   dev.off();
+
+  save(box,file="plotly.rda");
+
   mbSetObj$analSet$stack <- data;
   mbSetObj$analSet$stack.taxalvl <- taxalvl;
   mbSetObj$analSet$plot <- "Stacked Bar";
   
   return(.set.mbSetObj(mbSetObj));
 }
+
 
 #'Function to perform categorical comparison.
 #'@description This functions performs categorical comparisons.
@@ -3031,59 +2742,108 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
 #'Bray-Curtis Index, "jsd" for Jensen-Shannon Divergence, "jaccard" for Jaccard Index,
 #'"unifrac" for Unweighted Unifrac Distance and "wunifrac" for Weighted Unifrac Distance.
 #'@param variable Input the name of the experimental factor to group the samples.
+#'@param covariates Boolean. TRUE to consider covariates, FALSE to only consider the
+#'main effect. Only valid for PERMANOVA.
+#'@param cov.vec Character vector. Input the names of the covariates to consider in the 
+#'PERMANOVA model.
+#'@param model.additive Boolean. If TRUE, the model will be additive (i.e. data ~ var1 + var2),
+#'making the assumption that the two factor variables are independent. 
+#'However, if FALSE, the model will consider the synergistic effects of the variables - interaction (i.e. data ~ var1*var2).
+#'"Different explanatory variables the effects on the outcome of a change in one variable may either not depend on the
+#'level of the other variable (additive model) or it may depend on the level of the other variable (interaction model)." 
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import vegan
-PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable){
+PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, 
+                                covariates = FALSE, cov.vec = NA, model.additive = TRUE){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
+
   load_vegan();
-  
+
   if(distnm %in% c("wunifrac", "unifrac")) {
     data <- qs::qread("data_unifra.qs");
   } else {
-    if(taxaLvl=="OTU"){
-      data <- mbSetObj$dataSet$proc.phyobj;
-      data <- merge_phyloseq(data);
-    }else{
-      taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
-      data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj, taxa_table);
-      #merging at taxonomy levels
-      data <- fast_tax_glom_mem(data, taxaLvl)
-      if(is.null(data)){
+     if(!(exists("phyloseq_objs"))){
+      phyloseq_objs <- readDataQs("phyloseq_objs.qs",mbSetObj$module.type,mbSetObj$dataSet$name)
+   }
+     data <- phyloseq_objs$merged_obj[[taxaLvl]]
+     if(is.null(data)){
         AddErrMsg("Errors in projecting to the selected taxanomy level!");
         return(0);
       }
-    }
+
   }
   
   data <- transform_sample_counts(data, function(x) x/sum(x));
-  data.dist <- distance(data, method=distnm);
+
+  data.dist <- phyloseq::distance(data, method=distnm);
   group <- get_variable(data,variable);
   stat.info <- "";
   resTab <- list();
-  
+ 
   if(method=="adonis"){
-    sampledf <- data.frame(sample_data(data),check.names=F);
-    res <- adonis(data.dist~sampledf[ ,variable],data = sampledf);
-    resTab <- res$aov.tab[1,];
-    stat.info <- paste("[PERMANOVA] F-value: ", signif(resTab$F.Model, 5),  "; R-squared: ", signif(resTab$R2, 5), "; p-value < ", signif(resTab$Pr, 5), sep="");
-  }else if(method=="anosim"){
-    anosim <- anosim(data.dist,group=group);
+    sampledf <- data.frame(sample_data(data), check.names=FALSE); 
+    outcome <- "data.dist";
+    variables <- variable;
+    f <- as.formula(paste(outcome,paste(variables, collapse = " * "), sep = " ~ "));
+    
+    # advanced feature to include co-variates and different model options (NOT implemented in web?)
+    if(covariates){
+      variables <- c(variable, cov.vec)
+      
+      if(model.additive){
+        f <- as.formula(
+          paste(outcome,
+                paste(variables, collapse = " + "),
+                sep = " ~ "))
+      }else{
+        f <- as.formula(
+          paste(outcome,
+                paste(variables, collapse = " * "),
+                sep = " ~ "))
+      }
+    }
+    res <- adonis2(formula = f, data = sampledf);
+    resTab <- res[1,];
+    stat.info <- paste("[PERMANOVA] F-value: ", signif(resTab$F, 5),  "; R-squared: ", signif(resTab$R2, 5), "; p-value: ", signif(resTab$Pr, 5), sep="");   
+    stat.info.vec <- c(signif(resTab$F, 5), signif(resTab$R2, 5), signif(resTab$Pr, 5));
+    names(stat.info.vec) <- c("F-value", "R-squared", "p-value");
+  }else if(method=="anosim"){ # just one group
+    anosim <- anosim(data.dist, group=group);
     resTab$Rval <- anosim$statistic;
     resTab$pval <- anosim$signif;
     stat.info <- paste("[ANOSIM] R: ", signif(resTab$Rval, 5), "; p-value < ", signif(resTab$pval, 5), sep="");
-  }else if (method=="permdisp"){
-    beta <- betadisper(data.dist,group=group);
+    stat.info.vec <- c(signif(resTab$Rval, 5), signif(resTab$pval, 5));
+    names(stat.info.vec) <- c("R", "p-value");
+
+  }else if (method=="permdisp"){ # just one group
+    beta <- betadisper(data.dist, group=group);
     resTab <- anova(beta);
     stat.info <- paste("[PERMDISP] F-value: ", signif(resTab$"F value"[1], 5), "; p-value: ", signif(resTab$"Pr(>F)"[1], 5), sep="");
+    stat.info.vec <- c(signif(resTab$"F value"[1], 5), signif(resTab$"Pr(>F)"[1], 5));
+    names(stat.info.vec) <- c("F-value", "p-value");
+  }else if(method=="mirkat"){
+    
+    if(!exists("MiRKAT")){ # public web on same user dir
+      .load.scripts.on.demand("utils_MiRKAT.Rc"); 
+    }
+    exclud <- which(colnames(data@sam_data) %in% variable)
+    X = data@sam_data[,-exclud]
+    X = apply(X, 2, function(x) as.numeric(factor(x)))
+    K.weighted <- D2K(as.matrix(data.dist))
+    Gp <- as.numeric(factor(group))
+    res<- MiRKAT(y =Gp, X = X, Ks = K.weighted, out_type = "C", method = "davies", returnKRV = TRUE, returnR2 = TRUE)
+    resTab <- do.call(cbind,res);
+    stat.info <- paste("[MiRKAT] R-squared: ", signif(resTab[1,"R2"], 5), "; p-value: ", signif(resTab[1,"p_values"], 5),"; KRV: ",signif(resTab[1,"KRV"], 5), sep="");
+    stat.info.vec <- signif(resTab[1, c("R2", "p_values", "KRV")], 5);
+    names(stat.info.vec) <- c("R-squared", "p-value", "KRV");
   }
-  
+
   mbSetObj$analSet$stat.info <- stat.info;
-  
+  mbSetObj$analSet$stat.info.vec <- stat.info.vec;
   return(.set.mbSetObj(mbSetObj));
 }
 
@@ -3101,7 +2861,7 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable){
 #'@import reshape
 PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, facet2, imgOpt,
                                      feat_cnt, colpalopt, calcmeth, toptaxa,abunTopTaxaOpt, 
-                                     appendnm, format="png", dpi=72){
+                                     appendnm, format="png", dpi=72, interactive = FALSE){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -3109,38 +2869,39 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
     load_reshape();
     load_viridis();
   }
-  #using filtered data
-  data <- mbSetObj$dataSet$filt.data;
-  if("matrix" %in% class(mbSetObj$dataSet$filt.data)){
-    data<-otu_table(data,taxa_are_rows =TRUE);
-  }
-  sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
-  data1 <- merge_phyloseq(data, tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
   
+  if(mbSetObj$module.type == "meta"){
+    data1 <- qs::qread("merged.data.raw.qs");
+    sample_table <- sample_data(data1);
+    data <- as.data.frame(t(otu_table(data1)),check.names=FALSE);
+    facet2="dataset";
+  }else{
+    #using filtered data
+    data <- mbSetObj$dataSet$filt.data;
+    if("matrix" %in% class(mbSetObj$dataSet$filt.data)){
+      data<-otu_table(data,taxa_are_rows =TRUE);
+    }
+  
+    sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
+    data1 <- merge_phyloseq(data, tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
+  }
+
   yLbl <- "Actual Abundance";
+  data <- as.data.frame(t(otu_table(data1)),check.names=FALSE);
+  flag <- (facet2 == "null" || facet2 == "none" || facet2 == metadata);
   
-  data <- as.data.frame(t(otu_table(data1)));
-  
-  if(facet2 == "null" || facet2 == "none" || facet2 == metadata){
+  if(flag){
     data <- cbind(data, variable=data1@sam_data[[metadata]]);
+    clsLbl <- unique(factor(data1@sam_data[[metadata]]));
   } else {
-    data$variable <- paste(data1@sam_data[[metadata]],
-                           data1@sam_data[[facet2]], 
-                           sep = ";");
+    data$variable <- paste(data1@sam_data[[metadata]], data1@sam_data[[facet2]], sep = ";");
+    clsLbl <- unique(factor(paste(data1@sam_data[[metadata]],data1@sam_data[[facet2]], sep = ";")));
   }
-  
+
   data <- aggregate(. ~variable,data,sum);
   rownames(data) <- data[,1];
   data <- data[,-1];
-  data <- data[order(rownames(data)),];
-  
-  if(facet2 == "null" || facet2 == "none" || facet2 == metadata){
-    clsLbl <- sort(unique(factor(data1@sam_data[[metadata]])));
-  } else {
-    clsLbl <- sort(unique(factor(paste(data1@sam_data[[metadata]],
-                                       data1@sam_data[[facet2]],
-                                       sep = ";"))));
-  }
+  data <- data[rownames(data),];
   
   data_tax <- tax_table(data1);
   #reshaping data
@@ -3149,9 +2910,7 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
     rownames(taxa_nm) <- colnames(data);
     rownames(taxa_nm) <- sub("^X", "", rownames(taxa_nm))
   }else{
-    
     taxa_nm <- as.character(data_tax[,taxalvl]);
-    
     y <- which(is.na(taxa_nm)==TRUE);
     #converting NA values to unassigned
     taxa_nm[y] <- "Not_Assigned";
@@ -3187,7 +2946,7 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
   nms <- colnames(data);
   data <- as.matrix(data);
   data <- data %*% sapply(unique(nms),"==",nms);
-  data <- data.frame(data);
+  data <- data.frame(data,check.names=FALSE);
   data <- data[ , order(names(data))];
   indx <- which(colnames(data)=="ZZZ");
   colnames(data)[indx] <- "NA";
@@ -3214,19 +2973,18 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
   
   if(length(ind1)>0){
     colnames(data)[ind1] <- "Others";
-    data <- as.data.frame(do.call(cbind, by(t(data),INDICES=names(data),FUN=colSums)));
+    data <- as.data.frame(do.call(cbind, by(t(data),INDICES=names(data),FUN=colSums)),check.names=FALSE);
   }
   
   if(imgOpt=="barnorm"){
-    data <- as.data.frame(apply(data,1, function(x) x/sum(x)));
-    data <- as.data.frame(t(data));
+    data <- as.data.frame(apply(data,1, function(x) x/sum(x)),check.names=FALSE);
+    data <- as.data.frame(t(data),check.names=FALSE);
     yLbl <- "Relative Abundance";
   }
   
-  feat_no <- ncol(data);
-  #adjust height according to number of taxa
-  w <- 600;
-  
+  w <- 650;
+  #adjust height according to number of taxa 
+  feat_no <- ncol(data); 
   if(feat_no < 10){
     h<-w;
   } else if (feat_no < 20){
@@ -3243,22 +3001,36 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
     h<-w/2+300;
   }
   
-  flag = (facet2 == "null" || facet2 == "none" || facet2 == metadata);
-  
   if(flag){
   } else {
     feat_no2 <- nlevels(as.factor(data1@sam_data[[facet2]]));
     if(feat_no2 < 3){
-      w <- w * 1.3;
+      w <- w;
     } else if (feat_no2 < 4){
-      w <- w * 1.5
-    } else if (feat_no2 < 5) {
-      w <- w * 2;
+      w <- w * 1.1
     } else if (feat_no2 < 6){
-      w <- w * 2.5;
+      w <- w * 1.2;
+    } else if (feat_no2 < 8){
+      w <- w * 1.3;
+    } else  if (feat_no2 < 10) {
+      w <- w * 1.4;
+    } else  if (feat_no2 < 12) {
+      w <- w * 1.5;
+    } else  if (feat_no2 < 14) {
+      w <- w * 1.6;
     } else {
-      w <- w * 3
+      w <- w * 2;
     }
+  }
+  # final check
+  if(w > 1800){
+    w <- 1800;
+  }
+  if(h < w/3){
+    h <- w/3
+  }
+  if(h < 480){
+    h <- 480;
   }
   
   fast.write(t(data), file="taxa_abund.csv");
@@ -3276,10 +3048,10 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
   data$variable <- factor(data$variable, levels = var_level) # change the factor level of taxa
   levels(data$variable) <- sub("^X", "", levels(data$variable)) 
   
-  if(facet2 == "null" || facet2 == "none" || facet2 == metadata){
+  if(flag){
   }else {
-    data$variable2 <- sapply(strsplit(data$step, ";", fixed = TRUE), "[", 2);
-    data$step <- sapply(strsplit(data$step, ";", fixed = TRUE), "[", 1);
+    data$variable2 <- sapply(strsplit(as.character(data$step), ";", fixed = TRUE), "[", 2);
+    data$step <- sapply(strsplit(as.character(data$step), ";", fixed = TRUE), "[", 1);
   }
   
   #color schema
@@ -3306,10 +3078,12 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
   }else{
     guide_num = 5
   }
-  
+
+  jsonName = paste(barplotName, ".json", sep="");
   barplotName = paste(barplotName, ".",format, sep="");
   mbSetObj$imgSet$stack<-barplotName;
   
+  stackdata <<- data
   Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
   box <- ggplot(data,aes(x = step, y = value, fill = variable))+
     geom_bar(stat="identity", position="stack", width = 0.4)+
@@ -3323,17 +3097,27 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
                                           size = 0.5, linetype = "solid"),
           panel.border = element_blank())
   
-  if(facet2 == "null" || facet2 == "none" || facet2 == metadata){
+  if(flag){
     box <- box;
   } else {
-    box <- box + facet_grid(~variable2, scales = "free");
+    box <- box + facet_grid(variable2 ~ ., scales = "free");
   }
   
   if(colpalopt %in% c("set1", "set2", "set3")){
+    
     cols.needed <- length(unique(data$variable))
     colpalopt <- tools::toTitleCase(tolower(colpalopt))
-    if(cols.needed > 12){
-      col.func <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(12, colpalopt))
+    
+    if(colpalopt == "Set1"){
+      n.cols <- 9
+    }else if(colpalopt == "Set2"){
+      n.cols <- 8
+    }else{
+      n.cols <- 12
+    }
+    
+    if(cols.needed > n.cols){
+      col.func <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(n.cols, colpalopt))
       box <- box + scale_fill_manual(values=col.func(cols.needed),
                                      guide = guide_legend(direction = "horizontal",
                                                           ncol = guide_num))
@@ -3347,8 +3131,15 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
   }else{
     box <- box + scale_fill_manual(values=c(x.colors)) + guides(fill=guide_legend(ncol=guide_num))
   }
+
+  if(mbSetObj$module.type == "meta"){
+      box <- box + facet_grid(variable2 ~ . , scales = "free", space = "free");
+  }
   print(box);
   dev.off();
+  
+  save(box,file="plotly.rda");
+
   mbSetObj$analSet$stack<-data;
   mbSetObj$analSet$stack.taxalvl<-taxalvl;
   mbSetObj$analSet$plot<-"Stacked Bar";
@@ -3358,12 +3149,29 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
 #'Function to create rarefraction curves of microbiome data
 #'@description This functions plots rarefraction curves.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param data.src Character, use "orig" to use the original data or
+#'"proc" to use the processed data.
+#'@param linecolor Character, input the metadata you wish to 
+#'group the sample line colors.
+#'@param linetype Character, input the metadata you wish to 
+#'group the sample line types.
+#'@param facet Character, input the metadata you wish to 
+#'group the samples.
+#'@param step Numeric, input the step number. Default is set to 5.
+#'@param imgName Character, input the name of the plot to be saved.
+#'@param format Character, input the type of plot to be saved. Default is 
+#'set to png. 
+#'@param dpi Numeric, input the dpi for the plot to be saved. Default
+#'is set to 72.
+#'@param interactive Boolean, if set to TRUE, saves the plot
+#'as an interactive html plot.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotRarefactionCurve <- function(mbSetObj, data.src, linecolor, linetype, facet, step, 
-                                 imgName, format="png",dpi=72){
+PlotRarefactionCurve <- function(mbSetObj, data.src, linecolor, linetype, facet, step=5, 
+                                 imgName, format="png", dpi=72, interactive = FALSE){
+  
   mbSetObj <- .get.mbSetObj(mbSetObj);
   # should use unfiltered data
   if(data.src == "orig"){
@@ -3373,6 +3181,7 @@ PlotRarefactionCurve <- function(mbSetObj, data.src, linecolor, linetype, facet,
   }
   
   sample_table_msg <- sample_data(data_rare, errorIfNULL=TRUE);
+  
   if(min(table(factor(sample_table_msg [[linecolor]]))) < 3 | min(table(factor(sample_table_msg [[linetype]]))) < 3 | min(table(factor(sample_table_msg [[facet]]))) < 3){
     AddErrMsg("Too many groups to be displayed - please select a more meaningful group option with at least 3 samples per group.");
     return(0);
@@ -3419,8 +3228,23 @@ PlotRarefactionCurve <- function(mbSetObj, data.src, linecolor, linetype, facet,
   }
   print(box);
   dev.off();
+  
   mbSetObj$analSet$rarefaction_curve <- imgName;
   mbSetObj$analSet$rarefaction_curve_data.src = ifelse(data.src == "orig", "original", "filtered");
+  
+  if(interactive){
+    library(plotly)
+    library(htmlwidgets)
+    ax <- list(
+      zeroline = FALSE,
+      showline = FALSE,
+      showgrid = FALSE
+    )
+    p <- plotly::ggplotly(box)
+    p <- p %>% layout(xaxis = ax, yaxis = ax)
+    htmlwidgets::saveWidget(p, "rarefaction_interactive.html")
+  }
+  
   return(.set.mbSetObj(mbSetObj))
 }
 
@@ -3459,7 +3283,6 @@ PlotPhylogeneticTree <-function(mbSetObj, color, shape, taxa, treeshape, imgName
   pg_sd <- sample_data(data1);
   pg_tree <- prune_taxa(taxa_names(pg_ot), pg_tree);
   data_tree <- merge_phyloseq(pg_tb, pg_ot, pg_sd, pg_tree);
-  
   for (i in sample_variables(data_tree)){
     if(is.integer(sample_data(data_tree)[[i]]) | is.character(sample_data(data_tree)[[i]])){
       sample_data(data_tree)[[i]] <- factor(sample_data(data_tree)[[i]])
@@ -3544,7 +3367,6 @@ SetGroupItems <- function(mbSetObj, groups){
 }
 
 GetHtMetaCpInfo <- function(mbSetObj, meta){
-  
   mbSetObj <- .get.mbSetObj(mbSetObj);
   dm <- mbSetObj$dataSet$proc.phyobj;  
   dm_samples = as(sample_data(dm), "data.frame");
@@ -3590,15 +3412,15 @@ GetHtMetaCpInfo <- function(mbSetObj, meta){
 #'@export
 #'@import metacoder
 PrepareHeatTreePlot <- function(mbSetObj, meta, taxalvl, color, layoutOpt, comparison, 
-                                wilcox.cutoff, imgName, format="png", dpi=72){
-  
+                                wilcox.cutoff, switchCmpDirection, imgName, format="png", dpi=72){
   load_metacoder();
   
-  mbSetObj <- .get.mbSetObj(mbSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);  
   tax_o <- taxalvl;
   
   dm <- mbSetObj$dataSet$proc.phyobj;
-  tax_table_new = data.frame("Kingdom" = "Root", as(tax_table(dm), "matrix")[, 1:6]) # add root to tax table
+  tax_table_new = data.frame("Kingdom" = "Root", as(tax_table(dm), "matrix")[, 1:ncol(tax_table(dm))],check.names=FALSE) # add root to tax table
+  
   tax_table(dm) <- as.matrix(tax_table_new);
   
   dm_samples = as(sample_data(dm), "data.frame");
@@ -3606,14 +3428,12 @@ PrepareHeatTreePlot <- function(mbSetObj, meta, taxalvl, color, layoutOpt, compa
   row.names(dm_samples) <- c();
   dm_samples[] <- lapply(dm_samples, as.character);
   
-  grp.nms <- strsplit(comparison, "_vs_")[[1]];
-  dm_samples_cmf <- dm_samples[dm_samples[[meta]] %in% grp.nms, ]; #subset sample data by meta variable
-  
-  otu_dm <- as.data.frame(as(otu_table(dm), "matrix"));
-  tax_dm <- as.data.frame(as(tax_table(dm), "matrix"));
+  otu_dm <- as.data.frame(as(otu_table(dm), "matrix"),check.names=FALSE);
+  tax_dm <- as.data.frame(as(tax_table(dm), "matrix"),check.names=FALSE);
   tax_dm[] <- lapply(tax_dm, as.character);#make sure characters in tax_dm;
+  depth <- ncol(tax_dm)
   rank_dm <- c("r", "p", "c", "o", "f", "g", "s");
-  names(tax_dm) <- rank_dm;
+  names(tax_dm) <- rank_dm[1:depth];
   
   for (i in 1:ncol(tax_dm)){
     for (j in 1:nrow(tax_dm)){
@@ -3650,6 +3470,16 @@ PrepareHeatTreePlot <- function(mbSetObj, meta, taxalvl, color, layoutOpt, compa
   row.names(dm_otu) <- c();
   dm_otu$lineage <- gsub(";+$", "", dm_otu$lineage); #remove empty tax names
   
+  grp.nms <- strsplit(comparison, "_vs_")[[1]];
+  #dm_samples_cmf <- dm_samples[dm_samples[[meta]] %in% grp.nms, ]; #subset sample data by meta variable  
+  grpDF1 <- dm_samples[dm_samples[[meta]] == grp.nms[1], ];
+  grpDF2 <- dm_samples[dm_samples[[meta]] == grp.nms[2], ];
+  if(switchCmpDirection == "false"){
+    dm_samples_cmf <- rbind.data.frame(grpDF1, grpDF2);
+  } else {
+    dm_samples_cmf <- rbind.data.frame(grpDF2, grpDF1);
+    comparison <- paste0(grp.nms[2], "_vs_", grp.nms[1]);
+  }
   dm_otu_cmf <- dm_otu[, c("otu_id", "lineage", dm_samples_cmf$sample_id)]; #make otu table ready for heat tree  
   
   PrepareHeatTreePlotDataParse_cmf_res <- PrepareHeatTreePlotDataParse_cmf(dm_otu_cmf, dm_samples_cmf, meta); #parse otu table to heat tree object
@@ -3679,12 +3509,12 @@ PrepareHeatTreePlot <- function(mbSetObj, meta, taxalvl, color, layoutOpt, compa
 PrepareHeatTreePlotDataParse_cmf <- function(dm_otu_cmf,
                                              dm_samples_cmf,
                                              meta){
-  dm_obj_cmf <- taxa::parse_tax_data(dm_otu_cmf,
-                                     class_cols = "lineage",
-                                     class_sep = ";",
-                                     class_regex = "^(.+)__(.+)$",
-                                     class_key = c(tax_rank = "info",
-                                                   tax_name = "taxon_name"));
+  dm_obj_cmf <- metacoder::parse_tax_data(dm_otu_cmf,
+                                          class_cols = "lineage",
+                                          class_sep = ";",
+                                          class_regex = "^(.+)__(.+)$",
+                                          class_key = c(tax_rank = "info",
+                                                        tax_name = "taxon_name"));
   
   dm_obj_cmf$data$tax_data <- calc_obs_props(dm_obj_cmf, "tax_data"); # normalization
   
@@ -3829,7 +3659,7 @@ PlotGroupDataHeattree <- function(mbSetObj, meta, comparison, taxalvl, color, la
   tax_o <- taxalvl;
   
   dm <- mbSetObj$dataSet$proc.phyobj;
-  tax_table_new = data.frame("Kingdom" = "Root", as(tax_table(dm), "matrix")[, 1:6]) # add root to tax table
+  tax_table_new = data.frame("Kingdom" = "Root", as(tax_table(dm), "matrix")[, 1:6],check.names=FALSE) # add root to tax table
   tax_table(dm) <- as.matrix(tax_table_new);
   
   dm_samples = as(sample_data(dm), "data.frame");
@@ -3865,7 +3695,7 @@ PlotSampleDataHeattree <- function(mbSetObj,comparison, taxalvl, color, layoutOp
   tax_o <- taxalvl;
   
   dm <- mbSetObj$dataSet$proc.phyobj;
-  tax_table_new = data.frame("Kingdom" = "Root", as(tax_table(dm), "matrix")[, 1:6]) # add root to tax table
+  tax_table_new = data.frame("Kingdom" = "Root", as(tax_table(dm), "matrix")[, 1:6],check.names=FALSE) # add root to tax table
   tax_table(dm) <- as.matrix(tax_table_new);
   
   dm_samples = as(sample_data(dm), "data.frame");
@@ -3903,7 +3733,7 @@ PlotOverviewDataHeattree <- function(mbSetObj, taxalvl, color, layoutOpt,
   tax_o <- taxalvl;
   
   dm <- mbSetObj$dataSet$proc.phyobj;
-  tax_table_new = data.frame("Kingdom" = "Root", as(tax_table(dm), "matrix")[, 1:6]) # add root to tax table
+  tax_table_new = data.frame("Kingdom" = "Root", as(tax_table(dm), "matrix")[, 1:6],check.names=FALSE) # add root to tax table
   tax_table(dm) <- as.matrix(tax_table_new);
   
   dm_samples = as(sample_data(dm), "data.frame");
@@ -3931,11 +3761,12 @@ PlotOverviewDataHeattree <- function(mbSetObj, taxalvl, color, layoutOpt,
 PrepareHeatTreePlotAbR <- function(dm = dm, tax_dm = tax_dm, taxalvl = taxalvl, dm_samples_cmf = dm_samples_cmf, 
                                    color = color, imgName = imgName, format = format, layoutOpt= layoutOpt, comparison = comparison, flag = flag){
   
-  otu_dm <- as.data.frame(as(otu_table(dm), "matrix"));
-  tax_dm <- as.data.frame(as(tax_table(dm), "matrix"));
+  otu_dm <- as.data.frame(as(otu_table(dm), "matrix"),check.names=FALSE);
+  tax_dm <- as.data.frame(as(tax_table(dm), "matrix"),check.names=FALSE);
   tax_dm[] <- lapply(tax_dm, as.character);#make sure characters in tax_dm;
+  depth <- ncol(tax_dm)
   rank_dm <- c("r", "p", "c", "o", "f", "g", "s");
-  names(tax_dm) <- rank_dm;
+  names(tax_dm) <- rank_dm[1:depth];
   
   for (i in 1:ncol(tax_dm)){
     for (j in 1:nrow(tax_dm)){
@@ -3976,12 +3807,12 @@ PrepareHeatTreePlotAbR <- function(dm = dm, tax_dm = tax_dm, taxalvl = taxalvl, 
   dm_otu$lineage <- gsub(";+$", "", dm_otu$lineage); #remove empty tax names
   
   dm_otu_cmf <- dm_otu[, c("otu_id", "lineage", dm_samples_cmf$sample_id)]; #make otu table ready for heat tree  
-  dm_obj_cmf <- taxa::parse_tax_data(dm_otu_cmf,
-                                     class_cols = "lineage",
-                                     class_sep = ";",
-                                     class_regex = "^(.+)__(.+)$",
-                                     class_key = c(tax_rank = "info",
-                                                   tax_name = "taxon_name"));
+  dm_obj_cmf <- metacoder::parse_tax_data(dm_otu_cmf,
+                                          class_cols = "lineage",
+                                          class_sep = ";",
+                                          class_regex = "^(.+)__(.+)$",
+                                          class_key = c(tax_rank = "info",
+                                                        tax_name = "taxon_name"));
   
   dm_obj_cmf$data$tax_data <- calc_obs_props(dm_obj_cmf, "tax_data"); # normalization
   
@@ -4060,191 +3891,24 @@ PrepareHeatTreePlotAbR <- function(dm = dm, tax_dm = tax_dm, taxalvl = taxalvl, 
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import Tax4Fun
-Perform16FunAnot<-function(mbSetObj, type, pipeline) {
-  
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  
-  mbSetObj$dataSet$type <- type;
-  merge.otu <- qs::qread("data.orig");
-  merge.otu <- apply(merge.otu, 2, as.numeric);
-  rownames(merge.otu) <- mbSetObj$dataSet$comp_taxnm;
-  
-  #getting whole taxa labels back
-  if(type=="SILVA"){
-    func.meth<-"Tax4Fun";
-    load_tax4fun();
-    
-    if(pipeline=="qi_silva"){
-      ModSilvaIds <- gsub("uncultured archaeon","",rownames(merge.otu));
-      ModSilvaIds <- gsub("uncultured organism","",ModSilvaIds);
-      ModSilvaIds <- gsub("uncultured bacterium","",ModSilvaIds);
-      ModSilvaIds <- gsub("uncultured crenarchaeote","",ModSilvaIds);
-      ModSilvaIds <- gsub("uncultured euryarchaeote","",ModSilvaIds);
-      ModSilvaIds <- gsub("; ",";",ModSilvaIds);
-      rownames(merge.otu)<-ModSilvaIds;
-      merge.otu <- rowsum(as.data.frame(merge.otu),ModSilvaIds);
-    }
-    data<-list(sampleNames=colnames(merge.otu),otuTable=merge.otu);
-    
-    if(.on.public.web){
-      folderReferenceData <- "../../lib/SILVA123";
-    }else{
-      folderReferenceData <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/SILVA123";
-    }
-    Tax4FunOutput <- Tax4Fun(data, folderReferenceData, fctProfiling = TRUE, refProfile = "UProC", shortReadMode = TRUE, normCopyNo = TRUE);
-    result2<-as.data.frame(Tax4FunOutput[1]);
-    #removing unnecessary data from column name.
-    colnames(result2)<-sub("Tax4FunProfile.","",colnames(result2));
-    colnames(result2)<-substr(colnames(result2),1,6);
-    result<-t(result2);
-    result<-as.data.frame(round(1000000*result));  # get to integers
-  } else {
-    func.meth<-"PICRUSt";
-    
-    if(type == "Greengenes"){
-      a<-rownames(merge.otu);
-      rownames(merge.otu)<-NULL;
-      merge.otu<-data.frame(merge.otu);
-      merge.otu <- cbind(a,merge.otu)
-      colnames(merge.otu)[1]<-"X.OTU_IDs";
-      
-      if(.on.public.web){
-        otu.dic <<- qs::qread("../../lib/picrust/greengenes_taxmap.qs");
-      }else{
-        otu.dic <<- .read.microbiomeanalyst.lib.rds("greengenes_taxmap.rds", "ko");
-      }
-      
-      merge.otu[,1]<-as.character(merge.otu[,1]);
-      merge.otu[,1]<-otu.dic[match(merge.otu$X.OTU_IDs,otu.dic$Greengenes),1];
-      merge.otu<-merge.otu[!is.na(merge.otu$X.OTU_IDs),];
-      nm<-rownames(merge.otu)<-merge.otu[,1];
-      merge.otu<-merge.otu[,-1];
-      merge.otu<-apply(merge.otu, 2, as.numeric);
-      rownames(merge.otu)<-nm;
-    }
-    
-    query<-as.data.frame(merge.otu);
-    samplenm<-colnames(query);
-    
-    #normalizing by 16S copy number
-    
-    if(.on.public.web){
-      copyno <- qs::qread("../../lib/picrust/16S_copyno.qs");
-    }else{
-      copyno <- .read.microbiomeanalyst.lib.rds("16S_copyno.rds", "picrust");
-    }
-    
-    result2<-merge(query,copyno, by ="row.names");
-    index1<-match(samplenm,colnames(result2), nomatch = NA_integer_, incomparables = NULL);
-    result2[index1]<-result2[index1]/result2[['X16S_rRNA_Count']];
-    result2[index1]<-round(result2[index1],2);
-    rownames(result2)<-result2[,1];
-    result2<-result2[,-1];
-    
-    # need to fetch and merge results from 5 parts of picrust to get around memory issue (from 2G => 400M)
-    res <- data.frame(matrix(0, nrow=nrow(result2), ncol= 6885));
-    row.names(res) <- row.names(result2);
-    
-    if(.on.public.web){
-      pc.lib <- qs::qread("../../lib/picrust/picrust_part1.qs");
-    }else{
-      pc.lib <- .read.microbiomeanalyst.lib.rds("picrust_part1.rds", "picrust");
-    }
-    
-    row.hits <- match(row.names(result2), rownames(pc.lib));
-    res[, 1:1377] <- pc.lib[row.hits,];
-    colnames(res)[1:1377] <- colnames(pc.lib);
-    
-    if(.on.public.web){
-      pc.lib <- qs::qread("../../lib/picrust/picrust_part2.qs");
-    }else{
-      pc.lib <- .read.microbiomeanalyst.lib.rds("picrust_part2.rds", "picrust");
-    }
-    
-    res[, 1378:2754] <- pc.lib[row.hits,];
-    colnames(res)[1378:2754] <- colnames(pc.lib);
-    
-    if(.on.public.web){
-      pc.lib <- qs::qread("../../lib/picrust/picrust_part3.qs");
-    }else{
-      pc.lib <- .read.microbiomeanalyst.lib.rds("picrust_part3.rds", "picrust");
-    }
-    
-    res[, 2755:4131] <- pc.lib[row.hits,];
-    colnames(res)[2755:4131] <- colnames(pc.lib);
-    
-    if(.on.public.web){
-      pc.lib <- qs::qread("../../lib/picrust/picrust_part4.qs");
-    }else{
-      pc.lib <- .read.microbiomeanalyst.lib.rds("picrust_part4.rds", "picrust");
-    }
-    
-    res[, 4132:5508] <- pc.lib[row.hits,];
-    colnames(res)[4132:5508] <- colnames(pc.lib);
-    
-    if(.on.public.web){
-      pc.lib <- qs::qread("../../lib/picrust/picrust_part5.qs");
-    }else{
-      pc.lib <- .read.microbiomeanalyst.lib.rds("picrust_part5.rds", "picrust");
-    }
-    
-    res[, 5509:6885] <- pc.lib[row.hits,];
-    colnames(res)[5509:6885] <- colnames(pc.lib);
-    
-    ko.nms <- colnames(res);
-    res<-merge(result2,res, by ="row.names");
-    
-    index2<-match(samplenm,colnames(res), nomatch = NA_integer_, incomparables = NULL);
-    index3<-match(ko.nms,colnames(res), nomatch = NA_integer_, incomparables = NULL);
-    
-    myList <- vector('list', length(index2));
-    
-    for (i in 1:length(index2)) {
-      myList[[i]]<-data.frame(colSums(res[index3]*res[,index2[i]]));
-    }
-    
-    res <- NULL;
-    gc();
-    
-    MyMerge <- function(x, y){
-      df<- merge(x, y, by= "row.names", all.x= F, all.y= F);
-      rownames(df) <- df$Row.names
-      df$Row.names <- NULL
-      return(df)
-    }
-    
-    result<- Reduce(MyMerge, myList);
-    #orignal class label
-    colnames(result)<-samplenm;
+
+# use memoise tech to avoid repeating
+Perform16FunAnot_mem <- function(mbSetObj, type, pipeline,ggversion){
+  if(!exists("perform16funanot_mem")){
+    require("memoise");
+    perform16funanot_mem <<- memoise(Perform16FunAnot); 
   }
   
-  result <- round(result, digits =0);
-  if(func.meth == "Tax4Fun"){
-    kos <- matrix(rownames(result))
-    colnames(kos) <- "#NAME"
-    tax4_feats <- cbind(kos, result)
-    fast.write(tax4_feats, file="functionalprof_tax4fun.csv", row.names = FALSE);
-  }else{
-    kos <- matrix(rownames(result))
-    colnames(kos) <- "#NAME"
-    picrust_feats <- cbind(kos, result)
-    fast.write(picrust_feats, file="functionalprof_picrust.csv", row.names=FALSE);
+  res <- perform16funanot_mem(mbSetObj, type, pipeline,ggversion);
+  return(res);
+}
+
+
+Perform16FunAnot<-function(mbSetObj, type, pipeline,ggversion) {
+  if(!exists("my.16sfun.anot")){ # public web on same user dir
+    .load.scripts.on.demand("utils_16s2fun.Rc");    
   }
-  result <- result[!apply(result==0,1,all), ]; #filtering zero counts across all
-  
-  # create meta-data file
-  meta <- as.matrix(mbSetObj$dataSet$sample_data)
-  samplenames <- matrix(rownames(meta))
-  colnames(samplenames) <- "#NAME"
-  meta_all <- cbind(samplenames, meta)  
-  fast.write(meta_all, file="metadata.csv", row.names = FALSE)
-  
-  # save as RDS for memory saving
-  mbSetObj$analSet$func.pred<-result;
-  mbSetObj$analSet$func.meth<-func.meth;
-  
-  return(.set.mbSetObj(mbSetObj));
-  
+  return(my.16sfun.anot(mbSetObj, type, pipeline,ggversion));
 }
 
 ######################################
@@ -4272,6 +3936,7 @@ GetPieTaxaAbund<- function(){
   return(piedata$value);
 }
 
+
 ######################################
 ######### Utility Functions ##########
 ######################################
@@ -4285,7 +3950,7 @@ ComputeGoods <-function(physeq_object){
   goods <- 100*(1-no.singleton/no.seqs)
   sample <- row.names(com)
   goods.sum <- cbind(sample, no.singleton, no.seqs, goods)
-  goods.sum <- as.data.frame(goods.sum)
+  goods.sum <- as.data.frame(goods.sum,check.names=FALSE)
   row.names(goods.sum) <- c()
   return(goods.sum)
 }
@@ -4311,9 +3976,9 @@ ggrare2 <- function(physeq_object, data.src, label = NULL, color = NULL, plot = 
     y <- vegan::rarefy(x[i, ,drop = FALSE], n, se = se)
     if (nrow(y) != 1) {
       rownames(y) <- c(".S", ".se")
-      return(data.frame(t(y), Size = n, Sample = rownames(x)[i]))
+      return(data.frame(t(y), Size = n, Sample = rownames(x)[i],check.names=FALSE));
     } else {
-      return(data.frame(.S = y[1, ], Size = n, Sample = rownames(x)[i]))
+      return(data.frame(.S = y[1, ], Size = n, Sample = rownames(x)[i],check.names=FALSE));
     }
   }
   
@@ -4327,7 +3992,7 @@ ggrare2 <- function(physeq_object, data.src, label = NULL, color = NULL, plot = 
     sdf <- methods::as(sample_data(physeq_object), "data.frame")
     sdf$Sample <- rownames(sdf);
     data <- merge(df, sdf, by = "Sample")
-    labels <- data.frame(x = tot, y = S, Sample = rownames(x))
+    labels <- data.frame(x = tot, y = S, Sample = rownames(x),check.names=FALSE)
     labels <- merge(labels, sdf, by = "Sample")
   }
   
@@ -4389,7 +4054,7 @@ generateColorArr <- function(grp.num, filenm=NULL) {
     return(colArr);
   }else{
     sink(filenm);
-    cat(toJSON(colArr));
+    cat(rjson::toJSON(colArr));
     sink();
     return(filenm);
   }

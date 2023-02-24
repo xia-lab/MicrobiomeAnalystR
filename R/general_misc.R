@@ -4,6 +4,25 @@
 ## Author: Jeff Xia, jeff.xia@mcgill.ca
 ###################################################
 
+#' Adds an error message
+#'@description The error message will be printed in all cases.
+#'Used in higher functions.
+#'@param msg Error message to print
+#'@export
+AddErrMsg <- function(msg){
+  err.vec <<- c(err.vec, msg);
+  print(msg);
+}
+
+#' Gets the error message
+#'@description The error message will be printed in all cases.
+#'Used in higher functions.
+#'@param msg Error message to print
+#'@export
+GetErrMsg<-function(){
+  return(err.vec);
+}
+
 GetRandomNumbers <- function(){
   rm(.Random.seed);
   runif(1);
@@ -51,14 +70,14 @@ UnzipUploadedFile<-function(zip_file){
         dataName <- dataName[-dsInx];
       }
       if(length(dataName) != 1){
-        current.msg <<- "More than one data files found in the zip file.";
+        AddErrMsg("More than one data files found in the zip file.");
         print(dataName);
         return("NA");
       }
     }
     a <- try(unzip(zip_file));
     if(class(a) == "try-error" | length(a)==0){
-      current.msg <<- "Failed to unzip the uploaded files!";
+      AddErrMsg("Failed to unzip the uploaded files!");
       return ("NA");
     }
     return(dataName);
@@ -100,7 +119,7 @@ GetNumbericalInx <- function(my.dat){
                         as.numeric(dim(x))[1:2]))
   vec <- is.na(obj.dim)[, 1] & (obj.type != "function")
   obj.dim[vec, 1] <- napply(names, length)[vec]
-  out <- data.frame(obj.type, obj.size, obj.prettysize, obj.dim)
+  out <- data.frame(obj.type, obj.size, obj.prettysize, obj.dim,check.names=FALSE);
   names(out) <- c("Type", "Size", "PrettySize", "Rows", "Columns")
     
   if (!missing(order.by))
@@ -141,6 +160,7 @@ ComputeColorGradient <- function(nd.vec, centered=TRUE){
   return(scale_vec_colours(nd.vec, col = color, breaks = breaks));
 }
 
+
 generate_breaks = function(x, n, center = F){
     
   if(center){
@@ -170,7 +190,7 @@ scale_colours = function(mat, col = rainbow(10), breaks = NA){
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-.readDataTable <- function(fileName){
+.readDataTable <- function (fileName) {
   dat <- try(data.table::fread(fileName, header=TRUE, check.names=FALSE, blank.lines.skip=TRUE, data.table=FALSE));
   if(class(dat) == "try-error" || any(dim(dat) == 0)){
       print("Using slower file reader ...");
@@ -181,17 +201,9 @@ scale_colours = function(mat, col = rainbow(10), breaks = NA){
         dat <- try(read.csv(fileName, header=TRUE, comment.char = "", check.names=F, as.is=T));
       }
   }
+  # need to remove potential empty columns
+  dat <- dat[!sapply(dat, function(x) all(x == "" || is.na(x)))];
   return(dat);
-}
-
-#' Adds an error message
-#'@description The error message will be printed in all cases.
-#'Used in higher functions.
-#'@param msg Error message to print
-#'@export
-AddErrMsg <- function(msg){
-  current.msg <<- msg;
-  print(msg);
 }
 
 # this is to be validated (data.table), not done yet, very promising need to validate
@@ -259,8 +271,8 @@ fast_tax_glom_first <- function(physeq, taxrank){
   tax <- as(access(physeq, "tax_table"), "matrix")[, 1:CN, drop=FALSE];
   tax <- apply(tax, 1, function(i){paste(i, sep=";_;", collapse=";_;")});
   # using Map-Reduce/vectorized
-  otab2 <- data.frame(otu_table(physeq))
-  taxdf <- data.frame(tax);
+  otab2 <- data.frame(otu_table(physeq),check.names=FALSE);
+  taxdf <- data.frame(tax,check.names=FALSE);
   otab2 <- merge(otab2, taxdf, by = "row.names");
   row.names(otab2) <- otab2$Row.names
   otab2 <- otab2[ , 2:ncol(otab2)]
@@ -339,7 +351,7 @@ GetSeriesColors <- function(taxa=NULL){
   }
     
   pie.cols <<- pie.cols;
-  return(paste(pie.cols[taxa], collapse=","));
+  return(paste("#", pie.cols[taxa], sep=""));
 }
 
 InitPieColors <- function(){
@@ -513,16 +525,17 @@ PerformUnivTests <- function(cls, data, nonpar){
 }
 
 ## fast T-tests/F-tests using C++
-PerformFastUnivTests <- function(data, cls, var.equal=TRUE){
+PerformFastUnivTests <- function(data, cls, var.equal=TRUE,nonpar=F){
     print("Performing fast univariate tests ....");
-
     # note, feature in rows for gene expression
-    data <- t(as.matrix(data));
+    data <- as.matrix(data);
     cls <- as.factor(cls);
+    # print(cls)
+
     if(length(levels(cls)) > 2){
         res <- try(rowcolFt(data, cls, var.equal = var.equal));
     }else{
-        res <- try(rowcoltt(data, cls, FALSE, 1L, FALSE));
+        res <- try(rowcoltt(data, cls,  var.equal, 1L, nonpar));
     }  
 
     if(class(res) == "try-error") {
@@ -771,6 +784,10 @@ rowcolFt =  function(x, fac, var.equal, which = 1L) {
 
   sqr = function(x) x*x
   
+  if(length(fac)==nrow(x)){
+    x <- t(x)
+  }
+
   stopifnot(length(fac)==ncol(x), is.factor(fac), is.matrix(x))
   x   <- x[,!is.na(fac), drop=FALSE]
   fac <- fac[!is.na(fac)]
@@ -836,15 +853,16 @@ rowcolFt =  function(x, fac, var.equal, which = 1L) {
   
   res = data.frame(statistic = fstat,
                    p.value   = pf(fstat, dff, dfr, lower.tail=FALSE),
-                   row.names = rownames(x))
+                   row.names = rownames(x),check.names=FALSE)
 
   attr(res, "df") = c(dff=dff, dfr=dfr)
   return(res)
 }
 
 rowcoltt =  function(x, fac, tstatOnly, which, na.rm) {
-    
+ 
   if(.on.public.web){
+  
     dyn.load(.getDynLoadPath());
   }
 
@@ -862,7 +880,7 @@ rowcoltt =  function(x, fac, tstatOnly, which, na.rm) {
     
   res = data.frame(statistic = cc$statistic,
                    dm        = cc$dm,
-                   row.names = dimnames(x)[[which]])
+                   row.names = dimnames(x)[[which]],check.names=FALSE)
 
   if (!tstatOnly)
     res = cbind(res, p.value = 2*pt(abs(res$statistic), cc$df, lower.tail=FALSE))
@@ -894,9 +912,15 @@ checkfac = function(fac) {
   return(list(fac=fac, nrgrp=nrgrp))
 }
 
+
 .getDynLoadPath <- function() {
-    path = "../../rscripts/networkanalystr/src/MicrobiomeAnalyst.so";
-    return(path)
+    
+ if(dir.exists("/Users/lzy/NetBeansProjects/MicrobiomeAnalyst")){
+        path <- "/Users/lzy/NetBeansProjects/MicrobiomeAnalyst/target/MicrobiomeAnalyst-3.15/resources/rscripts/microbiomeanalystr/src/MicrobiomeAnalyst.so"
+    }else{
+        path = "../../rscripts/microbiomeanalystr/src/MicrobiomeAnalyst.so";
+}
+     return(path)  
 }
 
 # obtain a numeric matrix, exclude comments if any
@@ -918,4 +942,45 @@ checkfac = function(fac) {
   rownames(dat1) <- row.nms;
   colnames(dat1) <- col.nms;
   return(dat1);
+}
+
+# for scatter
+gg_color_hue_scatter <- function(grp.num, type="green", filenm=NULL) {
+  grp.num <- as.numeric(grp.num)
+    if(type == "green"){
+    pal18 <- c("#e6194B", "#3cb44b", "#4363d8", "#ffff00", "#f032e6", "#ffe119", "#911eb4", "#f58231", "#bfef45", "#fabebe", "#469990", "#e6beff", "#9A6324", "#800000", "#aaffc3", "#808000", "#ffd8b1", "#000075");
+    }else{
+    pal18 <- c( "#4363d8","#e6194B" , "#3cb44b", "#f032e6", "#ffe119", "#e6194B", "#f58231", "#bfef45", "#fabebe", "#469990", "#e6beff", "#9A6324", "#800000", "#aaffc3", "#808000", "#ffd8b1", "#42d4f4","#000075", "#ff4500");
+    }
+if(grp.num <= 18){ # update color and respect default
+    colArr <- pal18[1:grp.num];
+  }else{
+    colArr <- colorRampPalette(pal18)(grp.num);
+  }
+  if(is.null(filenm)){
+    return(colArr);
+  }else{
+    require(RJSONIO)
+    sink(filenm);
+    cat(toJSON(colArr));
+    sink();
+    return(filenm);
+  }
+}
+
+
+.load.scripts.on.demand <- function(fileName=""){
+    complete.path <- paste0("../../rscripts/microbiomeanalystr/", fileName);
+    compiler::loadcmp(complete.path);
+}
+
+SetCurrentMetaData <- function(meta.data, type){
+  current.proc$analysisVar<<- meta.data
+  selected.meta.data <<- meta.data
+  enrich.type <<- type;
+}
+
+AutoScale <- function(data){apply(data, 2, function(x){
+    (x - mean(x))/sd(x, na.rm=T);
+  });
 }

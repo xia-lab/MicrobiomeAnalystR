@@ -9,7 +9,8 @@ Match.Pattern(
   dist.name = "pearson",
   pattern = NULL,
   taxrank,
-  variable
+  variable,
+  appendname
 )
 }
 \arguments{

@@ -4,7 +4,7 @@
 \alias{ReadSampleTable}
 \title{Function to read in sample data}
 \usage{
-ReadSampleTable(mbSetObj, dataName)
+ReadSampleTable(mbSetObj, fileName)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

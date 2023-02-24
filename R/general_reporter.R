@@ -42,7 +42,10 @@ PreparePDFReport <- function(mbSetObj, usrName){
   }else{
     CreateTaxaEnrichRnwReport(mbSetObj, usrName);
   }
-    
+ 
+  CreateRHistAppendix();
+  CreateFooter(mbSetObj);  
+
   # close opened files
   close(rnwFile);
 
@@ -53,12 +56,11 @@ PreparePDFReport <- function(mbSetObj, usrName){
   }
 
   return(.set.mbSetObj(mbSetObj));
-  
 }
 
 # this is for PDF report generation from bash
 SaveCurrentSession <- function(){
-  file.copy("../../libs/Sweave.sty", ".")
+  file.copy("../../rscripts/_sweave.sty", ".")
   save.image("SweaveImage.RData");
 }
 
@@ -104,7 +106,7 @@ CreateMDPRnwReport<-function(mbSetObj, usrName){
   } else {
     CreateAnalNullMsg();
     }
-  CreateFooter(mbSetObj);
+  #CreateFooter(mbSetObj);
 }
 
 #'Function to create PDF report for SDP module
@@ -139,7 +141,7 @@ CreateSDPRnwReport<-function(mbSetObj, usrName){
   } else {
     CreateAnalNullMsg();
   }
-  CreateFooter(mbSetObj);
+  #CreateFooter(mbSetObj);
 }
 
 # create header
@@ -218,8 +220,11 @@ CreateIOdoc <- function(mbSetObj){
   cat("\n\n", file=rnwFile, append=TRUE);
         
   #user data info
-  cat(mbSetObj$dataSet$read.msg, file=rnwFile, append=TRUE, sep="\n");
-  cat(mbSetObj$dataSet$smpl.msg, file=rnwFile, append=TRUE, sep=" ");
+  rmsg <- mbSetObj$dataSet$read.msg;
+  smsg <- mbSetObj$dataSet$smpl.msg;
+
+  cat(gsub("_", "\\\\_", rmsg), file=rnwFile, append=TRUE, sep="\n");
+  cat(gsub("_", "\\\\_", smsg), file=rnwFile, append=TRUE, sep=" ");
         
   if(mbSetObj$module.type == "sdp"){
     cat("The genes are annotated as ", mbSetObj$dataSet$gene.id,"label.", file=rnwFile, append=TRUE, sep=" ");
@@ -388,7 +393,8 @@ Init16SAnalMode<-function(){
               "\\item{Predictive functional profiling: }",
               "\\begin{itemize}",
               "\\item{PICRUSt}",
-              "\\item{Tax4Fun}",
+              "\\item{Tax4Fun}", 
+              "\\item{Tax4Fun2}",
               "\\end{itemize}",
               "\\end{enumerate}");
         
@@ -940,11 +946,11 @@ CreateUNIVARdoc<-function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
   # need to check if this process is executed
-  if(is.null(mbSetObj$analSet$Univar$resTable)){
+  if(is.null(mbSetObj$analSet$univar$resTable)){
     return();
   }
 
-  if(isEmptyMatrix(mbSetObj$analSet$Univar$resTable)){
+  if(isEmptyMatrix(mbSetObj$analSet$univar$resTable)){
     univar.tab<-NULL;
   }else{
     #taxonomic class will be replaced with gene id in SDP
@@ -1321,7 +1327,7 @@ CreateTaxaEnrichRnwReport<-function(mbSetObj, usrName){
   CreateEnrichInputDoc(mbSetObj);
   CreateEnrichProcessDoc();
   CreateEnrichORAdoc();
-  CreateFooter(mbSetObj);
+  #CreateFooter(mbSetObj);
 }
 
 CreateEnrichIntr<-function(){
@@ -1466,25 +1472,6 @@ CreateEnrichORAdoc<-function(){
   cat(descr, file=rnwFile, append=TRUE, sep="\n");
 }
 
-CreateFooter<-function(mbSetObj){
-  
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  
-  if(mbSetObj$module.type == "sdp"){
-    descr <- c("\\section{Other Features}\n",
-             "Please be advised that association analysis",
-             "with its corresponding results are not included in this report.",
-             "\n\n");
-    cat(descr, file=rnwFile, append=TRUE); 
-  }
-  
-  end <- c("\\vspace{5 mm}\n--------------------------------\n\n",
-           "The report was generated on \\Sexpr{date()} with \\Sexpr{print(version$version.string)}.\n",
-           "\\end{document}\n\n");
-  cat(end, file=rnwFile, append=TRUE);
-}
-
-
 ###############################################
 ## Projection with Public Data
 ##########################################
@@ -1497,7 +1484,7 @@ CreatePPDRnwReport<-function(mbSetObj, usrName){
     CreateIOdoc();
     CreatePPDAnalDoc();
     CreatePPDResultDoc();
-    CreateFooter(mbSetObj);
+   # CreateFooter(mbSetObj);
 }
 
 CreatePPDIntr<-function(){
@@ -1607,4 +1594,54 @@ CreatePPDResultDoc<-function(mbSetObj){
            "\\clearpage\n\n");
         
   cat(fig, file=rnwFile, append=TRUE, sep="\n");
+}
+
+
+#'Create report of analyses
+#'@description Report generation using Sweave
+#'Create footer
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+CreateRHistAppendix <- function(){
+  
+  descr <- c("\\section{Appendix: R Command History}\n");
+  cat(descr, file=rnwFile, append=TRUE);
+  
+  if(!is.null("Rhistory.R")){
+    
+    cmdhist<-c("<<echo=false, results=verbatim>>=",
+               "GetRCommandHistory(mbSet);",
+               "@"
+    );
+    cat(cmdhist, file=rnwFile, append=TRUE, sep="\n");
+  }
+}
+
+#'Create report of analyses (Met Enrichment)
+#'@description Report generation using Sweave
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: GNU GPL (>= 2)
+#'@export
+#'
+CreateFooter<-function(mbSetObj){
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  
+  if(mbSetObj$module.type == "sdp"){
+    descr <- c("\\section{Other Features}\n",
+             "Please be advised that association analysis",
+             "with its corresponding results are not included in this report.",
+             "\n\n");
+    cat(descr, file=rnwFile, append=TRUE); 
+  }
+  
+  end <- c("\\vspace{5 mm}\n--------------------------------\n\n",
+           "The report was generated on \\Sexpr{date()} with \\Sexpr{print(version$version.string)}, OS system:",
+           "\\Sexpr{Sys.info()['sysname']}, version: \\Sexpr{gsub('#[0-9]+', '', Sys.info()['version'])} .\n",
+           "\\end{document}\n\n"
+  );
+  cat(end, file=rnwFile, append=TRUE);
 }

@@ -26,7 +26,6 @@
 #'@export
 #'@import randomForest
 RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank){
-  
   load_randomforest();
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -54,7 +53,7 @@ RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank){
   if(mbSetObj$module.type=="sdp"){
     taxrank<-"OTU";
     data <- mbSetObj$dataSet$norm.phyobj;
-    data1 <- as.data.frame(t(otu_table(data)));
+    data1 <- as.data.frame(t(otu_table(data)),check.names=FALSE);
   }else{
     if(!exists("phyloseq_objs")){
       phyloseq_objs <- qs::qread("phyloseq_objs.qs")
@@ -66,6 +65,19 @@ RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank){
       taxrank.inx <- which(names(phyloseq_objs$count_tables) %in% taxrank)
       data1 <- t(phyloseq_objs$count_tables[[taxrank.inx]])
     } 
+  }
+
+  meta.info <- sample_data(mbSetObj$dataSet$norm.phyobj)
+  if(length(meta.vec.rf) == 0){
+    sel.meta.vecs <- "NA"
+  }else{
+    sel.meta.vecs <- meta.info[, meta.vec.rf]
+  }
+
+  data1 <- data1[match(rownames(meta.info), rownames(data1)), ] # make sure the metadata and metabolites have the same row order
+  if(length(meta.vec.rf) >0) {
+    data1 <- cbind(sel.meta.vecs, data1);
+    colnames(data1)[1:length(meta.vec.rf)] <- meta.vec.rf;
   }
   
   data.impfeat <<- data1;
@@ -355,7 +367,7 @@ PlotImpVar <- function(mbSetObj, imp.vec, xlbl, feature, color.BW=FALSE){
 #'@import MASS
 
 PerformUnivarTest <- function(mbSetObj, variable, p.lvl, shotgunid, taxrank, statOpt){
-  
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   #rather than whole name from taxonomy just last name.
@@ -365,7 +377,7 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, shotgunid, taxrank, sta
   if(mbSetObj$module.type=="sdp"){
     taxrank<-"OTU";
     data <- mbSetObj$dataSet$norm.phyobj;
-    data1 <- as.data.frame(t(otu_table(data)));
+    data1 <- as.data.frame(t(otu_table(data)),check.names=FALSE);
   }else{
     if(!exists("phyloseq_objs")){
       phyloseq_objs <- qs::qread("phyloseq_objs.qs")
@@ -388,7 +400,7 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, shotgunid, taxrank, sta
   
   rownames(resTable) <- colnames(data1);
   colnames(resTable) <- c("Statistics","Pvalues");
-  resTable <- data.frame(resTable);
+  resTable <- data.frame(resTable,check.names=FALSE);
   resTable$FDR <- p.adjust(resTable$Pvalues,method ="fdr");
   ord.inx <- order(resTable$Pvalues);
   resTable <- resTable[ord.inx, , drop=FALSE];
@@ -460,11 +472,12 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, shotgunid, taxrank, sta
   }
   
   nm_boxplot <- taxa_names(data_boxplot);
-  dat3t_boxplot <- as.data.frame(t(otu_table(data_boxplot)));
+  dat3t_boxplot <- as.data.frame(t(otu_table(data_boxplot)),check.names=FALSE);
   colnames(dat3t_boxplot) <- nm_boxplot; 
-  
+
+
   #individual boxplot for features
-  box_data <- data.frame(dat3t_boxplot[,sigfeat %in% nm_boxplot]);
+  box_data <- data.frame(dat3t_boxplot[,sigfeat %in% nm_boxplot],check.names=FALSE);
   box_data$class <- claslbl_boxplot;
   mbSetObj$analSet$boxdata <- box_data;
   fast.write(t(box_data), "uni_abund_data.csv")
@@ -473,7 +486,7 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, shotgunid, taxrank, sta
   mbSetObj$analSet$var.type <- variable;
   mbSetObj$analSet$sig.count <- de.Num;
   mbSetObj$analSet$id.type <- shotgunid;
-  mbSetObj$analSet$Univar$resTable <- mbSetObj$analSet$resTable <- resTable;
+  mbSetObj$analSet$univar$resTable <- mbSetObj$analSet$resTable <- resTable;
   mbSetObj$analSet$univar.taxalvl <- taxrank;
   
   return(.set.mbSetObj(mbSetObj));
@@ -505,9 +518,8 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, shotgunid, taxrank, sta
 PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank, model){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
   load_metagenomeseq();
-  
+  current.msg<<-"null"
   filt.dataphy <- mbSetObj$dataSet$filt.data;
   filt.dataphy <- apply(filt.dataphy,2,as.integer);
   filt.dataphy <- otu_table(filt.dataphy,taxa_are_rows =TRUE);
@@ -519,14 +531,13 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
   #data<-dataSet$norm.phyobj;
   cls <- as.factor(sample_data(data)[[variable]]);
   lvl <- length(levels(cls));
-  
+
   if(mbSetObj$module.type=="mdp"){
     mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
     data <- merge_phyloseq(data, mbSetObj$dataSet$taxa_table);
   }else{ #using by default names for shotgun data
     taxrank <- "OTU";
   }
-  
   if(taxrank!="OTU"){
     #merging at taxonomy levels
     data <- fast_tax_glom_mem(data, taxrank);
@@ -545,12 +556,11 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
     data <- merge_phyloseq(data1, sample_data(data));
     nm <- taxa_names(data);
   }
-  
   tree_data <<- data;
   data <- phyloseq_to_metagenomeSeq(data);
   data <- cumNorm(data, p=cumNormStat(data));
   mod <- model.matrix(~phenoData(data)@data[,variable]);
-  
+
   if(model=="zigfit"){
     tryCatch(
       {
@@ -583,7 +593,7 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
         })
     }
   }
-  
+
   x <- MRfulltable(fit, number = nrow(assayData(data)$counts));
   x <- x[!is.na(rownames(x)), ];
   
@@ -592,13 +602,13 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
   
   if (!is.null(tax_table(data, errorIfNULL = FALSE))) {
     #Attach the bacterial taxonomy to the table, if available
-    TAX = data.frame(tax_table(data));
+    TAX = data.frame(tax_table(data),check.names=FALSE);
     TAX$OTUnames <- as.character(rownames(TAX));
     res = merge(x, TAX, by = "OTUnames")
   } else {
     res = x;
   }
-  
+
   # Sort and return #sighits return TRUE or FALSE
   sigHits <-res$adjPvalues<=p.lvl;
   de.Num <- length(which(sigHits));
@@ -618,7 +628,7 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
     resTable <- signif(resTable[,1:2], digits = 5);
     colnames(resTable) <- c("Pvalues","FDR");
   }
-  
+
   ord.inx <- order(resTable$Pvalues);
   resTable <- resTable[ord.inx, , drop=FALSE];
   fast.write(resTable, file="metageno_de_output.csv");
@@ -627,7 +637,7 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
     resTable <- resTable[1:500, ];
   }
   
-  mbSetObj$analSet$metagenoseq$resTable <- mbSetObj$analSet$resTable <- data.frame(resTable);
+  mbSetObj$analSet$metagenoseq$resTable <- mbSetObj$analSet$resTable <- data.frame(resTable,check.names=FALSE);
   
   #only getting the names of DE features
   diff_ft <<- rownames(resTable)[1:de.Num];
@@ -640,12 +650,12 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
   
   #samples in rows
   box_data <- t(box_data);
-  box_data <- data.frame(box_data);
+  box_data <- data.frame(box_data,check.names=FALSE);
   colnames(box_data) <- sigfeat;
   
   claslbl <- pData(data)[ ,variable];
   box_data$class <- unlist(claslbl);
-  
+
   mbSetObj$analSet$boxdata <- box_data;
   mbSetObj$analSet$sig.count <- de.Num;
   mbSetObj$analSet$anal.type <- "metagseq";
@@ -687,7 +697,7 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
   if(mbSetObj$module.type=="sdp"){
     taxrank<-"OTU";
     data <- mbSetObj$dataSet$norm.phyobj;
-    dat3t <- as.data.frame(t(otu_table(data)));
+    dat3t <- as.data.frame(t(otu_table(data)),check.names=FALSE);
   }else{
     if(!exists("phyloseq_objs")){
       phyloseq_objs <- qs::qread("phyloseq_objs.qs")
@@ -717,12 +727,12 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
     dat3t <- dat3t[,1:500];
   };
   
-  wil_datadf <- as.data.frame(dat3t);
+  wil_datadf <- as.data.frame(dat3t,check.names=FALSE);
   
   #if no subclass within classes then no wilcoxon rank sum test  
   #Linear Discriminant analysis (LDA)
   ldares <- lda(claslbl~ .,data = wil_datadf);
-  ldamean <- as.data.frame(t(ldares$means));
+  ldamean <- as.data.frame(t(ldares$means),check.names=FALSE);
   class_no <<- length(unique(claslbl));
   ldamean$max <- apply(ldamean[,1:class_no],1,max);
   ldamean$min <- apply(ldamean[,1:class_no],1,min);
@@ -779,7 +789,7 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
   mbSetObj$analSet$lefse$resTable <- mbSetObj$analSet$resTable <- resTable;
   
   #subset dataset for bar plot visualization (LDA Score)
-  ldabar <- as.data.frame(rownames(resTable));
+  ldabar <- as.data.frame(rownames(resTable),check.names=FALSE);
   ldabar[,2] <- resTable$LDAscore;
   ldabar[,3] <- res.cls;
   
@@ -797,7 +807,7 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
   #preparing data for indvidual box plot
   sigfeat <<- rownames(resTable);
   taxrank <<- taxrank;
-  box_data <- as.data.frame(wil_datadf[, sigfeat]);
+  box_data <- as.data.frame(wil_datadf[, sigfeat],check.names=FALSE);
   colnames(box_data) <- sigfeat;
   box_data$class <- claslbl;
   
@@ -1079,7 +1089,6 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank){
   }else{
     data <- .prepare_rnaseq(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank)
     res <- .perform_edger(variable, data, p.lvl)
-    
   }
   return(1)
 }
@@ -1088,8 +1097,8 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank){
   data <- .prepare_rnaseq(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank)
   mbSetObj = .get.mbSetObj(mbSetObj);
   claslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
-  if(length(claslbl) > 100){
-    AddErrMsg("Only EdgeR is supported for sample size over 100.");
+  if(length(claslbl) > 120){
+    AddErrMsg("Only EdgeR is supported for sample size over 120.");
     return(0);
   }else{
     dat.in <- list(data=data, variable=variable);
@@ -1109,7 +1118,7 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank){
       diagdds <- DESeq(diagdds, test="Wald", fitType="parametric");
       res <- results(diagdds, independentFiltering = FALSE, cooksCutoff = Inf);
       # make sure it is basic R, not DESeq2 obj
-      resTable <- data.frame(res[,c("log2FoldChange" ,"lfcSE","pvalue","padj")]); 
+      resTable <- data.frame(res[,c("log2FoldChange" ,"lfcSE","pvalue","padj")],check.names=FALSE); 
       return(resTable);
     }
     dat.in <- list(data=data, variable=variable, my.fun=my.fun);
@@ -1141,7 +1150,7 @@ return(1)
   colnames(resTable) <- c("log2FC","lfcSE","Pvalues","FDR");
   mbSetObj$analSet$anal.type <- "deseq";
   
-  resTable <- as.data.frame(resTable);
+  resTable <- as.data.frame(resTable,check.names=FALSE);
   ord.inx <- order(resTable$Pvalues);
   resTable <- resTable[ord.inx, , drop=FALSE];
   fast.write(resTable, file="rnaseq_de.csv");
@@ -1150,14 +1159,14 @@ return(1)
     resTable<-resTable[1:500, ];
   }
   
-  mbSetObj$analSet$rnaseq$resTable <- mbSetObj$analSet$resTable <- as.data.frame(resTable);
+  mbSetObj$analSet$rnaseq$resTable <- mbSetObj$analSet$resTable <- as.data.frame(resTable,check.names=FALSE);
   
   #only getting the names of DE features
   diff_ft <<- rownames(resTable)[1:de.Num];
   
   #individual boxplot for features
   sigfeat <- rownames(resTable);
-  box_data <- as.data.frame(dat3t[ ,sigfeat]);
+  box_data <- as.data.frame(dat3t[ ,sigfeat],check.names=FALSE);
   colnames(box_data) <- sigfeat;
   box_data$class <- claslbl;
   
@@ -1171,6 +1180,7 @@ return(1)
 
 .prepare_rnaseq<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank){
   mbSetObj <-.get.mbSetObj(mbSetObj);
+
   taxrank <<- taxrank;
   # build phyloslim obj in fly
   filt.dataphy <- mbSetObj$dataSet$filt.data;
@@ -1216,7 +1226,7 @@ return(1)
     nm <- taxa_names(data);
   }
 
-  dat3t <- as.data.frame(t(otu_table(data)));
+  dat3t <- as.data.frame(t(otu_table(data)),check.names=FALSE);
   colnames(dat3t) <- nm;
   
   mbSetObj$analSet$rnaseq$data.rnaseq <- dat3t
@@ -1252,7 +1262,7 @@ return(1)
   colnames(resTable) <- c("log2FC","logCPM","Pvalues","FDR");
   mbSetObj$analSet$anal.type <- "edgr";
   
-  resTable <- as.data.frame(resTable);
+  resTable <- as.data.frame(resTable,check.names=FALSE);
   ord.inx <- order(resTable$Pvalues);
   resTable <- resTable[ord.inx, , drop=FALSE];
   fast.write(resTable, file="rnaseq_de.csv");
@@ -1261,7 +1271,7 @@ return(1)
     resTable<-resTable[1:500, ];
   }
   
-  mbSetObj$analSet$rnaseq$resTable <- mbSetObj$analSet$resTable <- as.data.frame(resTable);
+  mbSetObj$analSet$rnaseq$resTable <- mbSetObj$analSet$resTable <- as.data.frame(resTable,check.names=FALSE);
   
   #only getting the names of DE features
   diff_ft <<- rownames(resTable)[1:de.Num];
@@ -1269,7 +1279,7 @@ return(1)
   
   #individual boxplot for features
   sigfeat <- rownames(resTable);
-  box_data <- as.data.frame(dat3t[ ,sigfeat]);
+  box_data <- as.data.frame(dat3t[ ,sigfeat],check.names=FALSE);
   colnames(box_data) <- sigfeat;
   box_data$class <- claslbl;
   
@@ -1355,7 +1365,7 @@ FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, feat){
   sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
   variable <- colnames(sample_table)[1];
   clslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
-  boxdata <- as.data.frame(data1);
+  boxdata <- as.data.frame(data1,check.names=FALSE);
   boxdata$class <- clslbl;
   mbSetObj$analSet$boxdata <- boxdata;
   
@@ -1390,7 +1400,7 @@ FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, feat){
   
   fileName <- "correlation_feature.csv";
   fast.write(sig.mat,file=fileName);
-  mbSetObj$analSet$resTable <- as.data.frame(sig.mat);
+  mbSetObj$analSet$resTable <- as.data.frame(sig.mat,check.names=FALSE);
   #removing Inf values from table
   is.na(mbSetObj$analSet$resTable) <- sapply(mbSetObj$analSet$resTable, is.infinite);
   mbSetObj$analSet$resTable[is.na(mbSetObj$analSet$resTable)]<-0;
@@ -1426,7 +1436,7 @@ FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, feat){
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotCorr <- function(mbSetObj, imgName, format="png", dpi=72, width=NA){
+PlotCorr <- function(mbSetObj, imgName, format="png", dpi=72,appendnm, width=NA){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -1466,6 +1476,8 @@ PlotCorr <- function(mbSetObj, imgName, format="png", dpi=72, width=NA){
       cor.res <- cor.res[-(nrow(cor.res)),]
     }
   }
+
+
   
   title <- paste("Top",nrow(cor.res), tolower(mbSetObj$analSet$taxrank), "correlated with", pattern);
   imgName = paste(imgName, ".", format, sep="");
@@ -1473,9 +1485,9 @@ PlotCorr <- function(mbSetObj, imgName, format="png", dpi=72, width=NA){
   feat.num <- nrow(cor.res);
   
   if(is.na(width)){
-    h <- w <- 8 
+    h <- w <- 10
   }else if(width == 0){
-    h <- w <- 8 
+    h <- w <- 10
   }else{
     w <- width;
     h <- w/0.85
@@ -1515,7 +1527,7 @@ PlotCorr <- function(mbSetObj, imgName, format="png", dpi=72, width=NA){
   
   op <- par(mar=c(5, 10, 3, rt.mrg));
   
-  feat.nms <- substr(rownames(cor.res), 1, 18);
+  feat.nms <- substr(rownames(cor.res), 1, 20);
   feat.num <- length(feat.nms)
   rownames(cor.res) <- NULL;
   
@@ -1610,7 +1622,8 @@ PlotCorr <- function(mbSetObj, imgName, format="png", dpi=72, width=NA){
 #'License: GNU GPL (>= 2)
 #'@export
 
-Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, variable){
+
+Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, variable,appendname){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -1652,19 +1665,60 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, 
     if(taxrank=="OTU"){
       data <- phyloseq_objs$count_tables$OTU
     }else{
+      
+       data <- phyloseq_objs$merged_obj[[taxrank]]
+     if(is.null(data)){
+        AddErrMsg("Errors in projecting to the selected taxanomy level!");
+        return(0);
+      }
+      
       taxrank.inx <- which(names(phyloseq_objs$count_tables) %in% taxrank)
-      data <- phyloseq_objs$count_tables[[taxrank.inx]]
+      nm <- as.character(tax_table(data)[,taxrank]);
+      nm.idx = match(rownames(phyloseq_objs$count_tables[[taxrank.inx]]),nm);
+      y <- which(is.na(nm)==TRUE);
+      
+      #converting NA values to unassigned
+      
+      nm[y] <- "Not_Assigned";
+      data1 <- as.matrix(otu_table(data));
+      
+      if(appendname=="T"){
+        
+        all_nm <- colnames(tax_table(data));
+        hg_nmindx <- which(all_nm==taxrank)-1;
+        
+        if(hg_nmindx!=0){
+          nma <- as.character(tax_table(data)[,hg_nmindx]);
+          y1 <- which(is.na(nma)==TRUE);
+          nma[y1] <- "Not_Assigned";
+          nm <- paste0(nma,"_",nm);
+          ind <- which(nm=="Not_Assigned_Not_Assigned");
+          nm[ind] <- "Not_Assigned";
+          nm <- gsub("_Not_Assigned", "",nm, perl = TRUE);
+        }
+        
+   
+
+        idx.table =  data.frame(original = rownames(phyloseq_objs$count_tables[[taxrank.inx]]),
+                                taxPrepend = nm[nm.idx],stringsAsFactors = F)
+        idx.table$taxPrepend[is.na(idx.table$taxPrepend)] <-  'Not_Assigned'
+        data <- phyloseq_objs$count_tables[[taxrank.inx]]
+        rownames(data) <- idx.table$taxPrepend
+      }else{
+        data <- phyloseq_objs$count_tables[[taxrank.inx]]
+      }
+      
     }
   }else{
     taxrank <- "OTU";
     data <- as.matrix(otu_table(mbSetObj$dataSet$norm.phyobj));
   }
-  
+
   data <- t(data);
   qs::qsave(data, "match_data.qs")
   
   clslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
-  boxdata <- as.data.frame(data);
+  boxdata <- as.data.frame(data,check.names=FALSE);
   boxdata$class <- clslbl;
   mbSetObj$analSet$boxdata <- boxdata;
   
@@ -1704,7 +1758,7 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, 
   
   fileName <- "correlation_feature.csv";
   fast.write(sig.mat, file=fileName);
-  mbSetObj$analSet$resTable <- as.data.frame(sig.mat);
+  mbSetObj$analSet$resTable <- as.data.frame(sig.mat,check.names=FALSE);
   #removing Inf values from table
   is.na(mbSetObj$analSet$resTable) <- sapply(mbSetObj$analSet$resTable, is.infinite);
   mbSetObj$analSet$resTable[is.na(mbSetObj$analSet$resTable)]<-0;
@@ -1723,6 +1777,831 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, 
   mbSetObj$analSet$pattern.var <- variable
   
   return(.set.mbSetObj(mbSetObj));
+}
+
+## plots for multi-factor linear model
+# IMPORTANT NOTE: data must be log transformed, and ideally TSS scaled as well (follow Maaslin defaults).
+# There is no way of ensuring this from current tool design. User must choose either TSS or LOG, or they could choose none for both. 
+# We could take original data, but then it is not filtered and Maaslin takes a long time to run.
+# Best case: have filtered but raw data, and enforce both TSS and LOG in this function
+# filt.data.orig <- qs::qread("filt.data.orig")@.Data %>% as.data.frame() <- this is what we want for OTU. Trying to find something similar for other taxa.
+# See note on general_io.R -> "JE note" etc. Filtered, unnormalized tables do not exist other than OTU. Not sure if this is correct.
+PerformMaaslin <- function(
+    mbSetObj,
+    analysis.var,
+    is.norm = "false",
+    comp = NULL,
+    ref = NULL,
+    block = "NA",
+    taxrank = "NA",
+    imgNm = "NA",
+    thresh = 0.05){
+
+  require(dplyr);
+  require(R.utils);
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  
+  if (!exists('adj.vec')) {
+    adj.bool = F;
+  } else {
+    if (length(adj.vec) > 0) {
+      adj.bool = T;
+    } else {
+      adj.bool = F;
+    }
+  }
+  
+  thresh <- as.numeric(thresh);
+  adj.vars <- adj.vec;
+  
+  if (mbSetObj$module.type=="sdp"){
+    taxrank<-"OTU";
+    if (is.norm == "false"){
+      phyloseq_objs <- qs::qread("phyloseq_prenorm_objs.qs")
+      input.data <- phyloseq_objs$count_tables$OTU %>% as.data.frame()
+    } else {
+      phyloseq_objs <- qs::qread("phyloseq_objs.qs")
+      input.data <- phyloseq_objs$count_tables$OTU %>% as.data.frame()
+    }
+  } else {
+    if (is.norm == "false"){
+      phyloseq_objs <- qs::qread("phyloseq_prenorm_objs.qs")
+      
+      if (taxrank=="OTU"){
+        input.data <- phyloseq_objs$count_tables$OTU %>% as.data.frame()
+      } else {
+        taxrank.inx <- which(names(phyloseq_objs$count_tables) %in% taxrank)
+        input.data <- phyloseq_objs$count_tables[[taxrank.inx]] %>% as.data.frame()
+      } 
+    } else {
+      phyloseq_objs <- qs::qread("phyloseq_objs.qs")
+      if (taxrank=="OTU") {
+        input.data <- phyloseq_objs$count_tables$OTU %>% as.data.frame()
+      } else {
+        taxrank.inx <- which(names(phyloseq_objs$count_tables) %in% taxrank)
+        input.data <- phyloseq_objs$count_tables[[taxrank.inx]] %>% as.data.frame()
+      } 
+    }
+  }
+  
+  meta.nms <- colnames(mbSetObj$dataSet$sample_data)
+  input.meta <- mbSetObj$dataSet$sample_data@.Data %>% as.data.frame()
+  colnames(input.meta) <- meta.nms
+  rownames(input.meta) <- input.meta$sample_id
+  
+  if(adj.bool){
+    fixed.effects <- c(analysis.var, adj.vars)
+    fixed.types <- mbSetObj$dataSet$meta.types[names(mbSetObj$dataSet$meta.types) %in% fixed.effects]
+    fixed.types <- fixed.types[match(fixed.effects, names(fixed.types))]
+  } else { # to do still
+    fixed.effects <- analysis.var
+    fixed.types <- mbSetObj$dataSet$meta.types[names(mbSetObj$dataSet$meta.types) == analysis.var]
+  }
+  
+  analysis.type <- fixed.types[fixed.effects == analysis.var]
+  disc.effects <- fixed.effects[fixed.types == "disc"]
+  
+  # build refs vector (may need to add for blocking too)
+  if(length(disc.effects) > 0){
+    if(analysis.type == "disc"){
+      refs <- paste0(analysis.var, ",", ref)
+      if(length(disc.effects) > 1){
+        for(i in c(2:length(disc.effects))){
+          ref.temp <- paste0(disc.effects[i], ",", levels(unlist(c(input.meta[,disc.effects[i]])))[1])
+          refs <- c(refs, ref.temp)
+        }
+      }
+    } else {
+      refs <- c()
+      if(length(disc.effects) > 1){
+        for(i in c(1:length(disc.effects))){
+          ref.temp <- paste0(disc.effects[i], ",", levels(unlist(c(input.meta[,disc.effects[i]])))[1])
+          refs <- c(refs, ref.temp)
+        }
+      }
+    }
+  }
+
+  # MaAslin does not require samples or orders to exactly match - it takes care of this
+  # set normalized/transformation parameters
+  if(is.norm == "false"){
+    norm.method = "TSS"
+    trans.method = "LOG"
+  } else {
+    norm.method = "NONE"
+    trans.method = "NONE"
+  }
+
+  if(block == "NA"){
+    if(length(disc.effects) > 0){ # case: discrete variables, no blocking factor
+      maaslin <- Maaslin2.MicrobiomeAnalyst(
+        input_data = input.data, 
+        input_metadata = input.meta, 
+        fixed_effects = c(fixed.effects),
+        reference = c(refs),
+        max_significance = 0.05,
+        min_abundance = 0.0,
+        min_prevalence = 0.0,
+        min_variance = 0.0,
+        normalization = norm.method,
+        transform = trans.method);
+    } else { # case: no discrete variables, no blocking factor
+      maaslin <- Maaslin2.MicrobiomeAnalyst(
+        input_data = input.data, 
+        fixed_effects = c(fixed.effects),
+        max_significance = 0.05,
+        min_abundance = 0.0,
+        min_prevalence = 0.0,
+        min_variance = 0.0,
+        normalization = norm.method,
+        transform = trans.method); 
+    }
+  } else { # case: discrete variables, blocking factor (blocking factor must be discrete)
+    check.rank <- capture.output(Maaslin2.MicrobiomeAnalyst(
+      input_data = input.data[1,], 
+      input_metadata = input.meta, 
+      fixed_effects = c(fixed.effects),
+      random_effects = c(block),
+      reference = c(refs),
+      max_significance = 0.05,
+      min_abundance = 0.0,
+      min_prevalence = 0.0,
+      min_variance = 0.0,
+      normalization = norm.method,
+      transform = trans.method), type=c("message"));
+    
+    if((length(grep("rank deficient", check.rank)) + length(grep("singular", check.rank))) > 0){
+      # often random effects model matrix are rank deficient - check this way and return 
+      # feedback that the experimental design does not support using a blocking factor.
+      return(-2)
+    } else {
+      maaslin <- Maaslin2.MicrobiomeAnalyst(
+        input_data = input.data, 
+        input_metadata = input.meta, 
+        fixed_effects = c(fixed.effects),
+        random_effects = c(block),
+        reference = c(refs),
+        max_significance = 0.05,
+        min_abundance = 0.0,
+        min_prevalence = 0.0,
+        min_variance = 0.0,
+        normalization = norm.method,
+        transform = trans.method);
+    }
+  }
+
+  res <- maaslin$results
+  inds <- !(res$feature %in% rownames(input.data)); # rownames that are all integers have "X" appended to front
+  res$feature[inds] <- substring(res$feature[inds], 2);
+  
+  # get unadjusted results
+  if((!adj.bool) & (block == "NA")){
+    res.noadj <- res;
+  } else {
+    refs <- refs[grep(paste0(analysis.var, ","), refs)];
+    
+    maaslin.noadj <- Maaslin2.MicrobiomeAnalyst(
+      input_data = input.data, 
+      input_metadata = input.meta, 
+      fixed_effects = c(analysis.var),
+      reference = c(refs),
+      max_significance = 0.05,
+      min_abundance = 0.0,
+      min_prevalence = 0.0,
+      min_variance = 0.0,
+      normalization = norm.method,
+      transform = trans.method);
+    
+    res.noadj <- maaslin.noadj$results;
+  }
+  
+  inds <- !(res.noadj$feature %in% rownames(input.data)) # rownames that are all integers have "X" appended to front
+  res.noadj$feature[inds] <- substring(res.noadj$feature[inds], 2)
+  
+  # filter results to get only ones related to analysis var
+  res <- res[res$metadata == analysis.var, ];
+  
+  # make res pretty
+  res$coef <- signif(res$coef, digits = 3);
+  res$stderr <- signif(res$stderr, digits = 3);
+  res$pval <- signif(res$pval, digits = 3);
+  res$qval <- signif(res$qval, digits = 3);
+  
+  if(analysis.type == "disc"){
+    res <- res[res$value == comp, ];
+    res.noadj <- res.noadj[res.noadj$value == comp, ];
+    rownames(res) <- res$feature;
+    rownames(res.noadj) <- res.noadj$feature;
+    res <- res[ ,c("coef", "stderr", "pval", "qval")];
+    res.noadj <- res.noadj[ ,c("coef", "stderr", "pval", "qval")];
+    colnames(res) <- c("Log2FC", "St.Error", "P-value", "FDR");
+    colnames(res.noadj) <- c("Log2FC", "St. Error", "P-value", "FDR");
+  } else {
+    rownames(res) <- res$feature;
+    rownames(res.noadj) <- res.noadj$feature;
+    res <- res[ ,c("coef", "stderr", "pval", "qval")];
+    res.noadj <- res.noadj[ ,c("coef", "stderr", "pval", "qval")];
+    colnames(res) <- c("Coefficient", "St.Error", "P-value", "FDR");
+    colnames(res.noadj) <- c("Coefficient", "St.Error", "P-value", "FDR");
+  }
+  
+  # write out/save results
+  fileName <- "multifac_output.csv";
+  fast.write(res, file = fileName);
+  
+  # put results in mbSetObj, learn pattern of analysis set
+  sigfeat <- rownames(res)[res$FDR < thresh];
+  sig.count <- length(sigfeat);
+  if(sig.count == 0){
+    current.msg <<- "No significant features were identified using the given p value cutoff.";
+  }else{
+    current.msg <<- paste("A total of", sig.count, "significant features were identified!");
+  }
+
+  # process data for individual feature boxplot
+  taxrank_boxplot <- taxrank;
+  claslbl_boxplot <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[analysis.var]]);
+  nm_boxplot <- rownames(input.data);
+  dat3t_boxplot <- as.data.frame(t(input.data),check.names=FALSE);
+  colnames(dat3t_boxplot) <- nm_boxplot; 
+  box_data <- dat3t_boxplot;
+  box_data$class <- claslbl_boxplot;
+  box_data$norm <- is.norm;
+  
+  
+  # for graphical summary
+  adj.mat <- res[, c("P-value", "FDR")]
+  noadj.mat <- res.noadj[, c("P-value", "FDR")]
+  
+  colnames(adj.mat) <- c("pval.adj", "fdr.adj")
+  colnames(noadj.mat) <- c("pval.no", "fdr.no")
+  
+  both.mat <- merge(adj.mat, noadj.mat, by = "row.names")
+  both.mat$pval.adj <- -log10(both.mat$pval.adj)
+  both.mat$fdr.adj <- -log10(both.mat$fdr.adj)
+  both.mat$pval.no <- -log10(both.mat$pval.no)
+  both.mat$fdr.no <- -log10(both.mat$fdr.no)
+  
+  rownames(both.mat) = both.mat[,1]
+  
+  # for plotting adjp vs p
+  jsonNm <- gsub(".png", ".json", imgNm);
+  jsonObj <- RJSONIO::toJSON(both.mat);
+  sink(jsonNm);
+  cat(jsonObj);
+  sink();
+  
+  mbSetObj$analSet$cov.mat <- both.mat; 
+  mbSetObj$analSet$multiboxdata <- box_data;
+  mbSetObj$analSet$sig.count <- sig.count;
+  mbSetObj$analSet$resTable <- res;
+  mbSetObj$analSet$maas.resnoadj <- res.noadj;
+  
+  return(.set.mbSetObj(mbSetObj))
+}
+
+
+Maaslin2.MicrobiomeAnalyst <-
+    function(
+        input_data,
+        input_metadata,
+        min_abundance = 0.0,
+        min_prevalence = 0.1,
+        min_variance = 0.0,
+        normalization = "TSS",
+        transform = "LOG",
+        analysis_method = "LM",
+        max_significance = 0.25,
+        random_effects = NULL,
+        fixed_effects = NULL,
+        correction = "BH",
+        standardize = TRUE,
+        cores = 1,
+        reference = NULL)
+    {
+      
+      require('data.table')
+      require('dplyr')
+     
+        # Allow for lower case variables
+        normalization <- toupper(normalization);
+        transform <- toupper(transform);
+        analysis_method <- toupper(analysis_method);
+        correction <- toupper(correction);
+
+        #################################################################
+        # Read in the data and metadata, create output folder, init log #
+        #################################################################
+        # if a character string then this is a file name, else it 
+        # is a data frame
+        if (is.character(input_data)) {
+            data <- data.frame(data.table::fread(input_data, header = TRUE, sep = "\t"), row.names = 1);
+            if (nrow(data) == 1) {
+                # read again to get row name
+                data <- read.table(input_data, header = TRUE, row.names = 1);
+            }
+        } else {
+            data <- input_data;
+        }
+        if (is.character(input_metadata)) {
+            metadata <- data.frame(data.table::fread(input_metadata, header = TRUE, sep = "\t"), row.names = 1);
+            if (nrow(metadata) == 1) {
+                metadata <- read.table(input_metadata, header = TRUE, row.names = 1);
+            }
+        } else {
+            metadata <- input_metadata;
+        }
+
+        ###############################################################
+        # Determine orientation of data in input and reorder to match #
+        ###############################################################
+        
+        samples_row_row <- intersect(rownames(data), rownames(metadata))
+        if (length(samples_row_row) > 0) {
+            # this is the expected formatting so do not modify data frames
+        } else {
+            samples_column_row <- intersect(colnames(data), rownames(metadata));
+
+            if (length(samples_column_row) == 0) {
+                # modify possibly included special chars in sample names in metadata
+                rownames(metadata) <- make.names(rownames(metadata));
+                samples_column_row <- intersect(colnames(data), rownames(metadata));
+            }
+
+            if (length(samples_column_row) > 0) {
+                # transpose data frame so samples are rows
+                data <- as.data.frame(t(data));
+            } else {
+                samples_column_column <- intersect(colnames(data), colnames(metadata));
+                if (length(samples_column_column) > 0) {
+                    data <- as.data.frame(t(data));
+                    metadata <- type.convert(as.data.frame(t(metadata)));
+                } else {
+                    samples_row_column <- intersect(rownames(data), colnames(metadata));
+
+                    if (length(samples_row_column) == 0) {
+                        # modify possibly included special chars in sample names in data
+                        rownames(data) <- make.names(rownames(data));
+                        samples_row_column <- intersect(rownames(data), colnames(metadata));
+                    }
+
+                    if (length(samples_row_column) > 0) {
+                        metadata <- type.convert(as.data.frame(t(metadata)));
+                    } else {
+                        stop()
+                    }
+                }
+            }
+        }
+       
+        # replace unexpected characters in feature names
+        colnames(data) <- make.names(colnames(data))
+ 
+        # check for samples without metadata
+        extra_feature_samples <- setdiff(rownames(data), rownames(metadata))
+        # check for metadata samples without features
+        extra_metadata_samples <- setdiff(rownames(metadata), rownames(data))
+        
+        # get a set of the samples with both metadata and features
+        intersect_samples <- intersect(rownames(data), rownames(metadata))
+        
+        # now order both data and metadata with the same sample ordering
+        data <- data[intersect_samples, , drop = FALSE]
+        metadata <- metadata[intersect_samples, , drop = FALSE]
+        
+        ###########################################
+        # Compute the formula based on user input #
+        ###########################################
+        
+        random_effects_formula <- NULL
+        # use all metadata if no fixed effects are provided
+        if (is.null(fixed_effects)) {
+            fixed_effects <- colnames(metadata)
+        } else {
+            fixed_effects <- unlist(strsplit(fixed_effects, ",", fixed = TRUE))
+            # remove any fixed effects not found in metadata names
+            to_remove <- setdiff(fixed_effects, colnames(metadata))
+            if (length(to_remove) > 0)
+            fixed_effects <- setdiff(fixed_effects, to_remove)
+            if (length(fixed_effects) == 0) {
+                stop()
+            }
+        }
+        
+        if (!is.null(random_effects)) {
+            random_effects <- unlist(strsplit(random_effects, ",", fixed = TRUE))
+            
+            # subtract random effects from fixed effects
+            fixed_effects <- setdiff(fixed_effects, random_effects)
+            
+            # remove any random effects not found in metadata
+            to_remove <- setdiff(random_effects, colnames(metadata))
+            
+            if (length(to_remove) > 0)
+            random_effects <- setdiff(random_effects, to_remove)
+            
+            # create formula
+            if (length(random_effects) > 0) {
+                random_effects_formula_text <- paste("expr ~ (1 | ",
+                        paste(random_effects, ")", sep = '', collapse = " + (1 | "), sep = '');
+                
+                random_effects_formula <- tryCatch(as.formula(random_effects_formula_text),
+                                                   error = function(e)
+                                                     stop(paste("Invalid formula for random effects: ",
+                                                                random_effects_formula_text)));
+            }
+        }
+        
+        # reduce metadata to only include fixed/random effects in formula
+        effects_names <- union(fixed_effects, random_effects)
+        metadata <- metadata[, effects_names, drop = FALSE]
+        
+        # create the fixed effects formula text
+        formula_text <- paste("expr ~ ", paste(fixed_effects, collapse = " + "));
+        formula <- tryCatch(as.formula(formula_text),
+                error = function(e)
+                    stop(paste("Invalid formula.",
+                               "Please provide a different formula: ",
+                               formula_text)));
+        #########################################################
+        # Filter data based on min abundance and min prevalence #
+        #########################################################
+
+        # use ordered factor for variables with more than two levels
+        # find variables with more than two levels
+        if (is.null(reference)) {reference <- ","}
+
+        for ( i in colnames(metadata) ) {
+            mlevels <- unique(na.omit(metadata[,i]));
+            numeric_levels <- grep('^-?[0-9.]+[eE+-]?', mlevels, value = T);
+            if ( ( length(mlevels[! (mlevels %in% c("UNK"))]) > 1 ) &&  # modification to allow setting reference when only two classes in metadata
+                 ( i %in% fixed_effects ) &&
+                 ( length(numeric_levels) == 0)) {
+                    split_reference <- unlist(strsplit(reference, "[,;]"));
+                if (! i %in% split_reference ) {
+                    stop(paste("Please provide the reference for the variable '",
+                        i, "' which includes more than 2 levels: ",
+                        paste(as.character(mlevels), collapse=", "), ".", sep=""));
+                } else {
+                    ref <- split_reference[match(i,split_reference)+1];
+                    other_levels <- as.character(mlevels)[! as.character(mlevels) == ref];
+                    metadata[,i] <- factor(metadata[,i], levels=c(ref, other_levels));
+                }
+            }
+        }       
+ 
+        unfiltered_data <- data;
+        unfiltered_metadata <- metadata;
+        
+        # require at least total samples * min prevalence values 
+        # for each feature to be greater than min abundance
+        total_samples <- nrow(unfiltered_data);
+        min_samples <- total_samples * min_prevalence;
+        
+        # Filter by abundance using zero as value for NAs
+        data_zeros <- unfiltered_data;
+        data_zeros[is.na(data_zeros)] <- 0;
+        filtered_data <- unfiltered_data[, colSums(data_zeros > min_abundance) > min_samples, drop = FALSE];
+        total_filtered_features <- ncol(unfiltered_data) - ncol(filtered_data);
+        filtered_feature_names <- setdiff(names(unfiltered_data), names(filtered_data));
+        
+        #################################
+        # Filter data based on variance #
+        #################################
+        
+        sds <- apply(filtered_data, 2, sd)
+        variance_filtered_data <- filtered_data[, which(sds > min_variance), drop = FALSE]
+        variance_filtered_features <- ncol(filtered_data) - ncol(variance_filtered_data)
+        variance_filtered_feature_names <- setdiff(names(filtered_data), names(variance_filtered_data))
+        filtered_data <- variance_filtered_data
+       
+        ######################
+        # Normalize features #
+        ######################
+        
+        filtered_data_norm <- normalizeFeatures(filtered_data, normalization = normalization)
+        
+        ################################
+        # Standardize metadata, if set #
+        ################################
+        
+        if (standardize) {
+            metadata <- metadata %>% dplyr::mutate_if(is.numeric, scale)
+        }
+        
+        ############################
+        # Transform and run method #
+        ############################
+       
+        # transform features
+        filtered_data_norm_transformed <- transformFeatures(filtered_data_norm, transformation = transform)
+        
+        # apply the method to the data with the correction
+        fit_data <- fit.data(
+                filtered_data_norm_transformed,
+                metadata,
+                analysis_method,
+                formula = formula,
+                random_effects_formula = random_effects_formula,
+                correction = correction,
+                cores = cores);
+        
+        fit_data$results$N <- apply(fit_data$results, 1, FUN = function(x)
+                    length(filtered_data_norm[, x[1]]));
+        
+        fit_data$results$N.not.zero <- apply(fit_data$results, 1, FUN = function(x)
+                    length(which(filtered_data_norm[, x[1]] > 0)));
+        
+        fit_data$input$data <- filtered_data_norm_transformed
+        fit_data$input$metadata <- metadata
+        fit_data$input$analysis_method <- analysis_method
+        fit_data$input$formula <- formula
+        fit_data$input$random_effects_formula <- random_effects_formula
+        fit_data$input$correction <- correction
+        
+        return(fit_data)
+    }
+
+
+############## Fit Function #############
+fit.data <- function(
+    features,
+    metadata,
+    model,
+    formula = NULL,
+    random_effects_formula = NULL,
+    correction = "BH",
+    cores = 1) {
+  
+  # Load Required Packages
+  for (lib in 
+       c('dplyr','pbapply','lmerTest','car','parallel','glmmTMB','MASS','cplm','pscl')) {
+    suppressPackageStartupMessages(require(lib, character.only = TRUE))
+  }
+  
+  # set the formula default to all fixed effects if not provided
+  if (is.null(formula))
+    formula <-
+      as.formula(paste(
+        "expr ~ ", 
+        paste(colnames(metadata), 
+              collapse = "+")))
+  
+  if (!(is.null(random_effects_formula))) {
+    formula <-
+      paste(
+        '. ~', 
+        paste(all.vars(formula)[-1], collapse = ' + '), 
+        '.', 
+        sep = ' + ')
+    formula <- update(random_effects_formula, formula)
+  }
+  
+  #############################################################
+  # Determine the function and summary for the model selected #
+  #############################################################
+  
+  ################
+  # Linear Model #
+  ################
+  
+  if (model == "LM") {
+    if (is.null(random_effects_formula)) {
+      model_function <-
+        function(formula, data, na.action) {
+          return(glm(
+            formula,
+            data = data,
+            family = 'gaussian',
+            na.action = na.action
+          ))
+        }
+      summary_function <- function(fit) {
+        lm_summary <- summary(fit)$coefficients
+        para <- as.data.frame(lm_summary)[-1, -3]
+        para$name <- rownames(lm_summary)[-1]
+        return(para)
+      }
+    } else {
+      ranef_function <- lme4::ranef
+      model_function <-
+        function(formula, data, na.action) {
+          return(lmerTest::lmer(
+            formula, 
+            data = data, 
+            na.action = na.action))
+        }
+      summary_function <- function(fit) {
+        lm_summary <- coef(summary(fit))
+        para <- as.data.frame(lm_summary)[-1, -c(3:4)]
+        para$name <- rownames(lm_summary)[-1]
+        return(para)
+      }
+    }
+  }
+  
+  #######################################
+  # Init cluster for parallel computing #
+  #######################################
+  
+  cluster <- NULL
+  if (cores > 1)
+  {
+    cluster <- parallel::makeCluster(cores)
+  }
+  
+  ##############################
+  # Apply per-feature modeling #
+  ##############################
+  outputs <-
+    pbapply::pblapply(seq_len(ncol(features)), cl = cluster, function(x) {
+      # Extract Features One by One
+      featuresVector <- features[, x]
+      
+      dat_sub <- data.frame(expr = as.numeric(featuresVector), metadata)
+      fit <- tryCatch({
+        fit1 <-
+          model_function(
+            formula, 
+            data = dat_sub, 
+            na.action = na.exclude)
+      }, error = function(err) {
+        fit1 <-
+          try({
+            model_function(
+              formula, 
+              data = dat_sub, 
+              na.action = na.exclude)
+          })
+        return(fit1)
+      })
+      
+      # Gather Output
+      output <- list()
+      if (all(!inherits(fit, "try-error"))) {
+        output$para <- summary_function(fit)
+        if (!(is.null(random_effects_formula))) {
+          l <- ranef_function(fit)
+          d<-as.vector(unlist(l))
+          names(d)<-unlist(lapply(l, row.names))
+          output$ranef<-d
+        }
+      }
+      else
+      {
+        output$para <-
+          as.data.frame(matrix(NA, 
+                               nrow = ncol(metadata), ncol = 3))
+        output$para$name <- colnames(metadata)
+        if (!(is.null(random_effects_formula))) output$ranef <- NA
+      }
+      colnames(output$para) <- c('coef', 'stderr' , 'pval', 'name')
+      output$para$feature <- colnames(features)[x]
+      return(output)
+    })
+  
+  # stop the cluster
+  if (!is.null(cluster))
+    parallel::stopCluster(cluster)
+  
+  # bind the results for each feature
+  paras <-
+    do.call(rbind, lapply(outputs, function(x) {
+      return(x$para)
+    }))
+  
+  if (!(is.null(random_effects_formula))) {
+    ranef <-
+      do.call(rbind, lapply(outputs, function(x) {
+        return(x$ranef)
+      }))
+    row.names(ranef) <- colnames(features) 
+  }
+  
+  ################################
+  # Apply correction to p-values #
+  ################################
+  
+  paras$qval <- as.numeric(p.adjust(paras$pval, method = correction))
+  
+  #####################################################
+  # Determine the metadata names from the model names #
+  #####################################################
+  
+  metadata_names <- colnames(metadata)
+  # order the metadata names by decreasing length
+  metadata_names_ordered <-
+    metadata_names[order(
+      nchar(metadata_names), decreasing = TRUE)]
+  # find the metadata name based on the match 
+  # to the beginning of the string
+  extract_metadata_name <- function(name) {
+    return(metadata_names_ordered[mapply(
+      startsWith, 
+      name, 
+      metadata_names_ordered)][1])
+  }
+  paras$metadata <- unlist(lapply(paras$name, extract_metadata_name))
+  # compute the value as the model contrast minus metadata
+  paras$value <-
+    mapply(function(x, y) {
+      if (x == y)
+        x
+      else
+        gsub(x, "", y)
+    }, paras$metadata, paras$name)
+  
+  ##############################
+  # Sort by decreasing q-value #
+  ##############################
+  
+  paras <- paras[order(paras$qval, decreasing = FALSE), ]
+  paras <-
+    dplyr::select(
+      paras,
+      c('feature', 'metadata', 'value'),
+      dplyr::everything())
+  
+  rownames(paras)<-NULL
+  
+  if (!(is.null(random_effects_formula))) {
+    return(list("results" = paras, "ranef" = ranef))
+  } else {
+    return(list("results" = paras))
+  }
+}    
+
+
+###################
+## Transformation #
+###################
+
+transformFeatures = function(features, transformation) {
+  if (transformation == 'LOG')     {
+    features <- apply(features, 2, LOG)
+  }
+  return(features)
+}
+
+
+##################
+## Normalization #
+##################
+
+normalizeFeatures = function(features, normalization) {
+  if (normalization == 'TSS')
+  {
+    features <- TSSnorm(features)
+  }
+  
+  if (normalization == 'NONE')
+  {
+    features <- features
+  }
+  
+  return(features)
+}
+
+######################
+## TSS Normalization #
+######################
+
+# Apply TSS Normalization To A Dataset
+
+TSSnorm = function(features) {
+  # Convert to Matrix from Data Frame
+  features_norm = as.matrix(features)
+  dd <- colnames(features_norm)
+  
+  # TSS Normalizing the Data
+  features_TSS <-
+    vegan::decostand(
+      features_norm,
+      method = "total",
+      MARGIN = 1,
+      na.rm = TRUE)
+  
+  # Convert back to data frame
+  features_TSS <- as.data.frame(features_TSS)
+  
+  # Rename the True Positive Features - Same Format as Before
+  colnames(features_TSS) <- dd
+  
+  
+  # Return
+  return(features_TSS)
+}
+
+
+######################
+# Log Transformation #
+######################
+
+# Log Transformation
+LOG <- function(x) {
+  y <- replace(x, x == 0, min(x[x>0]) / 2)
+  return(log2(y))
 }
 
 ###################################
@@ -1747,406 +2626,26 @@ RunFastSpar_mem <- function(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, 
 #'@export
 RunFastSpar <- function(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, output="network", opt="corr"){
   
-  # only works for unix
-  my.os <- tolower(GetOS());
-  
-  if(my.os == "mac" | my.os == "windows"){
-    AddErrMsg("The built-in fastspar only works for unix system. Please visit https://github.com/scwatts/fastspar for more details.");
-    return(0);
-  }
-  
-  if(.on.public.web){
-    spar_home <- "../../lib/fastspar/";
-  }else if (file.exists("/home/jasmine/Downloads/fastspar/fastspar")){ #jas local
-    spar_home <- "/home/jasmine/Downloads/fastspar/"
-  }else{
-    spar_home <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/fast_spar/"
-  }
-  
-  path_fastspar <- paste(spar_home, "fastspar", sep="");
-  path_fastspar_bs <- paste(spar_home, "fastspar_bootstrap", sep="");
-  path_fastspar_pvals <- paste(spar_home, "fastspar_pvalues", sep="");
-  
-  # make sure they are executable
-  my.cmd <- paste("chmod a+x", path_fastspar, path_fastspar_bs, path_fastspar_pvals);
-  system(my.cmd);
-  
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  if(.on.public.web){
-    load_igraph();
-  }
-  
-  if(opt == "pattern"){
-    data1 <- qs::qread("pattern_data.qs")
-  }else{
-    # first get OTU table to BIOM TSV format
-    if(mbSetObj$module.type=="sdp"){
-      data1 <- as.matrix(otu_table(mbSetObj$dataSet$norm.phyobj));
-      taxrank <- "OTU";
-    }else if(mbSetObj$module.type=="mdp"){
-      if(!exists("phyloseq_objs")){
-        phyloseq_objs <- qs::qread("phyloseq_objs.qs")
-      }
-      
-      if(taxrank=="OTU"){
-        data1 <- phyloseq_objs$count_tables$OTU
-      }else{
-        taxrank.inx <- which(names(phyloseq_objs$count_tables) %in% taxrank)
-        data1 <- phyloseq_objs$count_tables[[taxrank.inx]]
-      }
+    if(!exists("my.fast.spar")){ # public web on same user dir
+        .load.scripts.on.demand("utils_fastspar.Rc");    
     }
-  }
-  
-  if(opt=="corr"){
-    qs::qsave(data1, "sparcc_full_data.qs")  
-  }
-  
-  if(!is.null(mbSetObj$dataSet$selected.grps) & opt == "corr"){
-    data1 <- data1[,which(colnames(data1) %in% mbSetObj$dataSet$selected.grps)]
-  }
-  
-  # filter data if necessary
-  abund_filtered <- mbSetObj$dataSet$ab.filtered
-  var_filtered <- mbSetObj$dataSet$var.filtered
-  
-  feat_num <- nrow(data1)
-  
-  # if number of feats is greater than 500, do filtering of poorly represented OTUs
-  # first, do low count filtering 
-  if(feat_num > 500 & !abund_filtered){
-    minLen <- 0.2*ncol(data1); # filter out feats that do not have a minimum count of 4 in at least 20 percent of samples
-    kept.inx <- apply(data1, MARGIN = 1,function(x) {sum(x >= 4) >= minLen});
-    data1 <- data1[kept.inx, ];
-  }
-  
-  # second, do low variance filtering
-  if(feat_num > 500 & !var_filtered){
-    filter.val <- apply(data1, 1, IQR, na.rm=T);
-    rk <- rank(-filter.val, ties.method='random');
-    remain <- rk < feat_num*(1-0.1); # filter out 10% of low variance feats based on IQR
-    data1 <- data1[remain,];
-  }
-  
-  # third, if still over 500 feats, rank and keep top 500
-  if(feat_num > 500){
-    filter.val <- apply(data1, 1, IQR, na.rm=T);
-    rk <- rank(-filter.val, ties.method='random');
-    remain <- rk < 500;
-    data1 <- data1[remain,];
-    current.msg <<- "Only the top 500 features are kept, ranked by their variance!"
-  }
-  
-  # replace zeros with random numbers based on lowest non-zero count
-  
-  set.seed(12345)
-  
-  if(opt %in% c("corr", "feat")){
-    lowest.count <- min(apply(data1, 1, FUN = function(x) {min(x[x > 0])}))
-  }else{ #only pattern searching
-    lowest.count <- min(apply(data1[-nrow(data1),], 1, FUN = function(x) {min(x[x > 0])}))
-  }
-  
-  # replacements
-  replacements <- apply(data1, 1, function(x) { (sample(1:lowest.count, size=sum(x==0), replace = F))/lowest.count} )
-  
-  # this works for rows
-  replaced <- vector(length = nrow(data1), "list")
-  
-  for(i in 1:nrow(data1)){
-    replaced[[i]] <- replace(as.vector(data1[i,]), as.vector(data1[i,]==0), replacements[[i]])
-  }
-  
-  zero.output <- matrix(unlist(replaced), ncol = ncol(data1), byrow = TRUE)
-  colnames(zero.output) <- colnames(data1)
-  rownames(zero.output) <- rownames(data1)
-  
-  if(opt=="corr"){
-    qs::qsave(zero.output, "sparcc_data.qs")
-  }
-  
-  # add header
-  new_col <- c("#OTU ID", colnames(zero.output))
-  data <- cbind(rownames(zero.output), zero.output)
-  colnames(data) <- new_col
-  
-  write.table(data, file="otu_table_corr.tsv", quote=FALSE, row.names = FALSE, sep="\t")
-  
-  otu_table <- "otu_table_corr.tsv"
-  corr_output <- "sparcc_median_correlation.tsv"
-  cov_output <- "sparcc_median_covariance.tsv"
-  bootstrap_counts <- "bootstrap_counts"
-  counts_prefix <- "bootstrap_counts/boot_data"
-  bootstrap_correlation <- "bootstrap_correlation"
-  corr_bs_output <- "${jnew}_median_correlation.tsv"
-  cov_bs_output <- "${k}_median_covariance.tsv"
-  corr_prefix <- "cor_boot_data_"
-  test <- "text.txt"
-  pval_output <- "sparcc_pvals.tsv"
-  
-  invisible(system(paste(path_fastspar, "--otu_table", otu_table, "--correlation", corr_output, "--covariance", cov_output, ";",
-                         "mkdir", bootstrap_counts, ";",
-                         path_fastspar_bs,  "--otu_table", otu_table, "--number", permNum, "--prefix", counts_prefix, ";",
-                         "find", bootstrap_counts, ">>", test, ";",
-                         "cat", test, "| while read line; do echo $line; j=$(basename ${line}); jnew=$(echo cor_${j}); k=$(echo cov_${j}); jnew=$(echo ${jnew} | sed 's/\\.tsv//'); k=$(echo ${k} | sed 's/\\.tsv//');", path_fastspar, "--otu_table ${line} --correlation",
-                         corr_bs_output, "--covariance", cov_bs_output, "-i 5 ; done;",
-                         path_fastspar_pvals, "--otu_table", otu_table, "--correlation", corr_output, "--prefix", corr_prefix, "--permutations", permNum, "--outfile", pval_output, ";",
-                         "rm cor_boot_data*.tsv; rm cov_boot_data*.tsv;", "rm -rf", bootstrap_counts, "rm -rf text.txt"), intern=TRUE, ignore.stdout=TRUE))
-  
-  sparcc_results <- read.table(file = "sparcc_median_correlation.tsv", sep="\t", stringsAsFactors = FALSE)
-  names <- sparcc_results[,1]
-  sparcc_results_new <- as.matrix(sparcc_results[,-1])
-  colnames(sparcc_results_new) <- rownames(sparcc_results_new) <- names
-  
-  sparcc_pvals <- read.table(file = "sparcc_pvals.tsv", sep="\t", stringsAsFactors = FALSE)
-  sparcc_pvals_new <- as.matrix(sparcc_pvals[,-1])
-  colnames(sparcc_pvals_new) <- rownames(sparcc_pvals_new) <- names
-  
-  if(output == "network"){
-    sparcc_results_new[sparcc_results_new==0] <- .00001
-    sparcc_corr <- igraph::as_data_frame(igraph::graph_from_adjacency_matrix(sparcc_results_new, weighted = TRUE))
-    sparcc_pvals_new[sparcc_pvals_new==0] <- .00001
-    sparcc_pvals <- igraph::as_data_frame(igraph::graph_from_adjacency_matrix(sparcc_pvals_new, weighted = TRUE))
-    
-    sparcc_combo <- cbind(sparcc_corr, sparcc_pvals[,3])
-    colnames(sparcc_combo) <- c("Taxon1", "Taxon2", "Correlation", "P.Value")
-    qs::qsave(sparcc_combo, "network_correlation.qs")
-    
-    sparcc_combo <- sparcc_combo[(abs(sparcc_combo[,3]) > corrCutoff & sparcc_combo[,4] < pvalCutoff),]
-    fast.write(sparcc_combo, "correlation_table.csv", row.names = FALSE)
-    .set.mbSetObj(mbSetObj)
-    return(sparcc_combo)
-  }else if(output=="heatmap"){
-    .set.mbSetObj(mbSetObj)
-    return(sparcc_results_new)
-  }
+    return(my.fast.spar(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, output, opt));
 }
 
 # Set of functions to perform cor.test
 PearsonCorrFunc <- function(var1, var2, data){
   result <- cor.test(data[,var1], data[,var2])
-  data.frame(var1, var2, result[c("estimate", "p.value", "statistic", "method")], stringsAsFactors = FALSE)
+  data.frame(var1, var2, result[c("estimate", "p.value", "statistic", "method")], stringsAsFactors = FALSE,check.names=FALSE)
 }
 
 SpearmanCorrFunc <- function(var1, var2, data){
   result <- cor.test(data[,var1], data[,var2], method = "spearman", exact = FALSE)
-  data.frame(var1, var2, result[c("estimate", "p.value", "statistic", "method")], stringsAsFactors = FALSE)
+  data.frame(var1, var2, result[c("estimate", "p.value", "statistic", "method")], stringsAsFactors = FALSE,check.names=FALSE)
 }
 
 KendallCorrFunc <- function(var1, var2, data){
   result <- cor.test(data[,var1], data[,var2], method = "kendall", exact = FALSE)
-  data.frame(var1, var2, result[c("estimate", "p.value", "statistic", "method")], stringsAsFactors = FALSE)
-}
-
-#'Function to create Network Summary plot
-#'@description This function outputs the network
-#'summary plot for a specific taxa.
-#'@param mbSetObj Input the name of the mbSetObj.
-#'@param colOpt Character, "default", "viridis",
-#'"cividis", or "plasma".
-#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
-#'McGill University, Canada
-#'License: GNU GPL (>= 2)
-#'@export
-
-PlotNetworkSummary <- function(mbSetObj, imgName, taxa, format, width=NA, dpi=72,
-                               colOpt="default", num_taxa=10){
-  
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  
-  group <- mbSetObj$dataSet$meta
-  pvalCutoff <- mbSetObj$dataSet$corr.pval.cutoff
-  
-  mbSetObj$analSet$network_sum <- imgName;
-  imgName <- paste(imgName, ".", format, sep="");
-  
-  cor.method <- mbSetObj$dataSet$cor.method
-  
-  network_results <- qs::qread("network_correlation.qs")
-  
-  if(cor.method != "sparcc"){
-    network_results <- network_results[,1:4]
-    data <- qs::qread("network_cor_data.qs") 
-    taxa_inx1 <- which(network_results$Taxon1 %in% taxa)
-    taxa_inx2 <- which(network_results$Taxon2 %in% taxa)
-    taxa_results1 <- network_results[taxa_inx1,]
-    taxa_results2 <- network_results[taxa_inx2,]
-    taxa_results2 <- taxa_results2[, c(2,1,3,4)]
-    colnames(taxa_results2) <- colnames(taxa_results1)
-    taxa_results <- rbind(taxa_results1, taxa_results2) 
-  }else{
-    data <- qs::qread("sparcc_full_data.qs") 
-    data <- t(data)
-    taxa_inx <- which(network_results$Taxon1 %in% taxa)
-    taxa_results <- network_results[taxa_inx,]
-  }
-  
-  taxa_results <- taxa_results[!taxa_results$Taxon1 == taxa_results$Taxon2,] 
-  taxa_results <- taxa_results[order(-abs(taxa_results[[3]])), ];
-  
-  if(num_taxa < nrow(taxa_results)) {
-    taxa_results <- taxa_results[1:num_taxa,]
-  }
-  
-  # reverse order
-  taxa_results <- taxa_results[nrow(taxa_results):1,]
-  
-  # next create dot-size by p-value
-  pval <- taxa_results[[4]]
-  corr <- taxa_results[[3]]
-  sig.names <- names(corr) <- taxa_results[[2]]
-  
-  sig.inx <- which(pval < pvalCutoff)
-  sig.names[sig.inx] <- paste0(sig.names[sig.inx], "*")
-  
-  if(sum(corr > 0) == 0){ # all negative correlation
-    corr <- rev(corr);
-  }
-  
-  feat.num <- length(corr);
-  
-  if(is.na(width)){
-    if(length(corr) < 5 ){
-      h <- 6;
-      w <- 8;
-    } else if (length(corr) < 10){
-      h <- length(corr)/1.3;
-      w <- 8;
-    } else if (length(corr) < 15){
-      h <- length(corr)/1.6;
-      w <- 8;
-    } else if (length(corr) < 20){
-      h <- length(corr)/1.8;
-      w <- 8;
-    } else if (length(corr) < 25){
-      h <- length(corr)/2;
-      w <- 8;
-    } else if (length(corr) < 30){
-      h <- length(corr)/2.2;
-      w <- 8;
-    } else if (length(corr) < 40){
-      h <- length(corr)/2.5;
-      w <- 8;
-    } else {
-      h <- length(corr)/4.5;
-      w <- 8;
-    };
-  }else if(width == 0){
-    w <- 8.5;
-  }else{
-    w <- width;
-  }
-  
-  Cairo::Cairo(file = imgName, unit="in", dpi=72, width=w, height=h, type=format, bg="white");
-  
-  sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
-  keep <- mbSetObj$dataSet$selected.grps
-  keep.inx <- rownames(sample_table) %in% keep
-  sample_table$Keep <- keep.inx
-  sample_table <- eval(parse(text = paste("phyloseq:::subset_samples(sample_table,", "Keep == TRUE)", sep="")))
-  
-  cls.len <- length(mbSetObj$dataSet$comparison)
-  
-  if(cls.len == 2){
-    rt.mrg <- 7;
-  }else if(cls.len == 3){
-    rt.mrg <- 8;
-  }else if(cls.len == 4){
-    rt.mrg <- 9;
-  }else if(cls.len == 5){
-    rt.mrg <- 10;
-  }else if(cls.len == 6){
-    rt.mrg <- 11;
-  }else{
-    rt.mrg <- 12;
-  }
-  
-  op <- par(mar=c(5,10,3,rt.mrg)); # set right side margin with the number of class (always 2)
-  
-  # as data should already be normalized, use mean/median should be the same
-  # mns is a list contains means of all vars at each level
-  # convert the list into a matrix with each row contains var averages across different lvls
-  data1 <- data[which(rownames(data) %in% mbSetObj$dataSet$selected.grps),]
-  mns <- by(data1[, names(corr)], 
-            sample_table[[group]],
-            function(x){ # inner function note, by send a subset of dataframe
-              apply(x, 2, mean, trim=0.1)
-            });
-  mns <- t(matrix(unlist(mns), ncol=feat.num, byrow=TRUE));
-  
-  vip.nms <- sig.names;
-  names(corr) <- NULL;
-  
-  cols <- case_when(
-    corr > 0.75 ~ "#d47273",
-    corr > 0.5 & corr < 0.75 ~ "#dd9091",
-    corr > 0.25 & corr < 0.5 ~ "#e6aeaf",
-    corr > 0 & corr < 0.25 ~ "#f0cccd",
-    corr < 0 & corr > -0.25 ~ "#ccdef0",
-    corr > -0.25 ~ "#ccdef0",
-    corr > -0.5 ~ "#aecbe6",
-    corr > -0.75 ~ "#90b7dd",
-    TRUE ~ "#72a4d4"
-  )
-  
-  title <- taxa
-  
-  dotchart(corr, xlab="Correlation", xlim=c(-1, 1), pch="", main=title, cex.lab = 1.15);
-  barplot(corr, space=c(0.5, rep(0, length(corr)-1)), xlim=c(-1,1), xaxt="n", col = cols, add=T, horiz=T);
-  
-  mtext(side=2, at=1:feat.num, vip.nms, las=2, line=1) # set y-axis (species names)
-  
-  axis.lims <- par("usr"); # x1, x2, y1 ,y2
-  
-  # get character width
-  shift <- 2*par("cxy")[1];
-  lgd.x <- axis.lims[2] + shift;
-  
-  x <- rep(lgd.x, feat.num);
-  y <- 1:feat.num;
-  par(xpd=T);
-  
-  load_rcolorbrewer();
-  
-  nc <- ncol(mns);
-  
-  col <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdYlBu"))(nc); # set colors for each class
-  
-  # calculate background
-  bg <- matrix("", nrow(mns), nc);
-  for (m in 1:nrow(mns)){
-    bg[m,] <- (col[nc:1])[rank(mns[m,])];
-  }
-  
-  cls.lbl <- levels(sample_table[[group]]);
-  
-  for (n in 1:ncol(mns)){
-    points(x,y, bty="n", pch=22, bg=bg[,n], cex=3);
-    # now add label
-    text(x[1], axis.lims[4], cls.lbl[n], srt=45, adj=c(0.2,0.5));
-    # shift x, note, this is good for current size
-    x <- x + shift/1.25;
-  }
-  
-  # now add color key, padding with more intermediate colors for contiuous band
-  col <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(25, "RdYlBu"))(50)
-  
-  nc <- length(col);
-  x <- rep(x[1] + shift, nc);
-  
-  shifty <- (axis.lims[4]-axis.lims[3])/3;
-  starty <- axis.lims[3] + shifty;
-  endy <- axis.lims[3] + 2*shifty;
-  y <- seq(from = starty, to = endy, length = nc);
-  
-  points(x,y, bty="n", pch=15, col=rev(col), cex=2);
-  
-  text(x[1], endy+shifty/8, "High");
-  text(x[1], starty-shifty/8, "Low");
-  
-  par(op);
-  dev.off();
-  
-  return(.set.mbSetObj(mbSetObj));
+  data.frame(var1, var2, result[c("estimate", "p.value", "statistic", "method")], stringsAsFactors = FALSE,check.names=FALSE)
 }
 
 #'Function to generate templates
@@ -2210,7 +2709,7 @@ phyloseq_to_edgeR = function(physeq, group, method="RLE", ...){
   # Define gene annotations (`genes`) as tax_table
   taxonomy = tax_table(physeq, errorIfNULL=FALSE)
   if( !is.null(taxonomy) ){
-    taxonomy = data.frame(as(taxonomy, "matrix"))
+    taxonomy = data.frame(as(taxonomy, "matrix"),check.names=FALSE);
   }
   
   # Now turn into a DGEList
@@ -2227,19 +2726,17 @@ phyloseq_to_metagenomeSeq = function (physeq, ...)
   }
   countData = round(as(otu_table(physeq), "matrix"), digits = 0)
   if (!is.null(sample_data(physeq, FALSE))) {
-    ADF = Biobase::AnnotatedDataFrame(data.frame(sample_data(physeq)))
+    ADF = Biobase::AnnotatedDataFrame(data.frame(sample_data(physeq),check.names=FALSE));
   }else {
-    ADF = NULL
+    ADF = NULL;
   }
   taxonomy = tax_table(physeq, errorIfNULL=FALSE);
   if (!is.null(taxonomy)) {
-    TDF = Biobase::AnnotatedDataFrame(data.frame(OTUname = taxa_names(physeq), 
-                                                 data.frame(as(taxonomy, "matrix")), row.names = taxa_names(physeq)))
+    TDF = Biobase::AnnotatedDataFrame(data.frame(OTUname = taxa_names(physeq), data.frame(as(taxonomy, "matrix")), row.names = taxa_names(physeq),check.names=FALSE))
     #  data.frame(tax_table(physeq)@.Data), row.names = taxa_names(physeq)))
     #  data.frame(tax_table(physeq)), row.names = taxa_names(physeq))) ## bugs with tax_table
   }else {
-    TDF = Biobase::AnnotatedDataFrame(data.frame(OTUname = taxa_names(physeq), 
-                                                 row.names = taxa_names(physeq)))
+    TDF = Biobase::AnnotatedDataFrame(data.frame(OTUname = taxa_names(physeq), row.names = taxa_names(physeq),check.names=FALSE));
   }
   if (requireNamespace("metagenomeSeq")) {
     mrobj = metagenomeSeq::newMRexperiment(counts = countData, 
@@ -2288,7 +2785,7 @@ GetMDI <- function(mbSetObj){
 #'@export
 GetSigTable.UNIVAR<-function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  GetSigTable(mbSetObj$analSet$Univar$resTable, "Univariate analysis");
+  GetSigTable(mbSetObj$analSet$univar$resTable, "Univariate analysis");
 }
 
 #'Getter function

@@ -14,7 +14,8 @@ PlotTreeGraph(
   colorOpts,
   format = "png",
   dpi = 72,
-  width = NA
+  width = NA,
+  plotType = "rectangle"
 )
 }
 \arguments{
@@ -44,6 +45,9 @@ classification. For instance, "OTU-level" to use OTUs.}
 \item{dpi}{The dots per inch. Numeric, by default it is set to 72.}
 
 \item{width}{Width of the plot. Numeric, by default it is set to NA.}
+
+\item{plotType}{Character, default is set to "rectangle". Alternative is
+"triangle".}
 
 \item{datatype}{Character, "16S" if marker gene data and 
 "metageno" if shotgun metagenomic data.}

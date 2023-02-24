@@ -95,7 +95,7 @@ CrossReferencing <- function(mbSetObj, q.type){
 SpeciesMappingExact<-function(qvec, q.type){
        
   # local variable to save memory
-  species.db <- .read.microbiomeanalyst.lib.rds("microbe_db.rds", "tsea")
+  species.db <- .read.microbiomeanalyst.lib.rds("microbe_db_new.rds", "tsea")
        
   # variables to record results
   hit.inx = vector(mode='numeric', length=length(qvec)); # record hit index, initial 0
@@ -160,7 +160,7 @@ SpeciesMappingExact<-function(qvec, q.type){
                             paste(ifelse(match.state[i]==0 || is.na(hit$GOLDMAPID) ||is.null(hit$GOLDMAPID) || hit$GOLDMAPID=="" || hit$GOLDMAPID=="NA", "-", paste("<a href=https://gold.jgi.doe.gov/project?id=", hit$GOLDMAPID," target='_blank'>", hit$GOLDMAPID,"</a>", sep="")), sep=""))
   }
 
-  return(data.frame(html.res));
+  return(data.frame(html.res,check.names=FALSE));
 }
 
 #'Calculate enrichment score.
@@ -228,7 +228,7 @@ CalculateHyperScore <- function(mbSetObj){
   res.mat <- res.mat[hit.num>0,];
 
   # fix error when only 1 hit (not sig), no longer a matrix
-  if(class(res.mat)!= "matrix"){
+  if(!("matrix" %in% class(res.mat))){
     AddErrMsg("No significant hits found using enrichment analysis!");
     return(0);
   }
@@ -269,7 +269,7 @@ GetFinalNameMap<-function(mbSetObj){
     hit.inx <- name.map$hit.inx;
     hit.values <- name.map$hit.values;
     match.state <- name.map$match.state;
-    species.db <- .read.microbiomeanalyst.lib.rds("microbe_db.rds", "tsea");
+    species.db <- .read.microbiomeanalyst.lib.rds("microbe_db_new.rds", "tsea");
         
     for (i in 1:length(qvec)){
       hit <-species.db[hit.inx[i], ,drop=F];
@@ -281,7 +281,7 @@ GetFinalNameMap<-function(mbSetObj){
       nm.mat[i, ] <- c(qvec[i], kegg.hit);
     }
   }
-  return(as.data.frame(nm.mat));
+  return(as.data.frame(nm.mat,check.names=FALSE));
 }
 
 #'Function to prepare data for enrichment network.
@@ -336,10 +336,16 @@ SetTaxonSetLib <- function(mbSetObj, tset.type){
       libPath <- "../../lib/tsea/tsea_host_ext_species.csv";
     }else if(tset.type=="host_int_strain"){
       libPath <- "../../lib/tsea/tsea_host_int_strain.csv";
-    }else if(tset.type=="env_strain"){
-      libPath <- "../../lib/tsea/tsea_environment_strain.csv";
-    }else{
-      libPath <- "../../lib/tsea/tsea_microbiome_int_strain.csv";
+    }else if(tset.type=="host_diet"){
+      libPath <- "../../lib/tsea/tsea_host_diet_lifestyle.csv";
+    }else if(tset.type=="host_drug"){
+      libPath <- "../../lib/tsea/tsea_host_medication.csv";
+    }else if(tset.type=="mic_met"){
+      libPath <- "../../lib/tsea/taxon_metabolite_tsea.csv";
+    }else if(tset.type=="host_diet_species"){
+      libPath <- "../../lib/tsea/tsea_host_diet_lifestyle_species.csv";
+    }else if(tset.type=="host_drug_species"){
+      libPath <- "../../lib/tsea/tsea_host_medication_species.csv";
     }
   }else{
     if(tset.type=="host_int"){
@@ -386,12 +392,10 @@ SetTaxonSetLib <- function(mbSetObj, tset.type){
 #'@export
 #'@import igraph
 #'@import reshape
-#'@import RJSONIO
 PlotEnrichNet.Overview<-function(hits, pvals){
   
   load_igraph();
   load_reshape();
-  load_rjsonio();
 
   # due to space limitation, plot top 50 if more than 50 were given
   title <- "Taxon Set Enrichment Network Overview";
@@ -450,8 +454,8 @@ PlotEnrichNet.Overview<-function(hits, pvals){
     
   edge.mat <- get.edgelist(g);
   edge.mat <- cbind(id=1:nrow(edge.mat), source=edge.mat[,1], target=edge.mat[,2]);
-  # covert to json
 
+  # covert to json
   netData <- list(nodes=nodes, edges=edge.mat);
   sink("tsea_network.json");
   cat(RJSONIO::toJSON(netData));
@@ -487,12 +491,13 @@ GetORA.colorBar<-function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   len <- nrow(mbSetObj$analSet$ora.mat);
   
-  if(len > 50){
+  if(len > 60){
     ht.col <- c(substr(heat.colors(50), 0, 7), rep("#FFFFFF", len-50));
   }else{
     # reduce to hex by remove the last character so HTML understand
     ht.col <- substr(heat.colors(len), 0, 7);
   }
+
   return (ht.col);
 }
 
@@ -589,7 +594,7 @@ GetMsetPval<-function(mbSetObj, msetNm){
 GetMsetEvidence <- function(mbSetObj, msetNm){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   matched.inx <- match(tolower(msetNm), tolower(current.msetlib$name))[1];
-  print(current.msetlib$evidence[matched.inx])
+  #print(current.msetlib$evidence[matched.inx])
   return(current.msetlib$evidence[matched.inx])
 }
 

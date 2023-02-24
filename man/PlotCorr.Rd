@@ -4,7 +4,7 @@
 \alias{PlotCorr}
 \title{Plot Pattern Search}
 \usage{
-PlotCorr(mbSetObj, imgName, format = "png", dpi = 72, width = NA)
+PlotCorr(mbSetObj, imgName, format = "png", dpi = 72, appendnm, width = NA)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

@@ -4,7 +4,7 @@
 \alias{PlotLibSizeView}
 \title{Function to plot library size}
 \usage{
-PlotLibSizeView(mbSetObj, imgName, format = "png", dpi = 72)
+PlotLibSizeView(mbSetObj, imgName, format = "png", dpi = 72, dataName = "")
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

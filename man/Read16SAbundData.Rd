@@ -4,7 +4,14 @@
 \alias{Read16SAbundData}
 \title{Main function to read 16S data}
 \usage{
-Read16SAbundData(mbSetObj, dataName, format, taxa_type, ismetafile)
+Read16SAbundData(
+  mbSetObj,
+  dataName,
+  format,
+  taxa_type,
+  ismetafile,
+  is.normalized
+)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}

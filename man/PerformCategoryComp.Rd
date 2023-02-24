@@ -4,7 +4,16 @@
 \alias{PerformCategoryComp}
 \title{Function to perform categorical comparison.}
 \usage{
-PerformCategoryComp(mbSetObj, taxaLvl, method, distnm, variable)
+PerformCategoryComp(
+  mbSetObj,
+  taxaLvl,
+  method,
+  distnm,
+  variable,
+  covariates = FALSE,
+  cov.vec = NA,
+  model.additive = TRUE
+)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
@@ -21,6 +30,18 @@ Bray-Curtis Index, "jsd" for Jensen-Shannon Divergence, "jaccard" for Jaccard In
 "unifrac" for Unweighted Unifrac Distance and "wunifrac" for Weighted Unifrac Distance.}
 
 \item{variable}{Input the name of the experimental factor to group the samples.}
+
+\item{covariates}{Boolean. TRUE to consider covariates, FALSE to only consider the
+main effect. Only valid for PERMANOVA.}
+
+\item{cov.vec}{Character vector. Input the names of the covariates to consider in the 
+PERMANOVA model.}
+
+\item{model.additive}{Boolean. If TRUE, the model will be additive (i.e. data ~ var1 + var2),
+making the assumption that the two factor variables are independent. 
+However, if FALSE, the model will consider the synergistic effects of the variables - interaction (i.e. data ~ var1*var2).
+"Different explanatory variables the effects on the outcome of a change in one variable may either not depend on the
+level of the other variable (additive model) or it may depend on the level of the other variable (interaction model)."}
 }
 \description{
 This functions performs categorical comparisons.

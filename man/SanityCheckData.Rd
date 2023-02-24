@@ -2,7 +2,7 @@
 % Please edit documentation in R/general_proc.R
 \name{SanityCheckData}
 \alias{SanityCheckData}
-\title{Main function to sanity check on uploaded data}
+\title{Main function to sanity check on uploaded microbiome data}
 \usage{
 SanityCheckData(mbSetObj, filetype, disableFilter = FALSE)
 }

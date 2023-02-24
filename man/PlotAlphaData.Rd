@@ -13,7 +13,8 @@ PlotAlphaData(
   taxrank,
   colors = "default",
   format = "png",
-  dpi = 72
+  dpi = 72,
+  interactive = FALSE
 )
 }
 \arguments{
