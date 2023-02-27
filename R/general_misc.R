@@ -918,7 +918,7 @@ checkfac = function(fac) {
  if(dir.exists("/Users/lzy/NetBeansProjects/MicrobiomeAnalyst")){
         path <- "/Users/lzy/NetBeansProjects/MicrobiomeAnalyst/target/MicrobiomeAnalyst-3.15/resources/rscripts/microbiomeanalystr/src/MicrobiomeAnalyst.so"
     }else{
-        path = "../../rscripts/microbiomeanalystr/src/MicrobiomeAnalyst.so";
+        path = "../../rscripts/MicrobiomeAnalystR/src/MicrobiomeAnalyst.so";
 }
      return(path)  
 }
@@ -970,7 +970,7 @@ if(grp.num <= 18){ # update color and respect default
 
 
 .load.scripts.on.demand <- function(fileName=""){
-    complete.path <- paste0("../../rscripts/microbiomeanalystr/", fileName);
+    complete.path <- paste0("../../rscripts/MicrobiomeAnalystR/R/", fileName);
     compiler::loadcmp(complete.path);
 }
 
