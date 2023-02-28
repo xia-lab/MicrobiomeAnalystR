@@ -424,7 +424,8 @@ PlotEnrichNet.Overview<-function(hits, pvals){
   g <- graph.data.frame(wd[,-3], directed=F);
   E(g)$width <- sqrt(wd[,3]*20);
   g <- delete.edges(g, E(g)[wd[,3] < 0.2]);
-  idx <- unlist(sapply(V(g)$name, function(x) which(x == id)));
+  idx <- unlist(sapply(V(g)$name, function(x) match(x,id)));
+  pvalue <- pvalue[idx]
   cols <- color_scale("red", "#E5C494");
   V(g)$color <- cols[sapply(pvalue, getIdx, min(pvalue), max(pvalue))];
 
