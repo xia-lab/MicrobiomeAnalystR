@@ -82,6 +82,9 @@ SelectData <- function(){
     return(0);
   }
   
+  paramSet <- readSet(paramSet, "paramSet");
+  mdata.all <- paramSet$mdata.all;
+
   all.nms <- names(mdata.all);
   for(nm in all.nms){
     if(nm %in% nm.vec){
@@ -92,6 +95,11 @@ SelectData <- function(){
   }
   
   rm('nm.vec', envir = .GlobalEnv);
+
+  paramSet$mdata.all <- mdata.all;
+  mdata.all <<- mdata.all;
+  saveSet(paramSet, "paramSet");
+  
   return(1);
 }
 
