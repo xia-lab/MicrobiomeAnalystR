@@ -661,31 +661,6 @@ readDataset <- function(fileName="", obj=NA){
   return(dat);
 }
 
-RegisterData <- function(dataSet, obj, output=1){
-  dataName <- dataSet$name;
-  paramSet <- readSet(paramSet, "paramSet");
-  mdata.all <- paramSet$mdata.all;
-  mdata.all[[dataName]] <- 1;
-  paramSet$mdata.all <- mdata.all;
-  
-  saveSet(paramSet, "paramSet");
-  
-  if(paramSet$on.public.web){
-    obj$dataSets[[dataName]] <- dataSet;
-    obj$dataSets <<- obj$dataSets;
-    return(output);
-  }else{
-    if(paramSet$api.bool){
-      qs::qsave(dataSet, file=dataName);
-      return(output);
-    }else{
-      obj$dataSets[[dataName]] <- dataSet;
-      obj$dataSets <<- obj$dataSets;
-      return(obj$dataSets);
-    }
-  }
-} 
-
 Set.Config <-function(anal.mode="web"){
   
   globalConfig <- list();

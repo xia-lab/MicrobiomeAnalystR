@@ -9,7 +9,7 @@ my.json.scatter.meta <- function(mbSetObj=NA, filenm="abc",selMeta=""){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   paramSet <- readSet(paramSet, "paramSet");
-  mdata.all <- paramSet$mdata.all;
+  mdata.all <- mbSetObj$mdata.all;
   anal.type <- mbSetObj$module.type;
   
   data <- qs::qread("merged.data.qs");
