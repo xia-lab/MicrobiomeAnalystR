@@ -17,7 +17,6 @@ Init.DataMeta <- function(mbSetObj, onWeb=T){
   dataSet <<- dataSet;
   
   paramSet <- list(annotated=FALSE);
-  paramSet$mdata.all <- list();
   paramSet$on.public.web <- onWeb;
   .on.public.web <<- onWeb;
 
@@ -27,7 +26,7 @@ Init.DataMeta <- function(mbSetObj, onWeb=T){
   paramSet <<- list(annotated=FALSE);
   msgSet <<- list(annotated=FALSE);
   cmdSet <<- list(annotated=FALSE);
-
+  mdata.all <<- list();
   msg.vec <<- vector(mode="character");
   lib.path <<- "../../data/";
   data.org <<- NULL;
@@ -39,6 +38,7 @@ Init.DataMeta <- function(mbSetObj, onWeb=T){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   mbSetObj$dataSets <- list();
+  mbSetObj$mdata.all <- list();
 
   saveSet(paramSet, "paramSet");
   saveSet(msgSet, "msgSet");
@@ -81,9 +81,9 @@ SelectData <- function(){
     print(current.msg);
     return(0);
   }
-  
-  paramSet <- readSet(paramSet, "paramSet");
-  mdata.all <- paramSet$mdata.all;
+
+  mbSetObj <- .get.mbSetObj(NA);
+  mdata.all <- mbSetObj$mdata.all;
 
   all.nms <- names(mdata.all);
   for(nm in all.nms){
@@ -96,9 +96,8 @@ SelectData <- function(){
   
   rm('nm.vec', envir = .GlobalEnv);
 
-  paramSet$mdata.all <- mdata.all;
+  mbSetObj$mdata.all <- mdata.all;
   mdata.all <<- mdata.all;
-  saveSet(paramSet, "paramSet");
   
   return(1);
 }
@@ -587,10 +586,9 @@ ReadSampleTableMeta <- function(mbSetObj, fileName) {
   for(i in 1:length(mbSetObj$dataSets)){
     mdata.all[[names(mbSetObj$dataSets)[i]]] <- 1;
   }
-  paramSet <- readSet(paramSet, "paramSet");
-  paramSet$mdata.all <- mdata.all;
-  saveSet(paramSet,"paramSet");
-  return(1);
+
+  mbSetObj$mdata.all <- mdata.all;
+  return(.set.mbSetObj(mbSetObj));
 }
 
 GetMetaInfoMeta <- function(mbSetObj, dataName, type="disc"){
@@ -610,8 +608,9 @@ GetMetaInfoMeta <- function(mbSetObj, dataName, type="disc"){
 
 CheckMetaDataIntegrity <- function(mbSetObj, taxo_type="OTU", sample_var="NA"){
   mbSetObj <- .get.mbSetObj(mbSetObj);
+  paramSet <- readSet(paramSet, "paramSet");
   paramSet$performedDE <- FALSE;
-  
+  mdata.all <- mbSetObj$mdata.all;
   for(i in 1:length(mdata.all)){
     mdata.all[i] <- 1;
   }
