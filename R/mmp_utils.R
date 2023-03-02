@@ -958,7 +958,6 @@ mtchidx <-  taxMapKEGG[names(taxnms)[nmsidx]]
 mtcls <<- unique(unlist(mtchidx))
 mtchidx <- unlist(lapply(mtchidx, function(x) paste(unique(x),collapse = ";")))
 res$Match <- mtchidx[match(res$Qtrans,as.character(taxnms[names(mtchidx)]))]
-print(res)
 fast.write(res, paste("kegg_taxa_match_result.csv"));
 message("kegg taxonomy mapping done!")
   return(res)
@@ -1734,7 +1733,6 @@ if(dataType=="metabolite"){
     dat.in <- list(cls=phenotype, data=datmat, subsets=hits, set.num=set.num, filenm=file.nm);
     
   }else if(dataType=="ko"){
-    print(contain)
     if(contain=="bac"){
       current.set <- qs::qread(paste0(lib.path.mmp,"ko_set_bac.qs"))
       
@@ -3544,7 +3542,7 @@ PlotDiagnosticLoading <- function(imgNm, dpi=72, format="png",type="diablo"){
     Cairo(file=imgNm, width=10, height=10, type=format, bg="white", unit="in", dpi=dpi);
     plot.mcoin(type=2, mcoin, phenovec=reductionSet$cls, sample.lab=FALSE, df.color=1:length(names(mdata.all)))
     dev.off();
-  }else if(type == "mbpca"){
+  }else if(type == "mbpca"){ 
     library(ggplot2)
     moa <- reductionSet$dim.res 
     loading <- moa@loading[,c(1:3)]
