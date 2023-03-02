@@ -424,7 +424,6 @@ Read16STaxaTable <- function(mbSetObj, dataName) {
     AddErrMsg("Failed to read in the taxonomic data! Please make sure the data is in the right format.");
     return(0);
   }
-
   # look for #TAXONOMY, store in a list
   sam.nm <- substr(colnames(mydata[1]),1,9);
   sam.nm <- tolower(sam.nm);

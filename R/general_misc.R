@@ -202,7 +202,7 @@ scale_colours = function(mat, col = rainbow(10), breaks = NA){
       }
   }
   # need to remove potential empty columns
-  dat <- dat[!sapply(dat, function(x) all(x == "" || is.na(x)))];
+  dat <- dat[!sapply(dat, function(x) all(x == "") || all(is.na(x)))];
   return(dat);
 }
 
