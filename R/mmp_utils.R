@@ -724,14 +724,13 @@ PrepareResTable <- function(mbSetObj,micDataType,taxalvl,is.norm=F){
     }
     
     resTab = qs::qread("phyloseq_objs.qs")$res_deAnal[[taxalvl]]
-   
+    sigfeat <- qs::qread("phyloseq_objs.qs")$sigfeat[[taxalvl]]
   }else{
     taxalvl =="OTU"
     resTab = current.proc$mic$res_deAnal
-    
+     sigfeat <- current.proc$mic$sigfeat
   }
 
- sigfeat <- qs::qread("phyloseq_objs.qs")$sigfeat[[taxalvl]]
   sig.count <- length(sigfeat);
   if(sig.count == 0){
     current.msg <<- "No significant features were identified using the given p value cutoff.";
