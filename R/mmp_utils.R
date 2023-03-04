@@ -1195,10 +1195,14 @@ performeCorrelation <- function(mbSetObj,taxalvl,initDE,cor.method="univariate",
   if(!exists("phyloseq_objs")){
     phyloseq_objs <- qs::qread("phyloseq_objs.qs")
   }
- 
+
   micdat <- phyloseq_objs$count_tables[[taxalvl]]
   metdat <- current.proc$met$data.proc
-  lbl.mic <- phyloseq_objs$sigfeat[[taxalvl]]
+  if(micDataType=="ko"){
+  lbl.mic <-current.proc$mic$sigfeat
+}else{
+  lbl.mic <- phyloseq_objs$sigfeat[[taxalvl]] 
+}
   lbl.met <- current.proc$met$sigfeat
   if(length(lbl.mic) >100){lbl.mic= lbl.mic[1:100]}
   if(length(lbl.met) >100){lbl.met= lbl.met[1:100]}
