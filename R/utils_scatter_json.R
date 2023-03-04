@@ -13,9 +13,15 @@ my.json.scatter <- function(filenm,analysisVar){
   if(!exists("phyloseq_objs")){
     phyloseq_objs <- qs::qread("phyloseq_objs.qs")
   }
-   # saveRDS(current.proc,"/Users/lzy/Documents/MicrobiomeAnalystR-master/current.proc.rds")
+print(micDataType)
+
    metdat <- current.proc$met$data.proc
-  sig.mic <- lapply(phyloseq_objs$res_deAnal,function(x) x[which(x$P_value<current.proc$mic$plvl),])
+  if(micDataType=="ko"){
+   sig.mic <- current.proc$mic$res_deAnal[which(current.proc$mic$res_deAnal$P_value<current.proc$mic$plvl),]
+   sig.mic <- list(OTU=sig.mic)
+  }else{
+   sig.mic <- lapply(phyloseq_objs$res_deAnal,function(x) x[which(x$P_value<current.proc$mic$plvl),])
+  } 
   sig.met <- current.proc$met$res_deAnal
   sig.met <- sig.met[which(sig.met$P_value<current.proc$met$plvl),]
   sig.met$ids <- rownames(sig.met)
@@ -163,7 +169,7 @@ my.json.scatter <- function(filenm,analysisVar){
       edge.mat = "";
       modules = "NA"
       ellipse ="NA"
-      
+    
       diablo.res$pos.xyz[[tax]] = pos.xyz;
           
       loading.data = diablo.res$loading.pos.xyz[[tax]];

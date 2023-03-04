@@ -20,7 +20,6 @@ if(isNormalized=="false" & isNormalizedMet=="false"){
 return(0)
 
 }
-
 current.msg <<- ""
 
 if(isNormalized=="true"){
@@ -1604,9 +1603,14 @@ anno.mat0 <- anno.mat0[which(anno.mat0$value<predpval.thresh),]
     as_list[["layout"]][["width"]] <- 1200
     as_list[["layout"]][["height"]] <- map.height
   }
+
+if(exists("id2nm",where=current.proc)){
+  for(i in 1:ncol(data1sc)){
   
-  
-  
+as_list$layout$annotations[[i]]$text = unname(current.proc$id2nm[as_list$layout$annotations[[i]]$text])
+}
+}
+
   as_json <- attr(as_list, "TOJSON_FUNC")(as_list)
   as_json <- paste0("{ \"x\":", as_json, ",\"evals\": [],\"jsHooks\": []}")
   
@@ -1655,22 +1659,22 @@ PrepareOTUQueryJson <- function(mbSetObj,taxalvl,contain="bac"){
 
 
 PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,contain="hsabac",enrich.type){
-  #print(enrich.type)
   mbSetObj <- .get.mbSetObj(mbSetObj);
   if(enrich.type == "hyper"){
      if(dataType=="metabolite"){
-
-
   PerformMetListEnrichment(mbSetObj, contain,file.nm);
 
   }else{
-
     MicrobiomeAnalystR:::LoadKEGGKO_lib(category);
     PerformKOEnrichAnalysis_List(mbSetObj, file.nm);
 
 }
 
   }else if(enrich.type =="global"){
+    if(contain=="usrbac" & micDataType=="ko"){
+   tuneKOmap()
+   contain = "bac"
+   }
     .prepare.global.tune(mbSetObj, dataType, category, file.nm,contain);
     .perform.computing();
    
@@ -1702,6 +1706,7 @@ res=enrich2json()
   phenotype <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[selected.meta.data]]);
 
 if(dataType=="metabolite"){
+   print(c("baccontaion",contain))
     if(contain=="bac"){
       current.set <- qs::qread(paste0(lib.path.mmp,"kegg_bac_mummichog.qs"))$pathways$cpds
       
@@ -1731,7 +1736,7 @@ if(dataType=="metabolite"){
     set.num <- unlist(lapply(current.set, length), use.names = FALSE);
     dat.in <- list(cls=phenotype, data=datmat, subsets=hits, set.num=set.num, filenm=file.nm);
     
-  }else if(dataType=="ko"){
+     }else if(dataType=="ko"){
     if(contain=="bac"){
       current.set <- qs::qread(paste0(lib.path.mmp,"ko_set_bac.qs"))
       
@@ -1747,8 +1752,7 @@ if(dataType=="metabolite"){
       current.set <- kegg.anot$sets$Metabolism;
     }else{
     kegg.anot <- .read.microbiomeanalyst.lib.rds("ko_pathways.rds", "ko")
- current.set <- qs::qread(paste0(lib.path.mmp,"ko_set_bac.qs"))
-    
+    current.set <- qs::qread(paste0(lib.path.mmp,"ko_set_bac.qs"))
     }
 
 koset2nm <- qs::qread(paste0(lib.path.mmp,"koset2nm.qs"));
@@ -1985,7 +1989,7 @@ GetAssociationPlot <- function(type,keggid,koid,micDataType,metIDType,taxalvl,im
           barplot[[pl]] <-  ggplot(plot.df, aes(x=mic, y=correlation,fill= pval)) + 
             scale_fill_viridis_c(option = "plasma",alpha = 0.8)+
             geom_bar(stat = "identity") + 
-             ggtitle(qvec[pl])+
+            ggtitle(unname(current.proc$id2nm[qvec[pl]]))+
             xlab("")+theme_minimal()+coord_flip() 
              if(length(qvec)>1){
           barplot[[pl]] <-  barplot[[pl]] +theme(legend.key.size = unit(0.45, 'cm'))
@@ -2011,7 +2015,7 @@ GetAssociationPlot <- function(type,keggid,koid,micDataType,metIDType,taxalvl,im
             circleplot[[pl]] <-  ggplot(plot.df,aes(x=mic, y=correlation,fill= pval))+
               geom_bar(stat="identity", color="black")+
               ylim(ylim0,ylim1) + xlab("")+ylab(yl)+
-              theme_minimal() +  ggtitle(qvec[pl])+
+              theme_minimal() + ggtitle(unname(current.proc$id2nm[qvec[pl]]))+
               geom_text(data=plot.df, aes(x=mic, y=yh, label=mic, hjust=hjust), color="black", fontface="bold",alpha=0.8, size=3, angle= plot.df$angle, inherit.aes = FALSE )+ 
               coord_polar(start = 0) +scale_fill_viridis_c(option = "plasma",alpha = 0.7)+
               theme(
@@ -2032,7 +2036,7 @@ GetAssociationPlot <- function(type,keggid,koid,micDataType,metIDType,taxalvl,im
         barplot[[pl]] <-  ggplot(plot.df, aes(x=mic, y=correlation,fill= correlation)) + 
           scale_fill_viridis_c(option = "plasma",alpha = 0.8)+
           geom_bar(stat = "identity") + xlab("")+ theme_minimal()+
-          coord_flip() + ggtitle(qvec[pl])
+          coord_flip() + ggtitle(unname(current.proc$id2nm[qvec[pl]]))
         
         if(nrow(plot.df)>2){
           angle <-  90 - 360 * (1:nrow(plot.df)-0.5) /nrow(plot.df)
@@ -2055,7 +2059,7 @@ GetAssociationPlot <- function(type,keggid,koid,micDataType,metIDType,taxalvl,im
             coord_polar(start = 0) +scale_fill_viridis_c(option = "plasma",alpha = 0.7)+
             theme(
               axis.text.x = element_blank()
-            ) + ggtitle(qvec[pl])
+            ) + ggtitle(unname(current.proc$id2nm[qvec[pl]]))
           
         }else{
           current.msg<<-"Circle plot is not supported when associated taxa are less than 3!"
@@ -2335,6 +2339,21 @@ UpdateAssociationPlot <- function(imgNm,topNum=10){
   json.mat <- RJSONIO::toJSON(json.res);
   json.nm <- paste(imgNm, ".json", sep="");
   sink(json.nm)
+  cat(json.mat);
+  sink();
+  
+}
+
+tuneKOmap <- function(){
+  edges.ko = qs::qread(paste0(lib.path.mmp,"ko.info.qs"))
+  include = rownames(current.proc$mic$data.proc)
+  edges.ko = edges.ko[which(edges.ko$ko %in% include),]
+  includeInfo = list(edges=edges.ko)
+  includeInfo$nodes = unique(c(edges.ko$from,edges.ko$to))
+  includeInfo$nodes =includeInfo$nodes[!(grepl("unddef",includeInfo$nodes))]
+  
+  json.mat <- rjson::toJSON(includeInfo);
+  sink("includeInfo.json");
   cat(json.mat);
   sink();
   
@@ -2791,7 +2810,7 @@ CreatM2MHeatmapList<-function(mbSetObj, plotNm,  format="png",
   #used for color pallete
   ######set up plot
   #colors for heatmap
-  
+
   if(palette=="gbr"){
     colors <- grDevices::colorRampPalette(c("green", "black", "red"), space="rgb")(256);
   }else if(palette == "heat"){
@@ -3541,7 +3560,7 @@ PlotDiagnosticLoading <- function(imgNm, dpi=72, format="png",type="diablo"){
     Cairo(file=imgNm, width=10, height=10, type=format, bg="white", unit="in", dpi=dpi);
     plot.mcoin(type=2, mcoin, phenovec=reductionSet$cls, sample.lab=FALSE, df.color=1:length(names(mdata.all)))
     dev.off();
-  }else if(type == "mbpca"){ 
+  }else if(type == "mbpca"){
     library(ggplot2)
     moa <- reductionSet$dim.res 
     loading <- moa@loading[,c(1:3)]
@@ -3629,6 +3648,18 @@ InitCurrentProc <-function(){
 current.proc<- vector("list",length=2)
 names(current.proc)<-c("mic","met")
 moduleType <<-"mmp"
+if(metIDType=="kegg"){
+metInfo <- qs::qread(paste0(lib.path.mmp,"general_kegg2name.qs"));
+mbSetObj <- .get.mbSetObj(mbSetObj);
+keggids <- rownames(mbSetObj$dataSet$metabolomics$data.orig)
+nms<- metInfo$Name[match(keggids, metInfo$ID)]
+current.proc$id2nm <- setNames(nms,keggids)
+}else{
+mbSetObj <- .get.mbSetObj(mbSetObj);
+nms <- rownames(mbSetObj$dataSet$metabolomics$data.orig)
+current.proc$id2nm <- setNames(nms,nms)
+}
+
 current.proc<<-current.proc
 return(1)
 
