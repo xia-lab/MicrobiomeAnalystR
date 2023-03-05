@@ -394,6 +394,7 @@ if(micDataType=="ko"){
     }else{
       micdat <- phyloseq_objs$count_tables[[taxalvl]]
       micdat.de <- doMaAslin(micdat,plvl)
+ 
       current.proc$mic$res_deAnal <<- micdat.de$res
       current.proc$mic$res_deAnal_noadj <<- micdat.de$res.noadj
        current.proc$mic$sigfeat <<-  rownames(current.proc$mic$res_deAnal)[current.proc$mic$res_deAnal$FDR< plvl]
@@ -706,7 +707,8 @@ if(current.proc$meta_para$analysis.type == "disc"){
     colnames(res.noadj) <- c("Coefficient", "St.Error", "P_value", "FDR");
   }
   
-  
+res = res[order(res$P_value),]
+ res.noadj = res.noadj[order(res.noadj$P_value),] 
 return (list(res=res,res.noadj=res.noadj))
   # write out/save results
   fileName <- "multifac_output.csv";
@@ -724,10 +726,12 @@ PrepareResTable <- function(mbSetObj,micDataType,taxalvl,is.norm=F){
     
     resTab = qs::qread("phyloseq_objs.qs")$res_deAnal[[taxalvl]]
     sigfeat <- qs::qread("phyloseq_objs.qs")$sigfeat[[taxalvl]]
+  fileName <- paste0(taxalvl,"_maaslin_output.csv");
   }else{
     taxalvl =="OTU"
     resTab = current.proc$mic$res_deAnal
      sigfeat <- current.proc$mic$sigfeat
+  fileName <- paste0("maaslin_output.csv");
   }
 
   sig.count <- length(sigfeat);
@@ -746,7 +750,7 @@ PrepareResTable <- function(mbSetObj,micDataType,taxalvl,is.norm=F){
   input.data = qs::qread(phylonm)$count_tables[[taxalvl]]
     analysis.var = current.proc$meta_para$analysis.var
   # put results in mbSetObj, learn pattern of analysis set
-  fileName <- paste0(taxalvl,"_maaslin_output.csv");
+
   fast.write(resTab, file = fileName);
   compMicFile<<-fileName
 
@@ -1209,7 +1213,7 @@ performeCorrelation <- function(mbSetObj,taxalvl,initDE,cor.method="univariate",
 
   mic.sig <- micdat[which(rownames(micdat) %in% lbl.mic),]
   met.sig <- metdat[which(rownames(metdat) %in% lbl.met),match(colnames(mic.sig),colnames(metdat))]
-  
+
  res.corr <- DoM2Mcorr(mic.sig,met.sig,cor.method,cor.stat,taxalvl)
    corr.mat <- res.corr$corr.mat
    if(is.null(dim(res.corr$corr.mat))){
@@ -1895,9 +1899,10 @@ GetAssociationPlot <- function(type,keggid,koid,micDataType,metIDType,taxalvl,im
     }
 
 
- current.proc$keggmap$current_qvec<<-qvec
+   current.proc$keggmap$current_qvec<<-qvec
 
      micdat <- phyloseq_objs$count_tables[[taxalvl]]
+     
     metdat <- current.proc$met$data.proc[qvec,,drop=FALSE]
     if(grepl("u-",corrMethod)){
       cor.method = "univariate"
@@ -1912,7 +1917,16 @@ GetAssociationPlot <- function(type,keggid,koid,micDataType,metIDType,taxalvl,im
       cor.stat = "discor"
     }
 
-  
+    if(nrow(micdat)>2000){
+     if(micDataType=="ko"){
+     keepft = rownames(current.proc$mic$res_deAnal)[1:2000]
+     }else{
+      keepft =phyloseq_objs$res_deAnal[[taxalvl]] [1:2000]
+     }
+      micdat <-  micdat[rownames( micdat) %in%keepft, ]
+
+    }
+
     res.corr <- DoM2Mcorr(micdat,metdat,cor.method,cor.stat,taxalvl)
 
     if(is.null(res.corr$corr.mat)| length(res.corr$corr.mat)==1){

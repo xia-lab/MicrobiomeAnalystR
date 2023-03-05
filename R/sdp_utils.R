@@ -511,7 +511,6 @@ PerformKOmapping <- function(mbSetObj, geneIDs, type){
 PrepareQueryJson <- function(mbSetObj){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  print(enrich.type)
   if(enrich.type == "hyper"){
     exp.vec <- mbSetObj$analSet$data[,1]; # drop dim for json
   }else{
