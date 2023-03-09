@@ -511,6 +511,7 @@ PerformKOmapping <- function(mbSetObj, geneIDs, type){
 PrepareQueryJson <- function(mbSetObj){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
+
   if(enrich.type == "hyper"){
     exp.vec <- mbSetObj$analSet$data[,1]; # drop dim for json
   }else{
@@ -527,9 +528,11 @@ PrepareQueryJson <- function(mbSetObj){
   net.orig <- edge.mat[,2];
   query.res <- edge.mat[,3];# abundance
   names(query.res) <- eids; # named by edge
-
-
-  json.mat <- rjson::toJSON(query.res);
+  
+ labels <- qs::qread("../../lib/ko/ko_lbs.qs")
+ labels <-labels[labels$info %in% query.ko,c(2,4)]
+ labels <- aggregate(labels$info,list(labels$id),function(x) paste(x,collapse = ","))
+  json.mat <- rjson::toJSON(list(query.res=query.res,id=labels[,1],label=labels[,2]));
   sink("network_query.json");
   cat(json.mat);
   sink();
@@ -908,7 +911,7 @@ Save2KEGGJSON <- function(hits.query, res.mat, file.nm){
   }
   
   hits.edge <- lapply(hits.query, function(x) {
-    as.character(unique(ko.edge.map$edge[ko.edge.map$gene%in%unlist(x)]));});
+  as.character(unique(ko.edge.map$edge[ko.edge.map$gene%in%unlist(x)]));});
   
   # only keep hits with edges in the map
   hits.inx <- unlist(lapply(hits.edge, length))>0;
