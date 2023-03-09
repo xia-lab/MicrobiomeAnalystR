@@ -528,7 +528,7 @@ PrepareQueryJson <- function(mbSetObj){
   net.orig <- edge.mat[,2];
   query.res <- edge.mat[,3];# abundance
   names(query.res) <- eids; # named by edge
-  tuneKOmap(query.ko)
+  filtKOmap(query.ko)
   
  labels <- qs::qread("../../lib/ko/ko_lbs.qs")
  labels <-labels[labels$info %in% query.ko,c(2,4)]
@@ -542,7 +542,7 @@ PrepareQueryJson <- function(mbSetObj){
   
 }
 
-tuneKOmap <- function(include){
+filtKOmap <- function(include){
   edges.ko = qs::qread("../../lib/mmp/ko.info.qs")
   edges.ko = edges.ko[which(edges.ko$ko %in% include),]
   includeInfo = list(edges=edges.ko)
