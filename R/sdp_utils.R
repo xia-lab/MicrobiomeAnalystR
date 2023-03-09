@@ -524,10 +524,11 @@ PrepareQueryJson <- function(mbSetObj){
   edge.mat <- MapKO2KEGGEdges(exp.vec);
 
   row.names(edge.mat) <- eids <- rownames(edge.mat);
-  query.ko <- edge.mat[,1];
+  query.ko <<- edge.mat[,1];
   net.orig <- edge.mat[,2];
   query.res <- edge.mat[,3];# abundance
   names(query.res) <- eids; # named by edge
+  tuneKOmap(query.ko)
   
  labels <- qs::qread("../../lib/ko/ko_lbs.qs")
  labels <-labels[labels$info %in% query.ko,c(2,4)]
@@ -541,6 +542,20 @@ PrepareQueryJson <- function(mbSetObj){
   
 }
 
+tuneKOmap <- function(include){
+  edges.ko = qs::qread("../../lib/mmp/ko.info.qs")
+  edges.ko = edges.ko[which(edges.ko$ko %in% include),]
+  includeInfo = list(edges=edges.ko)
+  includeInfo$nodes = unique(c(edges.ko$from,edges.ko$to))
+  includeInfo$nodes =includeInfo$nodes[!(grepl("unddef",includeInfo$nodes))]
+  
+  json.mat <- rjson::toJSON(includeInfo);
+  sink("includeInfo.json");
+  cat(json.mat);
+  sink();
+  
+}
+
 #'Function to prepare KO enrichment analysis.
 #'@description This function performs KO enrichment analysis
 #'using the KO01100 map.
@@ -549,25 +564,24 @@ PrepareQueryJson <- function(mbSetObj){
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, file.nm){
+PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",file.nm){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
  
   if(enrich.type == "hyper"){
-  LoadKEGGKO_lib(category);
+  LoadKEGGKO_lib(category,contain);
     PerformKOEnrichAnalysis_List(mbSetObj, file.nm);
   }else{
-    .prepare.global(mbSetObj, category, file.nm);
+    .prepare.global(mbSetObj, category,contain ,file.nm);
     .perform.computing();
     .save.global.res();
   }
   return(.set.mbSetObj(mbSetObj))
 }
 
-.prepare.global<-function(mbSetObj, category, file.nm){
-  LoadKEGGKO_lib(category);
+.prepare.global<-function(mbSetObj, category,contain ,file.nm){
+  LoadKEGGKO_lib(category,contain);
   mbSetObj <- .get.mbSetObj(mbSetObj);
-
   phenotype <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[selected.meta.data]]);
   genemat <- as.data.frame(t(otu_table(mbSetObj$dataSet$norm.phyobj)),check.names=FALSE);
   # first, get the matched entries from current.geneset
@@ -693,18 +707,34 @@ PerformKOEnrichAnalysis_Table <- function(mbSetObj, file.nm){
 }
 
 # Utility function
-LoadKEGGKO_lib<-function(category){
+LoadKEGGKO_lib<-function(category,contain="all"){
     
   if(category == "module"){
     kegg.anot <- .read.microbiomeanalyst.lib.rds("ko_modules.rds", "ko")
     current.setlink <- kegg.anot$link;
     current.mset <- kegg.anot$sets$"Pathway module";
   }else{
-    kegg.anot <- .read.microbiomeanalyst.lib.rds("ko_pathways.rds", "ko")
-    current.setlink <- kegg.anot$link;
-    current.mset <- kegg.anot$sets$Metabolism;
-  }
     
+    if(contain=="bac"){
+      current.mset <- qs::qread("../../lib/mmp/ko_set_bac.qs")
+      
+    }else if(contain=="hsabac"){
+      current.mset <- qs::qread("../../lib/mmp/ko_set_hsa_bac.qs")
+      
+    }else if(contain=="hsa"){
+      current.mset <- qs::qread("../../lib/mmp/ko_set_hsa.qs")
+      
+    }else if(contain=="all"){
+      kegg.anot <- .read.microbiomeanalyst.lib.rds("ko_pathways.rds", "ko")
+      current.setlink <- kegg.anot$link;
+      current.mset <- kegg.anot$sets$Metabolism;
+    }else{
+    current.mset <- qs::qread("../../lib/mmp/ko_set_bac.qs") ## filter users' data based on bacterial metabolism
+    current.mset <-  lapply(current.mset, function(x) x[x %in% query.ko])
+    current.mset <- current.mset[unlist(lapply(current.mset,function(x) length(x)))>1]
+    }
+
+  }
   # now need to update the msets to contain only those in ko01100 map
   if(!exists("ko.edge.map")){
     
@@ -723,9 +753,10 @@ LoadKEGGKO_lib<-function(category){
   mset.ln <- lapply(current.mset, length);
   current.mset <- current.mset[mset.ln > 0];
   set.ids <- names(current.mset);
-  names(set.ids) <- names(current.mset) <- kegg.anot$term[set.ids];
+  koset2nm <- qs::qread("../../lib/mmp/koset2nm.qs");
+  names(set.ids) <- names(current.mset) <- koset2nm[set.ids];
 
-  current.setlink <<- current.setlink;
+  current.setlink <<- "http://www.genome.jp/kegg-bin/show_pathway?";
   current.setids <<- set.ids;
   current.geneset <<- current.mset;
   current.universe <<- unique(unlist(current.mset));

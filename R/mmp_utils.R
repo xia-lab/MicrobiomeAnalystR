@@ -1759,7 +1759,6 @@ if(dataType=="metabolite"){
       current.setlink <- kegg.anot$link;
       current.set <- kegg.anot$sets$Metabolism;
     }else{
-    kegg.anot <- .read.microbiomeanalyst.lib.rds("ko_pathways.rds", "ko")
     current.set <- qs::qread(paste0(lib.path.mmp,"ko_set_bac.qs"))
     }
 
