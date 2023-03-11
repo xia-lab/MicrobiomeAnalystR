@@ -509,7 +509,6 @@ PerformKOmapping <- function(mbSetObj, geneIDs, type){
 #'@export
 
 PrepareQueryJson <- function(mbSetObj){
-  
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
   if(enrich.type == "hyper"){
@@ -565,9 +564,8 @@ filtKOmap <- function(include){
 #'License: GNU GPL (>= 2)
 #'@export
 PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",file.nm){
-  
   mbSetObj <- .get.mbSetObj(mbSetObj);
- 
+
   if(enrich.type == "hyper"){
   LoadKEGGKO_lib(category,contain);
     PerformKOEnrichAnalysis_List(mbSetObj, file.nm);
@@ -582,6 +580,7 @@ PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",fi
 .prepare.global<-function(mbSetObj, category,contain ,file.nm){
   LoadKEGGKO_lib(category,contain);
   mbSetObj <- .get.mbSetObj(mbSetObj);
+
   phenotype <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[selected.meta.data]]);
   genemat <- as.data.frame(t(otu_table(mbSetObj$dataSet$norm.phyobj)),check.names=FALSE);
   # first, get the matched entries from current.geneset
@@ -708,13 +707,28 @@ PerformKOEnrichAnalysis_Table <- function(mbSetObj, file.nm){
 
 # Utility function
 LoadKEGGKO_lib<-function(category,contain="all"){
-    
   if(category == "module"){
-    kegg.anot <- .read.microbiomeanalyst.lib.rds("ko_modules.rds", "ko")
-    current.setlink <- kegg.anot$link;
+   current.setlink <- "http://www.genome.jp/kegg-bin/show_module?";
+       if(contain=="bac"){
+      current.mset <- qs::qread("../../lib/ko/module_bac.qs")
+      
+    }else if(contain=="hsabac"){
+      current.mset <- qs::qread("../../lib/ko/module_hsa_bac.qs")
+      
+    }else if(contain=="hsa"){
+      current.mset <- qs::qread("../../lib/ko/module_hsa.qs")
+      
+    }else if(contain=="all"){
+        kegg.anot <- .read.microbiomeanalyst.lib.rds("ko_modules.rds", "ko")
     current.mset <- kegg.anot$sets$"Pathway module";
+    }else{
+    current.mset <- qs::qread("../../lib/ko/module_bac.qs") ## filter users' data based on bacterial metabolism
+    current.mset <-  lapply(current.mset, function(x) x[x %in% query.ko])
+    current.mset <- current.mset[unlist(lapply(current.mset,function(x) length(x)))>1]
+    }
+
   }else{
-    
+    current.setlink <- "http://www.genome.jp/kegg-bin/show_pathway?";
     if(contain=="bac"){
       current.mset <- qs::qread("../../lib/mmp/ko_set_bac.qs")
       
@@ -726,7 +740,6 @@ LoadKEGGKO_lib<-function(category,contain="all"){
       
     }else if(contain=="all"){
       kegg.anot <- .read.microbiomeanalyst.lib.rds("ko_pathways.rds", "ko")
-      current.setlink <- kegg.anot$link;
       current.mset <- kegg.anot$sets$Metabolism;
     }else{
     current.mset <- qs::qread("../../lib/mmp/ko_set_bac.qs") ## filter users' data based on bacterial metabolism
@@ -753,10 +766,10 @@ LoadKEGGKO_lib<-function(category,contain="all"){
   mset.ln <- lapply(current.mset, length);
   current.mset <- current.mset[mset.ln > 0];
   set.ids <- names(current.mset);
-  koset2nm <- qs::qread("../../lib/mmp/koset2nm.qs");
-  names(set.ids) <- names(current.mset) <- koset2nm[set.ids];
+  set2nm <- qs::qread("../../lib/mmp/set2nm.qs")[[category]];
+  names(set.ids) <- names(current.mset) <- set2nm[set.ids];
 
-  current.setlink <<- "http://www.genome.jp/kegg-bin/show_pathway?";
+  current.setlink <<-  current.setlink;
   current.setids <<- set.ids;
   current.geneset <<- current.mset;
   current.universe <<- unique(unlist(current.mset));

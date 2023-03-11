@@ -1714,7 +1714,7 @@ res=enrich2json()
   phenotype <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[selected.meta.data]]);
 
 if(dataType=="metabolite"){
-   print(c("baccontaion",contain))
+
     if(contain=="bac"){
       current.set <- qs::qread(paste0(lib.path.mmp,"kegg_bac_mummichog.qs"))$pathways$cpds
       
@@ -1762,9 +1762,9 @@ if(dataType=="metabolite"){
     current.set <- qs::qread(paste0(lib.path.mmp,"ko_set_bac.qs"))
     }
 
-koset2nm <- qs::qread(paste0(lib.path.mmp,"koset2nm.qs"));
+set2nm <-  qs::qread("../../lib/mmp/set2nm.qs")[["pathway"]];
 set.ids <- names(current.set);
-names(set.ids) <- names(current.set)<-  koset2nm[set.ids];
+names(set.ids) <- names(current.set)<-  set2nm[set.ids];
 
 
   current.setids <<-  set.ids;
