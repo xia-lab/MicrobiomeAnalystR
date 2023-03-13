@@ -565,7 +565,7 @@ filtKOmap <- function(include){
 #'@export
 PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",file.nm){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-
+  print(enrich.type)
   if(enrich.type == "hyper"){
   LoadKEGGKO_lib(category,contain);
     PerformKOEnrichAnalysis_List(mbSetObj, file.nm);
@@ -723,8 +723,10 @@ LoadKEGGKO_lib<-function(category,contain="all"){
     current.mset <- kegg.anot$sets$"Pathway module";
     }else{
     current.mset <- qs::qread("../../lib/ko/module_bac.qs") ## filter users' data based on bacterial metabolism
+    if(enrich.type != "hyper"){
     current.mset <-  lapply(current.mset, function(x) x[x %in% query.ko])
     current.mset <- current.mset[unlist(lapply(current.mset,function(x) length(x)))>1]
+    }
     }
 
   }else{
@@ -743,8 +745,10 @@ LoadKEGGKO_lib<-function(category,contain="all"){
       current.mset <- kegg.anot$sets$Metabolism;
     }else{
     current.mset <- qs::qread("../../lib/mmp/ko_set_bac.qs") ## filter users' data based on bacterial metabolism
+    if(enrich.type != "hyper"){
     current.mset <-  lapply(current.mset, function(x) x[x %in% query.ko])
     current.mset <- current.mset[unlist(lapply(current.mset,function(x) length(x)))>1]
+    }
     }
 
   }
@@ -865,7 +869,6 @@ MapKO2KEGGEdges<- function(kos, net="ko01100"){
 PerformKOEnrichAnalysis_List <- function(mbSetObj, file.nm){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
   # prepare for the result table
   set.size <- length(current.geneset);
   res.mat <- matrix(0, nrow=set.size, ncol=5);
