@@ -1240,7 +1240,6 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   dataName <- mbSetObj$dataSet$name;
   module.type <- mbSetObj$module.type;
-  
   load_phyloseq();
   load_splitstackshape();
   
@@ -1249,7 +1248,6 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
   # do some sanity check here on sample and feature names
   smpl.nms <- colnames(data.proc);
   taxa.nms <- row.names(data.proc);
-  
   # check for uniqueness of dimension name
   if(length(unique(smpl.nms))!=length(smpl.nms)){
     dup.nms <- paste(smpl.nms[duplicated(smpl.nms)], collapse="; ");
@@ -1272,7 +1270,6 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
       mbSetObj$is.ASV <-TRUE;
     }
   }
-  
   # now check for special characters in the data labels
   if(sum(is.na(iconv(smpl.nms)))>0){
     na.inx <- is.na(iconv(smpl.nms));
@@ -1289,10 +1286,8 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
     AddErrMsg(paste("No special letters (i.e. Latin, Greek) are allowed in feature or taxa names:", nms, collapse=" "));
     return(0);
   }
-  
   #standard name to be used
   classi.lvl<- c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species");
-  
   if(mbSetObj$module.type == "mdp" || mbSetObj$module.type.mic =="otu" |mbSetObj$module.type == "ppd" |mbSetObj$module.type == "meta" ){
     if(type=="text"){
       # prepare data for phyloseq visualization.
@@ -1314,7 +1309,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
           
         }else{
           
-          
+       
           if(taxa_type=="SILVA"){
             
             load_splitstackshape();
@@ -1373,7 +1368,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
           
           
         }
-        
+    
         # making unique id for each OTU consist of lowest taxonomy level present followed by row number
         tmat <- as(tax_table(taxa_table), "matrix")
         rowLn <- nrow(tmat);
@@ -1397,7 +1392,6 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
           AddErrMsg(paste("Errors with the taxonomy table! Please check if there are any names with all NA."));
           return(0);
         }
-        
         taxa_names(taxa_table)<-mynames;
         feat_nm<-NULL;
         mbSetObj$dataSet$taxa_table<-taxa_table;
@@ -1407,7 +1401,6 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
         taxa_table <- mbSetObj$dataSet$taxa_table;
         
         indx<-match(rownames(data.proc), rownames(taxa_table));
-        
         if(sum(is.na(indx)) > 0){
           na.nms <- rownames(data.proc)[is.na(indx)];
           if(length(na.nms)>10){
@@ -1436,7 +1429,6 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
             qs::qsave(pg_tree, "tree.qs");
           }
         }
-        
         nm<-colnames(taxa_table);
         taxa_table<-as.matrix(taxa_table[indx,]);
         colnames(taxa_table)<-nm;
@@ -1451,7 +1443,6 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
         }
         taxa_names(mbSetObj$dataSet$taxa_table)<-rownames(taxa_table);
       }
-      
       # creating phyloseq object
       if(isNormInput=="false"){
        data.proc<-apply(data.proc,2,as.integer);
@@ -1474,7 +1465,6 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
       if(length(indx)>0){
         mbSetObj$dataSet$taxa_table<-mbSetObj$dataSet$taxa_table[,-1];
       }
-      
       classi.lvl<- c("Phylum", "Class", "Order", "Family", "Genus", "Species");
       colnames(mbSetObj$dataSet$taxa_table)<-classi.lvl[1:ncol(mbSetObj$dataSet$taxa_table)]; 
       #sanity check: no of sample of both abundance and metadata should match.
@@ -1486,7 +1476,6 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
       }else{
         mbSetObj$dataSet$sample_data<-mbSetObj$dataSet$sample_data[indx, ,drop=FALSE];
       }
-      
       mbSetObj$dataSet$sample_data<-sample_data(mbSetObj$dataSet$sample_data, errorIfNULL=TRUE);
       #cleaning up the names#deleting [] if present; and substituting (space,.,/ with underscore(_))
       mbSetObj$dataSet$taxa_table<- gsub("[[:space:]./_-]", "_",mbSetObj$dataSet$taxa_table);
@@ -1526,7 +1515,6 @@ if(mbSetObj$module.type=="mmp" &  taxalabel=="T"){# for mapping to the database 
 }
 
 }
-
 #sometimes after removal of such special characters rownames beacame non unique; so make it unique
       mynames1<- gsub("[[:space:]./_-]", "_",taxa_names(mbSetObj$dataSet$taxa_table));
       mynames1<- gsub("\\[|\\]","",mynames1);
@@ -1604,7 +1592,6 @@ if(mbSetObj$module.type=="mmp" &  taxalabel=="T"){# for mapping to the database 
       missing_vector <- paste0("New_OTU", seq_along(missing.inx))
       mynames1[missing.inx] <- missing_vector
     }
-    
     taxa_names(mbSetObj$dataSet$taxa_table)<-taxa_names(data.proc)<-mynames1;
     mbSetObj$dataSet$sample_data<-sample_data(mbSetObj$dataSet$sample_data, errorIfNULL = TRUE);
     sd_names <- sample_names(mbSetObj$dataSet$sample_data)
@@ -1619,7 +1606,6 @@ if(mbSetObj$module.type=="mmp" &  taxalabel=="T"){# for mapping to the database 
     if(length(rank_names(mbSetObj$dataSet$proc.phyobj)) > 7){
       tax_table(mbSetObj$dataSet$proc.phyobj) <- tax_table(mbSetObj$dataSet$proc.phyobj)[, 1:7]
     }
-    
     #also using unique names for our further data
     prefilt.data <- readDataQs("data.prefilt", module.type, dataName);
     rownames(prefilt.data)<-taxa_names(mbSetObj$dataSet$taxa_table);

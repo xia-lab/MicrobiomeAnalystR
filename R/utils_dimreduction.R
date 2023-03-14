@@ -30,11 +30,19 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
   if(!exists("phyloseq_objs")){
     phyloseq_objs <- qs::qread("phyloseq_objs.qs")
   }
-  
+
   d.list[["mic"]] = list()
   d.list[["mic"]][["data.proc"]] = phyloseq_objs$count_tables
+  if(micDataType=='ko'){
+  d.list[["mic"]][["comp.res"]]  = current.proc$mic$res_deAnal[,c(3,4,1)]
+  names(d.list[["mic"]][["comp.res"]])[3] = "T.Stats"
+  d.list[["mic"]][["comp.res"]] = list(OTU=d.list[["mic"]][["comp.res"]])
+  d.list[["mic"]][["enrich.nms"]] = list(OTU=rownames(current.proc$mic$res_deAnal))
+
+  }else{
   d.list[["mic"]][["comp.res"]] = lapply(phyloseq_objs$res_deAnal, function(x){names(x)[1] ="T.Stats"; return(x[,c(3,4,1)])})
   d.list[["mic"]][["enrich.nms"]] = lapply(phyloseq_objs$res_deAnal ,function(x) rownames(x))
+  }
   d.list[["mic"]][["meta"]] = data.frame(mbSetObj$dataSet$sample_data)
   
   d.list[["met"]] = list()
@@ -42,8 +50,7 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
   d.list[["met"]][["comp.res"]] =   current.proc$met$res_deAnal[,c(1:3)] #comp.res
   d.list[["met"]][["enrich.nms"]] = rownames(current.proc$met$res_deAnal)
   d.list[["met"]][["meta"]] = data.frame(mbSetObj$dataSet$sample_data)
-  
-  
+
   newmeta <- rbind(  d.list[["mic"]][["meta"]],d.list[["met"]][["meta"]])
   comp.res1 = lapply( d.list[["mic"]][["comp.res"]],function(x) rbind(x, d.list[["met"]][["comp.res"]]) )
   
@@ -166,6 +173,7 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
     pos.xyz2 <- lapply(pos.xyz2, function(x) unitAutoScale(x));
     pos.xyz2 <- lapply(pos.xyz2, "rownames<-", names2[[1]]);
   }
+
   
   if(reductionOpt != "procrustes"){
     hit.inx <- mapply(function(x,y){
@@ -174,6 +182,9 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
     loadingSymbols <- mapply(function(x,y){
       y[x]
     },hit.inx, combined.res$enrich_ids);
+    if(micDataType=="ko"){
+    loadingSymbols=list(OTU=loadingSymbols)
+  }
   }
   if(reductionOpt %in% c("o2pls", "mcia","rcca", "mbpca", "diablo", "rcca", "spls")){
     loading.pos.xyz = lapply(loading.pos.xyz,as.data.frame)

@@ -190,7 +190,7 @@ citation("MicrobiomeAnalystR")
 
 ## Bugs or feature requests
 
-To inform us of any bugs or requests, please open a new issue or send an email to #jasmine.chong@mail.mcgill.ca.
+To inform us of any bugs or requests, please open a new issue or send an email to #yao.lu5@mail.mcgill.ca. 
 
 ## MicrobiomeAnalystR History & Updates
 
