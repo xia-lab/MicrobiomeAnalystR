@@ -4,103 +4,12 @@
 ## Author: Guangyan Zhou, guangyan.zhou@mail.mcgill.ca
 ##################################################
 
-#dataName is used for onedata dataset
-my.json.scatter.meta <- function(mbSetObj=NA, filenm="abc",selMeta=""){
-
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  paramSet <- readSet(paramSet, "paramSet");
-  mdata.all <- mbSetObj$mdata.all;
-  anal.type <- mbSetObj$module.type;
-  
-  data <- qs::qread("merged.data.qs");
-  #data <- subsetPhyloseqByDataset(mbSetObj, data);
-  
-  meta <- sample_data(data);
-  
-  Sys.setenv(RGL_USE_NULL = TRUE);
-  require(rgl);
-  require(igraph);
-  pos.xyz <-qs::qread("score_pos_xyz.qs");
-  nodes <- vector(mode="list");
-  names <- c(rownames(pos.xyz));
-  metadf <- meta;
-  
-  
-  a<-list();
-  a$objects <- "NA";
-  meshes<-"NA";
-  
-  col <- vector();
-  
-  
-  # can be selected meta as well if = dataSet$sel.meta
-  meta.vec <- as.vector(metadf[,selMeta][[1]]);
-  meta.vec.num <- as.integer(as.factor(metadf[,selMeta][[1]]));
-  dataset.vec <- metadf$dataset;
-  
-  col.s <- gg_color_hue_scatter(length(unique(meta.vec)), "green");
-  for(i in 1:length(meta.vec.num)){
-    col[i] <- col.s[meta.vec.num[i]];
-  }
-  color = col;
-  nodeSize = 18;
-  if(length(names)>200){
-    nodeSize = 16;
-  }
-  seriesList <- list();
-  for(j in 1:length(unique(dataset.vec))){
-    nodes <- list();
-    k = 1;
-    for(i in 1:length(names)){
-      if(unique(dataset.vec)[j] == dataset.vec[i]){
-        nodes[[k]] <- c(
-          names[i],
-          nodeSize,
-          meta.vec[i],
-          meta.vec.num[i],
-          unname(pos.xyz[i,1]),
-          unname(pos.xyz[i,2]),
-          unname(pos.xyz[i,3]),
-          color[i],
-          dataset.vec[i]
-        );
-        k = k+1;
-      }
-      
-    }
-    
-    seriesList[[j]] <- nodes;
-    
-  }
-  
-  edge.mat = "NA";
-  modules = "NA";
-  # save node table
-  ellipse ="NA";  
-  require(RJSONIO);
-  
-  netData <- list( seriesList=seriesList,colArr=col.s,metaVecUniq=unique(meta.vec.num), metaVec = meta.vec, edges=edge.mat, modules=modules, objects=a$objects, ellipse=meshes, meta=metadf, loading="NA", reductionOpt="pca" ,omicstype=c("rna.b"));
-  
-  netData[["misc"]] <- "";
-  paramSet$partialToBeSaved <- c(paramSet$partialToBeSaved, c(filenm));
-  paramSet$jsonNms["scatter3d"] <- filenm;
-  
-  saveSet(paramSet, "paramSet");
-  
-  sink(filenm);
-  cat(toJSON(netData));
-  sink();
-  
-  return(1);
-}
-
-
 my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
   library(igraph);
   ## 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   res <- mbSetObj$analSet$pca$score
-  
+
   nodes <- vector(mode="list");
   names <- res$name;
   if(ncol(res$xyz) > nrow(res$xyz)){
@@ -145,7 +54,9 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
 
   if("facB" %in% names(res)){
     meta.vec2 <- res$facB
-    metadf <- res$metadata_list;
+    phyobjdata <- qs::qread("merged.data.qs");
+    metadf <- as.matrix(sample_data(phyobjdata));
+    metadf <- as.data.frame(metadf);
     shape <- vector();
     meta.vec.num <- as.integer(as.factor(meta.vec2))
     shape.s <- c("circle", "triangle", "square", "diamond")[1:length(unique(meta.vec2))];
