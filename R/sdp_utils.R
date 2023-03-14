@@ -565,7 +565,7 @@ filtKOmap <- function(include){
 #'@export
 PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",file.nm){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  print(enrich.type)
+  #print(enrich.type)
   if(enrich.type == "hyper"){
   LoadKEGGKO_lib(category,contain);
     PerformKOEnrichAnalysis_List(mbSetObj, file.nm);
@@ -583,10 +583,10 @@ PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",fi
 
   phenotype <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[selected.meta.data]]);
   genemat <- as.data.frame(t(otu_table(mbSetObj$dataSet$norm.phyobj)),check.names=FALSE);
-  # first, get the matched entries from current.geneset
+  # first, get the matched entries from current.mset
 
-  hits <- lapply(current.geneset, function(x){x[x %in% colnames(genemat)]});
-  set.num <- unlist(lapply(current.geneset, length), use.names = FALSE);
+  hits <- lapply(current.mset, function(x){x[x %in% colnames(genemat)]});
+  set.num <- unlist(lapply(current.mset, length), use.names = FALSE);
   dat.in <- list(cls=phenotype, data=genemat, subsets=hits, set.num=set.num, filenm=file.nm);
 
   my.fun <- function(){
@@ -651,9 +651,9 @@ PerformKOEnrichAnalysis_Table <- function(mbSetObj, file.nm){
 
   phenotype <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[selected.meta.data]]);
   genemat <- as.data.frame(t(otu_table(mbSetObj$dataSet$norm.phyobj)),check.names=FALSE);
-  # first, get the matched entries from current.geneset
-  hits <- lapply(current.geneset, function(x){x[x %in% colnames(genemat)]});
-  set.num <- unlist(lapply(current.geneset, length), use.names = FALSE);
+  # first, get the matched entries from current.mset
+  hits <- lapply(current.mset, function(x){x[x %in% colnames(genemat)]});
+  set.num <- unlist(lapply(current.mset, length), use.names = FALSE);
 
    # now, perform the enrichment analysis
    library(RSclient);
@@ -708,53 +708,51 @@ PerformKOEnrichAnalysis_Table <- function(mbSetObj, file.nm){
 # Utility function
 LoadKEGGKO_lib<-function(category,contain="all"){
   if(category == "module"){
-   current.setlink <- "http://www.genome.jp/kegg-bin/show_module?";
+       current.setlink <- "http://www.genome.jp/kegg-bin/show_module?";
        if(contain=="bac"){
-      current.mset <- qs::qread("../../lib/ko/module_bac.qs")
+            current.mset <- qs::qread("../../lib/ko/module_bac.qs")
       
-    }else if(contain=="hsabac"){
-      current.mset <- qs::qread("../../lib/ko/module_hsa_bac.qs")
+        }else if(contain=="hsabac"){
+            current.mset <- qs::qread("../../lib/ko/module_hsa_bac.qs")
       
-    }else if(contain=="hsa"){
-      current.mset <- qs::qread("../../lib/ko/module_hsa.qs")
+        }else if(contain=="hsa"){
+            current.mset <- qs::qread("../../lib/ko/module_hsa.qs")
       
-    }else if(contain=="all"){
-        kegg.anot <- .read.microbiomeanalyst.lib.rds("ko_modules.rds", "ko")
-    current.mset <- kegg.anot$sets$"Pathway module";
-    }else{
-    current.mset <- qs::qread("../../lib/ko/module_bac.qs") ## filter users' data based on bacterial metabolism
-    if(enrich.type != "hyper"){
-    current.mset <-  lapply(current.mset, function(x) x[x %in% query.ko])
-    current.mset <- current.mset[unlist(lapply(current.mset,function(x) length(x)))>1]
-    }
-    }
-
-  }else{
-    current.setlink <- "http://www.genome.jp/kegg-bin/show_pathway?";
-    if(contain=="bac"){
-      current.mset <- qs::qread("../../lib/mmp/ko_set_bac.qs")
+        }else if(contain=="all"){
+            kegg.anot <- .read.microbiomeanalyst.lib.rds("ko_modules.rds", "ko")
+            current.mset <- kegg.anot$sets$"Pathway module";
+        }else{
+            current.mset <- qs::qread("../../lib/ko/module_bac.qs") ## filter users' data based on bacterial metabolism
+            if(enrich.type != "hyper"){
+                current.mset <-  lapply(current.mset, function(x) x[x %in% query.ko])
+                current.mset <- current.mset[unlist(lapply(current.mset,function(x) length(x)))>1]
+            }
+        }
+   }else{
+        current.setlink <- "http://www.genome.jp/kegg-bin/show_pathway?";
+        if(contain=="bac"){
+            current.mset <- qs::qread("../../lib/mmp/ko_set_bac.qs")
       
-    }else if(contain=="hsabac"){
-      current.mset <- qs::qread("../../lib/mmp/ko_set_hsa_bac.qs")
+        }else if(contain=="hsabac"){
+            current.mset <- qs::qread("../../lib/mmp/ko_set_hsa_bac.qs")
       
-    }else if(contain=="hsa"){
-      current.mset <- qs::qread("../../lib/mmp/ko_set_hsa.qs")
+        }else if(contain=="hsa"){
+            current.mset <- qs::qread("../../lib/mmp/ko_set_hsa.qs")
       
-    }else if(contain=="all"){
-      kegg.anot <- .read.microbiomeanalyst.lib.rds("ko_pathways.rds", "ko")
-      current.mset <- kegg.anot$sets$Metabolism;
-    }else{
-    current.mset <- qs::qread("../../lib/mmp/ko_set_bac.qs") ## filter users' data based on bacterial metabolism
-    if(enrich.type != "hyper"){
-    current.mset <-  lapply(current.mset, function(x) x[x %in% query.ko])
-    current.mset <- current.mset[unlist(lapply(current.mset,function(x) length(x)))>1]
-    }
-    }
-
+        }else if(contain=="all"){
+            kegg.anot <- .read.microbiomeanalyst.lib.rds("ko_pathways.rds", "ko")
+            current.mset <- kegg.anot$sets$Metabolism;
+        }else{
+            current.mset <- qs::qread("../../lib/mmp/ko_set_bac.qs") ## filter users' data based on bacterial metabolism
+            if(enrich.type != "hyper"){
+                current.mset <-  lapply(current.mset, function(x) x[x %in% query.ko])
+                current.mset <- current.mset[unlist(lapply(current.mset,function(x) length(x)))>1]
+            }
+        }
   }
+
   # now need to update the msets to contain only those in ko01100 map
   if(!exists("ko.edge.map")){
-    
     if(.on.public.web){
       ko.edge.path <- paste("../../lib/ko/ko_edge.csv", sep="");
     }else{
@@ -775,7 +773,7 @@ LoadKEGGKO_lib<-function(category,contain="all"){
 
   current.setlink <<-  current.setlink;
   current.setids <<- set.ids;
-  current.geneset <<- current.mset;
+  current.mset <<- current.mset;
   current.universe <<- unique(unlist(current.mset));
 }
 
@@ -870,9 +868,9 @@ PerformKOEnrichAnalysis_List <- function(mbSetObj, file.nm){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   # prepare for the result table
-  set.size <- length(current.geneset);
+  set.size <- length(current.mset);
   res.mat <- matrix(0, nrow=set.size, ncol=5);
-  rownames(res.mat) <- names(current.geneset);
+  rownames(res.mat) <- names(current.mset);
   colnames(res.mat) <- c("Total", "Expected", "Hits", "Pval", "FDR");
   
   # prepare query
@@ -887,9 +885,9 @@ PerformKOEnrichAnalysis_List <- function(mbSetObj, file.nm){
   q.size <- length(ora.vec);
   
   # get the matched query for each pathway
-  hits.query <- lapply(current.geneset, function(x) {
+  hits.query <- lapply(current.mset, function(x) {
     ora.vec[ora.vec%in%unlist(x)];});
-  names(hits.query) <- names(current.geneset);
+  names(hits.query) <- names(current.mset);
   
   hit.num <- unlist(lapply(hits.query, function(x){length(x)}), use.names=FALSE);
   
@@ -897,7 +895,7 @@ PerformKOEnrichAnalysis_List <- function(mbSetObj, file.nm){
   uniq.count <- length(current.universe);
   
   # unique gene count in each pathway
-  set.size <- unlist(lapply(current.geneset, length));
+  set.size <- unlist(lapply(current.mset, length));
   
   res.mat[,1] <- set.size;
   res.mat[,2] <- q.size*(set.size/uniq.count);

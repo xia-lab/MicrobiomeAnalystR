@@ -1762,22 +1762,20 @@ if(dataType=="metabolite"){
     current.set <- qs::qread(paste0(lib.path.mmp,"ko_set_bac.qs"))
     }
 
-set2nm <-  qs::qread("../../lib/mmp/set2nm.qs")[["pathway"]];
-set.ids <- names(current.set);
-names(set.ids) <- names(current.set)<-  set2nm[set.ids];
+    set2nm <-  qs::qread("../../lib/mmp/set2nm.qs")[["pathway"]];
+    set.ids <- names(current.set);
+    names(set.ids) <- names(current.set)<-  set2nm[set.ids];
 
-
-  current.setids <<-  set.ids;
+    current.setids <<-  set.ids;
 
     datmat <- as.data.frame(t(otu_table(mbSetObj$dataSet$norm.phyobj)),check.names=FALSE);
-    # first, get the matched entries from current.geneset
+    # first, get the matched entries from current.set
  
     hits <- lapply(current.set, function(x){x[x %in% colnames(datmat)]});
     set.num <- unlist(lapply(current.set, length), use.names = FALSE);
     dat.in <- list(cls=phenotype, data=datmat, subsets=hits, set.num=set.num, filenm=file.nm);
   }
 
-  
   
   my.fun <- function(){
     gt.obj <- globaltest::gt(dat.in$cls, dat.in$data, subsets=dat.in$subsets);
