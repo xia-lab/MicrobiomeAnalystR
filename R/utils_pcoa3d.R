@@ -147,10 +147,19 @@ my.pcoa.3d <- function(mbSetObj, ordMeth, distName, taxrank, colopt, variable, t
   cols <- apply(rgbcols, 2, function(x){paste("rgb(", paste(x, collapse=","), ")", sep="")});
   pca3d$score$colors <- cols;
 
-  json.obj <- rjson::toJSON(pca3d);
-  sink(jsonNm);
-  cat(json.obj);
-  sink();
+  #json.obj <- rjson::toJSON(pca3d);
+  #sink(jsonNm);
+  #cat(json.obj);
+  #sink();
+
+  mbSetObj$analSet$pca<-pca3d;
+
+  if(!exists("my.json.scatter")){
+    .load.scripts.on.demand("utils_scatter3d.Rc");    
+  }
+
+  .set.mbSetObj(mbSetObj)
+  my.json.scatter(mbSetObj, jsonNm, F);
 
   return(.set.mbSetObj(mbSetObj));
 }
