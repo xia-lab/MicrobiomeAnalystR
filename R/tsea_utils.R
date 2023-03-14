@@ -185,7 +185,7 @@ CalculateHyperScore <- function(mbSetObj){
     
   # total uniq cmpds in the current mset lib
   uniq.count <- length(unique(unlist(current.mset, use.names = FALSE)));
-	set.size<-length(current.mset);
+  set.size<-length(current.mset);
     
   if(set.size ==1){
     AddErrMsg("Cannot perform enrichment analysis on a single metabolite set!");
@@ -206,8 +206,8 @@ CalculateHyperScore <- function(mbSetObj){
     }else{
       AddErrMsg("Mixed-level taxa set was selected!");
     }
-      return(0);
-    }
+    return(0);
+  }
 
   set.num<-unlist(lapply(current.mset, length), use.names = FALSE);
 
