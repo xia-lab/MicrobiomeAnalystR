@@ -102,14 +102,14 @@ PerformDEAnalyse<- function(mbSetObj, taxalvl="Genus",netType="gem",overlay,init
   sample_data <-  mbSetObj$dataSet$sample_data
   sample_type <- mbSetObj$dataSet$meta_info
 
-  metdat.de <- doComparison(metdat,sample_data,sample_type,analysisVar,alg)
+  metdat.de <- performLimma(metdat,sample_data,sample_type,analysisVar)
 
  if(initDE=="1"){
  phyloseq_objs[["res_deAnal"]] <- vector("list",length=length(phyloseq_objs$count_tables))
  names( phyloseq_objs[["res_deAnal"]]) <- names( phyloseq_objs$count_tables)
 
  micdat <- phyloseq_objs$count_tables
- micdat.de <- lapply(micdat,function(x) doComparison(x,sample_data,sample_type,analysisVar,alg))
+ micdat.de <- lapply(micdat,function(x) performLimma(x,sample_data,sample_type,analysisVar))
   predres.met <- qs::qread(paste0("m2m_pred_",predDB,".qs"))
     predres.met <- lapply(predres.met,function(x) return(x$fun_prediction_met))
   predDE<- vector("list",length=length(predres.met))
@@ -135,7 +135,7 @@ PerformDEAnalyse<- function(mbSetObj, taxalvl="Genus",netType="gem",overlay,init
       #qs::qsave(list(m2m_for_de=m2m_for_de,m2m_pair_dat=m2m_pair_dat),"m2m_pair_pred.qs")
       rownames(m2m_pair_dat) <- m2m_pair_dat$pair
       m2m_pair_dat$pair <- NULL
-      m2m_pair_de <- doComparison(m2m_pair_dat,sample_data,sample_type,analysisVar,alg)
+      m2m_pair_de <- performLimma(m2m_pair_dat,sample_data,sample_type,analysisVar)
       m2m_pair_de$mic <- m2m_for_de$Var1[match(rownames(m2m_pair_de),m2m_for_de$pair)]
       m2m_pair_de$met <- m2m_for_de$Var2[match(rownames(m2m_pair_de),m2m_for_de$pair)]
       predDE[[taxalvl2]]<-m2m_pair_de
@@ -153,7 +153,7 @@ PerformDEAnalyse<- function(mbSetObj, taxalvl="Genus",netType="gem",overlay,init
 }else{
 
 micdat <- phyloseq_objs$count_tables[[taxalvl]]
-micdat.de <- doComparison(micdat,sample_data,sample_type,analysisVar,alg)
+micdat.de <- performLimma(micdat,sample_data,sample_type,analysisVar)
 
   if(netType=="gem" & overlay =="true" &  taxalvl != "OTU"){
     if(!(file.exists(paste0(tolower(taxalvl),"_metabolite_pred_pair.qs")))){
@@ -172,7 +172,7 @@ micdat.de <- doComparison(micdat,sample_data,sample_type,analysisVar,alg)
       qs::qsave(list(m2m_for_de=m2m_for_de,m2m_pair_dat=m2m_pair_dat),"m2m_pair_pred.qs")
       rownames(m2m_pair_dat) <- m2m_pair_dat$pair
       m2m_pair_dat$pair <- NULL
-      m2m_pair_de <- doComparison(m2m_pair_dat,sample_data,sample_type,analysisVar,alg)
+      m2m_pair_de <- performLimma(m2m_pair_dat,sample_data,sample_type,analysisVar)
       m2m_pair_de$mic <- m2m_for_de$Var1[match(rownames(m2m_pair_de),m2m_for_de$pair)]
       m2m_pair_de$met <- m2m_for_de$Var2[match(rownames(m2m_pair_de),m2m_for_de$pair)]
 
@@ -249,7 +249,7 @@ PerformPairDEAnalyse <- function(mbSetObj, taxalvl, analysisVar,alg="limma",plvl
           pred.dat[[tax]] <- m2m_pair_dat
           rownames(m2m_pair_dat) <- m2m_pair_dat$pair
           m2m_pair_dat$pair <- NULL
-          m2m_pair_de <- doComparison(m2m_pair_dat,sample_data,sample_type,analysisVar,alg)
+          m2m_pair_de <- performLimma(m2m_pair_dat,sample_data,sample_type,analysisVar)
           m2m_pair_de$mic <- m2m_for_de$Var1[match(rownames(m2m_pair_de),m2m_for_de$pair)]
           m2m_pair_de$met <- m2m_for_de$Var2[match(rownames(m2m_pair_de),m2m_for_de$pair)]
           predDE[[tax]]<-m2m_pair_de
@@ -280,7 +280,7 @@ PerformPairDEAnalyse <- function(mbSetObj, taxalvl, analysisVar,alg="limma",plvl
         pred.dat <- m2m_pair_dat
         rownames(m2m_pair_dat) <- m2m_pair_dat$pair
         m2m_pair_dat$pair <- NULL
-        m2m_pair_de <- doComparison(m2m_pair_dat,sample_data,sample_type,analysisVar,alg)
+        m2m_pair_de <- performLimma(m2m_pair_dat,sample_data,sample_type,analysisVar)
         m2m_pair_de$mic <- m2m_for_de$Var1[match(rownames(m2m_pair_de),m2m_for_de$pair)]
         m2m_pair_de$met <- m2m_for_de$Var2[match(rownames(m2m_pair_de),m2m_for_de$pair)]
         current.proc$pred.dat <<- pred.dat
@@ -303,11 +303,10 @@ CompareMic <- function(mbSetObj, taxalvl,initDE=1,
   mbSetObj <- .get.mbSetObj(mbSetObj);
   current.proc$mic$alg<<-alg
   current.proc$mic$plvl<<-plvl
-    sample_data <-  data.frame(mbSetObj$dataSet$sample_data)
+  sample_data <-  data.frame(mbSetObj$dataSet$sample_data)
   sample_type <- mbSetObj$dataSet$meta_info
   meta_type <- mbSetObj$dataSet$meta.types
-  
-  
+    
   if (!exists('adj.vec')) {
     adj.bool = F;
   } else {
@@ -379,33 +378,17 @@ CompareMic <- function(mbSetObj, taxalvl,initDE=1,
 if(micDataType=="ko"){
     micdat <- phyloseq_objs$count_tables[["OTU"]]
     micdat.de <- doMaAslin(micdat,plvl)
-    current.proc$mic$res_deAnal <<- micdat.de$res
-    current.proc$mic$res_deAnal_noadj <<- micdat.de$res.noadj
-    current.proc$mic$sigfeat <<-  rownames(current.proc$mic$res_deAnal)[current.proc$mic$res_deAnal$FDR< plvl]
-  }else{
+     }else{
     if(initDE=="1"|taxalvl=="all"){
       micdat <- phyloseq_objs$count_tables
       micdat.de <- lapply(micdat,function(x) doMaAslin(x,plvl))
-      phyloseq_objs <- qs::qread("phyloseq_objs.qs")
-      phyloseq_objs$res_deAnal <- lapply(micdat.de,function(x) x$res)
-      phyloseq_objs$res_deAnal_noadj <- lapply(micdat.de,function(x) x$res.noadj)
-      phyloseq_objs$sigfeat <- lapply(phyloseq_objs$res_deAnal,function(x) rownames(x)[x$FDR< plvl]) ;
-      qs::qsave(phyloseq_objs,"phyloseq_objs.qs")
-    }else{
+      }else{
       micdat <- phyloseq_objs$count_tables[[taxalvl]]
       micdat.de <- doMaAslin(micdat,plvl)
- 
-      current.proc$mic$res_deAnal <<- micdat.de$res
-      current.proc$mic$res_deAnal_noadj <<- micdat.de$res.noadj
-       current.proc$mic$sigfeat <<-  rownames(current.proc$mic$res_deAnal)[current.proc$mic$res_deAnal$FDR< plvl]
-      # fast.write(micdat.de, file=paste0(taxalvl,"_",analysisVar,"_",alg,"_Res.csv"));
     }
     
   }
-  print("CompareMic done")
-
-  return(.set.mbSetObj(mbSetObj))
-  
+  return(micdat.de) 
 }
 
 
@@ -426,7 +409,7 @@ alg="limma",plvl=0.05, selected="NA",nonpar=FALSE){
   sample_data <-  mbSetObj$dataSet$sample_data
   sample_type <- mbSetObj$dataSet$meta_info
 
-  metdat.de <- doComparison(metdat,sample_data,sample_type,analysisVar,alg)
+  metdat.de <- performLimma(metdat,sample_data,sample_type,analysisVar)
  
   
   fast.write(metdat.de, file="limma_output.csv");
@@ -453,18 +436,6 @@ alg="limma",plvl=0.05, selected="NA",nonpar=FALSE){
   print("CompareMet done")
   return(.set.mbSetObj(mbSetObj))
   
-}
-
-doComparison <- function(data,sample_data,sample_type,analysisVar,alg="limma"){
-
-  if(alg=="limma"){
-    res =  performLimma(data,sample_data,sample_type,analysisVar)
-  }else if (alg=="tt"){
-    cls = data.frame(sample_data)[,analysisVar]
-    res <- PerformFastUnivTests(data, cls,F,F); 
-  }else if(alg=="tt"){
-    res =  performMaaslin(data,sample_data,sample_type,analysisVar)
-  }
 }
 
 
@@ -594,7 +565,7 @@ doMaAslin <- function(input.data,thresh = 0.05,adj.bool=F){
   require(R.utils);
   if(.on.public.web){
     # make this lazy load
-    if(!exists("my.maaslin2")){ # public web on same user dir
+    if(!exists(".prepare.maaslin2")){ # public web on same user dir
       .load.scripts.on.demand("utils_maaslin.Rc");    
     }
   }
@@ -605,120 +576,57 @@ doMaAslin <- function(input.data,thresh = 0.05,adj.bool=F){
   analysis.var <- current.proc$meta_para$analysis.var
   if(block == "NA"){
     if(length(disc.effects) > 0){ # case: discrete variables, no blocking factor
-      maaslin <- my.maaslin2(
-        input_data = input.data, 
+     maaslin.para<<- list(input_data = input.data, 
         input_metadata = current.proc$meta_para$input.meta, 
-        fixed_effects = c(current.proc$meta_para$fixed.effects),
-        reference = c(current.proc$meta_para$refs),
+        fixed_effects =  current.proc$meta_para$fixed.effects,
+        reference = current.proc$meta_para$refs,
         max_significance = 0.05,
         min_abundance = 0.0,
         min_prevalence = 0.0,
         min_variance = 0.0,
         normalization = current.proc$meta_para$norm.method,
-        transform = current.proc$meta_para$trans.method);
+        transform = current.proc$meta_para$trans.method)
+       return(1)
     } else { # case: no discrete variables, no blocking factor
-        maaslin <- my.maaslin2(
-        input_data = input.data, 
-        fixed_effects = c(current.proc$meta_para$fixed.effects),
+        maaslin.para<<- list(input_data = input.data, 
+        fixed_effects = current.proc$meta_para$fixed.effects,
         max_significance = 0.05,
         min_abundance = 0.0,
         min_prevalence = 0.0,
         min_variance = 0.0,
         normalization = current.proc$meta_para$norm.method,
-        transform = current.proc$meta_para$trans.method); 
+        transform = trans.method)
+        return(1)
     }
   } else { # case: discrete variables, blocking factor (blocking factor must be discrete)
-    check.rank <- capture.output(my.maaslin2(
-      input_data = input.data[1,], 
-      input_metadata = input.meta, 
-      fixed_effects = c(current.proc$meta_para$fixed.effects),
-      random_effects = c(block),
-      reference = c(current.proc$meta_para$refs),
+       maaslin.para <<-list(check= list(input_data = input.data[1,], 
+      input_metadata = current.proc$meta_para$input.meta, 
+      fixed_effects = current.proc$meta_para$fixed.effects,
+      random_effects = block,
+      reference =current.proc$meta_para$refs,
       max_significance = 0.05,
       min_abundance = 0.0,
       min_prevalence = 0.0,
       min_variance = 0.0,
       normalization = current.proc$meta_para$norm.method,
-      transform = current.proc$meta_para$trans.method), type=c("message"));
-    
-    if((length(grep("rank deficient", check.rank)) + length(grep("singular", check.rank))) > 0){
-      # often random effects model matrix are rank deficient - check this way and return 
-      # feedback that the experimental design does not support using a blocking factor.
-      return(-2)
-    } else {
-      maaslin <- my.maaslin2(
-        input_data = input.data, 
+      transform = current.proc$meta_para$trans.method),
+     test=list(input_data = input.data, 
         input_metadata = current.proc$meta_para$input.meta, 
-        fixed_effects = c(current.proc$meta_para$fixed.effects),
-        random_effects = c(block),
-        reference = c(current.proc$meta_para$refs),
+        fixed_effects = current.proc$meta_para$fixed.effects,
+        random_effects = block,
+        reference = current.proc$meta_para$refs,
         max_significance = 0.05,
         min_abundance = 0.0,
         min_prevalence = 0.0,
         min_variance = 0.0,
         normalization = current.proc$meta_para$norm.method,
-        transform = current.proc$meta_para$trans.method);
-    }
+        transform = current.proc$meta_para$trans.method)
+     )
+    return(2)
+   
   }
   
-   res <- maaslin$results
-  inds <- !(res$feature %in% rownames(input.data)); # rownames that are all integers have "X" appended to front
- 
-  # get unadjusted results
-  if((!adj.bool) & (block == "NA")){
-    res.noadj <- res;
-  } else {
-    refs <- refs[grep(paste0(analysis.var, ","), refs)];
-    
-    maaslin.noadj <- my.maaslin2(
-      input_data = input.data, 
-      input_metadata = input.meta, 
-      fixed_effects = c(analysis.var),
-      reference = c(refs),
-      max_significance = 0.05,
-      min_abundance = 0.0,
-      min_prevalence = 0.0,
-      min_variance = 0.0,
-      normalization = norm.method,
-      transform = trans.method);
-    
-    res.noadj <- maaslin.noadj$results;
-  }
-  
-  
-  # filter results to get only ones related to analysis var
-  res <- res[res$metadata == analysis.var, ];
-  
-  # make res pretty
-  res$coef <- signif(res$coef, digits = 3);
-  res$stderr <- signif(res$stderr, digits = 3);
-  res$pval <- signif(res$pval, digits = 3);
-  res$qval <- signif(res$qval, digits = 3);
-if(current.proc$meta_para$analysis.type == "disc"){
-    res <- res[res$value == current.proc$meta_para$comp, ];
-    res.noadj <- res.noadj[res.noadj$value ==  current.proc$meta_para$comp, ];
-    rownames(res) <- res$feature;
-    rownames(res.noadj) <- res.noadj$feature;
-    res <- res[ ,c("coef", "stderr", "pval", "qval")];
-    res.noadj <- res.noadj[ ,c("coef", "stderr", "pval", "qval")];
-    colnames(res) <- c("Log2FC", "St.Error", "P_value", "FDR");
-    colnames(res.noadj) <- c("Log2FC", "St. Error", "P_value", "FDR");
-  } else {
-    rownames(res) <- res$feature;
-    rownames(res.noadj) <- res.noadj$feature;
-    res <- res[ ,c("coef", "stderr", "pval", "qval")];
-    res.noadj <- res.noadj[ ,c("coef", "stderr", "pval", "qval")];
-    colnames(res) <- c("Coefficient", "St.Error", "P_value", "FDR");
-    colnames(res.noadj) <- c("Coefficient", "St.Error", "P_value", "FDR");
-  }
-  
-res = res[order(res$P_value),]
- res.noadj = res.noadj[order(res.noadj$P_value),] 
-return (list(res=res,res.noadj=res.noadj))
-  # write out/save results
-  fileName <- "multifac_output.csv";
-  fast.write(res, file = fileName);
-  }
+}
 
 
 
@@ -778,6 +686,57 @@ message("Result table done")
   mbSetObj$analSet$resTable <- resTab;
   
   return(.set.mbSetObj(mbSetObj))
+}
+
+
+
+
+ProcessMaaslinRes <- function(mbSetObj,taxalvl,analysis.var){
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  input.data<-maaslin.para$input_data
+  res <- mbSetObj$analSet$maaslin$results
+
+  inds <- !(res$feature %in% rownames(input.data)); 
+  # filter results to get only ones related to analysis var
+  res <- res[res$metadata == analysis.var, ];
+  
+  # make res pretty
+  res$coef <- signif(res$coef, digits = 3);
+  res$stderr <- signif(res$stderr, digits = 3);
+  res$pval <- signif(res$pval, digits = 3);
+  res$qval <- signif(res$qval, digits = 3);
+  if(current.proc$meta_para$analysis.type == "disc"){
+    res <- res[res$value == current.proc$meta_para$comp, ];
+    rownames(res) <- res$feature;
+    res <- res[ ,c("coef", "stderr", "pval", "qval")];
+    colnames(res) <- c("Log2FC", "St.Error", "P_value", "FDR");
+  } else {
+    rownames(res) <- res$feature;
+    res <- res[ ,c("coef", "stderr", "pval", "qval")];
+    colnames(res) <- c("Coefficient", "St.Error", "P_value", "FDR");
+  }
+  
+  res = res[order(res$P_value),] 
+  # write out/save results
+  fileName <-paste0(taxalvl,"_maaslin_output.csv");
+  fast.write(res, file = fileName);
+  
+  plvl<- current.proc$mic$plvl
+  if(micDataType=="ko"){
+    current.proc$mic$res_deAnal <<- res
+    current.proc$mic$sigfeat <<-  rownames(current.proc$mic$res_deAnal)[current.proc$mic$res_deAnal$FDR< plvl]
+  }else{ 
+      phyloseq_objs <- qs::qread("phyloseq_objs.qs")
+      phyloseq_objs$res_deAnal[[taxalvl]] <- res
+      phyloseq_objs$sigfeat[[taxalvl]] <- rownames(phyloseq_objs$res_deAnal[[taxalvl]])[phyloseq_objs$res_deAnal[[taxalvl]]$FDR< plvl]
+      qs::qsave(phyloseq_objs,"phyloseq_objs.qs")
+   
+  }
+  print(paste0("CompareMic ", taxalvl," done!"))
+  
+  return(.set.mbSetObj(mbSetObj))
+
 }
 
 #####################################################
@@ -1106,15 +1065,14 @@ if(metType=="metabolite"){
     rownames(p)=rownames(OTUtab)
     return(p) })
   
-  
   keep = which(rowSums(fun_prediction) > 0)
   
   if (length(keep) == 0) stop("No functional prediction possible!\nEither no nearest neighbor found or your table is empty!")
   fun_prediction_final = fun_prediction[unname(keep),]
   
   fast.write(fun_prediction_final, paste0(taxalvl,"_prediction.csv"))
-
   return(list(fun_prediction_sample=fun_prediction_final,fun_prediction_met=fun_m2m_pair))
+
 }
 
 
@@ -1226,8 +1184,6 @@ performeCorrelation <- function(mbSetObj,taxalvl,initDE,cor.method="univariate",
      corr.pval <- 0
       return(0)
     }
-  
-
   res.corr.filt <- doCorrelationFilt(res.corr,cor.thresh,corp.thresh,sign)
 if(is.null(dim(res.corr.filt$corr.mat))){
      corr.mat <- 0
@@ -3745,6 +3701,36 @@ if(is.null(current.proc$mic)){
 
   return(c(dm, naNum));
 }
+
+
+GetMetaTaxaInfoMMP <- function(mbSetObj,istaxalbl){
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  proc.phyobj <- mbSetObj$dataSet$proc.phyobj;
+
+  #check that each rank has >2 groups
+  taxa.tbl <- as(tax_table(proc.phyobj), "matrix")
+
+  if(ncol(taxa.tbl)==1){
+    taxa.nms <- "Phylum"
+    return(taxa.nms)
+  }
+  
+  #drop taxa with only 1 level (i.e. Viruses at Phylum)
+  gd.inx <- apply(taxa.tbl, 2, function(x) length(unique(x))!=1);
+  taxa.tbl.update <- taxa.tbl[,gd.inx, drop=FALSE];
+  
+  if(ncol(taxa.tbl.update) == 0){
+    current.msg <<- c("All taxa info for the remaining features are the same!")
+    return("OTU")
+  }
+  
+  taxa.nms <- rank_names(taxa.tbl.update);
+
+  return(c(taxa.nms[!is.na(taxa.nms)],"OTU"));
+
+}
+
 
 CleanMMP<- function(){
 rm(list = ls())

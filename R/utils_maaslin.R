@@ -12,6 +12,7 @@
 
   require(dplyr);
   require(R.utils); 
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if (!exists('adj.vec')) {
@@ -141,17 +142,6 @@
         normalization = norm.method,
         transform = trans.method)
       return(1)
-      maaslin <- my.maaslin2(
-        input_data = input.data, 
-        input_metadata = input.meta, 
-        fixed_effects = c(fixed.effects),
-        reference = c(refs),
-        max_significance = 0.05,
-        min_abundance = 0.0,
-        min_prevalence = 0.0,
-        min_variance = 0.0,
-        normalization = norm.method,
-        transform = trans.method);
     } else { # case: no discrete variables, no blocking factor
     maaslin.para<<- list(input_data = input.data, 
         fixed_effects = c(fixed.effects),
@@ -162,15 +152,6 @@
         normalization = norm.method,
         transform = trans.method)
       return(1)
-      maaslin <- my.maaslin2(
-        input_data = input.data, 
-        fixed_effects = c(fixed.effects),
-        max_significance = 0.05,
-        min_abundance = 0.0,
-        min_prevalence = 0.0,
-        min_variance = 0.0,
-        normalization = norm.method,
-        transform = trans.method); 
     }
   } else { # case: discrete variables, blocking factor (blocking factor must be discrete)
   maaslin.para <<-list(check= list(input_data = input.data[1,], 
@@ -196,423 +177,11 @@
         normalization = norm.method,
         transform = trans.method)
      )
-    return(2)
-    check.rank <- capture.output(my.maaslin2(
-      input_data = input.data[1,], 
-      input_metadata = input.meta, 
-      fixed_effects = c(fixed.effects),
-      random_effects = c(block),
-      reference = c(refs),
-      max_significance = 0.05,
-      min_abundance = 0.0,
-      min_prevalence = 0.0,
-      min_variance = 0.0,
-      normalization = norm.method,
-      transform = trans.method), type=c("message"));
-    
-    if((length(grep("rank deficient", check.rank)) + length(grep("singular", check.rank))) > 0){
-      # often random effects model matrix are rank deficient - check this way and return 
-      # feedback that the experimental design does not support using a blocking factor.
-      return(-2)
-    } else {
-
-   maaslin <- my.maaslin2(
-        input_data = input.data, 
-        input_metadata = input.meta, 
-        fixed_effects = c(fixed.effects),
-        random_effects = c(block),
-        reference = c(refs),
-        max_significance = 0.05,
-        min_abundance = 0.0,
-        min_prevalence = 0.0,
-        min_variance = 0.0,
-        normalization = norm.method,
-        transform = trans.method);
-    }
+    return(2)  
   }
 
-  res <- maaslin$results
-  inds <- !(res$feature %in% rownames(input.data)); # rownames that are all integers have "X" appended to front
-  res$feature[inds] <- substring(res$feature[inds], 2);
-  
-  # get unadjusted results
-  if((!adj.bool) & (block == "NA")){
-    res.noadj <- res;
-  } else {
-    refs <- refs[grep(paste0(analysis.var, ","), refs)];
-    
-    maaslin.noadj <- my.maaslin2(
-      input_data = input.data, 
-      input_metadata = input.meta, 
-      fixed_effects = c(analysis.var),
-      reference = c(refs),
-      max_significance = 0.05,
-      min_abundance = 0.0,
-      min_prevalence = 0.0,
-      min_variance = 0.0,
-      normalization = norm.method,
-      transform = trans.method);
-    
-    res.noadj <- maaslin.noadj$results;
-  }
-  
-  inds <- !(res.noadj$feature %in% rownames(input.data)) # rownames that are all integers have "X" appended to front
-  res.noadj$feature[inds] <- substring(res.noadj$feature[inds], 2)
-  
-  # filter results to get only ones related to analysis var
-  res <- res[res$metadata == analysis.var, ];
-  
-  # make res pretty
-  res$coef <- signif(res$coef, digits = 3);
-  res$stderr <- signif(res$stderr, digits = 3);
-  res$pval <- signif(res$pval, digits = 3);
-  res$qval <- signif(res$qval, digits = 3);
-  
-  if(analysis.type == "disc"){
-    res <- res[res$value == comp, ];
-    res.noadj <- res.noadj[res.noadj$value == comp, ];
-    rownames(res) <- res$feature;
-    rownames(res.noadj) <- res.noadj$feature;
-    res <- res[ ,c("coef", "stderr", "pval", "qval")];
-    res.noadj <- res.noadj[ ,c("coef", "stderr", "pval", "qval")];
-    colnames(res) <- c("Log2FC", "St.Error", "P-value", "FDR");
-    colnames(res.noadj) <- c("Log2FC", "St. Error", "P-value", "FDR");
-  } else {
-    rownames(res) <- res$feature;
-    rownames(res.noadj) <- res.noadj$feature;
-    res <- res[ ,c("coef", "stderr", "pval", "qval")];
-    res.noadj <- res.noadj[ ,c("coef", "stderr", "pval", "qval")];
-    colnames(res) <- c("Coefficient", "St.Error", "P-value", "FDR");
-    colnames(res.noadj) <- c("Coefficient", "St.Error", "P-value", "FDR");
-  }
-  
-  # write out/save results
-  fileName <- "multifac_output.csv";
-  fast.write(res, file = fileName);
-  
-  # put results in mbSetObj, learn pattern of analysis set
-  sigfeat <- rownames(res)[res$FDR < thresh];
-  sig.count <- length(sigfeat);
-  if(sig.count == 0){
-    current.msg <<- "No significant features were identified using the given p value cutoff.";
-  }else{
-    current.msg <<- paste("A total of", sig.count, "significant features were identified!");
-  }
-
-  # process data for individual feature boxplot
-  taxrank_boxplot <- taxrank;
-  claslbl_boxplot <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[analysis.var]]);
-  nm_boxplot <- rownames(input.data);
-  dat3t_boxplot <- as.data.frame(t(input.data),check.names=FALSE);
-  colnames(dat3t_boxplot) <- nm_boxplot; 
-  box_data <- dat3t_boxplot;
-  box_data$class <- claslbl_boxplot;
-  box_data$norm <- is.norm;
-  
-  
-  # for graphical summary
-  adj.mat <- res[, c("P-value", "FDR")]
-  noadj.mat <- res.noadj[, c("P-value", "FDR")]
-  
-  colnames(adj.mat) <- c("pval.adj", "fdr.adj")
-  colnames(noadj.mat) <- c("pval.no", "fdr.no")
-  
-  both.mat <- merge(adj.mat, noadj.mat, by = "row.names")
-  both.mat$pval.adj <- -log10(both.mat$pval.adj)
-  both.mat$fdr.adj <- -log10(both.mat$fdr.adj)
-  both.mat$pval.no <- -log10(both.mat$pval.no)
-  both.mat$fdr.no <- -log10(both.mat$fdr.no)
-  
-  rownames(both.mat) = both.mat[,1]
-  
-  # for plotting adjp vs p
-  jsonNm <- gsub(".png", ".json", imgNm);
-  jsonObj <- RJSONIO::toJSON(both.mat);
-  sink(jsonNm);
-  cat(jsonObj);
-  sink();
-  
-  mbSetObj$analSet$cov.mat <- both.mat; 
-  mbSetObj$analSet$multiboxdata <- box_data;
-  mbSetObj$analSet$sig.count <- sig.count;
-  mbSetObj$analSet$resTable <- res;
-  mbSetObj$analSet$maas.resnoadj <- res.noadj;
-  
-  return(.set.mbSetObj(mbSetObj))
 }
 
-
-my.maaslin2 <-
-    function(
-        input_data,
-        input_metadata,
-        min_abundance = 0.0,
-        min_prevalence = 0.1,
-        min_variance = 0.0,
-        normalization = "TSS",
-        transform = "LOG",
-        analysis_method = "LM",
-        max_significance = 0.25,
-        random_effects = NULL,
-        fixed_effects = NULL,
-        correction = "BH",
-        standardize = TRUE,
-        cores = 1,
-        reference = NULL)
-    {
-      
-      require('data.table')
-      require('dplyr') 
-        # Allow for lower case variables
-        normalization <- toupper(normalization);
-        transform <- toupper(transform);
-        analysis_method <- toupper(analysis_method);
-        correction <- toupper(correction);
-
-        #################################################################
-        # Read in the data and metadata, create output folder, init log #
-        #################################################################
-        # if a character string then this is a file name, else it 
-        # is a data frame
-        if (is.character(input_data)) {
-            data <- data.frame(data.table::fread(input_data, header = TRUE, sep = "\t"), row.names = 1);
-            if (nrow(data) == 1) {
-                # read again to get row name
-                data <- read.table(input_data, header = TRUE, row.names = 1);
-            }
-        } else {
-            data <- input_data;
-        }
-        if (is.character(input_metadata)) {
-            metadata <- data.frame(data.table::fread(input_metadata, header = TRUE, sep = "\t"), row.names = 1);
-            if (nrow(metadata) == 1) {
-                metadata <- read.table(input_metadata, header = TRUE, row.names = 1);
-            }
-        } else {
-            metadata <- input_metadata;
-        }
-
-        ###############################################################
-        # Determine orientation of data in input and reorder to match #
-        ###############################################################
-        
-        samples_row_row <- intersect(rownames(data), rownames(metadata))
-        if (length(samples_row_row) > 0) {
-            # this is the expected formatting so do not modify data frames
-        } else {
-            samples_column_row <- intersect(colnames(data), rownames(metadata));
-
-            if (length(samples_column_row) == 0) {
-                # modify possibly included special chars in sample names in metadata
-                rownames(metadata) <- make.names(rownames(metadata));
-                samples_column_row <- intersect(colnames(data), rownames(metadata));
-            }
-
-            if (length(samples_column_row) > 0) {
-                # transpose data frame so samples are rows
-                data <- as.data.frame(t(data));
-            } else {
-                samples_column_column <- intersect(colnames(data), colnames(metadata));
-                if (length(samples_column_column) > 0) {
-                    data <- as.data.frame(t(data));
-                    metadata <- type.convert(as.data.frame(t(metadata)));
-                } else {
-                    samples_row_column <- intersect(rownames(data), colnames(metadata));
-
-                    if (length(samples_row_column) == 0) {
-                        # modify possibly included special chars in sample names in data
-                        rownames(data) <- make.names(rownames(data));
-                        samples_row_column <- intersect(rownames(data), colnames(metadata));
-                    }
-
-                    if (length(samples_row_column) > 0) {
-                        metadata <- type.convert(as.data.frame(t(metadata)));
-                    } else {
-                        stop()
-                    }
-                }
-            }
-        }
-       
-        # replace unexpected characters in feature names
-        colnames(data) <- make.names(colnames(data))
- 
-        # check for samples without metadata
-        extra_feature_samples <- setdiff(rownames(data), rownames(metadata))
-        # check for metadata samples without features
-        extra_metadata_samples <- setdiff(rownames(metadata), rownames(data))
-        
-        # get a set of the samples with both metadata and features
-        intersect_samples <- intersect(rownames(data), rownames(metadata))
-        
-        # now order both data and metadata with the same sample ordering
-        data <- data[intersect_samples, , drop = FALSE]
-        metadata <- metadata[intersect_samples, , drop = FALSE]
-        
-        ###########################################
-        # Compute the formula based on user input #
-        ###########################################
-        
-        random_effects_formula <- NULL
-        # use all metadata if no fixed effects are provided
-        if (is.null(fixed_effects)) {
-            fixed_effects <- colnames(metadata)
-        } else {
-            fixed_effects <- unlist(strsplit(fixed_effects, ",", fixed = TRUE))
-            # remove any fixed effects not found in metadata names
-            to_remove <- setdiff(fixed_effects, colnames(metadata))
-            if (length(to_remove) > 0)
-            fixed_effects <- setdiff(fixed_effects, to_remove)
-            if (length(fixed_effects) == 0) {
-                stop()
-            }
-        }
-        
-        if (!is.null(random_effects)) {
-            random_effects <- unlist(strsplit(random_effects, ",", fixed = TRUE))
-            
-            # subtract random effects from fixed effects
-            fixed_effects <- setdiff(fixed_effects, random_effects)
-            
-            # remove any random effects not found in metadata
-            to_remove <- setdiff(random_effects, colnames(metadata))
-            
-            if (length(to_remove) > 0)
-            random_effects <- setdiff(random_effects, to_remove)
-            
-            # create formula
-            if (length(random_effects) > 0) {
-                random_effects_formula_text <- paste("expr ~ (1 | ",
-                        paste(random_effects, ")", sep = '', collapse = " + (1 | "), sep = '');
-                
-                random_effects_formula <- tryCatch(as.formula(random_effects_formula_text),
-                                                   error = function(e)
-                                                     stop(paste("Invalid formula for random effects: ",
-                                                                random_effects_formula_text)));
-            }
-        }
-        
-        # reduce metadata to only include fixed/random effects in formula
-        effects_names <- union(fixed_effects, random_effects)
-        metadata <- metadata[, effects_names, drop = FALSE]
-        
-        # create the fixed effects formula text
-        formula_text <- paste("expr ~ ", paste(fixed_effects, collapse = " + "));
-        formula <- tryCatch(as.formula(formula_text),
-                error = function(e)
-                    stop(paste("Invalid formula.",
-                               "Please provide a different formula: ",
-                               formula_text)));
-        #########################################################
-        # Filter data based on min abundance and min prevalence #
-        #########################################################
-
-        # use ordered factor for variables with more than two levels
-        # find variables with more than two levels
-        if (is.null(reference)) {reference <- ","}
-
-        for ( i in colnames(metadata) ) {
-            mlevels <- unique(na.omit(metadata[,i]));
-            numeric_levels <- grep('^-?[0-9.]+[eE+-]?', mlevels, value = T);
-            if ( ( length(mlevels[! (mlevels %in% c("UNK"))]) > 1 ) &&  # modification to allow setting reference when only two classes in metadata
-                 ( i %in% fixed_effects ) &&
-                 ( length(numeric_levels) == 0)) {
-                    split_reference <- unlist(strsplit(reference, "[,;]"));
-                if (! i %in% split_reference ) {
-                    stop(paste("Please provide the reference for the variable '",
-                        i, "' which includes more than 2 levels: ",
-                        paste(as.character(mlevels), collapse=", "), ".", sep=""));
-                } else {
-                    ref <- split_reference[match(i,split_reference)+1];
-                    other_levels <- as.character(mlevels)[! as.character(mlevels) == ref];
-                    metadata[,i] <- factor(metadata[,i], levels=c(ref, other_levels));
-                }
-            }
-        }       
- 
-        unfiltered_data <- data;
-        unfiltered_metadata <- metadata;
-        
-        # require at least total samples * min prevalence values 
-        # for each feature to be greater than min abundance
-        total_samples <- nrow(unfiltered_data);
-        min_samples <- total_samples * min_prevalence;
-        
-        # Filter by abundance using zero as value for NAs
-        data_zeros <- unfiltered_data;
-        data_zeros[is.na(data_zeros)] <- 0;
-        filtered_data <- unfiltered_data[, colSums(data_zeros > min_abundance) > min_samples, drop = FALSE];
-        total_filtered_features <- ncol(unfiltered_data) - ncol(filtered_data);
-        filtered_feature_names <- setdiff(names(unfiltered_data), names(filtered_data));
-        
-        #################################
-        # Filter data based on variance #
-        #################################
-        
-        sds <- apply(filtered_data, 2, sd)
-        variance_filtered_data <- filtered_data[, which(sds > min_variance), drop = FALSE]
-        variance_filtered_features <- ncol(filtered_data) - ncol(variance_filtered_data)
-        variance_filtered_feature_names <- setdiff(names(filtered_data), names(variance_filtered_data))
-        filtered_data <- variance_filtered_data
-       
-        ######################
-        # Normalize features #
-        ######################
-        
-        filtered_data_norm <- normalizeFeatures(filtered_data, normalization = normalization)
-        
-        ################################
-        # Standardize metadata, if set #
-        ################################
-        
-        if (standardize) {
-            metadata <- metadata %>% dplyr::mutate_if(is.numeric, scale)
-        }
-        
-        ############################
-        # Transform and run method #
-        ############################
-       
-        # transform features
-        filtered_data_norm_transformed <- transformFeatures(filtered_data_norm, transformation = transform)
-        
-        # apply the method to the data with the correction
-
-    print( sum(memory.profile()) )   
-#Rprof(line.profiling = TRUE, memory.profiling = TRUE)
-
- fit_data <- fit.data(
-                filtered_data_norm_transformed,
-                metadata,
-                analysis_method,
-                formula = formula,
-                random_effects_formula = random_effects_formula,
-                correction = correction,
-                cores = cores);
- 
-    print( sum(memory.profile()) )  
-
-#Rprof(NULL)
-#print(summaryRprof(lines = "both", memory = "both"))
-
-    print( sum(memory.profile()) )  
-        
-        fit_data$results$N <- apply(fit_data$results, 1, FUN = function(x)
-                    length(filtered_data_norm[, x[1]]));
-        
-        fit_data$results$N.not.zero <- apply(fit_data$results, 1, FUN = function(x)
-                    length(which(filtered_data_norm[, x[1]] > 0)));
-        
-        fit_data$input$data <- filtered_data_norm_transformed
-        fit_data$input$metadata <- metadata
-        fit_data$input$analysis_method <- analysis_method
-        fit_data$input$formula <- formula
-        fit_data$input$random_effects_formula <- random_effects_formula
-        fit_data$input$correction <- correction
-        
-        return(fit_data)
-   
-}
 
 ############ use RserveMicro to perform MaasLin2
 .prepare.maaslin2<-function(case,input_data,
@@ -632,7 +201,6 @@ my.maaslin2 <-
                             reference = NULL){
   require('data.table')
   require('dplyr')
- 
 if(case==1){
   input_data = maaslin.para$input_data
   if(exists("input_metadata",where = maaslin.para)){
@@ -993,8 +561,7 @@ if(case==1){
     # Apply per-feature modeling #
     ##############################
 
-    outputs <-
-      pbapply::pblapply(seq_len(ncol(features)), cl = cluster, function(x) {
+    outputs <-lapply(seq_len(ncol(features)), function(x) {
         # Extract Features One by One
         featuresVector <- features[, x]
         
