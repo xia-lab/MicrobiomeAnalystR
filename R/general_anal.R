@@ -1811,7 +1811,6 @@ PerformMaaslin <- function(
     }
   }
 
-
   thresh <- as.numeric(thresh);
   adj.vars <- adj.vec;
   
@@ -1894,18 +1893,16 @@ PerformMaaslin <- function(
     norm.method = "NONE"
     trans.method = "NONE"
   }
- 
 ###set adjust paprameter
    if((!adj.bool) & (block == "NA")){
     maaslin.para.adj<<-0
   } else {
-    refs <- refs[grep(paste0(analysis.var, ","), refs)];
-    
+    refs2 <- refs[grep(paste0(analysis.var, ","), refs)];
    maaslin.para.noadj<<- list(
        input_data = input.data, 
        input_metadata = input.meta, 
       fixed_effects = c(analysis.var),
-      reference = c(refs),
+      reference = c(refs2),
        max_significance = 0.05,
       min_abundance = 0.0,
      min_prevalence = 0.0,
@@ -2382,7 +2379,6 @@ Maaslin2.MicrobiomeAnalyst <-
 #Rprof(NULL)
 #print(summaryRprof(lines = "both", memory = "both"))
 
-    print( sum(memory.profile()) )  
         
         fit_data$results$N <- apply(fit_data$results, 1, FUN = function(x)
                     length(filtered_data_norm[, x[1]]));
@@ -2419,7 +2415,6 @@ Maaslin2.MicrobiomeAnalyst <-
                             reference = NULL){
   require('data.table')
   require('dplyr')
- 
 if(case==1){
   input_data = maaslin.para$input_data
   if(exists("input_metadata",where = maaslin.para)){
@@ -2504,7 +2499,7 @@ if(case==1){
   } else {
     metadata <- input_metadata;
   }
-  
+
   ###############################################################
   # Determine orientation of data in input and reorder to match #
   ###############################################################
@@ -2546,7 +2541,7 @@ if(case==1){
       }
     }
   }
-  
+
   # replace unexpected characters in feature names
   colnames(data) <- make.names(colnames(data))
   
@@ -2565,7 +2560,7 @@ if(case==1){
   ###########################################
   # Compute the formula based on user input #
   ###########################################
-  
+
   random_effects_formula <- NULL
   # use all metadata if no fixed effects are provided
   if (is.null(fixed_effects)) {
@@ -2580,7 +2575,7 @@ if(case==1){
       stop()
     }
   }
-  
+
   if (!is.null(random_effects)) {
     random_effects <- unlist(strsplit(random_effects, ",", fixed = TRUE))
     
@@ -2604,7 +2599,7 @@ if(case==1){
                                                       random_effects_formula_text)));
     }
   }
-  
+
   # reduce metadata to only include fixed/random effects in formula
   effects_names <- union(fixed_effects, random_effects)
   metadata <- metadata[, effects_names, drop = FALSE]
@@ -2623,7 +2618,7 @@ if(case==1){
   # use ordered factor for variables with more than two levels
   # find variables with more than two levels
   if (is.null(reference)) {reference <- ","}
-  
+ 
   for ( i in colnames(metadata) ) {
     mlevels <- unique(na.omit(metadata[,i]));
     numeric_levels <- grep('^-?[0-9.]+[eE+-]?', mlevels, value = T);
@@ -2657,7 +2652,7 @@ if(case==1){
   filtered_data <- unfiltered_data[, colSums(data_zeros > min_abundance) > min_samples, drop = FALSE];
   total_filtered_features <- ncol(unfiltered_data) - ncol(filtered_data);
   filtered_feature_names <- setdiff(names(unfiltered_data), names(filtered_data));
-  
+
   #################################
   # Filter data based on variance #
   #################################
@@ -2681,7 +2676,7 @@ if(case==1){
   if (standardize) {
     metadata <- metadata %>% dplyr::mutate_if(is.numeric, scale)
   }
-  
+ 
   ############################
   # Transform and run method #
   ############################
@@ -2927,14 +2922,15 @@ if(case==1){
   fit_data$input$formula <- dat.in$formula
   fit_data$input$random_effects_formula <- dat.in$random_effects_formula
   fit_data$input$correction <- dat.in$correction
+
   if(case==4){
     mbSetObj$analSet$maaslin.noadj<-fit_data
   }else if(case !=2){
     mbSetObj$analSet$maaslin<-fit_data
   }
   .set.mbSetObj(mbSetObj)
+
   if(case==1|case==4){
-    print("here")
       return(1)
   }else if(case==2){
     check.rank <- capture.output(fit_data, type=c("message"));
@@ -2950,9 +2946,10 @@ if(case==1){
   }
 
 }
+
 PostProcessMaaslin <- function(mbSetObj,analysis.var,comp=NULL, thresh = 0.05,taxrank,is.norm,imgNm){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-input.data<-maaslin.para$input_data
+  input.data<-maaslin.para$input_data
   res <- mbSetObj$analSet$maaslin$results
 inds <- !(res$feature %in% rownames(input.data)); # rownames that are all integers have "X" appended to front
 res$feature[inds] <- substring(res$feature[inds], 2);
