@@ -429,7 +429,8 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
     print(box1);
     dev.off();
   }
-  mbSetObj$analSet$alpha.summary <- as.data.frame(tbl[, !colnames(tbl) %in% c("Significant", "Nsamples", "Study", "mean_LFD", "mean_HFD")]);
+  tbl <- as.data.frame(tbl[, !colnames(tbl) %in% c("Significant", "Nsamples", "Study", "mean_LFD", "mean_HFD")]);
+  mbSetObj$analSet$alpha.summary <- tbl[sort(tbl$Metric),];
   fast.write(mbSetObj$analSet$alpha.summary, "alpha_summary.csv", row.names = TRUE);
   return(.set.mbSetObj(mbSetObj));
 }

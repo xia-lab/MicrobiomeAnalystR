@@ -18,17 +18,17 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
   orig.pos.xyz <- res$xyz;
   }
   
-  ticksX <- pretty(range(orig.pos.xyz[,1]),10, bound=F);
-  ticksY <- pretty(range(orig.pos.xyz[,2]),10, bound=F);
-  ticksZ <- pretty(range(orig.pos.xyz[,3]),10, bound=F);
+  ticksX <- pretty(range(orig.pos.xyz[,1]*1.2),10, bound=F);
+  ticksY <- pretty(range(orig.pos.xyz[,2]*1.2),10, bound=F);
+  ticksZ <- pretty(range(orig.pos.xyz[,3]*1.2),10, bound=F);
   
   #add two nodes, 1 with all min values and another with all max values. For scaling purposes
   minNode <-  c(min(ticksX), min(ticksY), min(ticksZ));
   maxNode <-  c(max(ticksX), max(ticksY), max(ticksZ));
   
   # Add the new rows to the data frame
-  orig.pos.xyz.mod <- rbind(orig.pos.xyz, minNode)
-  orig.pos.xyz.mod <- rbind(orig.pos.xyz.mod, maxNode)
+  orig.pos.xyz.mod <- rbind(orig.pos.xyz, minNode);
+  orig.pos.xyz.mod <- rbind(orig.pos.xyz.mod, maxNode);
   
   #scaling
   pos.xyz <- orig.pos.xyz.mod;
@@ -234,9 +234,8 @@ scale_range <- function(x, new_min = 0, new_max = 1) {
 }
 
 
-ComputeEncasing <- function(mbSetObj=NA, filenm, type, names.vec, level=0.95, omics="NA"){
-  print("compute===============");
-  mbSetObj <- .get.mbSetObj(mbSetObj);
+ComputeEncasing <- function(filenm, type, names.vec, level=0.95, omics="NA"){
+
 
   level <- as.numeric(level)
   names = strsplit(names.vec, "; ")[[1]]

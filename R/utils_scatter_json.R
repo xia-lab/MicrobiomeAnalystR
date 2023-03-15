@@ -366,7 +366,7 @@ UpdateSampleBasedOnLoading<-function(filenm, gene.id, omicstype){
   sink();
 }
 
-ComputeEncasing <- function(filenm, type, names.vec, level=0.95, omics="NA",taxalvl="OTU"){
+ComputeEncasingDiablo <- function(filenm, type, names.vec, level=0.95, omics="NA",taxalvl="OTU"){
   Sys.setenv(RGL_USE_NULL = TRUE)
   level <- as.numeric(level)
   names = strsplit(names.vec, "; ")[[1]]
