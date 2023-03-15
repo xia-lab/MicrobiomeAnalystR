@@ -234,7 +234,6 @@ SetupMetaStats <- function(BHth, paramSet,analSet){
 #'@export
 CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank="Family", view.mode="ratio", format="png", dpi=72) {
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
   mdata.all <- mbSetObj$mdata.all;
   sel.nms <- names(mdata.all)[mdata.all==1];
   
@@ -242,7 +241,8 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
     AddErrMsg("Need to select at least one summary statistics!");
     return(0);
   }
-  
+
+print(summary.stat.vec);
   
   library(tidyverse);
   library(phyloseq);
@@ -284,7 +284,7 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
         return(0);
       }
     }
-    
+
     data <- bf_ratio(data);
     data@sam_data$dataset <- rep(Study, nrow(data@sam_data));
     data@sam_data$sample_id <- gsub("-", ".", data@sam_data$sample_id);

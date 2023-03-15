@@ -437,7 +437,6 @@ GetResRowNames <- function(mbSetObj, type="alpha"){
     mbSetObj <- .get.mbSetObj(mbSetObj);
 
     if(type == "alpha"){
-        print(mbSetObj$analSet$alpha.summary);
         vec <- mbSetObj$analSet$alpha.summary[,1];
     }else if (type == "beta"){
         vec <- mbSetObj$analSet$beta.summary$dataset;
