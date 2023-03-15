@@ -1786,7 +1786,7 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, 
 # Best case: have filtered but raw data, and enforce both TSS and LOG in this function
 # filt.data.orig <- qs::qread("filt.data.orig")@.Data %>% as.data.frame() <- this is what we want for OTU. Trying to find something similar for other taxa.
 # See note on general_io.R -> "JE note" etc. Filtered, unnormalized tables do not exist other than OTU. Not sure if this is correct.
-PerformMaaslin <- function(
+ProcessMaaslin <- function(
     mbSetObj,
     analysis.var,
     is.norm = "false",

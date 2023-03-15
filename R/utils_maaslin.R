@@ -12,6 +12,7 @@
 
   require(dplyr);
   require(R.utils); 
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if (!exists('adj.vec')) {
@@ -151,15 +152,6 @@
         normalization = norm.method,
         transform = trans.method)
       return(1)
-      maaslin <- my.maaslin2(
-        input_data = input.data, 
-        fixed_effects = c(fixed.effects),
-        max_significance = 0.05,
-        min_abundance = 0.0,
-        min_prevalence = 0.0,
-        min_variance = 0.0,
-        normalization = norm.method,
-        transform = trans.method); 
     }
   } else { # case: discrete variables, blocking factor (blocking factor must be discrete)
   maaslin.para <<-list(check= list(input_data = input.data[1,], 
@@ -185,149 +177,9 @@
         normalization = norm.method,
         transform = trans.method)
      )
-    return(2)
-    check.rank <- capture.output(my.maaslin2(
-      input_data = input.data[1,], 
-      input_metadata = input.meta, 
-      fixed_effects = c(fixed.effects),
-      random_effects = c(block),
-      reference = c(refs),
-      max_significance = 0.05,
-      min_abundance = 0.0,
-      min_prevalence = 0.0,
-      min_variance = 0.0,
-      normalization = norm.method,
-      transform = trans.method), type=c("message"));
-    
-    if((length(grep("rank deficient", check.rank)) + length(grep("singular", check.rank))) > 0){
-      # often random effects model matrix are rank deficient - check this way and return 
-      # feedback that the experimental design does not support using a blocking factor.
-      return(-2)
-    } else {
-
-   maaslin <- my.maaslin2(
-        input_data = input.data, 
-        input_metadata = input.meta, 
-        fixed_effects = c(fixed.effects),
-        random_effects = c(block),
-        reference = c(refs),
-        max_significance = 0.05,
-        min_abundance = 0.0,
-        min_prevalence = 0.0,
-        min_variance = 0.0,
-        normalization = norm.method,
-        transform = trans.method);
-    }
+    return(2)  
   }
 
-  res <- maaslin$results
-  inds <- !(res$feature %in% rownames(input.data)); # rownames that are all integers have "X" appended to front
-  res$feature[inds] <- substring(res$feature[inds], 2);
-  
-  # get unadjusted results
-  if((!adj.bool) & (block == "NA")){
-    res.noadj <- res;
-  } else {
-    refs <- refs[grep(paste0(analysis.var, ","), refs)];
-    
-    maaslin.noadj <- my.maaslin2(
-      input_data = input.data, 
-      input_metadata = input.meta, 
-      fixed_effects = c(analysis.var),
-      reference = c(refs),
-      max_significance = 0.05,
-      min_abundance = 0.0,
-      min_prevalence = 0.0,
-      min_variance = 0.0,
-      normalization = norm.method,
-      transform = trans.method);
-    
-    res.noadj <- maaslin.noadj$results;
-  }
-  
-  inds <- !(res.noadj$feature %in% rownames(input.data)) # rownames that are all integers have "X" appended to front
-  res.noadj$feature[inds] <- substring(res.noadj$feature[inds], 2)
-  
-  # filter results to get only ones related to analysis var
-  res <- res[res$metadata == analysis.var, ];
-  
-  # make res pretty
-  res$coef <- signif(res$coef, digits = 3);
-  res$stderr <- signif(res$stderr, digits = 3);
-  res$pval <- signif(res$pval, digits = 3);
-  res$qval <- signif(res$qval, digits = 3);
-  
-  if(analysis.type == "disc"){
-    res <- res[res$value == comp, ];
-    res.noadj <- res.noadj[res.noadj$value == comp, ];
-    rownames(res) <- res$feature;
-    rownames(res.noadj) <- res.noadj$feature;
-    res <- res[ ,c("coef", "stderr", "pval", "qval")];
-    res.noadj <- res.noadj[ ,c("coef", "stderr", "pval", "qval")];
-    colnames(res) <- c("Log2FC", "St.Error", "P-value", "FDR");
-    colnames(res.noadj) <- c("Log2FC", "St. Error", "P-value", "FDR");
-  } else {
-    rownames(res) <- res$feature;
-    rownames(res.noadj) <- res.noadj$feature;
-    res <- res[ ,c("coef", "stderr", "pval", "qval")];
-    res.noadj <- res.noadj[ ,c("coef", "stderr", "pval", "qval")];
-    colnames(res) <- c("Coefficient", "St.Error", "P-value", "FDR");
-    colnames(res.noadj) <- c("Coefficient", "St.Error", "P-value", "FDR");
-  }
-  
-  # write out/save results
-  fileName <- "multifac_output.csv";
-  fast.write(res, file = fileName);
-  
-  # put results in mbSetObj, learn pattern of analysis set
-  sigfeat <- rownames(res)[res$FDR < thresh];
-  sig.count <- length(sigfeat);
-  if(sig.count == 0){
-    current.msg <<- "No significant features were identified using the given p value cutoff.";
-  }else{
-    current.msg <<- paste("A total of", sig.count, "significant features were identified!");
-  }
-
-  # process data for individual feature boxplot
-  taxrank_boxplot <- taxrank;
-  claslbl_boxplot <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[analysis.var]]);
-  nm_boxplot <- rownames(input.data);
-  dat3t_boxplot <- as.data.frame(t(input.data),check.names=FALSE);
-  colnames(dat3t_boxplot) <- nm_boxplot; 
-  box_data <- dat3t_boxplot;
-  box_data$class <- claslbl_boxplot;
-  box_data$norm <- is.norm;
-  
-  
-  # for graphical summary
-  adj.mat <- res[, c("P-value", "FDR")]
-  noadj.mat <- res.noadj[, c("P-value", "FDR")]
-  
-  colnames(adj.mat) <- c("pval.adj", "fdr.adj")
-  colnames(noadj.mat) <- c("pval.no", "fdr.no")
-  
-  both.mat <- merge(adj.mat, noadj.mat, by = "row.names")
-  both.mat$pval.adj <- -log10(both.mat$pval.adj)
-  both.mat$fdr.adj <- -log10(both.mat$fdr.adj)
-  both.mat$pval.no <- -log10(both.mat$pval.no)
-  both.mat$fdr.no <- -log10(both.mat$fdr.no)
-  
-  rownames(both.mat) = both.mat[,1]
-  
-  # for plotting adjp vs p
-  jsonNm <- gsub(".png", ".json", imgNm);
-  jsonObj <- RJSONIO::toJSON(both.mat);
-  sink(jsonNm);
-  cat(jsonObj);
-  sink();
-  
-  mbSetObj$analSet$cov.mat <- both.mat; 
-  mbSetObj$analSet$multiboxdata <- box_data;
-  mbSetObj$analSet$sig.count <- sig.count;
-  mbSetObj$analSet$resTable <- res;
-  mbSetObj$analSet$maas.resnoadj <- res.noadj;
-  
-  return(.set.mbSetObj(mbSetObj))
 }
 
 
@@ -349,7 +201,6 @@
                             reference = NULL){
   require('data.table')
   require('dplyr')
-  print("microservice")
 if(case==1){
   input_data = maaslin.para$input_data
   if(exists("input_metadata",where = maaslin.para)){
@@ -710,8 +561,7 @@ if(case==1){
     # Apply per-feature modeling #
     ##############################
 
-    outputs <-
-      pbapply::pblapply(seq_len(ncol(features)), cl = cluster, function(x) {
+    outputs <-lapply(seq_len(ncol(features)), function(x) {
         # Extract Features One by One
         featuresVector <- features[, x]
         

@@ -726,13 +726,12 @@ ProcessMaaslinRes <- function(mbSetObj,taxalvl,analysis.var){
   if(micDataType=="ko"){
     current.proc$mic$res_deAnal <<- res
     current.proc$mic$sigfeat <<-  rownames(current.proc$mic$res_deAnal)[current.proc$mic$res_deAnal$FDR< plvl]
-  }else{
-   
+  }else{ 
       phyloseq_objs <- qs::qread("phyloseq_objs.qs")
       phyloseq_objs$res_deAnal[[taxalvl]] <- res
-      phyloseq_objs$sigfeat[[taxalvl]] <- rownames(current.proc$mic$res_deAnal$taxalvl)[current.proc$mic$res_deAnal$taxalvl$FDR< plvl]
+      phyloseq_objs$sigfeat[[taxalvl]] <- rownames(phyloseq_objs$res_deAnal[[taxalvl]])[phyloseq_objs$res_deAnal[[taxalvl]]$FDR< plvl]
       qs::qsave(phyloseq_objs,"phyloseq_objs.qs")
- 
+   
   }
   print(paste0("CompareMic ", taxalvl," done!"))
   
