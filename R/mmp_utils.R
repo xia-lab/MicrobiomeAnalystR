@@ -464,7 +464,7 @@ doComparison <- function(data,sample_data,sample_type,analysisVar,alg="limma"){
     res <- PerformFastUnivTests(data, cls,F,F); 
   }else if(alg=="tt"){
     res =  performMaaslin(data,sample_data,sample_type,analysisVar)
-}
+  }
 }
 
 
@@ -592,7 +592,12 @@ doMaAslin <- function(input.data,thresh = 0.05,adj.bool=F){
   
   require(dplyr);
   require(R.utils);
-
+  if(.on.public.web){
+    # make this lazy load
+    if(!exists("my.maaslin2")){ # public web on same user dir
+      .load.scripts.on.demand("utils_maaslin.Rc");    
+    }
+  }
   thresh <- as.numeric(thresh);
   input.data <- as.data.frame(input.data)
   block <- current.proc$meta_para$block
@@ -600,7 +605,7 @@ doMaAslin <- function(input.data,thresh = 0.05,adj.bool=F){
   analysis.var <- current.proc$meta_para$analysis.var
   if(block == "NA"){
     if(length(disc.effects) > 0){ # case: discrete variables, no blocking factor
-      maaslin <- Maaslin2.MicrobiomeAnalyst(
+      maaslin <- my.maaslin2(
         input_data = input.data, 
         input_metadata = current.proc$meta_para$input.meta, 
         fixed_effects = c(current.proc$meta_para$fixed.effects),
@@ -612,7 +617,7 @@ doMaAslin <- function(input.data,thresh = 0.05,adj.bool=F){
         normalization = current.proc$meta_para$norm.method,
         transform = current.proc$meta_para$trans.method);
     } else { # case: no discrete variables, no blocking factor
-        maaslin <- Maaslin2.MicrobiomeAnalyst(
+        maaslin <- my.maaslin2(
         input_data = input.data, 
         fixed_effects = c(current.proc$meta_para$fixed.effects),
         max_significance = 0.05,
@@ -623,7 +628,7 @@ doMaAslin <- function(input.data,thresh = 0.05,adj.bool=F){
         transform = current.proc$meta_para$trans.method); 
     }
   } else { # case: discrete variables, blocking factor (blocking factor must be discrete)
-    check.rank <- capture.output(Maaslin2.MicrobiomeAnalyst(
+    check.rank <- capture.output(my.maaslin2(
       input_data = input.data[1,], 
       input_metadata = input.meta, 
       fixed_effects = c(current.proc$meta_para$fixed.effects),
@@ -641,7 +646,7 @@ doMaAslin <- function(input.data,thresh = 0.05,adj.bool=F){
       # feedback that the experimental design does not support using a blocking factor.
       return(-2)
     } else {
-      maaslin <- Maaslin2.MicrobiomeAnalyst(
+      maaslin <- my.maaslin2(
         input_data = input.data, 
         input_metadata = current.proc$meta_para$input.meta, 
         fixed_effects = c(current.proc$meta_para$fixed.effects),
@@ -665,7 +670,7 @@ doMaAslin <- function(input.data,thresh = 0.05,adj.bool=F){
   } else {
     refs <- refs[grep(paste0(analysis.var, ","), refs)];
     
-    maaslin.noadj <- Maaslin2.MicrobiomeAnalyst(
+    maaslin.noadj <- my.maaslin2(
       input_data = input.data, 
       input_metadata = input.meta, 
       fixed_effects = c(analysis.var),
