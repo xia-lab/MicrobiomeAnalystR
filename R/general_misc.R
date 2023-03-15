@@ -118,7 +118,12 @@ GetNumbericalInx <- function(my.dat){
   obj.dim <- t(napply(names, function(x)
                         as.numeric(dim(x))[1:2]))
   vec <- is.na(obj.dim)[, 1] & (obj.type != "function")
-  obj.dim[vec, 1] <- napply(names, length)[vec]
+  obj.dim[vec, 1] <- napply(names, length)[vec];
+
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  print(lapply(mbSetObj$dataSet, object.size));
+  print(lapply(mbSetObj$analSet, object.size));
+
   out <- data.frame(obj.type, obj.size, obj.prettysize, obj.dim,check.names=FALSE);
   names(out) <- c("Type", "Size", "PrettySize", "Rows", "Columns")
     

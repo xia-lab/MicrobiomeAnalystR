@@ -275,7 +275,7 @@ PlotUsrRefPCoA3DScore <- function(mbSetObj, imgName, format="json", inx1, inx2, 
   pca3d$score$name <- sample_names(userrefdata);
   sam_data<-sample_data(userrefdata);
   cls<-as.character(sam_data[[variable]]);
-  clsb<-as.character(sam_data[["data"]]);
+  clsb<-as.character(sam_data[["dataset"]]);
   pca3d$score$facA <- cls;
   pca3d$score$facB <- clsb;
   variable <<- variable;
@@ -295,15 +295,18 @@ PlotUsrRefPCoA3DScore <- function(mbSetObj, imgName, format="json", inx1, inx2, 
   qs::qsave(pos.xyz, "score_pos_xyz.qs");
 
   json.obj <- rjson::toJSON(pca3d);
-  sink(imgName);
-  cat(json.obj);
-  sink();
-  return(.set.mbSetObj(mbSetObj))
-}
+  #sink(imgName);
+  #cat(json.obj);
+  #sink();
 
-doScatterJsonMeta <- function(mbSetObj, filenm, selMeta){
-    if(!exists("my.json.scatter.meta")){ # public web on same user dir
-        .load.scripts.on.demand("utils_scatter3d.Rc");    
-    }
-    return(my.json.scatter.meta(mbSetObj, filenm, selMeta));
+  mbSetObj$analSet$pca <- pca3d;
+
+  if(!exists("my.json.scatter")){
+    .load.scripts.on.demand("utils_scatter3d.Rc");    
+  }
+
+  .set.mbSetObj(mbSetObj)
+  my.json.scatter(mbSetObj, imgName, F);
+
+  return(.set.mbSetObj(mbSetObj))
 }

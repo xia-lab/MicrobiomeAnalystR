@@ -219,10 +219,10 @@ PreparePCA4Shotgun <- function(mbSetObj, imgName,imgName2, format="json", inx1, 
   cols <- apply(rgbcols, 2, function(x){paste("rgb(", paste(x, collapse=","), ")", sep="")});
   pca3d$score$colors <- cols;
   
-  json.obj <- rjson::toJSON(pca3d);
-  sink(imgName);
-  cat(json.obj);
-  sink();
+  #json.obj <- rjson::toJSON(pca3d);
+  #sink(imgName);
+  #cat(json.obj);
+  #sink();
 
   #2D
   Cairo::Cairo(file=imgName2, width=720, height=500, type=format2d, bg="white",dpi=dpi);
@@ -246,7 +246,14 @@ PreparePCA4Shotgun <- function(mbSetObj, imgName,imgName2, format="json", inx1, 
   }
   print(box);
   dev.off();
-  mbSetObj$analSet$pca<-pca;
+  mbSetObj$analSet$pca <- pca3d;
+
+  if(!exists("my.json.scatter")){
+    .load.scripts.on.demand("utils_scatter3d.Rc");    
+  }
+
+  .set.mbSetObj(mbSetObj)
+  my.json.scatter(mbSetObj, imgName, F);
   return(.set.mbSetObj(mbSetObj))
 }
 
