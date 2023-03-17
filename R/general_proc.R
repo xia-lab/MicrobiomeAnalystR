@@ -692,7 +692,7 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
       otu.tab <- otu_table(data,taxa_are_rows =TRUE);
       tax.tab <- tax_table(data.list$merged_obj[[i]])
       nm <- as.character(tax.tab[,ranks[i]])
-      nm[is.na(nm)|nm==""] <- "Not_Assigned";
+      nm[is.na(nm)|nm==""|nm==" "] <- "Not_Assigned";
       rownames(tax.tab) <- nm
       tax.tab <- tax.tab[!(duplicated(nm)),] 
       tax.tab[which(rownames(tax.tab)=="Not_Assigned"),] <- NA
@@ -1480,6 +1480,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
       #cleaning up the names#deleting [] if present; and substituting (space,.,/ with underscore(_))
       mbSetObj$dataSet$taxa_table<- gsub("[[:space:]./_-]", "_",mbSetObj$dataSet$taxa_table);
       mbSetObj$dataSet$taxa_table<- gsub("\\[|\\]","",mbSetObj$dataSet$taxa_table);
+      mbSetObj$dataSet$taxa_table[which(mbSetObj$dataSet$taxa_table==''|grepl("_$",mbSetObj$dataSet$taxa_table))]=NA;
 if(mbSetObj$module.type=="mmp" &  taxalabel=="T"){# for mapping to the database in mmp module
   if("Species" %in% colnames( mbSetObj$dataSet$taxa_table)){
     sps = data.frame(mbSetObj$dataSet$taxa_table@.Data[,c('Genus','Species')])
@@ -1578,7 +1579,7 @@ if(mbSetObj$module.type=="mmp" &  taxalabel=="T"){# for mapping to the database 
       #cleaning up the names#deleting [] if present; and substituting (space,.,/ with underscore(_))
       mbSetObj$dataSet$taxa_table <- gsub("[[:space:]./_-]", "_",mbSetObj$dataSet$taxa_table);
       mbSetObj$dataSet$taxa_table<- gsub("\\[|\\]","",mbSetObj$dataSet$taxa_table);
-      
+      mbSetObj$dataSet$taxa_table[which(mbSetObj$dataSet$taxa_table==''|grepl("_$",mbSetObj$dataSet$taxa_table))]=NA;
       #sometimes after removal of such special characters rownames beacame non unique; so make it unique
       mynames1 <- gsub("[[:space:]./_-]", "_",taxa_names(mbSetObj$dataSet$taxa_table));
       mynames1<-gsub("\\[|\\]","",mynames1);
