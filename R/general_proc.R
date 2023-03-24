@@ -1313,7 +1313,6 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
           if(taxa_type=="SILVA"){
             
             load_splitstackshape();
-            
             feat_nm<-data.frame(mbSetObj$dataSet$feat_nm,check.names=FALSE);
             names(feat_nm)<-"Rank";
             taxonomy<-splitstackshape::cSplit(feat_nm,"Rank",";");
@@ -1481,7 +1480,8 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
       mbSetObj$dataSet$taxa_table<- gsub("[[:space:]./_-]", "_",mbSetObj$dataSet$taxa_table);
       mbSetObj$dataSet$taxa_table<- gsub("\\[|\\]","",mbSetObj$dataSet$taxa_table);
       mbSetObj$dataSet$taxa_table[which(mbSetObj$dataSet$taxa_table==''|grepl("_$",mbSetObj$dataSet$taxa_table))]=NA;
-if(mbSetObj$module.type=="mmp" &  taxalabel=="T"){# for mapping to the database in mmp module
+       
+if(taxalabel=="T"){# for mapping to the database in mmp module
   if("Species" %in% colnames( mbSetObj$dataSet$taxa_table)){
     sps = data.frame(mbSetObj$dataSet$taxa_table@.Data[,c('Genus','Species')])
     if(grepl("^g__",sps[1,"Genus"])){
@@ -1511,8 +1511,7 @@ if(mbSetObj$module.type=="mmp" &  taxalabel=="T"){# for mapping to the database 
       sps$Species[idxsp] = paste0(sps$Genus[idxsp],"_",sps$Species[idxsp])
     }
   }
-  mbSetObj$dataSet$taxa_table@.Data[,'Species'] <- sps$Species
-  
+  mbSetObj$dataSet$taxa_table@.Data[,'Species']  <- sps$Species
 }
 
 }
