@@ -242,7 +242,7 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
     return(0);
   }
 
-print(summary.stat.vec);
+  #print(summary.stat.vec);
   
   library(tidyverse);
   library(phyloseq);
@@ -340,9 +340,6 @@ print(summary.stat.vec);
         }
         res.list[[Study]] <- PS;
       })  
-    
-   
-
   }
   
   mod<-lapply(res.list, function(x) x$AlphaDiversity) %>%
