@@ -10,6 +10,7 @@ my.16sfun.anot<-function(mbSetObj, type, pipeline,ggversion) {
   
   mbSetObj$dataSet$type <- type;
   merge.otu <- qs::qread("data.orig");
+ 
   merge.otu <- apply(merge.otu, 2, as.numeric);
   current.msg<<- "null"
 
@@ -71,12 +72,14 @@ my.16sfun.anot<-function(mbSetObj, type, pipeline,ggversion) {
             rownames(merge.otu)<-ModSilvaIds;
             merge.otu <- rowsum(as.data.frame(merge.otu),ModSilvaIds);
         }
-        rownames(merge.otu) <- gsub("; ",";",rownames(merge.otu))
+
+        
         rownames(merge.otu) <- gsub(" ","_",rownames(merge.otu))
         idx=which(!(grepl(";$",rownames(merge.otu))))
         rownames(merge.otu)[idx] <- paste0(rownames(merge.otu)[idx],";");
         rownames(merge.otu) <- gsub("Bacteroidota","Bacteroidetes",rownames(merge.otu));
         rownames(merge.otu) <- gsub("Enterobacterales","Enterobacteriales",rownames(merge.otu));
+       rownames(merge.otu) <- gsub("; ",";",rownames(merge.otu))
         data<-list(sampleNames=colnames(merge.otu),otuTable=merge.otu);
          Tax4FunOutput <- Tax4Fun(data, folderReferenceData, fctProfiling = TRUE, refProfile = "UProC", shortReadMode = TRUE, normCopyNo = TRUE);
    
@@ -635,17 +638,21 @@ functional_prediction_final$description <- functional_prediction_final$KO<-NULL
 ##modify tax4fun to remove all 0 columns
 
 Tax4Fun <- function(Tax4FunInput,folderReferenceData, fctProfiling=TRUE,refProfile="UProC",shortReadMode=TRUE,normCopyNo=TRUE){
-  Tax4FunReferenceData <- Tax4Fun:::importTax4FunReferenceData(folderReferenceData)
-  
+  Tax4FunReferenceData <- importTax4FunReferenceData(folderReferenceData)
+
+  ### clean the taxonomy names for match
+  cleanedNms <- CleanTaxaNames(rownames(Tax4FunInput$otuTable))
+
   #Intersect Mapping SILVA to KEGG and user OTU table
-  commonOTUs <- intersect(Tax4FunReferenceData$SilvaIDs$V1,row.names(Tax4FunInput$otuTable))
-  indexInput <- match(commonOTUs,row.names(Tax4FunInput$otuTable))
-  indexSILVAToKEGG <- match(commonOTUs,Tax4FunReferenceData$SilvaIDs$V1)
-  subsetOTUTables <- as.matrix(Tax4FunInput$otuTable[indexInput,])
-  keepidx <-  colSums(subsetOTUTables)>0
-  subsetOTUTables <- subsetOTUTables[,keepidx]
-  subsetSILVAToKEGG <- Tax4FunReferenceData$SilvaToKEGGMappingMat[indexSILVAToKEGG,]
-  subsetSILVAToKEGG <- as.data.frame(as.matrix(subsetSILVAToKEGG))
+rank <- colnames(cleanedNms)[length(colnames(cleanedNms))]
+commonOTUs <- intersect(Tax4FunReferenceData$SilvaTaxmat[,rank],cleanedNms[,rank])
+indexInput <- match(commonOTUs,cleanedNms[,rank])
+indexSILVAToKEGG <- match(commonOTUs,Tax4FunReferenceData$SilvaTaxmat[,rank])
+subsetOTUTables <- as.matrix(Tax4FunInput$otuTable[indexInput,])
+keepidx <-  colSums(subsetOTUTables)>0
+subsetOTUTables <- subsetOTUTables[,keepidx]
+subsetSILVAToKEGG <- Tax4FunReferenceData$SilvaToKEGGMappingMat[indexSILVAToKEGG,]
+subsetSILVAToKEGG <- as.data.frame(as.matrix(subsetSILVAToKEGG))
    
   if(length(which(keepidx==F))>0){
     rmidx = which(keepidx==F)
@@ -740,6 +747,94 @@ Tax4Fun <- function(Tax4FunInput,folderReferenceData, fctProfiling=TRUE,refProfi
   return(Tax4FunProfile)
 } 
 
+
+CleanTaxaNames <- function(nms){
+  feat_nm =data.frame(nms,check.names=FALSE);
+  names(feat_nm)<-"Rank";
+  taxonomy<-suppressWarnings(splitstackshape::cSplit(feat_nm,"Rank",";"));
+  taxmat= data.frame(matrix(NA, ncol = 7, nrow = nrow(taxonomy)),check.names=FALSE);
+  colnames(taxmat) <- c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species");
+  taxmat[,1:ncol(taxonomy)]<-taxonomy;
+  taxmat<-taxmat[colSums(!is.na(taxmat))>0];
+  if("Species" %in% colnames( taxmat)){
+    sps = data.frame(taxmat[,c('Genus','Species')])
+    if(grepl("^g__",sps[1,"Genus"])){
+      sps$Species = gsub("^s__","",sps$Species)
+      if(all(!grepl(" ",sps$Species)) & all(!grepl("_",sps$Species))){
+        sps$Genus =gsub("^g__","",sps$Genus)
+        idxsp = which(!is.na(sps$Genus) & !is.na(sps$Species) & sps$Genus!="" & sps$Species!="")
+        sps$Species[idxsp] = paste0("s__",sps$Genus[idxsp],"_",sps$Species[idxsp])
+      }
+    }else if(grepl("^g_",sps[1,"Genus"])){
+      sps$Species = gsub("^s_","",sps$Species)
+      if(all(!grepl(" ",sps$Species)) & all(!grepl("_",sps$Species))){
+        sps$Genus =gsub("^g_","",sps$Genus)
+        idxsp = which(!is.na(sps$Genus) & !is.na(sps$Species) & sps$Genus!="" & sps$Species!="")
+        sps$Species[idxsp] = paste0("s__",sps$Genus[idxsp],"_",sps$Species[idxsp])
+      }
+    }else if(grepl("^g_0__",sps[1,"Genus"])){
+      sps$Species = gsub("^s_0__","",sps$Species)
+      if(all(!grepl(" ",sps$Species)) & all(!grepl("_",sps$Species))){
+        sps$Genus =gsub("^g_0__","",sps$Genus)
+        idxsp = which(!is.na(sps$Genus) & !is.na(sps$Species) & sps$Genus!="" & sps$Species!="")
+        sps$Species[idxsp] = paste0("s_0__",sps$Genus[idxsp],"_",sps$Species[idxsp])
+      }
+    }else{
+      if(all(!grepl(" ",sps$Species)) & all(!grepl("_",sps$Species))){
+        idxsp = which(!is.na(sps$Genus) & !is.na(sps$Species) & sps$Genus!="" & sps$Species!="")
+        sps$Species[idxsp] = paste0(sps$Genus[idxsp],"_",sps$Species[idxsp])
+      }
+    }
+    taxmat[,'Species'] <- sps$Species
+  }
+  
+  taxmat <- apply(taxmat,2,function(x) gsub("'","",x))
+  taxmat <- apply(taxmat,2,function(x) gsub("\\[|\\]","",x))
+  
+  return(taxmat)
+
+}
+
+importTax4FunReferenceData <- function(folder){
+  
+  if(substr(folder,nchar(folder),nchar(folder))=="/"){
+    pathReferenceData <- folder
+  }else{
+    pathReferenceData <- paste(folder,"/",sep="")
+  }
+    
+  referenceData <- list()
+
+  tmpReferenceData <- readRDS(paste(pathReferenceData,"PathwayAbundancesKEGGBacArch.RData",sep=""))
+  referenceData$PathwayAbundancesKEGGBacArch <- tmpReferenceData
+  tmpReferenceData <- readRDS(paste(pathReferenceData,"PathwayInformationKEGGBacArch.RData",sep=""))
+  referenceData$PathwayInformationKEGGBacArch <- tmpReferenceData
+  
+  tmpReferenceData <- readRDS(paste(pathReferenceData,"KEGGKOInformation.RData",sep=""))
+  referenceData$KEGGKOInformation <- tmpReferenceData
+
+  tmpReferenceData <- readRDS(paste(pathReferenceData,"KEGGBacArchCopyNumbers.RData",sep=""))
+  referenceData$KEGGBacArchCopyNumbers <- tmpReferenceData
+  
+  tmpReferenceData <- readRDS(paste(pathReferenceData,"FctAbundancesKEGGBacArchPAUDALong.RData",sep=""))
+  referenceData$FctAbundancesKEGGBacArchPAUDALong <- tmpReferenceData
+  tmpReferenceData <- readRDS(paste(pathReferenceData,"FctAbundancesKEGGBacArchPAUDAShort.RData",sep=""))
+  referenceData$FctAbundancesKEGGBacArchPAUDAShort <- tmpReferenceData
+  tmpReferenceData <- readRDS(paste(pathReferenceData,"FctAbundancesKEGGBacArchUProCLong.RData",sep=""))
+  referenceData$FctAbundancesKEGGBacArchUProCLong <- tmpReferenceData
+  tmpReferenceData <- readRDS(paste(pathReferenceData,"FctAbundancesKEGGBacArchUProCShort.RData",sep=""))
+  referenceData$FctAbundancesKEGGBacArchUProCShort <- tmpReferenceData
+  
+  
+  tmpReferenceData <- readRDS(paste(pathReferenceData,"SilvaToKEGGMappingMat.RData",sep=""))
+  referenceData$SilvaToKEGGMappingMat <- tmpReferenceData
+  tmpReferenceData <- readRDS(paste(pathReferenceData,"SilvaIDs.RData",sep=""))
+  referenceData$SilvaIDs <- tmpReferenceData
+  tmpReferenceData <- readRDS(paste(pathReferenceData,"SilvaTaxmat.RData",sep=""))
+  referenceData$SilvaTaxmat <- tmpReferenceData
+
+  return(referenceData)
+}
 
 # helper functions for local testing
 get.fun.lib.path <- function(type){
