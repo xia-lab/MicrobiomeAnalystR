@@ -285,7 +285,7 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
       }
     }
 
-    data <- bf_ratio(data);
+    #data <- bf_ratio(data);
     data@sam_data$dataset <- rep(Study, nrow(data@sam_data));
     data@sam_data$sample_id <- gsub("-", ".", data@sam_data$sample_id);
     
@@ -296,7 +296,7 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
       as_tibble() %>%
       gather(-sample_id, key="Metric", value="Diversity") %>%
       left_join(data@sam_data[,c("sample_id",sel.meta, "dataset")]) %>%
-      select(sample_id, dataset, matches(sel.meta), Metric, Diversity);
+      dplyr::select(sample_id, dataset, matches(sel.meta), Metric, Diversity);
     
     colnames(res)[which(colnames(res) == sel.meta)] <- "study_condition";
 
@@ -310,7 +310,7 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
           spread(key=study_condition, value=mean) %>%
           dplyr::rename(mean_log2Control := !!quo_name(levels(res$study_condition)[1]), mean_log2Exp := !!quo_name(levels(res$study_condition)[2]))
       )  %>%
-      mutate(log2FC=log2(Diversity)-mean_log2Control);
+      plyr::mutate(log2FC=log2(Diversity)-mean_log2Control);
     
 
     res <- res[!is.na(res$log2FC),];
@@ -344,7 +344,7 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
   
   mod<-lapply(res.list, function(x) x$AlphaDiversity) %>%
     do.call(bind_rows, .) %>%
-    mutate(study_condition=factor(study_condition, levels=c("control","CRC"))) %>%
+    plyr::mutate(study_condition=factor(study_condition, levels=c("control","CRC"))) %>%
     group_by(Metric)
   
   AlphaCombined<-tibble(dataset=character(0), Metric=character(0), log2FC=numeric(0), Pvalue=numeric(0), mean_LFD=numeric(0), mean_HFD=numeric(0), CI_low=numeric(0), CI_high=numeric(0))
@@ -368,21 +368,21 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
     lapply(names(res.list), function(x) tibble(dataset=x, Nsamples=length(unique(res.list[[x]]$AlphaDiversity$sample_id)))) %>% 
     do.call(bind_rows, .) %>% 
     arrange(desc(Nsamples)) %>% 
-    mutate(Study=paste0(dataset, " (n=", Nsamples,")")) %>% 
+    plyr::mutate(Study=paste0(dataset, " (n=", Nsamples,")")) %>% 
     bind_rows(tibble(dataset="Combined", Study="Combined")) %>%
-    mutate(Study=factor(Study, levels=rev(Study)))
+    plyr::mutate(Study=factor(Study, levels=rev(Study)))
   imgName = paste(fileName, ".", format, sep="");
   
   tbl <- lapply(res.list, function(x) x$AlphaDiversity_Stats) %>%
     do.call(bind_rows, .) %>%
     bind_rows(AlphaCombined) %>%
-    mutate(Significant=case_when(
+    plyr::mutate(Significant=case_when(
       Pvalue<0.05 & log2FC>0 ~ "* up",
       Pvalue<0.05 & log2FC<0 ~ "* down",
       TRUE~"ns"
     )) %>%
     ungroup() %>%
-    mutate(Metric=factor(Metric, levels=summary.stat.vec)) %>%
+    plyr::mutate(Metric=factor(Metric, levels=summary.stat.vec)) %>%
     left_join(NSamples);
   
   if(view.mode == "ratio"){
@@ -631,7 +631,7 @@ PlotContinuousPopulation <- function(mbSetObj, loadingName, ordinationName, meta
       arrange(-abs(loading1)) %>%
       slice(1:20) %>%
       arrange(loading1) %>%
-      mutate(feature = factor(feature, levels = feature)) %>%
+      plyr::mutate(feature = factor(feature, levels = feature)) %>%
       ggplot(aes(x = feature, y = loading1)) +
       geom_bar(stat = "identity") +
       coord_flip() +

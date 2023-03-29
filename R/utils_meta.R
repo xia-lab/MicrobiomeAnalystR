@@ -430,8 +430,7 @@ GetResColNames <- function(mbSetObj, type="alpha"){
     }else if (type == "beta"){
         vec <- colnames(mbSetObj$analSet$beta.summary)[-c(4,5)];
     }
-
-    vec
+    return(vec)
 }
 GetResRowNames <- function(mbSetObj, type="alpha"){
     mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -442,7 +441,7 @@ GetResRowNames <- function(mbSetObj, type="alpha"){
         vec <- mbSetObj$analSet$beta.summary$dataset;
     }
 
-    vec
+    return(vec)
 }
 
 GetResMatrix<- function(mbSetObj, type="alpha"){
@@ -454,7 +453,7 @@ GetResMatrix<- function(mbSetObj, type="alpha"){
         df <- mbSetObj$analSet$beta.summary[,-c(4,5)];
     }
 
-    signif(as.matrix(df), 5)
+    return(signif(as.matrix(df), 5))
 }
 
 GetResMetric<- function(mbSetObj, type="alpha"){
@@ -466,5 +465,5 @@ GetResMetric<- function(mbSetObj, type="alpha"){
         vec <- mbSetObj$analSet$beta.summary$dist;
     }
 
-    vec
+    return(vec)
 }
