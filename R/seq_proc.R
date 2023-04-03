@@ -111,20 +111,23 @@ PerformSeqProcessing <- function(){
   MessageOutput("Start Sequencing data filtering and triming ... ")
   if(params$is_paired){
     out <- filterAndTrim(fnFs, filtFs, fnRs, filtRs, truncLen=truncLen, 
-                         trimLeft = trimLeft, trimRight = trimRight,
-                         maxN=maxN, maxEE=maxEE, truncQ=truncQ, rm.phix=rm.phix,
-                         compress=TRUE, multithread=TRUE) # On Windows set multithread=FALSE
+                 trimLeft = trimLeft, trimRight = trimRight,
+                 maxN=maxN, maxEE=maxEE, truncQ=truncQ, rm.phix=rm.phix,
+                 compress=TRUE, multithread=TRUE) # On Windows set multithread=FALSE
   } else {
     out <- filterAndTrim(fnFs, filtFs, truncLen=truncLen, 
                          trimLeft = trimLeft, trimRight = trimRight,
                          maxN=maxN, maxEE=maxEE, truncQ=truncQ, rm.phix=rm.phix,
                          compress=TRUE, multithread=TRUE) # On Windows set multithread=FALSE
   }
-
+   MessageOutput("Start Sequencing data filtering and triming2 ... ")
+  if(all(out[,"reads.out"]==0)){
+    MessageOutput("ERROR! No reads passed the filter. Please revisit your filtering parameters.")
+    stop("ERROR")
+  }
   write.table(15.0, file = "log_progress.txt", quote = F, row.names = F, col.names = F, append = F)
   MessageOutput("OK, done!")
   ####Dereplicate
-  MessageOutput("Step 3: Perform Sequencing data dereplicating ... ")
   if(params$is_paired){
     msg_d1 <- capture.output(derepF1 <- derepFastq(filtFs, verbose=TRUE), type = "message")
     sapply(msg_d1, MessageOutput)
