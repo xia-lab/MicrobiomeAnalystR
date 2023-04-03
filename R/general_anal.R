@@ -180,47 +180,28 @@ PlotRF.VIP<-function(mbSetObj, feature, imgName, format="png", dpi=72, width=NA)
   
   imgName = paste(imgName, ".", format, sep="");
   mbSetObj$imgSet$rf.imp <- imgName;
-  vip.score <- rev(sort(mbSetObj$analSet$rf$importance[,"MeanDecreaseAccuracy"]));
-  cls <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
-  cls.length <- length(levels(cls))
-  cls.width <- cls.length/2
-  
+
   if(is.na(width)){
-    if(feature < 5 ){
-      h <- feature*1.2;
-    } else if (feature < 10){
-      h <- feature*1.4;
-    } else if (feature < 15){
-      h <- feature/1.6;
-    } else if (feature < 20){
-      h <- feature/1.8;
-    } else if (feature < 25){
-      h <- feature/2;
-    } else if (feature < 30){
-      h <- feature/2.2;
-    } else if (feature < 40){
-      h <- feature/2.5;
-    } else {
-      h <- feature/10;
-    }
-    
-    if(cls.length < 5){
-      w <- 9.25;
-    } else if(cls.length < 10){
-      w <- 11.5;
-    } else if(cls.length < 15){
-      w <- 12.5;
-    }else{
-      w <- 15;
-    }
+    w <- 9;
   }else if(width == 0){
     w <- 8;
   }else{
     w <- width;
   }
-  
+  h <- w-1; # margin is big
+
+  vip.score <- rev(sort(mbSetObj$analSet$rf$importance[,"MeanDecreaseAccuracy"]));
+  cls <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
+  cls.len <- length(levels(cls));
+
+  # re-adjust width based on group size
+  rt.mrg <- cls.len + 3;
+  w <- w + rt.mrg/72; # convert to inch
+
   Cairo::Cairo(file = imgName,  unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
+  op <- par(mar=c(5,7,3,rt.mrg)); # update right side margin with the number of class
   PlotImpVar(mbSetObj, vip.score,"MeanDecreaseAccuracy", feature);
+  par(op);
   dev.off();
   return(.set.mbSetObj(mbSetObj))
 }
@@ -237,21 +218,6 @@ PlotImpVar <- function(mbSetObj, imp.vec, xlbl, feature, color.BW=FALSE){
   cls <- as.factor(mbSetObj$analSet$cls);
   cls.lbl <- levels(cls);
   cls.len <- length(levels(cls));
-  
-  if(cls.len == 2){
-    rt.mrg <- 5;
-  }else if(cls.len == 3){
-    rt.mrg <- 6;
-  }else if(cls.len == 4){
-    rt.mrg <- 7;
-  }else if(cls.len == 5){
-    rt.mrg <- 8;
-  }else if(cls.len == 6){
-    rt.mrg <- 9;
-  }else{
-    rt.mrg <- 11;
-  }
-  op <- par(mar=c(5,9,2,rt.mrg)); # set right side margin with the number of class
   
   feat.num = feature;
   if(feat.num <= 0){
@@ -338,7 +304,7 @@ PlotImpVar <- function(mbSetObj, imp.vec, xlbl, feature, color.BW=FALSE){
   
   text(x[1], endy+shifty/8, "High", cex=1.1);
   text(x[1], starty-shifty/8, "Low", cex=1.1);
-  par(op);
+
 }
 
 #######################################
@@ -868,11 +834,11 @@ PlotLEfSeSummary <- function(mbSetObj, ldaFeature, layoutOptlf, imgName, format=
   vip.score <- ldabar[[2]];
   names(vip.score) <- ldabar[[1]];
   
-  if(is.na(width)){
-    
     sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
     meta <- mbSetObj$analSet$meta
     cls.len <- length(levels(as.factor(sample_table[[meta]])));
+
+  if(is.na(width)){
     
     if(cls.len <= 4){
       w <- 9.25;
@@ -911,10 +877,18 @@ PlotLEfSeSummary <- function(mbSetObj, ldaFeature, layoutOptlf, imgName, format=
     w <- width;
   }
   
-  Cairo::Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
-  PlotImpVarLEfSe(mbSetObj, vip.score, layoutOptlf, mbSetObj$analSet$meta, colOpt);
-  dev.off();
-  return(.set.mbSetObj(mbSetObj))
+  # re-adjust width based on group size to accomodate miniheatmap
+  if(layoutOptlf == "dot") {
+       rt.mrg <- cls.len + 3;
+       w <- w + rt.mrg/72; # convert to inch
+       Cairo::Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
+       op <- par(mar=c(5,7,3,rt.mrg)); # update right side margin with the number of class
+   }else{
+       Cairo::Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
+   }
+   PlotImpVarLEfSe(mbSetObj, vip.score, layoutOptlf, mbSetObj$analSet$meta, colOpt);
+   dev.off();
+   return(.set.mbSetObj(mbSetObj))
 }
 
 #'Plot LEfSe summary
@@ -933,24 +907,6 @@ PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="defaul
   if(layoutOptlf == "dot") {
     
     sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
-    cls.len <- length(levels(as.factor(sample_table[[meta]])));
-    
-    if(cls.len <= 3){
-      rt.mrg <- 5;
-    }else if(cls.len <= 5){
-      rt.mrg <- 6.5;
-    }else if(cls.len <= 7){
-      rt.mrg <- 8;
-    }else if(cls.len <= 9){
-      rt.mrg <- 9.5;
-    }else if(cls.len <= 11){
-      rt.mrg <- 11;
-    }else if(cls.len <= 12){
-      rt.mrg <- 12.5;
-    }else{
-      rt.mrg <- 15;
-    }
-    op <- par(mar=c(5,9,2,rt.mrg)); # set right side margin with the number of class
     
     feat.num <- length(imp.vec);
     
@@ -966,7 +922,6 @@ PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="defaul
     data1 <- data.impfeat_lefse;
     mns <- by(data1[, names(imp.vec)], 
               sample_table[[meta]],
-              # sample_table[["SampleType"]],
               function(x){ # inner function note, by send a subset of dataframe
                 apply(x, 2, mean, trim=0.1)
               });
@@ -1035,7 +990,7 @@ PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="defaul
     text(x[1], endy+shifty/8, "High", cex=1.1);
     text(x[1], starty-shifty/8, "Low", cex=1.1);
     
-    par(op);
+    #par(op);
     
   } else {
     
