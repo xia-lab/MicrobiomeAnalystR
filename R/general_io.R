@@ -228,12 +228,15 @@ ReadSampleTable <- function(mbSetObj, fileName) {
   }
   #Check group label names for spaces and replace with underscore
   my.meta <- data.frame(mydata,check.names=FALSE);
-  my.meta.blank <- grep("[[:blank:]]", my.meta);
-  if(length(my.meta.blank) >=  1){
+  my.meta.blank <- any(grepl("[[:blank:]]", my.meta)| grepl("[[:blank:]]", names(my.meta)));
+  if(my.meta.blank){
     names(my.meta) <- gsub("\\s+","_", names(my.meta));
+    rownms <- rownames(my.meta)
+    my.meta <- data.frame(sapply(my.meta, function(x) gsub(" ","_",x)));
+   rownames(my.meta) <- rownms
     na.msg1 <- c(na.msg1, "Blank spaces in group names are replaced with underscore '_'");
   }
-  
+
   mbSetObj$dataSet$group_names <- colnames(my.meta)
   #na.msg <- paste(na.msg, "The sample data contains a total of ", nrow(mydata), "samples and  ", ncol(mydata), " sample variables.", collapse=" ");
 

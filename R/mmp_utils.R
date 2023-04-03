@@ -408,7 +408,6 @@ alg="limma",plvl=0.05, selected="NA",nonpar=FALSE){
   metdat <-current.proc$met$data.proc
   sample_data <-  mbSetObj$dataSet$sample_data
   sample_type <- mbSetObj$dataSet$meta_info
-
   metdat.de <- performLimma(metdat,sample_data,sample_type,analysisVar)
  
   
@@ -455,7 +454,7 @@ performLimma <-function(data,sample_data,sample_type,analysisVar){
       covariates[,i] <- covariates[,i] %>% as.character() %>% as.numeric()
     }
   }
-
+ 
   covariates <- data.frame(covariates[,-ncol(covariates),drop=F])
   
   if(!exists('adj.vec')){
@@ -478,10 +477,14 @@ performLimma <-function(data,sample_data,sample_type,analysisVar){
   }else{
     vars <- analysis.var
   }
+ print("step1")
   if(analysis.type == "disc"){
     covariates[, analysis.var] <- covariates[, analysis.var] %>% make.names() %>% factor();
     grp.nms <- unique(c(current.proc$meta_para$comp,current.proc$meta_para$ref,levels(covariates[, analysis.var])))
+print(grp.nms)
     design <- model.matrix(formula(paste0("~ 0", paste0(" + ", vars, collapse = ""))), data =covariates );
+ print("step2")
+
  if(adj.bool){
 
  nms=sapply(seq(adj.vars), function(x) nms= levels(covariates[,adj.vars[x]])[-1])
@@ -497,7 +500,7 @@ performLimma <-function(data,sample_data,sample_type,analysisVar){
     colnames(design) =  grp.nms[order(grp.nms)]
 
 }
-    
+ print("step3")
     inx = 0;
     myargs <- list();
     for(m in 1:(length(grp.nms)-1)){
@@ -835,7 +838,7 @@ MicIDmap <- function(netModel,predDB,taxalvl="all"){
   if(!exists("phyloseq_objs")){
     phyloseq_objs <- qs::qread("phyloseq_objs.qs")
   }
-  
+
   mic.vec <- lapply(phyloseq_objs$count_tables, function(x) return(list(rownames(x))))
 
   mic.vec[["OTU"]] <- NULL

@@ -565,7 +565,6 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
   module.type <- mbSetObj$module.type;
   data <- readDataQs("filt.data.orig", module.type, dataName);
   saveDataQs(mbSetObj$dataSet$proc.phyobj, "orig.phyobj", module.type, dataName);  
-
   # now proc.phyobj is now filtered data
   tax_nm <- rownames(data);
   msg <- NULL;
