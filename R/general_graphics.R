@@ -798,6 +798,11 @@ if (doclust == "T") {
   p <- p %>% add_col_dendro(dend_col)
 }
 
+f <- basename(tempfile('iheatmapr', '.', '.html'))
+on.exit(unlink(f), add = TRUE)
+html <- htmlwidgets::saveWidget(to_widget(p), f, selfcontained = TRUE)
+webshot::webshot(f, plotNm,vwidth = 992, vheight = 1200)
+
 as_list <- to_plotly_list(p)
 if (viewOpt != "overview") {
   as_list[["layout"]][["width"]] <- map.width

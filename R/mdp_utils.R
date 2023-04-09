@@ -3417,7 +3417,6 @@ PrepareHeatTreePlot <- function(mbSetObj, meta, taxalvl, color, layoutOpt, compa
   
   mbSetObj <- .get.mbSetObj(mbSetObj);  
   tax_o <- taxalvl;
-  
   dm <- mbSetObj$dataSet$proc.phyobj;
   tax_table_new = data.frame("Kingdom" = "Root", as(tax_table(dm), "matrix")[, 1:ncol(tax_table(dm))],check.names=FALSE) # add root to tax table
   
@@ -3582,11 +3581,9 @@ PrepareHeatTreePlotDataParse_cmf_diff_table <- function(PrepareHeatTreePlotDataP
 PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, comparison, wilcox.cutoff, imgName, format, dpi=72){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
   load_viridis();
   
   dm_obj_cmf = PrepareHeatTreePlotDataParse_cmf_res;
-  
   if(color == "ggr"){
     color_new <- c("#006B30", "gray", "#E21818");
   } else if(color == "dbgr") {
@@ -3614,7 +3611,6 @@ PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, co
   Cairo::Cairo(file=paste0(imgName, ".", format), height = 875, width = 1000, type=format, bg="white", dpi=96);
   
   wilcox.cutoff <- as.numeric(wilcox.cutoff)
-  
   if(layoutOpt == "reda"){# two layouts are provided
     box <- heat_tree(dm_obj_cmf,
                      node_label = ifelse(wilcox_p_value < wilcox.cutoff, taxon_names, NA),  #taxon names
