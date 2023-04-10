@@ -2828,7 +2828,7 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable,
   }else if(method=="mirkat"){
     
     if(!exists("MiRKAT")){ # public web on same user dir
-      .load.scripts.on.demand("utils_MiRKAT.Rc"); 
+      .load.scripts.on.demand("utils_mirkat.Rc"); 
     }
     exclud <- which(colnames(data@sam_data) %in% variable)
     X = data@sam_data[,-exclud]
