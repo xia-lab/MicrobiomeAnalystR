@@ -659,7 +659,6 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   load_MASS();
   claslbl <<- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
-  
   if(mbSetObj$module.type=="sdp"){
     taxrank<-"OTU";
     data <- mbSetObj$dataSet$norm.phyobj;
@@ -668,7 +667,6 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
     if(!exists("phyloseq_objs")){
       phyloseq_objs <- qs::qread("phyloseq_objs.qs")
     }
-    
     if(taxrank=="OTU"){
       dat3t <- t(phyloseq_objs$count_tables$OTU)
     }else{
@@ -700,9 +698,13 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
   ldares <- lda(claslbl~ .,data = wil_datadf);
   ldamean <- as.data.frame(t(ldares$means),check.names=FALSE);
   class_no <<- length(unique(claslbl));
-  ldamean$max <- apply(ldamean[,1:class_no],1,max);
+  if(class_no==2){
+  ldamean$LDAscore <- sign(ldamean[,1]-ldamean[,2])*signif(log10(1+abs(ldamean[,1]-ldamean[,2])/2),digits=3);
+  }else{
+   ldamean$max <- apply(ldamean[,1:class_no],1,max);
   ldamean$min <- apply(ldamean[,1:class_no],1,min);
   ldamean$LDAscore <- signif(log10(1+abs(ldamean$max-ldamean$min)/2),digits=3);
+  }
   ldamean$Pvalues <- signif(rawpvalues,digits=5);
   ldamean$FDR <- signif(clapvalues,digits=5);
   resTable <- ldamean;
@@ -745,12 +747,7 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
   cls.lbls <- levels(claslbl);
   grp.dat <- resTable[, cls.lbls];
   res.cls <- as.character(apply(grp.dat, 1, function(x){cls.lbls[which.max(x)]}));
-  
-  if(class_no==2){
-    indx <- which(res.cls==unique(claslbl)[1]);
-    resTable$LDAscore[indx]<--abs(resTable$LDAscore[indx]);
-  }
-  
+
   fast.write(resTable, file="lefse_de_output.csv");
   mbSetObj$analSet$lefse$resTable <- mbSetObj$analSet$resTable <- resTable;
   

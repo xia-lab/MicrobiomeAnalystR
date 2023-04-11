@@ -477,14 +477,10 @@ performLimma <-function(data,sample_data,sample_type,analysisVar){
   }else{
     vars <- analysis.var
   }
- print("step1")
   if(analysis.type == "disc"){
     covariates[, analysis.var] <- covariates[, analysis.var] %>% make.names() %>% factor();
     grp.nms <- unique(c(current.proc$meta_para$comp,current.proc$meta_para$ref,levels(covariates[, analysis.var])))
-print(grp.nms)
     design <- model.matrix(formula(paste0("~ 0", paste0(" + ", vars, collapse = ""))), data =covariates );
- print("step2")
-
  if(adj.bool){
 
  nms=sapply(seq(adj.vars), function(x) nms= levels(covariates[,adj.vars[x]])[-1])
@@ -500,7 +496,6 @@ print(grp.nms)
     colnames(design) =  grp.nms[order(grp.nms)]
 
 }
- print("step3")
     inx = 0;
     myargs <- list();
     for(m in 1:(length(grp.nms)-1)){
@@ -1695,12 +1690,13 @@ if(dataType=="metabolite"){
       current.set <- qs::qread(paste0(taxalvl,".current.lib.qs"))
       
     }
+
  
-    metmat <-  t(current.proc$met$data.proc)           # t(qs::qread("metabo.complete.norm.qs"));
+    metmat <-  t(current.proc$met$data.proc)          
     met.map <-  qs::qread("keggNet.met.map.qs")
     met.map <- met.map[!(is.na(met.map$Node)),]
-     met.map$include = ifelse(met.map$Match %in% unique(unlist(current.set)),T,F)
-     qs::qsave(met.map,"keggNet.met.map.qs")
+    met.map$include = ifelse(met.map$Match %in% unique(unlist(current.set)),T,F)
+    qs::qsave(met.map,"keggNet.met.map.qs")
     colnames(metmat) <- met.map$Match[match(colnames(metmat),met.map$Query)]
     datmat <- metmat[,which(colnames(metmat)!='')]
      
@@ -1723,7 +1719,7 @@ if(dataType=="metabolite"){
       current.setlink <- kegg.anot$link;
       current.set <- kegg.anot$sets$Metabolism;
     }else{
-    current.set <- qs::qread(paste0(lib.path.mmp,"ko_set_bac.qs"))
+      current.set <- qs::qread(paste0(lib.path.mmp,"ko_set_bac.qs"))
     }
 
     set2nm <-  qs::qread("../../lib/mmp/set2nm.qs")[["pathway"]];
@@ -1796,16 +1792,18 @@ enrich2json <- function(){
   x=met.map$Node[match(x,met.map$Match)]  
   return(x)
   })
-# write json
+# write json 
   path.pval = resTable$Pval; if(length(path.pval) ==1) { path.pval <- matrix(path.pval) };
   hit.num = paste0(resTable$Hits,"/",resTable$Size); if(length(hit.num) ==1) { hit.num <- matrix(hit.num) };
   path.nms <- resTable$Pathway; if(length(path.nms) ==1) { path.nms <- matrix(path.nms) };
   hits.query <- convert2JsonList(hits)
   path.fdr <- resTable$FDR; if(length(path.fdr) ==1) { path.fdr <- matrix(path.fdr) };
- expr.mat = current.proc$met$res_deAnal
-expr.mat$kegg = met.map$Match[match(rownames(expr.mat),met.map$Query)]
-expr.mat <- expr.mat[expr.mat$kegg %in% met.map$Match[met.map$include],]
-expr.mat <- split(expr.mat$T.Stats,expr.mat$kegg)
+  sig.path <- resTable$Pathway[which(resTable$FDR<0.05)];
+  sig.path <- hits.node[names(hits.node) %in% sig.path]; if(length(sig.path) ==0) { sig.path <-0};
+  expr.mat = current.proc$met$res_deAnal
+  expr.mat$kegg = met.map$Match[match(rownames(expr.mat),met.map$Query)]
+  expr.mat <- expr.mat[expr.mat$kegg %in% met.map$Match[met.map$include],]
+      expr.mat <- split(expr.mat$T.Stats,expr.mat$kegg)
   json.res <- list(hits.query = hits.query,
                    path.nms = path.nms,
                    path.pval = path.pval,
@@ -1813,7 +1811,8 @@ expr.mat <- split(expr.mat$T.Stats,expr.mat$kegg)
                    path.fdr = path.fdr,
                    hits.query.nm = convert2JsonList(hits.met),
                    hits.node = convert2JsonList(hits.node),
-                    expr.mat=convert2JsonList(expr.mat));
+                    expr.mat=convert2JsonList(expr.mat),
+                   sig.path=sig.path );
   
   json.mat <- RJSONIO::toJSON(json.res);
   json.nm <- paste(file.nm, ".json", sep="");
