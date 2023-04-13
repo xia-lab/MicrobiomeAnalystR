@@ -136,7 +136,13 @@ PerformMetaEffectSize <- function(mbSetObj=NA, imgName="", taxrank="OTU", selMet
   dev.off();
   res <- SetupMetaStats(BHth, paramSet, analSet);
   saveSet(res[[1]], "paramSet");
-  
+  mbSetObj$imgSet[[de.method]] <- imgName;
+  mbSetObj$analSet$effectsize$taxalvl <- taxrank;
+  mbSetObj$analSet$effectsize$de.method <- de.method;
+  mbSetObj$analSet$effectsize$selMeta <- selMeta;
+  mbSetObj$analSet$effectsize$ef.method <- ef.method;
+  mbSetObj$analSet$effectsize$thresh <- BHth;
+  .set.mbSetObj(mbSetObj);
   return(saveSet(res[[2]], "analSet", length(sig.inx)));
 }
 
@@ -429,6 +435,9 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
   tbl <- as.data.frame(tbl[, !colnames(tbl) %in% c("Significant", "Nsamples", "Study", "mean_LFD", "mean_HFD")]);
   mbSetObj$analSet$alpha.summary <- tbl[order(tbl$dataset, tbl$Metric),];
   fast.write(mbSetObj$analSet$alpha.summary, "alpha_summary.csv", row.names = TRUE);
+  mbSetObj$imgSet$alpha <- imgName;
+  mbSetObj$analSet$alpha.taxalvl <- taxrank
+   mbSetObj$analSet$alpha.meta <- sel.meta
   return(.set.mbSetObj(mbSetObj));
 }
 

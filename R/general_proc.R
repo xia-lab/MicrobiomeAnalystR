@@ -474,7 +474,7 @@ ApplyMetaboFilter <- function(mbSetObj=NA, filter,  rsd){
   current.proc$met$data.proc<<-t(filt.res)
   qs::qsave(mbSetObj$dataSet$metabolomics$filt.data, file="metabo.filt.data"); # save an copy
   current.msg <<- msg
- 
+ mbSetObj$dataSet$metabolomics$filt.msg <- current.msg;
   return(.set.mbSetObj(mbSetObj));
   
 }
@@ -589,7 +589,7 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
  
   
   #make hierarchies
-  if(mbSetObj$module.type=="sdp" | mbSetObj$module.type.mic=="ko"){
+  if(mbSetObj$module.type=="sdp" | mbSetObj$micDataType=="ko"){
     ranks <- "OTU"
   }else{
     ranks <- c(GetMetaTaxaInfo(mbSetObj), "OTU")
@@ -1255,7 +1255,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
   }
   
   # check for uniqueness of taxon names for metagenomic data only
-  if(mbSetObj$module.type == "sdp" | mbSetObj$module.type.mic =="ko"){
+  if(mbSetObj$module.type == "sdp" | mbSetObj$micDataType =="ko"){
     if(length(unique(taxa.nms))!=length(taxa.nms)){
       dup.tax.nms <- paste(taxa.nms[duplicated(taxa.nms)], collapse="; ");
       AddErrMsg(paste(c("Duplicate taxon names are not allowed:"), dup.tax.nms, collapse=" "));
@@ -1287,7 +1287,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
   }
   #standard name to be used
   classi.lvl<- c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species");
-  if(mbSetObj$module.type == "mdp" || mbSetObj$module.type.mic =="otu" |mbSetObj$module.type == "ppd" |mbSetObj$module.type == "meta" ){
+  if(mbSetObj$module.type == "mdp" || mbSetObj$micDataType =="otu" |mbSetObj$module.type == "ppd" |mbSetObj$module.type == "meta" ){
     if(type=="text"){
       # prepare data for phyloseq visualization.
       # if features names are present in specific taxonomy format (greengenes or silva).
@@ -1610,7 +1610,7 @@ if(taxalabel=="T"){# for mapping to the database in mmp module
     rownames(prefilt.data)<-taxa_names(mbSetObj$dataSet$taxa_table);
     saveDataQs(prefilt.data, "data.prefilt", module.type, dataName);
     
-  }else if(mbSetObj$module.type == "sdp"| mbSetObj$module.type.mic =="ko"){
+  }else if(mbSetObj$module.type == "sdp"| mbSetObj$micDataType =="ko"){
     #constructing phyloseq object for aplha diversity.
     data.proc<-otu_table(data.proc, taxa_are_rows = TRUE);
     taxa_names(data.proc)<-rownames(data.proc);
@@ -1665,7 +1665,7 @@ mbSetObj$dataSet$norm.phyobj <- mbSetObj$dataSet$proc.phyobj
 mbSetObj$dataSet$norm.msg <- "No normalization has been performed since the input data has been transformed."
 
     #make hierarchies
-  if(mbSetObj$module.type=="sdp" | mbSetObj$module.type.mic=="ko"){
+  if(mbSetObj$module.type=="sdp" | mbSetObj$micDataType=="ko"){
     ranks <- "OTU"
   }else if(mbSetObj$module.type=="meta"){ #temporary
     ranks <- "OTU"

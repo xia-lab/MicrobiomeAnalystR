@@ -2133,3 +2133,12 @@ GetRFConfColNames<-function(mbSetObj){
   return(colnames(mbSetObj$analSet$rf$confusion));
 }
 
+GetSigTable.MMPMic<-function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  GetSigTable(mbSetObj$analSet$resTable, "MaasLin");
+}
+
+GetSigTable.MMPMet<-function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  GetSigTable(mbSetObj$dataSet$metabolomics$resTable, "Limma");
+}

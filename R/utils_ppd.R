@@ -251,7 +251,8 @@ PCoA3DAnal.16SRef <- function(mbSetObj, barplotNm, ordMeth, distName, taxrank, m
   cum.pca<-imp.pca[5,]; # cummulated variance explained
   mbSetObj$analSet$topo.msg<-paste("Beta-diversity is performed using",feat.perc,"and",distName,"distance measure");
   mbSetObj$analSet$sum.pca<-append(sum.pca, list(std=std.pca, variance=var.pca, cum.var=cum.pca));
-  
+  mbSetObj$analSet$vis$feat.perc <- feat.perc
+  mbSetObj$analSet$vis$distName <- distName
   return(.set.mbSetObj(mbSetObj))
 }
 

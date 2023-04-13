@@ -96,9 +96,9 @@ ReadShotgunTabData <- function(mbSetObj, dataName, geneidtype, datatype) {
   rownames(mydata) <- dat.nms;
  if(mbSetObj$module.type=="mmp"){
 
-   mbSetObj$module.type.mic = "ko"
+   mbSetObj$micDataType = "ko"
 }else{
-  mbSetObj$module.type.mic = "na"
+  mbSetObj$micDataType = "na"
 }
 
   mbSetObj$dataSet$name <- basename(dataName);

@@ -630,6 +630,7 @@ doMaAslin <- function(input.data,thresh = 0.05,adj.bool=F){
 
 PrepareResTable <- function(mbSetObj,micDataType,taxalvl,is.norm=F){
   mbSetObj <- .get.mbSetObj(mbSetObj);
+ mbSetObj$analSet$maaslin$taxalvl <- taxalvl;
   if(micDataType=="otu"){
  if(is.null(taxalvl)|taxalvl=="null"){
       taxalvl = colnames(mbSetObj$dataSet$taxa_table)[length(colnames(mbSetObj$dataSet$taxa_table))]
@@ -732,7 +733,7 @@ ProcessMaaslinRes <- function(mbSetObj,taxalvl,analysis.var){
    
   }
   print(paste0("CompareMic ", taxalvl," done!"))
-  
+  mbSetObj$analSet$maaslin$taxalvl <- "OTU"
   return(.set.mbSetObj(mbSetObj))
 
 }
@@ -1375,12 +1376,15 @@ anno.mat0 <- anno.mat0[which(anno.mat0$value<predpval.thresh),]
           annols <- vector("list",length=nrow( anno.mat))
         }   
       }  
-      
+       mbSetObj$analSet$integration$corr<- cor.thresh
+      mbSetObj$analSet$integration$corrPval<- corp.thresh
     }else{
       anno.mat <- anno.mat0
      anno.mat$size <- as.numeric(ReScale(-log(anno.mat$value),8,12))
       annols <- vector("list",length=nrow( anno.mat))
     }    
+  mbSetObj$analSet$integration$potential<- potential.thresh
+  mbSetObj$analSet$integration$predPval<- predpval.thresh
 }else if(htMode=="corrht"){ 
     data.mtr <- current.proc$corr.mat
       corr.pval <- current.proc$corr.pval
@@ -1432,8 +1436,6 @@ anno.mat0 <- anno.mat0[which(anno.mat0$value<predpval.thresh),]
       }
   
       if(overlay=="true"){
-       # saveRDS(mbSetObj,"/Users/lzy/Documents/MicrobiomeAnalystR-master/mbSetObj.rds")
-      #  saveRDS(current.proc,"/Users/lzy/Documents/MicrobiomeAnalystR-master/current.proc.rds")
         pred.de <- current.proc$predDE[,c(5,6,1)] %>% filter(P_value <predpval.thresh)
         rownames(pred.de) <- NULL
         names(pred.de)[1:2] <- names(anno.mat0)[1:2]
@@ -1462,8 +1464,11 @@ anno.mat0 <- anno.mat0[which(anno.mat0$value<predpval.thresh),]
         anno.mat$size <- as.numeric(ReScale(-log(anno.mat$pval),8,12))
           annols <- vector("list",length=nrow( anno.mat))
         }
+       mbSetObj$analSet$integration$potential<- potential.thresh
+      mbSetObj$analSet$integration$predPval<- predpval.thresh
       }
-    
+      mbSetObj$analSet$integration$corr<- cor.thresh
+     mbSetObj$analSet$integration$corrPval<- corp.thresh
   }
      
   data1 <- data.mtr;
@@ -1591,7 +1596,9 @@ as_list$layout$annotations[[i]]$text = unname(current.proc$id2nm[as_list$layout$
   mbSetObj$analSet$integration$heatmap.dist <- smplDist
   mbSetObj$analSet$integration$heatmap.clust <- clstDist
   mbSetObj$analSet$integration$heat.taxalvl <- taxalvl
-  
+  mbSetObj$analSet$integration$overlay <- overlay
+  mbSetObj$analSet$integration$htMode <- htMode
+  mbSetObj$analSet$integration$sign <- sign
   message("heatmap done")
   return(.set.mbSetObj(mbSetObj))
 }
@@ -1647,6 +1654,7 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
    
 if(dataType=="ko"){
    res= .save.global.res();
+   taxalvl = "ko"
 }else if(dataType=="metabolite"){
 
 res=enrich2json()
@@ -1658,9 +1666,11 @@ res=enrich2json()
         .load.scripts.on.demand("utils_peak2fun.Rc");    
     }
    performPeakEnrich(lib=contain)
-   
 
   }
+if(!exists("taxalvl")){taxalvl = "ko"}
+  mbSetObj$analSet$keggnet$background <- contain
+  mbSetObj$analSet$keggnet$taxalvl <- taxalvl
   return(.set.mbSetObj(mbSetObj))
 }
 
@@ -2907,7 +2917,7 @@ CreatM2MHeatmapList<-function(mbSetObj, plotNm,  format="png",
   mbSetObj$analSet$integration$heatmap.dist <- smplDist
   mbSetObj$analSet$integration$heatmap.clust <- clstDist
   mbSetObj$analSet$integration$heat.taxalvl <- taxalvl
-  
+  mbSetObj$analSet$integration$overlay <- "false"
   message("heatmap done")
   return(.set.mbSetObj(mbSetObj))
 }
@@ -3070,7 +3080,6 @@ GetPredictionPlot <- function(mbSetObj, keggid,imgNm,predDB="agora",potentialThr
   sink(json.nm)
   cat(json.mat);
   sink();
-  
   return(.set.mbSetObj(mbSetObj))
 }
 
@@ -3239,8 +3248,8 @@ PlotCorrHistogram <- function(imgNm, dpi=72, format="png"){
 
 
 PlotDiagnostic <- function(imgName, dpi=72, format="png",alg){
+    mbSetObj <- .get.mbSetObj(mbSetObj);
   dpi <- as.numeric(dpi);
-
   imgNm <- paste(imgName,  ".", format, sep="");
   require("Cairo");
   if(alg %in% c("snf", "spectrum") ){
@@ -3278,6 +3287,7 @@ PlotDiagnostic <- function(imgName, dpi=72, format="png",alg){
       ) +
       theme_bw()
     print(p)
+  mbSetObj$imgSet$procrustes$diagnostic <- imgNm
   }else if(alg == "rcca"){
     require(mixOmics)
     plot(reductionSet$dim.res, scree.type = "barplot")
@@ -3304,6 +3314,7 @@ set.seed(123) # for reproducibility, only when the `cpus' argument is not used
 perf.res <- mixOmics:::perf(res, validation = 'Mfold', folds = 10, nrepeat = 1, dist="max.dist")
 diablo.comp <<- median(perf.res$choice.ncomp$WeightedVote)
 plot(perf.res) 
+ mbSetObj$imgSet$diablo$diagnostic <- imgNm
   }else if(alg == "mcia"){
     res = reductionSet$dim.res 
     p1<-plot.mcoin(type=3, res, phenovec=reductionSet$cls, sample.lab=FALSE, df.color=length(names(mdata.all)))   
@@ -3346,19 +3357,19 @@ plot(perf.res)
     plotEig(length(unique(reductionSet$clustVec)), reductionSet$clustRes[[5]])
   }
   dev.off();
-  
+  .set.mbSetObj(mbSetObj)
   return(1);
 }
 
 
 PlotDiagnosticPca <- function(imgNm, dpi=72, format="png",type="diablo"){
   
-  #save.image("TestDI.RData");
+    mbSetObj <- .get.mbSetObj(mbSetObj);
   require("Cairo");
   library(ggplot2);
   dpi<-as.numeric(dpi)
   imgNm<- paste(imgNm, ".", format, sep="");
-
+  print(imgNm)
   fig.list <- list()
  
   if(type == "diablo"){ 
@@ -3387,6 +3398,7 @@ PlotDiagnosticPca <- function(imgNm, dpi=72, format="png",type="diablo"){
 
   grid.arrange(grobs =fig.list, nrow=length(fig.list))
   dev.off(); 
+  mbSetObj$imgSet$diablo$pca <- imgNm;
   }else if(type == "rcca" || type == "spls"){
     res = reductionSet$dim.res 
     Factor <- as.factor(reductionSet$meta$newcolumn)
@@ -3496,16 +3508,19 @@ p <- ggplot(ctest) +
 Cairo(file=imgNm, width=10, height=10, type=format, bg="white", unit="in", dpi=dpi);
 print(p)
 dev.off();
-  
+  mbSetObj$imgSet$procrustes$pca <- imgNm
 }
+.set.mbSetObj(mbSetObj)
 }
 
 
 PlotDiagnosticLoading <- function(imgNm, dpi=72, format="png",type="diablo"){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   require("Cairo");
   library(ggplot2)
   dpi <- as.numeric(dpi);
   imgNm <- paste(imgNm,  ".", format, sep="");
+  mbSetObj$imgSet$diablo$loading <- imgNm
   if(type == "diablo"){
     library(grid)
     library(gridExtra)
@@ -3566,6 +3581,7 @@ PlotDiagnosticLoading <- function(imgNm, dpi=72, format="png",type="diablo"){
     print(pcafig)
     dev.off();
   }
+.set.mbSetObj(mbSetObj)
 }
 
 GetDiagnosticSummary<- function(type){
@@ -3638,7 +3654,12 @@ nms <- rownames(mbSetObj$dataSet$metabolomics$data.orig)
 current.proc$id2nm <- setNames(nms,nms)
 }
 
+mbSetObj$inputType <- inputType;
+mbSetObj$micDataType <-micDataType;
+mbSetObj$metDataType <-metDataType;
+mbSetObj$metIDType <-metIDType;
 current.proc<<-current.proc
+.set.mbSetObj(mbSetObj)
 return(1)
 
 }

@@ -52,9 +52,9 @@ Read16SAbundData <- function(mbSetObj, dataName, format, taxa_type, ismetafile, 
     return(0);
   }
   if(mbSetObj$module.type=="mmp"){
-   mbSetObj$module.type.mic = "otu"
+   mbSetObj$micDataType = "otu"
   }else{
-  mbSetObj$module.type.mic = "na"
+  mbSetObj$micDataType = "na"
 }
 
   #storing whole taxonomy label(used for PICRUST & Tax4Fun; reference data mapping)
@@ -533,10 +533,10 @@ ReadMetabolicTable <- function(mbSetObj, dataName, metType, idType) {
   mbSetObj$dataSet$metabolomics$comp_metnm <- rownames(mydata);
   mbSetObj$dataSet$metabolomics$feature.type <- metType;
   mbSetObj$dataSet$metabolomics$id.type <- idType;
-  mbSetObj$dataSet$metabolomics$read <- TRUE
+  mbSetObj$dataSet$metabolomics$read <- TRUE;
   
   current.msg <<- paste("A total of",ncol(mydata) ,"metabolomics samples and ", nrow(mydata), metType," are present.");
-  
+  mbSetObj$dataSet$metabolomics$read.msg <- current.msg
  
 
   return(.set.mbSetObj(mbSetObj));

@@ -169,7 +169,7 @@ SetModuleType <- function(mbSetObj, nm){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   mbSetObj$module.type <- nm;
   if(mbSetObj$module.type!="mmp"){
-  mbSetObj$module.type.mic = "na"
+  mbSetObj$micDataType = "na"
   }
   return(.set.mbSetObj(mbSetObj));
 }
@@ -553,7 +553,7 @@ PrepareDownloadData <- function(mbSetObj){
 
 UtilMakePhyloseqObjs <- function(mbSetObj, taxrank){
 
-# if(mbSetObj$module.type=="mdp" |mbSetObj$module.type.mic=="otu" ){
+# if(mbSetObj$module.type=="mdp" |mbSetObj$micDataType=="otu" ){
 #   
 #   taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
 #   data <- merge_phyloseq(mbSetObj$dataSet$proc.phyobj, taxa_table);

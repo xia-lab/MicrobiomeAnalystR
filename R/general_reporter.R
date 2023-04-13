@@ -39,6 +39,12 @@ PreparePDFReport <- function(mbSetObj, usrName){
     CreateSDPRnwReport(mbSetObj, usrName);
   }else if(mbSetObj$module.type == "ppd"){
     CreatePPDRnwReport(mbSetObj, usrName);
+  }else if(mbSetObj$module.type == "mmp"){
+    CreateMMPRnwReport(mbSetObj, usrName);
+  }else if(mbSetObj$module.type == "meta"){
+    CreateMetaRnwReport(mbSetObj, usrName);
+  }else if(mbSetObj$module.type == "raw"){
+    CreateRawRnwReport(mbSetObj, usrName);
   }else{
     CreateTaxaEnrichRnwReport(mbSetObj, usrName);
   }
@@ -179,7 +185,16 @@ CreateIOdoc <- function(mbSetObj){
               "and Cluster of Orthologous Groups (COG) are supported in MicrobiomeAnalyst.\n",
               "Also, uploading metadata file is required as plain text (.txt or.csv) with both these formats.\n"
               );
-  } else {
+  } else if(mbSetObj$module.type == "meta"){
+    descr <- c("\\subsection{Reading and Processing the Raw Data}\n",
+           "MicrobiomeAnalyst accepts multiple abundance data tables in plain text (.txt or.csv) for meta-analysis",
+           "User need to upload their data and specify the taxonomic labels in order for MicrobiomeAnalyst to  process the taxonomic information correctly.",
+           "The hierarchical information for taxa can either be present within abundance data or uploaded as a", 
+           "separate taxonomy table file (.txt or .csv format).\n",
+           "Also, uploading metadata file is required as plain text (.txt or.csv).",
+           "At least one meta-data group is shared across datasets and consists of two factors (case-control)"
+         );
+  }else {
     descr <- c("\\subsection{Reading and Processing the Raw Data}\n",
               "MicrobiomeAnalyst accepts count data in a variety of formats generated in microbiome studies",
               "including plain text table, biom format as well as output from mothur pipeline.",
@@ -197,9 +212,8 @@ CreateIOdoc <- function(mbSetObj){
     descr<-c("\\subsubsection{Reading abundance count data table}\n",
             "The abundance count data should be uploaded in tab-delimited text (.txt) or comma separated values (.csv)",
             "format. Samples are represented in columns, while rows contains the information about the features.",
-            "Metadata file contains additional information about samples such as experimental factors or sample", 
-            "grouping.\n");
-
+            "Metadata file contains additional information about samples such as experimental factors or sample grouping.\n");
+     
   }else if(mbSetObj$dataSet$data.type=="biom"){
     descr<-c("\\subsubsection{Reading BIOM data}\n",
             "BIOM format is the standard for representing the taxa abundance profiles.",
@@ -220,11 +234,22 @@ CreateIOdoc <- function(mbSetObj){
   cat("\n\n", file=rnwFile, append=TRUE);
         
   #user data info
+  if(mbSetObj$module.type == "meta"){
+  for(i in 1:length(mbSetObj$mdata.all)){
+    dataSet <- readDataset(names(mbSetObj$mdata.all)[i]);
+    rmsg <- dataSet$read.msg;
+    smsg <- dataSet$smpl.msg;
+    cat(names(mbSetObj$mdata.all)[i],": ",gsub("_", "\\\\_", rmsg), file=rnwFile, append=TRUE, sep="\n");
+    cat(names(mbSetObj$mdata.all)[i],": ",gsub("_", "\\\\_", smsg), file=rnwFile, append=TRUE, sep="\n");
+    cat("\n\n", file=rnwFile, append=TRUE);
+    }
+  }else{
   rmsg <- mbSetObj$dataSet$read.msg;
   smsg <- mbSetObj$dataSet$smpl.msg;
-
+  
   cat(gsub("_", "\\\\_", rmsg), file=rnwFile, append=TRUE, sep="\n");
   cat(gsub("_", "\\\\_", smsg), file=rnwFile, append=TRUE, sep=" ");
+  }
         
   if(mbSetObj$module.type == "sdp"){
     cat("The genes are annotated as ", mbSetObj$dataSet$gene.id,"label.", file=rnwFile, append=TRUE, sep=" ");
@@ -280,14 +305,25 @@ CreateIOdoc <- function(mbSetObj){
             
     cat(descr, file=rnwFile, append=TRUE);
     cat("\n\n", file=rnwFile, append=TRUE);
-
-    filt.msg <- mbSetObj$dataSet$filt.msg;
-            
-    if(is.null(filt.msg)){
-      filt.msg <- "No data filtering was performed.";
-    }
-    cat(filt.msg, file=rnwFile, append=TRUE);
   }
+
+    if(mbSetObj$module.type == "meta"){
+  for(i in 1:length(mbSetObj$mdata.all)){
+    dataSet <- readDataset(names(mbSetObj$mdata.all)[i]);
+    filt.msg <- dataSet$filt.msg;
+    if(is.null(filt.msg)){
+    filt.msg <- "No data filtering was performed.";
+    }
+    cat(names(mbSetObj$mdata.all)[i],": ",filt.msg, file=rnwFile, append=TRUE, sep="\n");
+    cat("\n\n", file=rnwFile, append=TRUE);
+  }
+}else{
+  filt.msg <- mbSetObj$dataSet$filt.msg;
+  if(is.null(filt.msg)){
+    filt.msg <- "No data filtering was performed.";
+  }
+  cat(filt.msg, file=rnwFile, append=TRUE);
+}
   cat("\n\n", file=rnwFile, append=TRUE);
 }
 
@@ -341,13 +377,24 @@ CreateNORMdoc <- function(mbSetObj){
   cat(descr2, file=rnwFile, append=TRUE, sep="\n");
   cat("\n\n", file=rnwFile, append=TRUE);
 
+  if(mbSetObj$module.type == "meta"){
+  for(i in 1:length(mbSetObj$mdata.all)){
+    dataSet <- readDataset(names(mbSetObj$mdata.all)[i]);
+    norm.msg <- dataSet$norm.msg;
+    if(is.null(norm.msg)){
+      norm.msg <- "No data normalization was performed.";
+     }
+     cat(names(mbSetObj$mdata.all)[i],": ",norm.msg, file=rnwFile, append=TRUE,sep="\n");
+    cat("\n\n", file=rnwFile, append=TRUE);
+    }
+  }else{
   norm.msg <- mbSetObj$dataSet$norm.msg;
-        
   if(is.null(norm.msg)){
     norm.msg <- "No data normalization was performed.";
-  }
+   }
   cat(norm.msg, file=rnwFile, append=TRUE);
   cat("\n", file=rnwFile, append=TRUE);
+ }
 }
 
 Init16SAnalMode<-function(){
@@ -1597,6 +1644,592 @@ CreatePPDResultDoc<-function(mbSetObj){
 }
 
 
+###############################################
+## Microbiome Metabolomics
+##########################################
+
+CreateMMPRnwReport<-function(mbSetObj, usrName){
+   mbSetObj <- .get.mbSetObj(mbSetObj);
+  
+  CreateHeader(usrName);
+  CreateIntr();
+  CreateMMPIOdoc();
+  CreateMMPNORMdoc();
+  CreateLMRdoc();
+  InitMMPAnalMode();
+    
+  if(!is.null(mbSetObj[["analSet"]]) & (length(mbSetObj$analSet)>0)){
+   
+    CreateMMPVISEXPLRdoc(mbSetObj);
+    CreateMMPNetworkRdoc(mbSetObj);
+    CreateMMPHeatmapRdoc(mbSetObj);
+  } else {
+    CreateAnalNullMsg();
+    }
+   # CreateFooter(mbSetObj);
+}
+
+
+CreateMMPIOdoc <- function(mbSetObj){
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  descr <- c("\\subsection{Reading and Processing the Raw Data}\n",
+               "MicrobiomeAnalyst accepts micrbiome data generating from both marker gene profiling and shotgun sequencing, 
+               and metabolomics data from targeted and untargted metabolomics analysis. Users can upload either paired microbiome-metabolomics abundance table or paired data list as input." ,
+                "All the uploded files need to be in plain text format (.txt or.csv).",
+               "Currently, KEGG Orthology IDs (KO) is supported for shotgun data and KEGG IDs, HMDB IDs and names are support for metabolite identification.\n"
+    );
+  cat(descr, file=rnwFile, append=TRUE);
+  #saveRDS(mbSetObj,"/Users/lzy/Documents/MicrobiomeAnalystR-master/mbSetObj.rds")
+  if(mbSetObj$inputType=="table"){
+    
+    descr<-c("Samples are represented in columns, while rows contains the information about the features.",
+             "For data table input, A metadata file is required. It contains additional information about samples such as experimental factors or sample grouping.\n");
+    
+    cat(descr, file=rnwFile, append=TRUE);
+    if(mbSetObj$micDataType=="otu"){
+      descr<-c("\\subsubsection{Reading microbiome data}\n",
+               "User need to specify the taxonomic labels for MicrobiomeAnalyst to  process the taxonomic information correctly.",
+               "The hierarchical information for taxa can either be present within abundance data or uploaded as a separate taxonomy table file (.txt or .csv format).\n");
+   }else{
+      descr<-c("\\subsubsection{Reading microbiome data}\n",
+               "The genes are annotated as KOs.\n");
+      
+    }
+    cat(descr, file=rnwFile, append=TRUE);
+    #user data info
+    rmsg <- mbSetObj$dataSet$read.msg;
+    cat(gsub("_", "\\\\_", rmsg), file=rnwFile, append=TRUE, sep="\n");
+    
+    if(mbSetObj$metDataType=="metabolite"){
+      descr<-c("\\subsubsection{Reading metabolomics data}\n",
+               "Metabolite concentration table is uploaded.")
+    }else{
+      descr<-c("\\subsubsection{Reading metabolomics data}\n",
+               "Peak intensity table is uploaded.")
+    }
+    
+    cat(descr, file=rnwFile, append=TRUE);
+    
+    #user data info
+    rmsg <- mbSetObj$dataSet$metabolomics$read.msg;
+    cat(gsub("_", "\\\\_", rmsg), file=rnwFile, append=TRUE, sep="\n");
+    
+   
+    descr<-c("\\subsubsection{Reading metadata}\n",
+             "The primary metadata need to be a discrete factor.\n");
+    
+    cat(descr, file=rnwFile, append=TRUE);
+    
+    smsg <- mbSetObj$dataSet$smpl.msg;
+    cat(gsub("_", "\\\\_", smsg), file=rnwFile, append=TRUE, sep=" ");
+    
+  }else if(mbSetObj$inputType=="list"){
+    descr<-c("\\subsubsection{Reading paired list data}\n",
+             "");
+  }
+  
+  # the last step is sanity check
+  descr<-c("\\subsubsection{Data Integrity Check}\n",
+           "Before data analysis, a data integrity check is performed to make sure that all the necessary",
+           "information has been collected. The sample variable should contain atleast two groups to perform most ",
+           "of the comparative analysis. \\textit{By default, sample variables which are found to be constant and ",
+           "continuous in nature will be removed from further analysis. Additionally, features just present in",
+           "one sample will also be discarded from the data.\n}", 
+           "By default, all missing values will be replaced by the half of the minimum positive value.\n"
+           );
+   cat(descr, file=rnwFile, append=TRUE);
+  
+   
+    descr<-c("\\subsubsection{Data Filtering}\n",
+             "The purpose of the data filtering is to identify and remove features that are unlikely to be of",
+             "use when modeling the data. No phenotype information are used in the filtering process, so the result",
+             "can be used with any downstream analysis. This step can usually improves the results. \n",
+             "Features having low count and variance can be removed during the filtration step.",               
+             "Features having very few counts are filtered based on their abundance levels (minimum counts) across ",
+             "samples (prevalence). Other than sample prevalence, such features can also be detected using minimum",
+             " count cutoff based on their mean and median values.\n",
+             "Features with constant or less variable abundances are invaluable for comparative analysis.",
+             "Such features are filtered based on their inter-quantile ranges, standard deviations or coefficient of variations.",
+             "\\textit{By default, features having zero counts across all the samples, or only appears in one sample",
+             "will be removed from further analysis.}");
+    
+    cat(descr, file=rnwFile, append=TRUE);
+    cat("\n\n", file=rnwFile, append=TRUE);
+    
+    filt.msg <- mbSetObj$dataSet$filt.msg;
+    
+    if(is.null(filt.msg)){
+      filt.msg <- "No data filtering was performed.";
+    }
+    cat("Microbiome data: ",filt.msg, file=rnwFile, append=TRUE);
+
+  cat("\n\n", file=rnwFile, append=TRUE);
+  
+  filt.msg <- mbSetObj$dataSet$metabolomics$filt.msg;
+  
+  if(is.null(filt.msg)){
+    filt.msg <- "No data filtering was performed.";
+  }
+  cat("Metabolomics data: ",filt.msg, file=rnwFile, append=TRUE);
+  
+  cat("\n\n", file=rnwFile, append=TRUE);
+
+}
+
+# create normalization doc 
+CreateMMPNORMdoc <- function(mbSetObj){
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  
+  # need to check if this process is executed
+  if(is.null(mbSetObj$dataSet$norm.phyobj)){
+    errorMsg<- c("Error occured during normalization of your data ....",
+                 "Fail to proceed. Please check if the data format you uploaded is correct.",
+                 "Please visit our FAQs and Data Format pages for more information!");
+    
+    cat(errorMsg, file=rnwFile, append=TRUE);
+    return();
+  }
+  
+  descr <- c("\\subsection{Data Normalization}\n",
+              "The data is stored as a table with one sample per column and one variable per row.\n")
+
+ cat(descr, file=rnwFile, append=TRUE);
+
+ descr1<-c("\\subsubsection{Microbiome Data}\n",
+              "For micorbiome data,the normalization procedures implemented below are grouped into three categories.",
+              "Data rarefaction and scaling based methods deal with uneven sequencing depths by bringing",
+              "samples to the same scale for comparison. While transformation based",
+              "methods account for sparsity, compositionality, and large variations within the data.",
+              "You can use one or combine all three to achieve better results. For more information",
+              "about these methods, please refer to the paper by Weiss et al.\\footnote{Weiss et al.",
+              "\\textit{Normalization and microbial differential abundance strategies depend upon",
+              "data characteristics}, Microbiome 2017}",
+              "\n",
+              "The normalization consists of the following options:");
+  
+  cat(descr1, file=rnwFile, append=TRUE);
+  
+  descr2 <- c("\\begin{enumerate}",
+              "\\item{Data rarefying (with or without replacement) }",
+              "\\item{Data scaling: }",
+              "\\begin{itemize}",
+              "\\item{Total sum scaling (TSS) }",
+              "\\item{Cumulative sum scaling (CSS) }",
+              "\\item{Upper-quantile normalization (UQ)}",
+              "\\end{itemize}",
+              "\\item{Data transformation : }",
+              "\\begin{itemize}",
+              "\\item{Relative log expression (RLE) }",
+              "\\item{Trimmed mean of M-values (TMM)}",
+              "\\item{Centered log ratio (CLR)}",
+              "\\end{itemize}",
+              "\\end{enumerate}",
+              "\n\n");
+  cat(descr2, file=rnwFile, append=TRUE, sep="\n");
+  cat("\n\n", file=rnwFile, append=TRUE);
+  norm.msg <- mbSetObj$dataSet$norm.msg;
+  
+  if(is.null(norm.msg)){
+    norm.msg <- "No data normalization was performed.";
+  }
+  cat(norm.msg, file=rnwFile, append=TRUE);
+  cat("\n", file=rnwFile, append=TRUE);
+  
+  
+  descr1 <- c("\\subsubsection{Metabolomics Data}\n",
+  "For metabolomics data, the normalization procedures implemented below are grouped into three categories.",
+  "Row-wise normalization allows general-purpose adjustment for differences among samples;",
+  "data transformation and scaling are two different approaches to make features more comparable.",
+  "You can use one or combine both to achieve better results.",
+  "\n\n",
+  "The normalization consists of the following options:");
+
+cat(descr1, file=rnwFile, append=TRUE);
+
+descr2 <- c("\\begin{enumerate}",
+            "\\item{Row-wise procedures: }",
+            "\\begin{itemize}", 
+            "\\item{Normalization by the sum }",
+            "\\item{Normalization by the sample median }",
+            "\\item{Quantile normalization }",
+            "\\end{itemize}",
+            "\\item{Data transformation : }",
+            "\\begin{itemize}",
+            "\\item{Log transformation (base 10)}",
+            "\\item{Square root transformation}",
+            "\\item{Cube root transformation}",
+            "\\end{itemize}",
+            "\\item{Data scaling: }",
+            "\\begin{itemize}",
+            "\\item{Mean centering (mean-centered only)}",
+            "\\item{Auto scaling (mean-centered and divided by standard deviation of each variable)}",
+            "\\item{Pareto scaling (mean-centered and divided by the square root of standard deviation of each variable)}",
+            "\\item{Range scaling (mean-centered and divided by the value range of each variable)}",
+            "\\end{itemize}",
+            "\\end{enumerate}",
+            "\n\n")
+  
+     cat(descr2, file=rnwFile, append=TRUE, sep="\n");
+      cat("\n\n", file=rnwFile, append=TRUE);
+     norm.msg <- mbSetObj$dataSet$metabolomics$norm.msg;
+  
+     if(is.null(norm.msg)){
+       norm.msg <- "No data normalization was performed.";
+     }
+     cat(norm.msg, file=rnwFile, append=TRUE);
+     cat("\n", file=rnwFile, append=TRUE);
+  
+}
+
+InitMMPAnalMode<-function(){
+  
+  descr <- c("\\section{Microbiome Metabolomics Analysis}",
+             "MicrobiomeAnalyst offers three types of methods for microbome and metabolomics data intergration. ",
+             "They include:\n");
+  cat(descr, file=rnwFile, append=TRUE, sep="\n");
+  
+  descr2 <- c("\\begin{enumerate}",
+              "\\item{Dimensionality reduction: }",
+              "\\begin{itemize}",
+              "\\item{Procrustes analysis (PA)}",
+              "\\item{Data Integration Analysis for Biomarker discovery using Latent variable approaches for Omics studies(DIABLO)}",
+              "\\end{itemize}",
+              "\\item{Metabolic network and pathway analysis}",
+              "\\item{Microbiome-metabolome correlation analysis}",
+              "\\begin{itemize}",
+              "\\item{Correlation heatmap}",
+              "\\item{Prediction heatmap}",
+              "\\end{itemize}",
+              "\\end{enumerate}");
+  
+  cat(descr2, file=rnwFile, append=TRUE, sep="\n");
+  cat("\n\n", file=rnwFile, append=TRUE, sep="\n");
+}
+
+CreateLMRdoc <- function(mSetObj=NA){ ## need to figure out the image still
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  if(is.null(mbSetObj$analSet$resTable)|is.null(mbSetObj$dataSet$metabolomics$resTable)){
+    return();
+  }
+  
+  if(isEmptyMatrix(mbSetObj$analSet$resTable)){
+    masslin.tab<-NULL;
+  }else{
+    if(mbSetObj$micDataType=="otu"){
+      masslin.tab<-paste("Table", table.count<<-table.count+1, "shows the important features identified by MaasLin at","\\texttt{", mbSetObj$analSet$maaslin$taxalvl, "}level");
+    }else{
+      masslin.tab<-paste("Table", table.count<<-table.count+1, "shows the important KOs identified by MaasLin");
+    }
+   }
+  
+  
+  if(isEmptyMatrix(mbSetObj$dataSet$metabolomics$resTable)){
+    limma.tab<-NULL;
+  }else{
+    #taxonomic class will be replaced with gene id in SDP
+    if(mbSetObj$metDataType=="peak"){
+      limma.tab<-paste("Table", table.count<<-table.count+1, "shows the important peaks identified by Limma");
+    }else{
+      limma.tab<-paste("Table", table.count<<-table.count+1, "shows the important metabolites identified by Limma");
+    }
+  }
+ 
+  descr <- c("\\subsection{Linear models with covariate adjustments}\n",
+             "Including metadata in the linear model adjusts for variability associated with them while ",
+             "performing statistical tests for the variable of interest. Users have the option of which metadata to include ",
+             "and whether to include them as fixed (normal) or random (blocking factor) effects. It is important to investigate ",
+             "correlation between metadata prior to defining the model as including variables that are highly correlated ",
+             "can lead to model parameter instability. ",
+             "\n\n");
+  
+  cat(descr, file=rnwFile, append=TRUE);
+  cat("\n\n", file=rnwFile, append=TRUE);
+  
+  cmdhist<-c("<<echo=false, results=tex>>=",
+             "GetSigTable.MMPMic(mbSet)",
+             "@");
+  cat(cmdhist, file=rnwFile, append=TRUE, sep="\n");
+  cat("\\clearpage", file=rnwFile, append=TRUE);
+  cat("\n\n", file=rnwFile, append=TRUE);
+  
+  cmdhist<-c("<<echo=false, results=tex>>=",
+             "GetSigTable.MMPMet(mbSet)",
+             "@");
+  cat(cmdhist, file=rnwFile, append=TRUE, sep="\n");
+  cat("\\clearpage", file=rnwFile, append=TRUE);
+}
+
+  CreateMMPVISEXPLRdoc <- function(mbSetObj){
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  
+  # need to check if this process is executed
+  if(is.null(mbSetObj$analSet$dimrdc)){
+    return();
+  }
+  
+  descr <- c("\\subsection{Explore Overall Patterns via Dimensionality Reduction}\n",
+             "These methods are used to visualize the overall pattern of the paired microbiome and metabolomics datasets via dimensionality reduction.",
+             "MicrobiomeAnalyst provides two options:  ",
+             "\\begin{itemize}",
+             "\\item{PA: a simple visualization technique that superimposes the principal components of two datasets at a low-dimensional space. 
+               Procrustes essentially computes reduced dimensions for each data set using a method similar to PCA. Then, one of the reduced dimension matrices is rotated until it has maximum similarity with the other. 
+                Scores from both matrices are plotted at the same time, with pairs belonging to the same sample connected by a line. Procrustes is asymmetric, therefore the order that the 'omics datasets are uploaded will impact the results }",
+             "\\item{DIABLO: a supervised method for multi-omics biomarker exploration. It is based on a generalized version of PLS (multi block PLS-DA) that seeks to find related multi-dimensional components that maximally separate sample labels.
+                 DIABLO is symmetric with respect to the 'omics data, therefore the order that 'omics datasets are uploaded will not impact the results.}",
+             "\\end{itemize}"
+             );
+  
+  cat(descr, file=rnwFile, append=TRUE);
+  
+ 
+    if(is.null(mbSetObj$imgSet$procrustes$diagnostic)|is.null(mbSetObj$imgSet$procrustes$pca)){
+      return();
+    }else{
+    if(mbSetObj$micDataType=="otu"){
+      descr1<- paste("Figure", fig.count<<-fig.count+1,"shows the PA diagnostic plot at ","\\texttt{", mbSetObj$analSet$maaslin$taxalvl, "}level. \n");
+      descr2<- paste("Figure", fig.count<<-fig.count+1,"shows the integrative sample space by PA at ","\\texttt{", mbSetObj$analSet$maaslin$taxalvl, "}level. \n");
+     }else{
+      descr1<- paste("Figure", fig.count<<-fig.count+1,"shows the PA diagnostic plot. \n");
+      descr2<- paste("Figure", fig.count<<-fig.count+1,"shows the integrative sample space by PA. \n");
+    }
+   
+    cat("\n\n", file=rnwFile, append=TRUE, sep="\n");
+    cat(descr1, file=rnwFile, append=TRUE);
+    
+    descr<- "Plot of procrustes residual differences which is based on the sum of squared deviations. The higher the residual difference, the more different is the paired sample between both omics. The three horizontal lines correspond to 75, median and 25 percentile of all residuals. \n"
+    cat(descr, file=rnwFile, append=TRUE);
+    
+    cmdhist<-c("\\begin{figure}[htp]",
+               "\\begin{center}",
+               paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$procrustes$diagnostic,"}", sep=""),
+               paste("\\caption{PA diagnostic plot}"),      
+               "\\end{center}",
+               paste("\\label{",mbSetObj$imgSet$procrustes$diagnostic,"}", sep=""),
+               "\\end{figure}");
+    
+    cat(cmdhist, file=rnwFile, append=TRUE);
+    
+    cat("\n\n", file=rnwFile, append=TRUE, sep="\n");
+    cat(descr2, file=rnwFile, append=TRUE);
+    
+    descr<- "Integrative sample space displaying overall sample clustering and similarity. Each paired samples (same sample in omics 1 and omics 2) are linked by edges. The shorter the edges, the more similar they are. \n"
+    cat(descr, file=rnwFile, append=TRUE);
+    
+    cmdhist<-c("\\begin{figure}[htp]",
+               "\\begin{center}",
+               paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$procrustes$pca,"}", sep=""),
+               paste("\\caption{Integrative sample space by PA}"),      
+               "\\end{center}",
+               paste("\\label{",mbSetObj$imgSet$procrustes$pca,"}", sep=""),
+               "\\end{figure}");
+    cat(cmdhist, file=rnwFile, append=TRUE);
+  }
+    if(is.null(mbSetObj$imgSet$diablo$diagnostic)|is.null(mbSetObj$imgSet$diablo$pca) | is.null(mbSetObj$imgSet$diablo$loading)){
+      return();
+    }else{
+    if(mbSetObj$micDataType=="otu"){
+      descr1<- paste("Figure", fig.count<<-fig.count+1,"shows the DIABLO diagnostic plot at ","\\texttt{", mbSetObj$analSet$maaslin$taxalvl, "}level. \n");
+      descr2<- paste("Figure", fig.count<<-fig.count+1,"shows the integrative sample space by DIABLO at ","\\texttt{", mbSetObj$analSet$maaslin$taxalvl, "}level. \n");
+      descr3<- paste("Figure", fig.count<<-fig.count+1,"shows the DIABLO loading plot at ","\\texttt{", mbSetObj$analSet$maaslin$taxalvl, "}level. \n");
+      
+       }else{
+      descr1<- paste("Figure", fig.count<<-fig.count+1,"shows the DIABLO diagnostic plot. \n");
+      descr2<- paste("Figure", fig.count<<-fig.count+1,"shows the integrative sample space by DIABLO. \n");
+      descr3<- paste("Figure", fig.count<<-fig.count+1,"shows the DIABLO loading plot. \n");
+      
+      }
+    
+    cat("\n\n", file=rnwFile, append=TRUE, sep="\n");
+    cat(descr1, file=rnwFile, append=TRUE);
+    
+    descr<- "This diagnostic plot is used to determine the number of components to include in the algorithm. It displays the relationship between error rate and number components. The optimal number of components corresponds to the component which corresponds to the elbow of the performance plot (when error rates start to stop drop less abruptly)."
+    cat(descr, file=rnwFile, append=TRUE);
+    
+    cmdhist<-c("\\begin{figure}[htp]",
+               "\\begin{center}",
+               paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$diablo$diagnostic,"}", sep=""),
+               paste("\\caption{DIABLO diagnostic plot}"),      
+               "\\end{center}",
+               paste("\\label{",mbSetObj$imgSet$diablo$diagnostic,"}", sep=""),
+               "\\end{figure}");
+    
+    cat(cmdhist, file=rnwFile, append=TRUE);
+    
+    cat("\n\n", file=rnwFile, append=TRUE, sep="\n");
+    cat(descr2, file=rnwFile, append=TRUE);
+    
+    
+    cmdhist<-c("\\begin{figure}[htp]",
+               "\\begin{center}",
+               paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$diablo$pca,"}", sep=""),
+               paste("\\caption{Integrative sample space by DIABLO}"),      
+               "\\end{center}",
+               paste("\\label{",mbSetObj$imgSet$diablo$pca,"}", sep=""),
+               "\\end{figure}");
+    cat(cmdhist, file=rnwFile, append=TRUE);
+
+    cat("\n\n", file=rnwFile, append=TRUE, sep="\n");
+    cat(descr3, file=rnwFile, append=TRUE);
+    descr<- "Bar plot visualizing loading weights of top 10 variables on each component and each data set. The color indicates the class in which the variable has the maximum level of expression using the median."
+    cat(descr, file=rnwFile, append=TRUE);
+    
+    
+    cmdhist<-c("\\begin{figure}[htp]",
+               "\\begin{center}",
+               paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$diablo$loading,"}", sep=""),
+               paste("\\caption{DIABLO loading plot}"),      
+               "\\end{center}",
+               paste("\\label{",mbSetObj$imgSet$diablo$loading,"}", sep=""),
+               "\\end{figure}");
+        cat(cmdhist, file=rnwFile, append=TRUE);
+  }
+  
+  cat("\n\n", file=rnwFile, append=TRUE, sep="\n");
+  descr<- "The interactive 3D scatter plot is not included here and can be directly download on the corresponding page."
+  cat(descr, file=rnwFile, append=TRUE);
+  
+  cat("\\clearpage", file=rnwFile, append=TRUE);
+}
+
+CreateMMPNetworkRdoc <- function(mbSetObj){
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  
+  # need to check if this process is executed
+  if(is.null(mbSetObj$analSet$keggnet)){
+    return();
+  }
+  if(mbSetObj$analSet$keggnet$background=="bac"){
+    net = "bacteria metabolism "
+  }else if(mbSetObj$analSet$keggnet$background=="hsabac"){
+    net = "human and bacteria metabolism "
+  }else if(mbSetObj$analSet$keggnet$background=="all"){
+    net = "general metabolism "
+  }else if(mbSetObj$analSet$keggnet$background=="usrbac"){
+    net = "metabolism of all the uploaded features "
+  }else if(mbSetObj$analSet$keggnet$background=="sigbac"){
+    net = "metabolism of significant features "
+  }
+ if(mbSetObj$micDataType=="otu"){
+    net <- paste0(net,"at ",  mbSetObj$analSet$keggnet$taxalvl," level. ")
+  }
+  
+  descr <- c("\\subsection{Obtain Functional Insights via Pathways and Network}\n",
+             "Microbiome data and metabolomics data are projected into KEGG metabolic network for visual exploration as well as enrichment analysis. The integration strategies are based on microbiome data types. ",
+             "Marker genes data will be used to customize the metabolic network for enrichment analysis of metabolomics data. Users can click a node to view the most correlated microbes of metabolites. ",
+             "For the metagenomics data, both KOs and metabolomic features will be projected to the selected network for integration analysis.",
+             "\n\n",
+             "The background network is customized to ", net, "\n",
+             "The interactive network is not included here and can be directly download on the corresponding page.\n");
+  cat(descr, file=rnwFile, append=TRUE);
+  
+}
+
+CreateMMPHeatmapRdoc <- function(mbSetObj){
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  
+  if(is.null(mbSetObj$analSet$integration)|is.null(mbSetObj$imgSet$IntegrationHeatmap)){
+    return();
+  }
+  
+  descr <- c("\\subsection{Discover Metabolite-microbe Correlations via Statistics and GEMs}\n",
+             "Correlation heatmap is the result of statistical correlation.",
+             "Prediction heatmap is based on GEM-based predictive models. The predictive models are logistic regression models trained based on high-quality genome-scale metabolic models (GEMs) that can predict the potential of each metabolite production across different taxonomy levels. Prediction heatmap is only suitable for integrating different taxonomy and metabolites.",
+             "Users can choose to overlap the two types of heatmaps for better interpretation. ",
+             "\n\n")
+   cat(descr, file=rnwFile, append=TRUE);
+   
+   para <- ""
+   if(!is.null(mbSetObj$analSet$integration$corr) & !is.null( mbSetObj$analSet$integration$corrPval)){
+     para<- paste0("correlation threshhold: ",mbSetObj$analSet$integration$corr,"; ",
+                   " correlation p-value threshhold: ",mbSetObj$analSet$integration$corr,"; ")
+   }
+   if(!is.null(mbSetObj$analSet$integration$potential) & !is.null( mbSetObj$analSet$integration$predPval)){
+     para<-  paste0(para,"potential threshhold: ",mbSetObj$analSet$integration$potential,"; ",
+                    " prediction p-value threshhold: ",mbSetObj$analSet$integration$predPval,"; ")
+     
+   }
+   para <- paste0(para," direction: ", mbSetObj$analSet$integration$sign,".")
+   
+   
+  if(mbSetObj$micDataType=="otu"){
+    descr<- paste("Figure", fig.count<<-fig.count+1,"shows the ","\\texttt{", mbSetObj$analSet$integration$htMode, "} heatmap at ",
+                  "\\texttt{", mbSetObj$analSet$integration$taxalvl, "}level. ",
+                  "[",para,"].\n",
+                  "The interactive network is not included here and can be directly download on the corresponding page.\n");
+  }else{
+    descr<- paste("Figure", fig.count<<-fig.count+1,"shows the correlation heatmap. ",
+                  "[",para,"].\n",
+                  "The interactive network is not included here and can be directly download on the corresponding page.\n");
+  }
+   cat(descr, file=rnwFile, append=TRUE);   
+ 
+}
+
+###############################################
+## Meta-analysis
+##########################################
+CreateMetaRnwReport<-function(mbSetObj, usrName){
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  #saveRDS(mbSetObj,"/Users/lzy/Documents/MicrobiomeAnalystR-master/mbSetObj.rds")
+  CreateHeader(usrName);
+  CreateIntr();
+  CreateIOdoc();
+  CreateNORMdoc();
+  InitMetaAnalMode();
+  
+  if(!is.null(mbSetObj[["analSet"]]) & (length(mbSetObj$analSet)>0)){
+    print("hrer")
+    CreateMetaVISEXPLRdoc(mbSetObj);
+    CreateMetaLMRdoc(mbSetObj);
+    CreateMMPALPHDIVdoc(mbSetObj);
+    CreateMetaBETADIVdoc(mbSetObj);
+  } else {
+    CreateAnalNullMsg();
+  }
+  #CreateFooter(mbSetObj);
+}
+
+
+
+
+InitMetaAnalMode <- function(){
+  
+  descr <- c("\\section{Statistical Meta-Analysis}",
+             "MicrobiomeAnalyst offers a variety of methods commonly used in meta-analysis.",
+             "They include:\n");
+  
+  cat(descr, file=rnwFile, append=TRUE, sep="\n");
+  
+  descr2 <- c("\\begin{enumerate}",
+              "\\item{Visual exploration: }",
+              "\\begin{itemize}",
+              "\\item{Stacked bar/area plot }",
+              "\\item{PCoA projection}",
+              "\\end{itemize}",
+              "\\item{Biomarker meta-analysis: }",
+              "\\begin{itemize}",
+              "\\item{Linear modeling (LM)}",
+              "\\item{Compound Poisson LM}",
+              "\\end{itemize}",
+              "\\item{Diversity meta-analysis: }",
+              "\\begin{itemize}",    
+              "\\item{Alpha diversity}",
+              "\\item{Beta diversity}",
+              "\\end{itemize}",
+              "\\end{enumerate}");
+  
+  cat(descr2, file=rnwFile, append=TRUE, sep="\n");
+  cat("\n\n", file=rnwFile, append=TRUE, sep="\n");
+}
+
+
 #'Create report of analyses
 #'@description Report generation using Sweave
 #'Create footer
@@ -1619,6 +2252,212 @@ CreateRHistAppendix <- function(){
   }
 }
 
+CreateMetaVISEXPLRdoc <- function(mbSetObj){
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  
+  # need to check if this process is executed
+  if(is.null(mbSetObj$analSet$stack)){
+    return();
+  }
+  
+  descr <- c("\\subsection{Visual Exploration}\n",
+             "These methods are used to visualize the taxonomic composition of community.",
+             "MicrobiomeAnalyst provides an option to view this composition at various taxonomic levels (phylum, class, order) using either",
+             "stacked bar/stacked area plot or PCoA plots. Viewing composition at higher-levels (phylum) provides a better picture than lower-levels (species)",
+             "when the number of species in a community is large and diversified.\n",
+             "Additionally, such taxonomic abundance or composition can be viewed at community-level (all samples), sample-group",
+             "level (based on experimental factor) or at individual sample-level.\n",
+             "Taxa with very low read counts can also be collapsed into \\texttt{Others} category using a count cutoff",
+             "based on either sum or median of their counts across all samples or all groups. Merging such minor",
+             "taxa will help in better visualization of significant taxonomic patterns in data.",
+             "\n");
+  
+  cat(descr, file=rnwFile, append=TRUE);
+  
+  # STACKPLOT
+  if(!is.null(mbSetObj$analSet$stack)){
+    
+    descr<- paste("Figure", fig.count<<-fig.count+1,"shows the taxonomic composition using Stacked bar/area plot.");
+    
+    cat(descr, file=rnwFile, append=TRUE);
+    
+    cmdhist<-c("\\begin{figure}[htp]",
+               "\\begin{center}",
+               paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$stack,"}", sep=""),
+               paste("\\caption{Taxonomic composition of", 
+                     " community at ", "\\texttt{", mbSetObj$analSet$stack.taxalvl, "} level using ", "\\texttt{", mbSetObj$analSet$plot, "} plot}", sep=""),      
+               "\\end{center}",
+               paste("\\label{",mbSetObj$imgSet$stack,"}", sep=""),
+               "\\end{figure}");
+    
+    cat(cmdhist, file=rnwFile, append=TRUE);
+    cat("\n\n", file=rnwFile, append=TRUE);
+  }
+  
+  # PcoA  
+  if(!is.null(mbSetObj$analSet$vis$feat.perc) & !is.null(mbSetObj$analSet$vis$distName)){ 
+    descr <-paste0("The interactive PCoA plot is performed using ", "\\texttt{", mbSetObj$analSet$vis$feat.perc,"} ",
+    "and ","\\texttt{", mbSetObj$analSet$vis$distName, "} ","distance measure. ",
+    "The interactive 3D plot is not included here and can be directly download on the corresponding page.\n")
+    cat(descr, file=rnwFile, append=TRUE);
+   }
+}
+
+CreateMetaLMRdoc <- function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  if(is.null(mbSetObj$analSet$effectsize)){
+    return();
+  }
+
+  descr <- c("\\subsection{Biomarker meta-analysis.}\n",
+             "These methods aim to Identify consistent changes across different data sets. It performs regression analysis in individual studies using MaAsLin2, and then aggregate results with fixed/mixed effect models using MMUPHin.",
+             "MicrobiomeAnalyst provide Linear modeling (LM) and Compound Poisson LM (CPLM) for differential analysis. 
+             Fixed Effect Model (EE) and Random Effect Model (REML) are offered for meta effect calculation.");
+  
+  cat(descr, file=rnwFile, append=TRUE);
+  cat("\n\n", file=rnwFile, append=TRUE, sep="\n");
+  
+  if(!is.null(mbSetObj$imgSet$LM)){
+    
+    descr<- paste("Figure", fig.count<<-fig.count+1,"shows the top features at ",
+                  "\\texttt{", mbSetObj$analSet$effectsize$taxalvl,"} ","level identified using ",
+                  "\\texttt{", mbSetObj$analSet$effectsize$de.method,"} ","and ",
+                  "\\texttt{", mbSetObj$analSet$effectsize$ef.method,"}. ",
+                  "The experimental factor for comparison is ",
+                  "\\texttt{", gsub("_", "\\\\_", mbSetObj$analSet$effectsize$selMeta),"}. ");
+    
+    cat(descr, file=rnwFile, append=TRUE);
+    
+    cmdhist<-c("\\begin{figure}[htp]",
+               "\\begin{center}",
+               paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$LM,"}", sep=""),
+               paste("\\caption{Top features at ","\\texttt{", mbSetObj$analSet$effectsize$taxalvl,"} level against",
+                     "\\texttt{",  gsub("_", "\\\\_", mbSetObj$analSet$effectsize$selMeta), "} using ",
+                     "\\texttt{", mbSetObj$analSet$effectsize$de.method,"} ","and ",
+                     "\\texttt{", mbSetObj$analSet$effectsize$ef.method,"}. }",
+                      "\\end{center}"),
+               paste("\\label{",mbSetObj$imgSet$LM,"}", sep=""),
+               "\\end{figure}");
+    
+    cat(cmdhist, file=rnwFile, append=TRUE);
+    cat("\n\n", file=rnwFile, append=TRUE);
+
+  }
+  
+  if(!is.null(mbSetObj$imgSet$CPLM)){
+    
+    descr<- paste("Figure", fig.count<<-fig.count+1,"shows the top features at ",
+                  "\\texttt{", mbSetObj$analSet$effectsize$taxalvl,"} ","level identified using ",
+                  "\\texttt{", mbSetObj$analSet$effectsize$de.method,"} ","and ",
+                  "\\texttt{", mbSetObj$analSet$effectsize$ef.method,"}. ",
+                  "The experimental factor for comparison is ",
+                  "\\texttt{", gsub("_", "\\\\_", mbSetObj$analSet$effectsize$selMeta),"}. ");
+    
+    cat(descr, file=rnwFile, append=TRUE);
+    
+    cmdhist<-c("\\begin{figure}[htp]",
+               "\\begin{center}",
+               paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$CPLM,"}", sep=""),
+               paste("\\caption{Top features at ","\\texttt{", mbSetObj$analSet$effectsize$taxalvl,"} level against",
+                     "\\texttt{",  gsub("_", "\\\\_", mbSetObj$analSet$effectsize$selMeta), "} using ",
+                     "\\texttt{", mbSetObj$analSet$effectsize$de.method,"} ","and ",
+                     "\\texttt{", mbSetObj$analSet$effectsize$ef.method,"}. }",
+                     "\\end{center}"),
+               paste("\\label{",mbSetObj$imgSet$CPLM,"}", sep=""),
+               "\\end{figure}");
+    
+    cat(cmdhist, file=rnwFile, append=TRUE);
+    cat("\n\n", file=rnwFile, append=TRUE);
+  }
+  
+}
+
+
+CreateMMPALPHDIVdoc <- function(mbSetObj){
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  
+  # need to check if this process is executed
+  if(is.null(mbSetObj$imgSet$alpha)){
+    return();
+  }
+  
+  descr <- c("\\subsection{Alpha Diversity Profiling and Significance Testing.}\n",
+             "This method is used to measure the diversity present within a sample or community.",
+              "Alpha diversity can be characterized via the total number of species (richness),",
+             "the abundances of the species (evenness) or measures that considered",
+             "both richness and evenness. How these measures estimates the diversity",
+             "is need to be considered when performing alpha-diversity analysis.",
+             "User can choose from richness based measure such as Observed index which calculates the actual number of ",
+             "unique taxa observed in each sample. While the Chao1 and ACE measures",
+             "estimate the richness by inferring out the number of rare organisms that may",
+             "have lost due to undersampling. Also,there are indices such as Shannon, Simpson",
+             "and Fisher in which along with the number (richness), the abundance of organisms (evenness)",
+             "is also measured to describe the actual diversity of a community.\n",
+             "For meta-analysis of alpha diversity, MicrobiomeAnalyst computes common diversity indices on a per-study basis and displays boxplots 
+             showing the ratios of indices that compare experimental and control groups per study grouped by metadata and forest plot",
+              paste("Figure", fig.count<<-fig.count+1," shows the alpha diversity measure across all the datasets for the selected diversity index.")
+             );
+   cat(descr, file=rnwFile, append=TRUE,sep="\n");
+  cat("\n\n", file=rnwFile, append=TRUE);
+  
+  cmdhist<-c(
+    "\\begin{figure}[htp]",
+    "\\begin{center}",
+    paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$alpha,"}", sep=""),
+    "\\caption{Alpha-diversity measure at","\\texttt{",mbSetObj$analSet$alpha.taxalvl, "} level and compared across all the datasets. }",
+    "\\end{center}",
+    paste("\\label{",mbSetObj$imgSet$alpha,"}", sep=""),
+    "\\end{figure}"
+  );
+  cat(cmdhist, file=rnwFile, append=TRUE);
+  cat("\\clearpage", file=rnwFile, append=TRUE, sep="\n");
+}
+
+CreateMetaBETADIVdoc<-function(mbSetObj){
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  
+  # need to check if this process is executed
+  if(is.null(mbSetObj$analSet$beta)){
+    return();
+  }
+  
+  descr <- c("\\subsection{Beta diversity Analysis}\n",
+             "This method provides a way to compare the diversity or composition between two samples or microbial communities.",
+             "These methods compare the changes in the presence/absence or abundance of thousands of taxa present in a dataset",
+             "and summarize these into how 'similar' or 'dissimilar' two samples. Each sample gets compared to every other sample", 
+             "generating a distance or dissimilarity matrix. Two parameters need to be considered when performing",
+             "beta diversity analysis. The first one is how similarity or distance between sample is measured which includes",
+             "non-phylogenetic (Bray-Curtis distance, Shannon index, Jaccard index) and phylogenetic-based (weighted and unweighted UniFrac)",
+             "distances. The other parameter is how to visualize such dissimilarity matrix in lower dimensions. Ordination-based methods such as Principle Coordinate",
+             "Analysis (PCoA) and non-metric multidimensional scaling (NMDS) are used to visualize these matrix in 2 or 3-D plot where",
+             "each point represents the entire microbiome of a single sample. Each axis reflects the percent of the variation between", 
+             "the samples with the X-axis representing the highest dimension of variation and the Y-axis representing the second",
+             "highest dimension of variation. Further,each point or sample displayed on PCoA or NMDS plots is colored based on either",
+             "sample group, features alpha diversity measures, or the abundance levels of a specific feature.\n",
+             "Also, the statistical significance of the clustering pattern in ordination plots can be evaluated using anyone among",
+             "Permutational ANOVA (PERMANOVA), Analysis of group Similarities (ANOSIM) and Homogeneity of Group Dispersions (PERMDISP).",
+             "\n\n",
+             "For meta-analysis of beta diversity, MicrobiomeAnalyst performs PCoA on beta diversity distance matrices on each individual study. Statistical testing is performed to measure significance on the effect of phenotype on community composition",
+             paste("Figure", fig.count<<-fig.count+1,"shows the ordination plot represented in 2-D for all datasets;"));
+            
+  cat(descr, file=rnwFile, append=TRUE,sep="\n");
+  
+  cmdhist<-c(
+    "\\begin{figure}[htp]",
+    "\\begin{center}",
+    paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$beta2d,"}", sep=""),
+    "\\caption{2-D","\\texttt{", mbSetObj$analSet$beta.meth, "} plot using \\texttt{", mbSetObj$analSet$beta.dist, "} distance. The explained",
+    "variances are shown in brackets.}",
+    "\\end{center}",
+    paste("\\label{",mbSetObj$imgSet$beta2d,"}", sep=""),
+    "\\end{figure}"
+  );
+  cat(cmdhist, file=rnwFile, append=TRUE, sep="\n");
+  cat("\n\n", file=rnwFile, append=TRUE, sep="\n");
+}
 #'Create report of analyses (Met Enrichment)
 #'@description Report generation using Sweave
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}

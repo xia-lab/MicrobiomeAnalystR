@@ -218,6 +218,9 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
     
   }
   reductionOptGlobal <<- reductionOpt
+
+
+  mbSetObj$analSet$dimrdc<-reductionOpt;
   
   .set.mbSetObj(mbSetObj);
   
