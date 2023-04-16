@@ -420,7 +420,7 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   data <- mbSetObj$dataSet$proc.phyobj;
-  
+  print(expFact)
   expFact <- expFact
   group <- group
   

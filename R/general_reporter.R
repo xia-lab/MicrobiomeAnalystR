@@ -1654,6 +1654,7 @@ CreateMMPRnwReport<-function(mbSetObj, usrName){
   CreateHeader(usrName);
   CreateIntr();
   CreateMMPIOdoc();
+ if(mbSetObj$inputType=="table"){
   CreateMMPNORMdoc();
   CreateLMRdoc();
   InitMMPAnalMode();
@@ -1666,10 +1667,23 @@ CreateMMPRnwReport<-function(mbSetObj, usrName){
   } else {
     CreateAnalNullMsg();
     }
-   # CreateFooter(mbSetObj);
+
+  }else{
+
+  if(!is.null(mbSetObj[["analSet"]]) & (length(mbSetObj$analSet)>0)){
+     CreateMMPMapdoc(mbSetObj);
+     InitMMPAnalListMode();
+     CreateMMPNetworkRdoc(mbSetObj);
+     CreateMMPHeatmapRdoc(mbSetObj);
+  } else {
+    CreateAnalNullMsg();
+    }
+
+
+
 }
 
-
+}
 CreateMMPIOdoc <- function(mbSetObj){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -1680,7 +1694,6 @@ CreateMMPIOdoc <- function(mbSetObj){
                "Currently, KEGG Orthology IDs (KO) is supported for shotgun data and KEGG IDs, HMDB IDs and names are support for metabolite identification.\n"
     );
   cat(descr, file=rnwFile, append=TRUE);
-  #saveRDS(mbSetObj,"/Users/lzy/Documents/MicrobiomeAnalystR-master/mbSetObj.rds")
   if(mbSetObj$inputType=="table"){
     
     descr<-c("Samples are represented in columns, while rows contains the information about the features.",
@@ -1724,10 +1737,7 @@ CreateMMPIOdoc <- function(mbSetObj){
     smsg <- mbSetObj$dataSet$smpl.msg;
     cat(gsub("_", "\\\\_", smsg), file=rnwFile, append=TRUE, sep=" ");
     
-  }else if(mbSetObj$inputType=="list"){
-    descr<-c("\\subsubsection{Reading paired list data}\n",
-             "");
-  }
+
   
   # the last step is sanity check
   descr<-c("\\subsubsection{Data Integrity Check}\n",
@@ -1775,7 +1785,35 @@ CreateMMPIOdoc <- function(mbSetObj){
   
   cat("\n\n", file=rnwFile, append=TRUE);
 
-}
+  }else if(mbSetObj$inputType=="list"){
+     descr<-c("\\subsubsection{Reading paired list data}\n",
+           "For micorbiome data, user can upload a taxa list and specify the taxonomy level.",
+           "Both metabolite list and peak list are supported. KEGG IDs, HMDB IDs and names are support for metabolite identification.",
+           'The peak list should be ranked by p.value, t-score or fold change and uploaded in .txt or .csv format. Users need to specify the positive/negative mode of the peak generation.');
+
+  cat(descr, file=rnwFile, append=TRUE);
+
+    
+  descr<- paste("A total of ", "\\texttt{", length(mbSetObj$dataSet$mic$original),"} ",
+                "\\texttt{", mbSetObj$paraSet$taxalvl,"} "," are presented.\n\n");
+  
+  cat(descr, file=rnwFile, append=TRUE);
+  
+  if(mbSetObj$paraSet$metDataType=="metabolite"){
+    descr<- paste("A total of ", "\\texttt{", length(mbSetObj$dataSet$met$original),"} ",
+                 " metabolites are presented.\n\n");
+
+  }else{
+    descr<- paste("A total of ", "\\texttt{", length(mbSetObj$dataSet$met$original),"} ",
+                  " peaks are presented.\n\n");
+    
+  }
+  
+  cat(descr, file=rnwFile, append=TRUE);
+  cat("\n\n", file=rnwFile, append=TRUE);
+  
+  }
+  }
 
 # create normalization doc 
 CreateMMPNORMdoc <- function(mbSetObj){
@@ -1886,7 +1924,7 @@ descr2 <- c("\\begin{enumerate}",
 InitMMPAnalMode<-function(){
   
   descr <- c("\\section{Microbiome Metabolomics Analysis}",
-             "MicrobiomeAnalyst offers three types of methods for microbome and metabolomics data intergration. ",
+             "MicrobiomeAnalyst offers three types of methods for microbiome and metabolomics data integration. ",
              "They include:\n");
   cat(descr, file=rnwFile, append=TRUE, sep="\n");
   
@@ -1907,6 +1945,26 @@ InitMMPAnalMode<-function(){
   cat(descr2, file=rnwFile, append=TRUE, sep="\n");
   cat("\n\n", file=rnwFile, append=TRUE, sep="\n");
 }
+
+InitMMPAnalListMode<-function(){
+  
+  descr <- c("\\section{Microbiome Metabolomics Analysis}",
+             "MicrobiomeAnalyst offers two types of approaches for microbiome and metabolomics list data integration. ",
+             "They include:\n");
+  cat(descr, file=rnwFile, append=TRUE, sep="\n");
+  
+  descr2 <- c("\\begin{enumerate}",
+              "\\item{Metabolic network and pathway analysis}",
+              "\\item{Microbial metabolic potential prediction and heatmap visualization.\n}",
+              "\\end{enumerate}");
+  
+  cat(descr2, file=rnwFile, append=TRUE, sep="\n");
+  cat("\n\n", file=rnwFile, append=TRUE, sep="\n");
+}
+
+
+
+
 
 CreateLMRdoc <- function(mSetObj=NA){ ## need to figure out the image still
   
@@ -2137,38 +2195,98 @@ CreateMMPHeatmapRdoc <- function(mbSetObj){
     return();
   }
   
-  descr <- c("\\subsection{Discover Metabolite-microbe Correlations via Statistics and GEMs}\n",
-             "Correlation heatmap is the result of statistical correlation.",
-             "Prediction heatmap is based on GEM-based predictive models. The predictive models are logistic regression models trained based on high-quality genome-scale metabolic models (GEMs) that can predict the potential of each metabolite production across different taxonomy levels. Prediction heatmap is only suitable for integrating different taxonomy and metabolites.",
-             "Users can choose to overlap the two types of heatmaps for better interpretation. ",
-             "\n\n")
-   cat(descr, file=rnwFile, append=TRUE);
-   
-   para <- ""
-   if(!is.null(mbSetObj$analSet$integration$corr) & !is.null( mbSetObj$analSet$integration$corrPval)){
-     para<- paste0("correlation threshhold: ",mbSetObj$analSet$integration$corr,"; ",
-                   " correlation p-value threshhold: ",mbSetObj$analSet$integration$corr,"; ")
-   }
-   if(!is.null(mbSetObj$analSet$integration$potential) & !is.null( mbSetObj$analSet$integration$predPval)){
-     para<-  paste0(para,"potential threshhold: ",mbSetObj$analSet$integration$potential,"; ",
-                    " prediction p-value threshhold: ",mbSetObj$analSet$integration$predPval,"; ")
-     
-   }
-   para <- paste0(para," direction: ", mbSetObj$analSet$integration$sign,".")
-   
-   
-  if(mbSetObj$micDataType=="otu"){
-    descr<- paste("Figure", fig.count<<-fig.count+1,"shows the ","\\texttt{", mbSetObj$analSet$integration$htMode, "} heatmap at ",
+  if(mbSetObj$inputType=="list"){
+    
+    descr <- c("\\subsection{Discover Metabolite-microbe Correlations via GEMs}\n",
+               "Prediction heatmap is based on GEM-based predictive models. The predictive models are logistic regression models trained based on high-quality genome-scale metabolic models (GEMs) that can predict the potential of each metabolite production across different taxonomy levels. ",
+               "The color of the heatmap indicate the predicted potential score. ",
+               "Prediction heatmap is only suitable for integrating different taxonomy and metabolites.",
+               "\n\n")
+  }else{
+    
+    descr <- c("\\subsection{Discover Metabolite-microbe Correlations via Statistics and GEMs}\n",
+               "Correlation heatmap is the result of statistical correlation.",
+               "Prediction heatmap is based on GEM-based predictive models. The predictive models are logistic regression models trained based on high-quality genome-scale metabolic models (GEMs) that can predict the potential of each metabolite production across different taxonomy levels. Prediction heatmap is only suitable for integrating different taxonomy and metabolites.",
+               "Users can choose to overlap the two types of heatmaps for better interpretation. ",
+               "\n\n")
+  }
+  
+  cat(descr, file=rnwFile, append=TRUE);
+  
+  para <- ""
+  
+  if(mbSetObj$inputType=="list"){
+    para<-  paste0("Prediction database: ",mbSetObj$analSet$integration$db,"; ",
+                   "Potential threshhold: ",mbSetObj$analSet$integration$potential,". ")
+    
+  }else{
+    if(!is.null(mbSetObj$analSet$integration$corr) & !is.null( mbSetObj$analSet$integration$corrPval)){
+      para<- paste0("correlation threshhold: ",mbSetObj$analSet$integration$corr,"; ",
+                    " correlation p-value threshhold: ",mbSetObj$analSet$integration$corr,"; ")
+      
+    }
+    if(!is.null(mbSetObj$analSet$integration$potential) & !is.null( mbSetObj$analSet$integration$predPval)){
+      para<-  paste0(para,"potential threshhold: ",mbSetObj$analSet$integration$potential,"; ",
+                     " prediction p-value threshhold: ",mbSetObj$analSet$integration$predPval,"; ")
+      
+    }
+    para <- paste0(para," direction: ", mbSetObj$analSet$integration$sign,".")
+  }
+
+ if(mbSetObj$analSet$integration$htMode=="corrht"){
+   htMode = "correlation"
+ }else{
+   htMode = "prediction"
+ }
+    
+if(mbSetObj$micDataType=="otu"){
+    descr<- paste("The ",htMode," heatmap is at ",
                   "\\texttt{", mbSetObj$analSet$integration$taxalvl, "}level. ",
                   "[",para,"].\n",
-                  "The interactive network is not included here and can be directly download on the corresponding page.\n");
+                  "The interactive heatmap is not included here and can be directly download on the corresponding page.\n");
   }else{
-    descr<- paste("Figure", fig.count<<-fig.count+1,"shows the correlation heatmap. ",
+    descr<- paste("Correlation heatmap is generated ",
                   "[",para,"].\n",
-                  "The interactive network is not included here and can be directly download on the corresponding page.\n");
+                  "The interactive heatmap is not included here and can be directly download on the corresponding page.\n");
   }
-   cat(descr, file=rnwFile, append=TRUE);   
- 
+  cat(descr, file=rnwFile, append=TRUE);   
+  
+}
+
+
+CreateMMPMapdoc <- function(mbSetObj){
+  descr <- c("\\subsubsection{Name mapping}\n",
+             "The first step is to match the user's entered taxa and metabolites with the underlying databases (GEMs or KEGG) for integration analysis. 
+             GEMs are genome-scale metabolic models which can be used for metabolic potential prediction. Two databases, Agora and EMBL GEMs, are included. While KEGG is used for enrichment analysis against tuned background.",
+             "IDs from the databases of KEGG, Agora and EMBL GEMs are presented for both taxa and metabolites. NCBI IDs are also provide for taxa mapping.",
+             "The unmapped name will be indicated by a \\textit{- or empty cell} and",
+             "will be removed from further analysis.");
+  cat(descr, file=rnwFile, append=TRUE, sep="\n");
+  
+  taxa.tab<-paste("Table", table.count<<-table.count+1, "shows the name mapping result of input taxa.\n");
+  cat(taxa.tab, file=rnwFile, append=TRUE);
+  if(mbSetObj$paraSet$metDataType=="metabolite"){
+    met.tab <- paste("Table", table.count<<-table.count+1, "shows the name mapping result of input metabolites.\n");
+    cat(met.tab, file=rnwFile, append=TRUE, sep="\n\n");
+  }
+   cat("\n\n", file=rnwFile, append=TRUE);
+  descr<-c("<<echo=false, results=tex>>=",
+           "GetMMPMicTable(mbSet)",
+           "@",
+           "\\clearpage\n\n");
+  cat(descr, file=rnwFile, append=TRUE, sep="\n");
+  
+  
+  if(mbSetObj$paraSet$metDataType=="metabolite"){
+    descr<-c("<<echo=false, results=tex>>=",
+             "GetMMPMetTable(mbSet)",
+             "@",
+             "\\clearpage\n\n");
+    cat(descr, file=rnwFile, append=TRUE, sep="\n");
+    }
+  
+  cat("\n\n", file=rnwFile, append=TRUE);
+
 }
 
 ###############################################
@@ -2177,7 +2295,6 @@ CreateMMPHeatmapRdoc <- function(mbSetObj){
 CreateMetaRnwReport<-function(mbSetObj, usrName){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  #saveRDS(mbSetObj,"/Users/lzy/Documents/MicrobiomeAnalystR-master/mbSetObj.rds")
   CreateHeader(usrName);
   CreateIntr();
   CreateIOdoc();

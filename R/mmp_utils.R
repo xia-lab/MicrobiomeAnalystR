@@ -1595,7 +1595,7 @@ as_list$layout$annotations[[i]]$text = unname(current.proc$id2nm[as_list$layout$
   mbSetObj$analSet$integration$heatmap <- data1sc
   mbSetObj$analSet$integration$heatmap.dist <- smplDist
   mbSetObj$analSet$integration$heatmap.clust <- clstDist
-  mbSetObj$analSet$integration$heat.taxalvl <- taxalvl
+  mbSetObj$analSet$integration$taxalvl <- taxalvl
   mbSetObj$analSet$integration$overlay <- overlay
   mbSetObj$analSet$integration$htMode <- htMode
   mbSetObj$analSet$integration$sign <- sign
@@ -2502,6 +2502,8 @@ DoStatComparisonVis <- function(filenm, alg, meta, selected, meta.vec, omicstype
 
 PrepareListInput<-function(mbSetObj, qvec, omic){
   mbSetObj <- .get.mbSetObj(mbSetObj);
+  mbSetObj$inputType <- "list";
+  mbSetObj$micDataType <- "otu"
   lines <- unlist(strsplit(qvec, "\r|\n|\r\n")[1]);
   if(substring(lines[1],1,1)=="#"){
     lines <- lines[-1];
@@ -2769,11 +2771,8 @@ M2MPredictionList<- function(mbSetObj,model,predDB,psc=0.5,metType="metabolite")
 
  
   mbSetObj$analSet$predres<-m2m_ls
-
- 
-  
   qs::qsave(m2m_ls,paste0("m2m_pred_",predDB,".qs"))
-  
+  mbSetObj$analSet$integration$db <- predDB;
   message("Prediction completed!")
   return(.set.mbSetObj(mbSetObj));
 }
@@ -2916,8 +2915,10 @@ CreatM2MHeatmapList<-function(mbSetObj, plotNm,  format="png",
   mbSetObj$analSet$integration$heatmap <- data1sc
   mbSetObj$analSet$integration$heatmap.dist <- smplDist
   mbSetObj$analSet$integration$heatmap.clust <- clstDist
-  mbSetObj$analSet$integration$heat.taxalvl <- taxalvl
+  mbSetObj$analSet$integration$taxalvl <- taxalvl
   mbSetObj$analSet$integration$overlay <- "false"
+  mbSetObj$analSet$integration$htMode <- "prediction"
+  mbSetObj$analSet$integration$potential <- potential.thresh;
   message("heatmap done")
   return(.set.mbSetObj(mbSetObj))
 }

@@ -2142,3 +2142,18 @@ GetSigTable.MMPMet<-function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   GetSigTable(mbSetObj$dataSet$metabolomics$resTable, "Limma");
 }
+
+GetMMPMicTable<-function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);  
+  load_xtable();
+  print(xtable::xtable(mbSetObj$analSet$mic.map, caption="Result from Taxa Name Mapping"),
+        tabular.environment = "longtable", caption.placement="top", size="\\scriptsize");
+}
+
+
+GetMMPMetTable<-function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);  
+  load_xtable();
+  print(xtable::xtable(mbSetObj$analSet$met.map, caption="Result from Metabolite Name Mapping"),
+        tabular.environment = "longtable", caption.placement="top", size="\\scriptsize");
+}
