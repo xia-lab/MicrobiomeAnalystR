@@ -800,8 +800,10 @@ if (doclust == "T") {
 
 f <- basename(tempfile('iheatmapr', '.', '.html'))
 on.exit(unlink(f), add = TRUE)
-html <- htmlwidgets::saveWidget(to_widget(p), f, selfcontained = TRUE)
+html <- htmlwidgets::saveWidget(to_widget(p), f, selfcontained = FALSE)
 webshot::webshot(f, plotNm,vwidth = 992, vheight = 1200)
+rmfile <- gsub(".html","_files",f)
+#unlink(rmfile, recursive = TRUE)
 
 as_list <- to_plotly_list(p)
 if (viewOpt != "overview") {
