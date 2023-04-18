@@ -456,3 +456,23 @@ UpdateSampleGroups<-function(mbSetObj=NA, metadata="NA"){
 
   return(.set.mbSetObj(mbSetObj));
 } 
+
+
+##############################################
+##############################################
+################  GETTERS ####################
+##############################################
+##############################################
+
+GetSampleGroups <- function(mbSetObj){
+    mbSetObj <- .get.mbSetObj(mbSetObj);
+  return(mbSetObj$dataSet$group_names);
+}
+
+
+GetMetaDataCol <- function(mbSetObj,colnm){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  cls = levels(mbSetObj$dataSet$sample_data[,colnm]);
+  return(cls[cls!="NA"]);
+}
+

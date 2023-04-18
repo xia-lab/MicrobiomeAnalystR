@@ -7,7 +7,7 @@
 ## J. Xia, jeff.xia@mcgill.ca
 ###################################################
 
-my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="globalscore", dimn=10,analysisVar){
+my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="globalscore", dimn=10,analysisVar, diabloPar=0.2){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   if(method == ""){
@@ -64,9 +64,9 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
   combined.res$enrich_ids = enrich.nms1
   combined.res$comp.res.inx = comp.res.inx1
   combined.res$meta = newmeta
-  
   if(reductionOpt == "diablo"){
     library(mixOmics)
+   diabloPar <- as.numeric(diabloPar); #default diabloPar was 0.2   
     if(is.null(analysisVar)){
     Y <- current.proc$meta_para$sample_data[,analysisVar]
     }else{
@@ -88,8 +88,9 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
        x <- t(x);
      })
      ncomp = min(ncol(dats[[l]]$mic),dimn)
-     design = matrix(1, ncol = length(dats[[l]]), nrow = length(dats[[l]]), 
-                     dimnames = list(names(dats[[l]]), names(dats[[l]])))
+     design = matrix(diabloPar, ncol = length(dats[[l]]), nrow = length(dats[[l]]), 
+                     dimnames = list(names(dats[[l]]), names(dats[[l]])));
+     diag(design) = 0;
      res[[l]] = mixOmics:::block.splsda(X = dats[[l]], Y = Y, ncomp = ncomp, design = design)
      pos.xyz[[l]] <- res[[l]]$variates[[1]]
      pos.xyz2[[l]] <- res[[l]]$variates[[2]]
@@ -101,7 +102,6 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
        res[[l]]$loadings[[i]] <- pos
        rownames(res[[l]]$loadings[[i]]) <- rn
      }
-     
      loading.pos.xyz[[l]] <- rbind(res[[l]]$loadings[[1]], res[[l]]$loadings[[2]])
      rownames(loading.pos.xyz[[l]]) = c(rownames(d.list$mic$data.proc[[l]]), rownames(d.list$met$data.proc))
      loadingNames[[l]]=rownames(loading.pos.xyz[[l]])
@@ -207,15 +207,6 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
     qs::qsave(combined.res,"combined.res.qs")
     qs::qsave(diablo.res,"diablo.res.qs")
     
-    
-    if(reductionOpt == "o2pls"){ #second loading plot
-      loading.pos.xyz2 <- as.data.frame(loading.pos.xyz2)
-      loading.pos.xyz2 <- unitAutoScale(loading.pos.xyz2);
-      rownames(loading.pos.xyz2) = loadingNames2
-      dataSet$loading.names2 = loadingNames2
-      dataSet$loading.pos.xyz2 = loading.pos.xyz2
-    }
-    
   }
   reductionOptGlobal <<- reductionOpt
 
@@ -225,10 +216,7 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
   .set.mbSetObj(mbSetObj);
   
   if(dimn == 2){
-    netData <-list()
-    if(reductionOpt == "mcia"){
-      pos.xyz = rbind(pos.xyz, dataSet$mcia.seg.points);
-    }
+    netData <-list();
     netData$score=pos.xyz
     if(reductionOpt %in% loadingOpts){
       netData$loading = list(pos=loading.pos.xyz, name=loadingSymbols);

@@ -264,7 +264,6 @@ Read16SBiomData <- function(mbSetObj, dataName, taxa_type, ismetadata){
   if(ismetadata=="T"){
     sample_data <- sample_data(mydata,errorIfNULL = FALSE);
     sample_data <- as.data.frame(sample_data,check.names=FALSE);
-        
     if(length(sample_data)==0){
       AddErrMsg("Metadata file not detected in your biom file. Please upload metadata file seperately.");
       return(0);

@@ -27,7 +27,6 @@ SanityCheckData <- function(mbSetObj, filetype, disableFilter = FALSE){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   dataName <- mbSetObj$dataSet$name;
   module.type <- mbSetObj$module.type;
-  
   feat.sums <- apply(mbSetObj$dataSet$data.orig, 1, function(x){sum(x>0, na.rm=T)});
   
   if(disableFilter){
@@ -48,7 +47,7 @@ SanityCheckData <- function(mbSetObj, filetype, disableFilter = FALSE){
   
   # making copy of data.proc and proc.phyobj(phyloseq)
   data.proc <- data.proc[!constCol, ];
-  
+
   if(length(data.proc)==0){
     AddErrMsg("All features are found to be constant and have been removed from data. No data left after such processing.");
     return(0);

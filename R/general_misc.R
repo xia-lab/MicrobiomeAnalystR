@@ -37,6 +37,7 @@ GetBashFullPath<-function(){
     print("Could not find bash in the PATH!");
     return("NA");
   }
+print(path)
   return(path);
 }
 
