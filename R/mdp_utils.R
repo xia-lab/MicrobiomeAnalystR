@@ -2861,7 +2861,7 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable,
 #'@import reshape
 PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, facet2, imgOpt,
                                      feat_cnt, colpalopt, calcmeth, toptaxa,abunTopTaxaOpt, 
-                                     appendnm, format="png", dpi=72, interactive = FALSE){
+                                     appendnm, format="png", dpi=100, interactive = FALSE){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   

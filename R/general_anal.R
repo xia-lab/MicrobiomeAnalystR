@@ -712,11 +712,10 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
   # it seems lda add ` around names containing dash "-", need to strip this off
   rawNms <- rownames(resTable);
   rownames(resTable) <- gsub("`", '', rawNms);
-
   if(pvalOpt == "raw"){
-    de.Num <- sum(rawpvalues<=p.lvl & ldamean$LDAscore>=lda.lvl)
+    de.Num <- sum(rawpvalues<=p.lvl & abs(ldamean$LDAscore)>=lda.lvl)
   }else{
-    de.Num <- sum(clapvalues<=p.lvl & ldamean$LDAscore>=lda.lvl)
+    de.Num <- sum(clapvalues<=p.lvl & abs(ldamean$LDAscore)>=lda.lvl)
   }
   
   if(de.Num == 0){
@@ -755,7 +754,6 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
   ldabar <- as.data.frame(rownames(resTable),check.names=FALSE);
   ldabar[,2] <- resTable$LDAscore;
   ldabar[,3] <- res.cls;
-  
   if(pvalOpt == "raw"){
     ldabar[,4] <- resTable$Pvalues;
     ldabar.sub <- subset(ldabar, (abs(ldabar[,2]) > lda.lvl & ldabar[,4] < p.lvl));
@@ -900,7 +898,6 @@ PlotLEfSeSummary <- function(mbSetObj, ldaFeature, layoutOptlf, imgName, format=
 PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="default", color.BW=FALSE){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
   if(layoutOptlf == "dot") {
     
     sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);

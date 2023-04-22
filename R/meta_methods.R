@@ -14,7 +14,7 @@
 #'License: GNU GPL (>= 2)
 #'@export
 #'
-PerformMetaEffectSize <- function(mbSetObj=NA, imgName="", taxrank="OTU", selMeta, BHth=0.05, de.method="LM", ef.method="REML", format="png", dpi=72){
+PerformMetaEffectSize <- function(mbSetObj=NA, imgName="", taxrank="OTU", selMeta, BHth=0.05, de.method="LM", ef.method="REML", format="png", dpi=100){
 
   if(exists('cov.meta.eff')){
     cov <- cov.meta.eff;
@@ -238,7 +238,7 @@ SetupMetaStats <- function(BHth, paramSet,analSet){
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank="Family", view.mode="ratio", format="png", dpi=72) {
+CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank="Family", view.mode="ratio", format="png", dpi=100) {
   mbSetObj <- .get.mbSetObj(mbSetObj);
   mdata.all <- mbSetObj$mdata.all;
   sel.nms <- names(mdata.all)[mdata.all==1];
@@ -485,7 +485,7 @@ bf_ratio <- function(phylo){
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotBetaSummary <- function(mbSetObj, plotNm,taxalvl, sel.meta, alg, format="png", dpi=72){
+PlotBetaSummary <- function(mbSetObj, plotNm,taxalvl, sel.meta, alg, format="png", dpi=100){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   data.obj <- qs::qread("merged.data.qs");
   data.obj <- subsetPhyloseqByDataset(mbSetObj, data.obj);
