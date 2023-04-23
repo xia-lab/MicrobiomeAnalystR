@@ -13,7 +13,7 @@ my.json.scatter <- function(filenm,analysisVar){
   if(!exists("phyloseq_objs")){
     phyloseq_objs <- qs::qread("phyloseq_objs.qs")
   }
-print(micDataType)
+#print(micDataType)
 
    metdat <- current.proc$met$data.proc
   if(micDataType=="ko"){

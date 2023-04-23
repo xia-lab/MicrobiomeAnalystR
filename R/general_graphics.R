@@ -581,7 +581,7 @@ if(palette=="gbr"){
 
    plotjs = paste0(plotNm, ".json");
   plotNm = paste(plotNm, ".", "pdf", sep="");
-  print(plotNm)
+  #print(plotNm)
   mbSetObj$imgSet$heatmap<-plotNm;
 
 
