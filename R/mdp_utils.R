@@ -1808,7 +1808,6 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
   module.type <- mbSetObj$module.type;
   load_datatable();
   load_viridis();
-  
   set.seed(13134);
   
   if(module.type == "meta" && !combined){
@@ -1919,7 +1918,6 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
       pg_sd <- sample_data(data);
       pg_tree <- prune_taxa(taxa_names(pg_ot), pg_tree);
       data <- merge_phyloseq(pg_tb, pg_ot, pg_sd, pg_tree);
-      
       # check if pg_tree is null
       if(is.null(data@phy_tree)){
         AddErrMsg("Tree tip labels do not match feature names in the OTU/taxonomic tables!");
@@ -2861,7 +2859,7 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable,
 #'@import reshape
 PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, facet2, imgOpt,
                                      feat_cnt, colpalopt, calcmeth, toptaxa,abunTopTaxaOpt, 
-                                     appendnm, format="png", dpi=100, interactive = FALSE){
+                                     appendnm, format="png", dpi=80, interactive = FALSE){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -3135,10 +3133,11 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
   if(mbSetObj$module.type == "meta"){
       box <- box + facet_grid(variable2 ~ . , scales = "free", space = "free");
   }
-  print(box);
+  save(box,file="plotly.rda");
+  print(box+guides(fill=guide_legend(ncol=3)));
   dev.off();
   
-  save(box,file="plotly.rda");
+ 
 
   mbSetObj$analSet$stack<-data;
   mbSetObj$analSet$stack.taxalvl<-taxalvl;
