@@ -3370,7 +3370,7 @@ PlotDiagnosticPca <- function(imgNm, dpi=72, format="png",type="diablo"){
   library(ggplot2);
   dpi<-as.numeric(dpi)
   imgNm<- paste(imgNm, ".", format, sep="");
-  print(imgNm)
+  #print(imgNm)
   fig.list <- list()
  
   if(type == "diablo"){ 

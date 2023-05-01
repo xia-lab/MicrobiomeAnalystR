@@ -921,7 +921,7 @@ PerformRarefaction <- function(mbSetObj, data, rare.opt){
     msg <- c(msg, paste("Rarefaction without replacement to minimum library depth."));
   }
   msg <- paste(msg, collapse=" ");
-  print(msg);
+  #print(msg);
   cleanMem();
   otu.tab <- otu_table(phy.obj);
   return(otu.tab);

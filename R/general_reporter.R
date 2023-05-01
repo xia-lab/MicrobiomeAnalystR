@@ -2302,7 +2302,7 @@ CreateMetaRnwReport<-function(mbSetObj, usrName){
   InitMetaAnalMode();
   
   if(!is.null(mbSetObj[["analSet"]]) & (length(mbSetObj$analSet)>0)){
-    print("hrer")
+
     CreateMetaVISEXPLRdoc(mbSetObj);
     CreateMetaLMRdoc(mbSetObj);
     CreateMMPALPHDIVdoc(mbSetObj);

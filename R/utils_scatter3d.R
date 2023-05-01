@@ -241,7 +241,7 @@ ComputeEncasing <- function(filenm, type, names.vec, level=0.95, omics="NA"){
   names = strsplit(names.vec, "; ")[[1]]
 
   pos.xyz <- qs::qread("pos.xyz.qs");
-  print(head(pos.xyz));
+  #print(head(pos.xyz));
   inx = rownames(pos.xyz) %in% names;
   coords = as.matrix(pos.xyz[inx,c(1:3)])
   mesh = list()

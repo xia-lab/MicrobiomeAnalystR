@@ -261,7 +261,7 @@ UpdateMetaLevels <- function(mbSetObj=NA,metaNm){
      names(mbSetObj$dataSet$types.cls.lbl)[length(nms.vec)] <- new.nm
 
      mbSetObj$dataSet$sample_data <- sample_data;
-     print(head(sample_data));
+     #print(head(sample_data));
   }
   return(.set.mbSetObj(mbSetObj));
 }
