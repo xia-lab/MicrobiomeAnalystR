@@ -2354,11 +2354,14 @@ tuneKOmap <- function(){
 ###########################################################
 
 
-DoDimensionReductionIntegrative <- function(mbSetObj, reductionOpt, method="globalscore", dimn){
+DoDimensionReductionIntegrative <- function(mbSetObj, reductionOpt, method="globalscore", dimn,analysisVar,diabloPar=0.2){
     if(!exists("my.reduce.dimension")){ # public web on same user dir
         .load.scripts.on.demand("utils_dimreduction.Rc");    
     }
-    return(my.reduce.dimension(mbSetObj, reductionOpt, method, dimn,current.proc$meta_para$analysis.var));
+    if(analysisVar=="null"){
+       analysisVar = current.proc$meta_para$analysis.var
+    }
+    return(my.reduce.dimension(mbSetObj, reductionOpt, method,dimn, analysisVar,diabloPar));
 }
 
 doScatterJson <- function(filenm,analysisVar){

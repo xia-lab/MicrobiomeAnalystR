@@ -8,12 +8,11 @@
 ###################################################
 
 my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="globalscore", dimn=10,analysisVar, diabloPar=0.2){
-  
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
   if(method == ""){
     method="globalscore"
   }
-
   dimn = as.numeric(dimn);
   if(dimn == 2){
     dimn = 3;
@@ -66,12 +65,8 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
   combined.res$meta = newmeta
   if(reductionOpt == "diablo"){
     library(mixOmics)
+   diablo.meta.type <- mbSetObj$dataSet$meta.types[analysisVar]
    diabloPar <- as.numeric(diabloPar); #default diabloPar was 0.2   
-    if(is.null(analysisVar)){
-    Y <- current.proc$meta_para$sample_data[,analysisVar]
-    }else{
-     Y <- current.proc$meta_para$sample_data[,1]
-    }
     diablo.res <- list()
     dats <- vector("list",length=length(d.list$mic$data.proc))
     names(dats) <- names(d.list$mic$data.proc)
@@ -88,10 +83,22 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
        x <- t(x);
      })
      ncomp = min(ncol(dats[[l]]$mic),dimn)
-     design = matrix(diabloPar, ncol = length(dats[[l]]), nrow = length(dats[[l]]), 
-                     dimnames = list(names(dats[[l]]), names(dats[[l]])));
-     diag(design) = 0;
-     res[[l]] = mixOmics:::block.splsda(X = dats[[l]], Y = Y, ncomp = ncomp, design = design)
+     if(diablo.meta.type == "disc"){
+      Y <-  current.proc$meta_para$sample_data[,analysisVar];
+       design = matrix(diabloPar, ncol = length(dats[[l]]), nrow = length(dats[[l]]), 
+                  dimnames = list(names(dats[[l]]), names(dats[[l]])));
+  
+       diag(design) = 0;
+       res[[l]] = block.splsda(X = dats[[l]], Y = Y, ncomp = ncomp, design = design)
+    } else {
+      meta.var <- current.proc$meta_para$sample_data[,analysisVar];
+      Y <- matrix(as.numeric(as.character(meta.var)));
+      rownames(Y) <- rownames(current.proc$meta_para$sample_data);
+       design = matrix(diabloPar, ncol = length(dats[[l]]), nrow = length(dats[[l]]), 
+                  dimnames = list(names(dats[[l]]), names(dats[[l]])));
+       diag(design) = 0;
+      res[[l]] = block.splsda(X = data.list, Y = Y, ncomp = ncomps, design = design, mode = "regression")
+}
      pos.xyz[[l]] <- res[[l]]$variates[[1]]
      pos.xyz2[[l]] <- res[[l]]$variates[[2]]
      
@@ -102,6 +109,7 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
        res[[l]]$loadings[[i]] <- pos
        rownames(res[[l]]$loadings[[i]]) <- rn
      }
+
      loading.pos.xyz[[l]] <- rbind(res[[l]]$loadings[[1]], res[[l]]$loadings[[2]])
      rownames(loading.pos.xyz[[l]]) = c(rownames(d.list$mic$data.proc[[l]]), rownames(d.list$met$data.proc))
      loadingNames[[l]]=rownames(loading.pos.xyz[[l]])

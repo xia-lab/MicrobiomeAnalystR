@@ -799,10 +799,10 @@ if (doclust == "T") {
   p <- p %>% add_col_dendro(dend_col)
 }
 
-f <- basename(tempfile('iheatmapr', '.', '.html'))
-on.exit(unlink(f), add = TRUE)
-pdfplot <- list(p=p,plotNm=plotNm,f=f,to_widget=to_widget)
-save(pdfplot,file="pdfplot.rda");
+#f <- basename(tempfile('iheatmapr', '.', '.html'))
+#on.exit(unlink(f), add = TRUE)
+#pdfplot <- list(p=p,plotNm=plotNm,f=f,to_widget=to_widget)
+#save(pdfplot,file="pdfplot.rda");
 
 #rmfile <- gsub(".html","_files",f)
 #unlink(rmfile, recursive = TRUE)
