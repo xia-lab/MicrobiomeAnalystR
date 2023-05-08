@@ -1567,7 +1567,7 @@ anno.mat0 <- anno.mat0[which(anno.mat0$value<predpval.thresh),]
     as_list$layout$annotations <- c(as_list$layout$annotations,annols)
   }
   
-  
+  overlyNum = length(which(unlist(lapply(annols,function(x) x[["text"]]=="۞"))))
   if (viewOpt != "overview") {
     as_list[["layout"]][["width"]] <- max(map.width,1000)
     as_list[["layout"]][["height"]] <- max(map.height,800)
@@ -1600,7 +1600,8 @@ as_list$layout$annotations[[i]]$text = unname(current.proc$id2nm[as_list$layout$
   mbSetObj$analSet$integration$htMode <- htMode
   mbSetObj$analSet$integration$sign <- sign
   message("heatmap done")
-  return(.set.mbSetObj(mbSetObj))
+  .set.mbSetObj(mbSetObj)
+  return(overlyNum)
 }
 
 ###########################################################
