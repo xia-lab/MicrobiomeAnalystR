@@ -2513,6 +2513,7 @@ PrepareListInput<-function(mbSetObj, qvec, omic){
     lines <- lines[-1];
   }
   mbSetObj$dataSet[[omic]][["original"]] <- lines;
+  inputType <<- "list"
   return(.set.mbSetObj(mbSetObj))
 }
 
@@ -2528,10 +2529,10 @@ taxalvl<<-taxalvl
 
 PerformMicNameMap <- function(mbSetObj,taxalvl){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
   mic.map = data.frame(Query=mbSetObj$dataSet$mic$original,agora=NA,embl=NA,kegg=NA,ncbi=NA,stringsAsFactors = F)
   taxMapLong <- qs::qread(paste0(lib.path.mmp,"agora_tax.qs"))[[taxalvl]]
   names(taxMapLong)[1] <- "taxa"
+ 
   mic.map$agora <- taxMapLong[match(mic.map$Query,taxMapLong$taxa),1]
  
   mic.map$ncbi <- taxMapLong$ncbi_id[match(mic.map$agora,taxMapLong$taxa)]
@@ -2563,14 +2564,13 @@ PerformMicNameMap <- function(mbSetObj,taxalvl){
 
 PerformMetNameMap <- function(mbSetObj,metIDType="kegg"){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
   met.map = data.frame(Query=mbSetObj$dataSet$met$original,agora=NA,embl=NA,kegg=NA,stringsAsFactors = F)
   
  res = MetaboIDmap("gem","agora",metIDType,met.map$Query)
   met.map$agora_id = res$Match[match( met.map$Query,res$Query)]
   res = MetaboIDmap("gem","embl",metIDType,met.map$Query)
   met.map$embl_id = res$Match[match( met.map$Query,res$Query)]
-   
+ 
   if(metIDType !='name'){
     metInfo <- qs::qread(paste0(lib.path.mmp,"synonymGem.qs"));
     met.map$agora = metInfo$Name[match(met.map$agora_id,metInfo$metID)]
@@ -2580,6 +2580,7 @@ PerformMetNameMap <- function(mbSetObj,metIDType="kegg"){
    if(metIDType=="kegg"){
     met.map$kegg = met.map$Query
     metInfo <- qs::qread(paste0(lib.path.mmp,"general_kegg2name.qs"));
+   
     met.map$name <- metInfo$Name[match(met.map$kegg,metInfo$ID)]
     met.map$node <- metInfo$node[match(met.map$kegg,metInfo$ID)]
   }else{
@@ -2598,7 +2599,6 @@ PerformMetNameMap <- function(mbSetObj,metIDType="kegg"){
 
 GetMicMapCol <-function(mbSetObj, colInx){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-
 if(colInx==0){
   return(rownames(mbSetObj$analSet$mic.map));
 }else{
@@ -2743,7 +2743,7 @@ PerformMetListEnrichment <- function(mbSetObj, contain,file.nm){
 
 
 
-M2MPredictionList<- function(mbSetObj,model,predDB,psc=0.5,metType="metabolite"){
+M2MPredictionList<- function(mbSetObj,model,predDB,psc=0.5,metType="metabolite",taxalvl){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
