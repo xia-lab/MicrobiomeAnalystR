@@ -1809,7 +1809,6 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
   load_datatable();
   load_viridis();
   set.seed(13134);
-  
   if(module.type == "meta" && !combined){
     mdata.all <- mbSetObj$mdata.all;
     sel.nms <- names(mdata.all)[mdata.all==1];
@@ -1836,6 +1835,7 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
     #using normalized data
     
     phyloseq_objs <- readDataQs("phyloseq_objs.qs",mbSetObj$module.type,dataName)
+
     data <- phyloseq_objs$merged_obj[[taxrank]]
     if(is.null(data)){
       AddErrMsg("Errors in projecting to the selected taxanomy level!");

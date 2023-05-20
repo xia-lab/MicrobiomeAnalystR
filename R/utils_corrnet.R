@@ -66,7 +66,7 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
   }
 
    secomdis_results <- my.secom.anal(mbSetObj,taxrank,permNum,corrCutoff, pvalCutoff,"secomdis")
-if(nrow(secomdis_results)==0){
+   if(nrow(secomdis_results)==0){
       AddErrMsg("No correlations meet the p-value and correlation thresholds!")
       return(0)
     }else{
@@ -118,10 +118,9 @@ if(nrow(secomdis_results)==0){
     cor.results.filt <- cor.results[(abs(cor.results[,3]) > corrCutoff & cor.results[,4] < pvalCutoff),]
     cor.results.filt[,3] <- round(cor.results.filt[,3], digits=4)
     cor.results.filt[,4] <- round(cor.results.filt[,4], digits=4)
-    fast.write(cor.results.filt, "correlation_table.csv", row.names = FALSE)
     mbSetObj$analSet$network_cor <- cor.results.filt;
   }
-   
+   fast.write(mbSetObj$analSet$network_cor, "correlation_table.csv", row.names = FALSE)
   mbSetObj$dataSet$corr.pval.cutoff <- pvalCutoff
   mbSetObj$analSet$corr_color_opt <- colorOpt;
 
