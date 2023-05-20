@@ -5,15 +5,14 @@
 ###################################################
 
 my.16sfun.anot<-function(mbSetObj, type, pipeline,ggversion) {
- #print(c(type,pipeline,ggversion))
+   print(c(type,pipeline,ggversion))
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
   mbSetObj$dataSet$type <- type;
   merge.otu <- qs::qread("data.orig");
  
   merge.otu <- apply(merge.otu, 2, as.numeric);
   current.msg<<- "null"
-
+  err.vec <<- "null"
  if(pipeline %in% c("Ref99NR","Ref100NR")){
     func.meth<-"Tax4Fun2";
     database_mode <- pipeline
@@ -61,6 +60,7 @@ my.16sfun.anot<-function(mbSetObj, type, pipeline,ggversion) {
      rownames(merge.otu) <- unname(mbSetObj$dataSet$comp_taxnm);
         func.meth<-"Tax4Fun";
         folderReferenceData <- get.fun.lib.path(func.meth);
+
         #load_tax4fun();
         if(pipeline=="qi_silva"){
             ModSilvaIds <- gsub("uncultured archaeon","",rownames(merge.otu));
@@ -72,17 +72,21 @@ my.16sfun.anot<-function(mbSetObj, type, pipeline,ggversion) {
             rownames(merge.otu)<-ModSilvaIds;
             merge.otu <- rowsum(as.data.frame(merge.otu),ModSilvaIds);
         }
-
-        
+        rownames(merge.otu) <- gsub(";  ",";",rownames(merge.otu));
+        rownames(merge.otu) <- gsub("; ",";",rownames(merge.otu));
         rownames(merge.otu) <- gsub(" ","_",rownames(merge.otu))
         idx=which(!(grepl(";$",rownames(merge.otu))))
         rownames(merge.otu)[idx] <- paste0(rownames(merge.otu)[idx],";");
         rownames(merge.otu) <- gsub("Bacteroidota","Bacteroidetes",rownames(merge.otu));
         rownames(merge.otu) <- gsub("Enterobacterales","Enterobacteriales",rownames(merge.otu));
-       rownames(merge.otu) <- gsub("; ",";",rownames(merge.otu))
+        rownames(merge.otu) <- stringr::str_trim(rownames(merge.otu) ,side="both")
         data<-list(sampleNames=colnames(merge.otu),otuTable=merge.otu);
+
          Tax4FunOutput <- Tax4Fun(data, folderReferenceData, fctProfiling = TRUE, refProfile = "UProC", shortReadMode = TRUE, normCopyNo = TRUE);
-   
+      
+         if(length(Tax4FunOutput)==1){
+          return(0)
+         }
         result2<-as.data.frame(Tax4FunOutput[1],check.names=FALSE);
 
         #removing unnecessary data from column name.
@@ -639,13 +643,16 @@ functional_prediction_final$description <- functional_prediction_final$KO<-NULL
 
 Tax4Fun <- function(Tax4FunInput,folderReferenceData, fctProfiling=TRUE,refProfile="UProC",shortReadMode=TRUE,normCopyNo=TRUE){
   Tax4FunReferenceData <- importTax4FunReferenceData(folderReferenceData)
-
   ### clean the taxonomy names for match
   cleanedNms <- CleanTaxaNames(rownames(Tax4FunInput$otuTable))
 
   #Intersect Mapping SILVA to KEGG and user OTU table
 rank <- colnames(cleanedNms)[length(colnames(cleanedNms))]
 commonOTUs <- intersect(Tax4FunReferenceData$SilvaTaxmat[,rank],cleanedNms[,rank])
+if(length(commonOTUs)==0){
+AddErrMsg("No feature in your data has been detected in Tax4Fun prediction database!");
+ return(0);
+}
 indexInput <- match(commonOTUs,cleanedNms[,rank])
 indexSILVAToKEGG <- match(commonOTUs,Tax4FunReferenceData$SilvaTaxmat[,rank])
 subsetOTUTables <- as.matrix(Tax4FunInput$otuTable[indexInput,])
