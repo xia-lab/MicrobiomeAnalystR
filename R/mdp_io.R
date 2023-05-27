@@ -86,7 +86,6 @@ Read16STabData <- function(mbSetObj, dataName) {
   
   msg <- NULL;
   mydata <- .readDataTable(dataName);
-
   if(any(is.na(mydata)) || class(mydata) == "try-error"){
     AddErrMsg("Failed to read in the OTU abundance data! Please make sure the data is in the right format and do not have empty cells or NA.");
     return(0);
@@ -125,8 +124,7 @@ Read16STabData <- function(mbSetObj, dataName) {
   }
   
   smpl_nm <- colnames(mydata[-1]);
-  
-  
+
   mydata <- .to.numeric.mat(mydata);
   
   # empty cell or NA cannot be tolerated in metadata

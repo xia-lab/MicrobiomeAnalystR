@@ -1475,7 +1475,7 @@ anno.mat0 <- anno.mat0[which(anno.mat0$value<predpval.thresh),]
   data1sc <- as.matrix(apply(data1, 2, as.numeric))
   rownames(data1sc) <- micnms
   #data1sc <- scale_mat(data1sc, scaleOpt)
-  
+
   fzCol <- round(as.numeric(fontsize_col), 1)
   fzRow <- round(as.numeric(fontsize_row), 1)
   map.height=nrow(data1)*30
