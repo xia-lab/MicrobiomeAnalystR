@@ -314,7 +314,8 @@ GetMetaDataGroups <- function(mbSetObj=NA, dataName){
   if(mbSetObj$module.type == "meta"){
      mbSetObj$dataSet <- readDataset(dataName);
   }
-  return(colnames(mbSetObj$dataSet$sample_data));
+  colnms = colnames(mbSetObj$dataSet$sample_data)
+  return(colnms[colnms!="sample_id"]);
   
 }
 

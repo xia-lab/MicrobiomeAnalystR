@@ -86,7 +86,6 @@ Read16STabData <- function(mbSetObj, dataName) {
   
   msg <- NULL;
   mydata <- .readDataTable(dataName);
-
   if(any(is.na(mydata)) || class(mydata) == "try-error"){
     AddErrMsg("Failed to read in the OTU abundance data! Please make sure the data is in the right format and do not have empty cells or NA.");
     return(0);
@@ -125,8 +124,7 @@ Read16STabData <- function(mbSetObj, dataName) {
   }
   
   smpl_nm <- colnames(mydata[-1]);
-  
-  
+
   mydata <- .to.numeric.mat(mydata);
   
   # empty cell or NA cannot be tolerated in metadata
@@ -417,7 +415,6 @@ ReadMothurData<-function(mbSetObj, dataName, taxdataNm, taxa_type){
 #'License: GNU GPL (>= 2)
 #'@export
 Read16STaxaTable <- function(mbSetObj, dataName) {
-  msg <- NULL;
   mydata <- .readDataTable(dataName);
   if(is.null(mydata) || class(mydata) == "try-error"){
     AddErrMsg("Failed to read in the taxonomic data! Please make sure the data is in the right format.");
@@ -501,15 +498,16 @@ ReadMetabolicTable <- function(mbSetObj, dataName, metType, idType) {
   mbSetObj <- .get.mbSetObj(mbSetObj);
   mbSetObj$dataSet$metabolomics <- list()
 
-  msg <- NULL;
+  current.msg <<- NULL;
   mydata <- .readDataTable(dataName);
+   
 
-  if(any(is.na(mydata)) || class(mydata) == "try-error"){
-    AddErrMsg("Failed to read in the metabolomics abundance table! Missing values detected in your metabolomics data! Please make sure the data is in the right format.");
+  if( class(mydata) == "try-error"){
+    AddErrMsg("Failed to read in the metabolomics abundance table! Please make sure the data is in the right format.");
     return(0);
   }
   
-  # getting NAME label
+ # getting NAME label
   sam.nm <- substr(colnames(mydata[1]),1,5);
   sam.nm <- tolower(sam.nm);
   sam.inx <- grep("^#name",sam.nm);
@@ -522,10 +520,22 @@ ReadMetabolicTable <- function(mbSetObj, dataName, metType, idType) {
   
   #smpl_nm <- colnames(mydata[-1]);
   
-  
   mydata <- .to.numeric.mat(mydata);
 
-  
+  row.nas <- apply(is.na(mydata)|is.null(mydata), 1, sum);
+  good.inx<- row.nas/ncol(mydata) < 0.5;
+  if(sum(!good.inx) > 0){
+    mydata <- mydata[good.inx,];
+    current.msg <<- c(current.msg, paste("removed ", sum(!good.inx), " features with over 50% missing values"));
+  }
+ 
+  minVal <- min(mydata, na.rm=T);
+  na.inx <- is.na(mydata);
+  if(sum(na.inx) > 0){
+    mydata[na.inx] <- minVal/2;
+    current.msg <<- c(current.msg, "the remaining", sum(na.inx), "missing variables were replaced with data min");
+  }
+
   mbSetObj$dataSet$metabolomics$name <- basename(dataName);
   #mbSetObj$dataSet$metabolomics$smpl_nm <- smpl_nm;
   mbSetObj$dataSet$metabolomics$data.orig <- data.matrix(mydata);
@@ -534,7 +544,7 @@ ReadMetabolicTable <- function(mbSetObj, dataName, metType, idType) {
   mbSetObj$dataSet$metabolomics$id.type <- idType;
   mbSetObj$dataSet$metabolomics$read <- TRUE;
   
-  current.msg <<- paste("A total of",ncol(mydata) ,"metabolomics samples and ", nrow(mydata), metType," are present.");
+  current.msg <<- c(current.msg,paste("A total of",ncol(mydata) ,"metabolomics samples and ", nrow(mydata), metType," are present."));
   mbSetObj$dataSet$metabolomics$read.msg <- current.msg
  
 

@@ -658,7 +658,9 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   load_MASS();
+ 
   claslbl <<- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
+
   if(mbSetObj$module.type=="sdp"){
     taxrank<-"OTU";
     data <- mbSetObj$dataSet$norm.phyobj;
@@ -674,7 +676,6 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
       dat3t <- t(phyloseq_objs$count_tables[[taxrank.inx]])
     } 
   }
-  
   data.impfeat_lefse <<- dat3t;
   
   set.seed(56290);
@@ -708,7 +709,7 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
   ldamean$Pvalues <- signif(rawpvalues,digits=5);
   ldamean$FDR <- signif(clapvalues,digits=5);
   resTable <- ldamean;
-  
+
   # it seems lda add ` around names containing dash "-", need to strip this off
   rawNms <- rownames(resTable);
   rownames(resTable) <- gsub("`", '', rawNms);

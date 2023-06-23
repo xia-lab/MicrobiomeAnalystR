@@ -1475,7 +1475,7 @@ anno.mat0 <- anno.mat0[which(anno.mat0$value<predpval.thresh),]
   data1sc <- as.matrix(apply(data1, 2, as.numeric))
   rownames(data1sc) <- micnms
   #data1sc <- scale_mat(data1sc, scaleOpt)
-  
+
   fzCol <- round(as.numeric(fontsize_col), 1)
   fzRow <- round(as.numeric(fontsize_row), 1)
   map.height=nrow(data1)*30
@@ -1567,7 +1567,7 @@ anno.mat0 <- anno.mat0[which(anno.mat0$value<predpval.thresh),]
     as_list$layout$annotations <- c(as_list$layout$annotations,annols)
   }
   
-  
+  overlyNum = length(which(unlist(lapply(annols,function(x) x[["text"]]=="۞"))))
   if (viewOpt != "overview") {
     as_list[["layout"]][["width"]] <- max(map.width,1000)
     as_list[["layout"]][["height"]] <- max(map.height,800)
@@ -1600,7 +1600,8 @@ as_list$layout$annotations[[i]]$text = unname(current.proc$id2nm[as_list$layout$
   mbSetObj$analSet$integration$htMode <- htMode
   mbSetObj$analSet$integration$sign <- sign
   message("heatmap done")
-  return(.set.mbSetObj(mbSetObj))
+  .set.mbSetObj(mbSetObj)
+  return(overlyNum)
 }
 
 ###########################################################
@@ -2353,11 +2354,14 @@ tuneKOmap <- function(){
 ###########################################################
 
 
-DoDimensionReductionIntegrative <- function(mbSetObj, reductionOpt, method="globalscore", dimn){
+DoDimensionReductionIntegrative <- function(mbSetObj, reductionOpt, method="globalscore", dimn,analysisVar,diabloPar=0.2){
     if(!exists("my.reduce.dimension")){ # public web on same user dir
         .load.scripts.on.demand("utils_dimreduction.Rc");    
     }
-    return(my.reduce.dimension(mbSetObj, reductionOpt, method, dimn,current.proc$meta_para$analysis.var));
+    if(analysisVar=="null"){
+       analysisVar = current.proc$meta_para$analysis.var
+    }
+    return(my.reduce.dimension(mbSetObj, reductionOpt, method,dimn, analysisVar,diabloPar));
 }
 
 doScatterJson <- function(filenm,analysisVar){
@@ -2509,6 +2513,7 @@ PrepareListInput<-function(mbSetObj, qvec, omic){
     lines <- lines[-1];
   }
   mbSetObj$dataSet[[omic]][["original"]] <- lines;
+  inputType <<- "list"
   return(.set.mbSetObj(mbSetObj))
 }
 
@@ -2524,10 +2529,10 @@ taxalvl<<-taxalvl
 
 PerformMicNameMap <- function(mbSetObj,taxalvl){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
   mic.map = data.frame(Query=mbSetObj$dataSet$mic$original,agora=NA,embl=NA,kegg=NA,ncbi=NA,stringsAsFactors = F)
   taxMapLong <- qs::qread(paste0(lib.path.mmp,"agora_tax.qs"))[[taxalvl]]
   names(taxMapLong)[1] <- "taxa"
+ 
   mic.map$agora <- taxMapLong[match(mic.map$Query,taxMapLong$taxa),1]
  
   mic.map$ncbi <- taxMapLong$ncbi_id[match(mic.map$agora,taxMapLong$taxa)]
@@ -2559,14 +2564,13 @@ PerformMicNameMap <- function(mbSetObj,taxalvl){
 
 PerformMetNameMap <- function(mbSetObj,metIDType="kegg"){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
   met.map = data.frame(Query=mbSetObj$dataSet$met$original,agora=NA,embl=NA,kegg=NA,stringsAsFactors = F)
   
  res = MetaboIDmap("gem","agora",metIDType,met.map$Query)
   met.map$agora_id = res$Match[match( met.map$Query,res$Query)]
   res = MetaboIDmap("gem","embl",metIDType,met.map$Query)
   met.map$embl_id = res$Match[match( met.map$Query,res$Query)]
-   
+ 
   if(metIDType !='name'){
     metInfo <- qs::qread(paste0(lib.path.mmp,"synonymGem.qs"));
     met.map$agora = metInfo$Name[match(met.map$agora_id,metInfo$metID)]
@@ -2576,6 +2580,7 @@ PerformMetNameMap <- function(mbSetObj,metIDType="kegg"){
    if(metIDType=="kegg"){
     met.map$kegg = met.map$Query
     metInfo <- qs::qread(paste0(lib.path.mmp,"general_kegg2name.qs"));
+   
     met.map$name <- metInfo$Name[match(met.map$kegg,metInfo$ID)]
     met.map$node <- metInfo$node[match(met.map$kegg,metInfo$ID)]
   }else{
@@ -2594,7 +2599,6 @@ PerformMetNameMap <- function(mbSetObj,metIDType="kegg"){
 
 GetMicMapCol <-function(mbSetObj, colInx){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-
 if(colInx==0){
   return(rownames(mbSetObj$analSet$mic.map));
 }else{
@@ -2739,7 +2743,7 @@ PerformMetListEnrichment <- function(mbSetObj, contain,file.nm){
 
 
 
-M2MPredictionList<- function(mbSetObj,model,predDB,psc=0.5,metType="metabolite"){
+M2MPredictionList<- function(mbSetObj,model,predDB,psc=0.5,metType="metabolite",taxalvl){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   

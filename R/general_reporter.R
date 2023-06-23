@@ -829,23 +829,15 @@ CreateHCdoc <- function(mbSetObj){
   }
   
   if(!is.null(mbSetObj$analSet$heatmap)){
-    descr <- paste("Figure", fig.count<<-fig.count+1,"shows the clustering result in the form of a heatmap.");
-    cat(descr, file=rnwFile, append=TRUE);
     #taxonomic class will be replaced with gene id in SDP
     if(mbSetObj$module.type == "sdp"){
       mbSetObj$analSet$heat.taxalvl <- mbSetObj$dataSet$gene.id;
     }
-    cmdhist<-c(
-        "\\begin{figure}[htp]",
-        "\\begin{center}",
-        paste("\\includegraphics[width=1.0\\textwidth]{", mbSetObj$imgSet$heatmap,"}", sep=""),
-        paste("\\caption{Clustering result shown as heatmap (", 
-            "distance measure using ","\\texttt{", mbSetObj$analSet$heatmap.dist, "} and clustering algorithm using ","\\texttt{", mbSetObj$analSet$heatmap.clust, "} at ","\\texttt{", mbSetObj$analSet$heat.taxalvl,"} level)}", sep=""),
-        "\\end{center}",
-        paste("\\label{",mbSetObj$imgSet$heatmap,"}", sep=""),
-        "\\end{figure}"
-    );                    
-    cat(cmdhist, file=rnwFile, append=TRUE, sep="\n");
+    descr <-  paste("\\caption{Clustering result shown as heatmap.", 
+            " Distance was measured using ","\\texttt{", mbSetObj$analSet$heatmap.dist, "} and clustering algorithm using ","\\texttt{", mbSetObj$analSet$heatmap.clust, "} at ","\\texttt{", mbSetObj$analSet$heat.taxalvl,"} level.}", 
+             " The interactive heatmap plot is not included here and can be directly download on the corresponding page.", sep="");
+                     
+    cat(descr, file=rnwFile, append=TRUE, sep="\n");
   }
    cat("\\clearpage", file=rnwFile, append=TRUE);
 }

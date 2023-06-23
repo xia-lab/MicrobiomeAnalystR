@@ -5,7 +5,7 @@
 ###################################################
 
 # This is only for web version
-.on.public.web <- TRUE; # only TRUE when on MicrobiomeAnalyst web server
+#.on.public.web <- TRUE; # only TRUE when on MicrobiomeAnalyst web server
 
 # note, this is usually used at the end of a function
 # for local, return itself; for web, push to global environment
@@ -34,12 +34,15 @@
 #'License: GNU GPL (>= 2)
 #'@export
 Init.mbSetObj <- function(){
-  
+
   rm(list = ls(all.names = TRUE))
   dataSet <- list();
   analSet <- list();
   imgSet <- list();
-  
+   if(!exists(".on.public.web")){
+    .on.public.web <<- FALSE
+  }  
+
   mbSetObj <- list();
   mbSetObj$dataSet <- dataSet;
   mbSetObj$analSet <- analSet;
@@ -48,7 +51,6 @@ Init.mbSetObj <- function(){
   mbSetObj$poor.replicate <- FALSE; # flag to show if all unique values
   mbSetObj$tree.uploaded <- FALSE;
   mbSetObj$cmdSet <- vector(mode="character"); # store R command
-  
   # set global variables
   current.msg <<- "";
   err.vec <<- "";
@@ -188,7 +190,6 @@ ReadSampleTable <- function(mbSetObj, fileName) {
   module.type <- mbSetObj$module.type;
   load_phyloseq();
   mydata <- .readDataTable(fileName);
-  #saveRDS(mydata,"/Users/lzy/Documents/MicrobiomeAnalystR-master/mydata.rds")
   mydata[is.na(mydata)] <- "Not Available";
   if(any(is.na(mydata)) || class(mydata) == "try-error"){
     AddErrMsg("Failed to read in the metadata! Please make sure that the metadata file is in the right format and does not have empty cells or NA.");
