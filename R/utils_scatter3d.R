@@ -40,11 +40,10 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
   pos.xyz <- pos.xyz[1:(nrow(pos.xyz) - 2), ]
   
   metadf <- res$facA
-  
   col = vector();
   
-  meta.vec = as.vector(metadf)
-  meta.vec.num = as.integer(as.factor(metadf))
+  meta.vec <- levels(metadf)
+  meta.vec.num = as.integer(metadf)
   col.s <- gg_color_hue(length(unique(meta.vec)))
   for(i in 1:length(meta.vec.num)){
     col[i] = col.s[meta.vec.num[i]];
