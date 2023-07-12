@@ -1576,37 +1576,43 @@ PlotCorr <- function(mbSetObj, imgName, format="png", dpi=72,appendnm, width=NA)
 Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, variable,appendname){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
-  if(!.on.public.web){
-    clslbl <- sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]];
+  if(pattern %in% names(mbSetObj$dataSet$sample_data)){
+    new.template = as.numeric(sample_data(mbSetObj$dataSet$norm.phyobj)[[pattern]])
+  }else{
+    
+    
+    if(!.on.public.web){
+      clslbl <- sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]];
+    }
+    
+    clslbl <- as.factor(clslbl);
+    if(is.null(pattern)){
+      pattern <- paste(1:length(levels(clslbl)), collapse="-");
+    }
+    
+    templ <- as.numeric(ClearStrings(strsplit(pattern, "-")[[1]]));
+
+    if(all(templ==templ[1])){
+      AddErrMsg("Cannot calculate correlation on constant values!");
+      return(0);
+    }
+    
+    new.template <- vector(mode="numeric", length=length(clslbl))
+    # expand to match each levels in the analSet$cls
+    all.lvls <- levels(clslbl);
+    
+    if(length(templ)!=length(all.lvls)){
+      AddErrMsg("Wrong template - must the same length as the group number!");
+      return(0);
+    }
+    
+    for(i in 1:length(templ)){
+      hit.inx <- clslbl == all.lvls[i]
+      new.template[hit.inx] = templ[i];
+    }
+ 
   }
-  
-  clslbl <- as.factor(clslbl);
-  if(is.null(pattern)){
-    pattern <- paste(1:length(levels(clslbl)), collapse="-");
-  }
-  
-  templ <- as.numeric(ClearStrings(strsplit(pattern, "-")[[1]]));
-  
-  if(all(templ==templ[1])){
-    AddErrMsg("Cannot calculate correlation on constant values!");
-    return(0);
-  }
-  
-  new.template <- vector(mode="numeric", length=length(clslbl))
-  # expand to match each levels in the analSet$cls
-  all.lvls <- levels(clslbl);
-  
-  if(length(templ)!=length(all.lvls)){
-    AddErrMsg("Wrong template - must the same length as the group number!");
-    return(0);
-  }
-  
-  for(i in 1:length(templ)){
-    hit.inx <- clslbl == all.lvls[i]
-    new.template[hit.inx] = templ[i];
-  }
-  
+ 
   if(mbSetObj$module.type=="mdp"){
     if(!exists("phyloseq_objs")){
       phyloseq_objs <- qs::qread("phyloseq_objs.qs")
@@ -1616,8 +1622,8 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, 
       data <- phyloseq_objs$count_tables$OTU
     }else{
       
-       data <- phyloseq_objs$merged_obj[[taxrank]]
-     if(is.null(data)){
+      data <- phyloseq_objs$merged_obj[[taxrank]]
+      if(is.null(data)){
         AddErrMsg("Errors in projecting to the selected taxanomy level!");
         return(0);
       }
@@ -1647,8 +1653,8 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, 
           nm <- gsub("_Not_Assigned", "",nm, perl = TRUE);
         }
         
-   
-
+        
+        
         idx.table =  data.frame(original = rownames(phyloseq_objs$count_tables[[taxrank.inx]]),
                                 taxPrepend = nm[nm.idx],stringsAsFactors = F)
         idx.table$taxPrepend[is.na(idx.table$taxPrepend)] <-  'Not_Assigned'
@@ -1663,7 +1669,7 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, 
     taxrank <- "OTU";
     data <- as.matrix(otu_table(mbSetObj$dataSet$norm.phyobj));
   }
-
+  
   data <- t(data);
   qs::qsave(data, "match_data.qs")
   
