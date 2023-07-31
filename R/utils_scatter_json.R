@@ -8,19 +8,19 @@
 
 my.json.scatter <- function(filenm,analysisVar){
   omicstype.vec <- c("microbiome","metabolomics");
-
+  
   library(RJSONIO)
   if(!exists("phyloseq_objs")){
     phyloseq_objs <- qs::qread("phyloseq_objs.qs")
   }
-#print(micDataType)
-
-   metdat <- current.proc$met$data.proc
+  #print(micDataType)
+  
+  metdat <- current.proc$met$data.proc
   if(micDataType=="ko"){
-   sig.mic <- current.proc$mic$res_deAnal[which(current.proc$mic$res_deAnal$P_value<current.proc$mic$plvl),]
-   sig.mic <- list(OTU=sig.mic)
+    sig.mic <- current.proc$mic$res_deAnal[which(current.proc$mic$res_deAnal$P_value<current.proc$mic$plvl),]
+    sig.mic <- list(OTU=sig.mic)
   }else{
-   sig.mic <- lapply(phyloseq_objs$res_deAnal,function(x) x[which(x$P_value<current.proc$mic$plvl),])
+    sig.mic <- lapply(phyloseq_objs$res_deAnal,function(x) x[which(x$P_value<current.proc$mic$plvl),])
   } 
   sig.met <- current.proc$met$res_deAnal
   sig.met <- sig.met[which(sig.met$P_value<current.proc$met$plvl),]
@@ -29,11 +29,11 @@ my.json.scatter <- function(filenm,analysisVar){
   
   names(sig.mats)<-names(sig.mic)
   for(s in 1:length(sig.mats)){
-      sig.mic[[s]]$ids<-rownames(sig.mic[[s]])
-     sig.mats[[s]][["microbiome"]] <- sig.mic[[s]]      
-     sig.mats[[s]][["metabolomics"]] <- sig.met
+    sig.mic[[s]]$ids<-rownames(sig.mic[[s]])
+    sig.mats[[s]][["microbiome"]] <- sig.mic[[s]]      
+    sig.mats[[s]][["metabolomics"]] <- sig.met
   }
-
+  
   seeds <- lapply(sig.mic,function(x) c(rownames(x),rownames(sig.met)))
   #meta <- meta ### for other methods not import here
   
@@ -58,7 +58,7 @@ my.json.scatter <- function(filenm,analysisVar){
     pos.xyz.all =  diablo.res$pos.xyz
     metadf = diablo.res$newmeta
   }
- 
+  
   if("omics" %in% colnames(metadf)){
     sel.meta = "omics"
   }
@@ -68,7 +68,7 @@ my.json.scatter <- function(filenm,analysisVar){
     pos.xyz <-   pos.xyz.all[[tax]]
     nodes <- vector(mode="list");
     names <-  make.unique(as.character(rownames(pos.xyz)))
-    
+
     a=list();
     a$objects = "NA";
     meshes="NA"
@@ -134,11 +134,11 @@ my.json.scatter <- function(filenm,analysisVar){
       procrustes.res$misc[[tax]]$pct2 <- pca.scatter$pct2
       
       netData[[tax]][["misc"]] <- procrustes.res$misc[[tax]]
-
-     qs::qsave(procrustes.res,"procrustes.res.qs")
+      
+      qs::qsave(procrustes.res,"procrustes.res.qs")
       
     }else if(reductionOptGlobal == "diablo"){
-    
+      
       pos.xyz2 <-   diablo.res$pos.xyz2[[tax]]
       names <- rownames(pos.xyz2)
       nodes_samples2 <- vector(mode="list");
@@ -169,9 +169,9 @@ my.json.scatter <- function(filenm,analysisVar){
       edge.mat = "";
       modules = "NA"
       ellipse ="NA"
-    
+      
       diablo.res$pos.xyz[[tax]] = pos.xyz;
-          
+      
       loading.data = diablo.res$loading.pos.xyz[[tax]];
       cluster = diablo.res$loadingCluster[[tax]];
       aLoading=list();
@@ -231,14 +231,14 @@ my.json.scatter <- function(filenm,analysisVar){
         );
       }
       netData[[tax]] <- list(omicstype=omicstype.vec, nodes=nodes, edges=edge.mat, modules=modules, objects=a$objects, ellipse=meshes, meta=metadf, loading=nodes2, reductionOpt=reductionOptGlobal , objectsLoading=aLoading$objects, sigMat=sig.mats[[tax]]);
-   
+      
       type <- omicstype.vec[2]
       netData[[tax]][[ type]] <- nodes_samples2;
       
       
       pca.scatter <- generatePCAscatter(phyloseq_objs$count_tables[[tax]],
                                         metdat,tax)
-    
+      
       diablo.res$pca.scatter[[tax]] <- pca.scatter
       for(i in 1:length(omicstype.vec)){
         pos<-pca.scatter[[paste0("pca_", omicstype.vec[i])]]$score
@@ -289,20 +289,20 @@ my.json.scatter <- function(filenm,analysisVar){
       diablo.res$misc[[tax]]$pct2 <- c( diablo.res$misc[[tax]]$pct2, pca.scatter$pct2)
       
       netData[[tax]][["misc"]] <- diablo.res$misc[[tax]]
-
       
-       qs::qsave(diablo.res,"diablo.res.qs")
+      
+      qs::qsave(diablo.res,"diablo.res.qs")
     }
-
+    
   }
- 
+  
   jsonNms_scatter <<- filenm;
   
   sink(filenm);
   cat(toJSON(netData));
   sink();
   return(1)
-
+  
 }
 
 generatePCAscatter <- function(micdat,metdat,tax){
@@ -313,40 +313,40 @@ generatePCAscatter <- function(micdat,metdat,tax){
   
   for(i in 1:2){
     if(i==1){
-
+      
       x <- data.matrix(micdat);
       type= "microbiome"
     }else{
-     
+      
       x <- data.matrix(metdat);
       type="metabolomics"
     }
     pca <- prcomp(t(na.omit(x)), center=T, scale=T);
     imp.pca<-summary(pca)$importance;
     nm <- paste0("pca_", type);
- 
-  pos.xyz = data.frame(x=pca$x[,1], y=pca$x[,2], z=pca$x[,3]);
-  pos.xyz <- unitAutoScale(pos.xyz);
-
- loading.pos.xyz = data.frame(pca$rotation[,c(1:3)]);
-  loadingNames <- rownames(loading.pos.xyz);
-  loading <- unitAutoScale(loading.pos.xyz);
-  rownames(loading) <- loadingNames;
-  
-
-  pca.list[[nm]][["score"]] <- pos.xyz * 1000;
-  pca.list[[nm]][["loading"]] <- loading* 1000;    
-  
-  pct[[nm]] <- unname(round(imp.pca[2,],3))[c(1:3)]*100;
-
+    
+    pos.xyz = data.frame(x=pca$x[,1], y=pca$x[,2], z=pca$x[,3]);
+    pos.xyz <- unitAutoScale(pos.xyz);
+    
+    loading.pos.xyz = data.frame(pca$rotation[,c(1:3)]);
+    loadingNames <- rownames(loading.pos.xyz);
+    loading <- unitAutoScale(loading.pos.xyz);
+    rownames(loading) <- loadingNames;
+    
+    
+    pca.list[[nm]][["score"]] <- pos.xyz * 1000;
+    pca.list[[nm]][["loading"]] <- loading* 1000;    
+    
+    pct[[nm]] <- unname(round(imp.pca[2,],3))[c(1:3)]*100;
+    
   }
-pca.list$pct2 <- pct;
+  pca.list$pct2 <- pct;
   return(pca.list)
 }
 
 UpdateSampleBasedOnLoading<-function(filenm, gene.id, omicstype){
   if(omicstype != "NA"){
-  sel.nms <- names(mdata.all)[mdata.all==1];
+    sel.nms <- names(mdata.all)[mdata.all==1];
     for(i in 1:length(sel.nms)){
       dat = readRDS(sel.nms[i])
       if(dat$type == omicstype){
