@@ -1241,6 +1241,49 @@ return(1)
   return(1);
 }
 
+
+########################################################
+###########)Permanova_Pairwise##########################
+########################################################
+###adopted from ecole package https://rdrr.io/github/phytomosaic/ecole/
+.permanova_pairwise <- function(x,
+                                 grp,
+                                 permutations = 999,
+                                 method = 'bray',
+                                 padj = 'bonferroni', ...) {
+  f     <- grp
+  if (!all(table(f) > 1)) warning('factor has singletons! perhaps lump them?')
+  co    <- combn(unique(as.character(f)),2)
+  nco   <- NCOL(co)
+  out   <- data.frame(matrix(NA, nrow=nco, ncol=5))
+  dimnames(out)[[2]] <- c('pairs', 'SumOfSqs', 'F.Model', 'R2', 'pval')
+  if (!inherits(x, 'dist')) {
+    D <- vegan::vegdist(x, method=method)
+  } else {
+    D <- x
+  }
+  cat('Now performing', nco, 'pairwise comparisons. Percent progress:\n')
+  for(j in 1:nco) {
+    cat(round(j/nco*100,0),'...  ')
+    ij  <- f %in% c(co[1,j],co[2,j])
+    Dij <- as.dist(as.matrix(D)[ij,ij])
+    fij <- data.frame(fij = f[ij])
+    a   <- vegan::adonis2(Dij ~ fij, data=fij, permutations = permutations,
+                          ...)
+    out[j,1] <- paste(co[1,j], 'vs', co[2,j])
+    out[j,2] <- a$SumOfSqs[1]
+    out[j,3] <- a$F[1]
+    out[j,4] <- a$R2[1]
+    out[j,5] <- a$`Pr(>F)`[1]
+  }
+  cat('\n')
+  out$p.adj <- p.adjust(out$pval, method=padj)
+  attr(out, 'p.adjust.method') <- padj
+  cat('\np-adjust method:', padj, '\n\n')
+  return(out)
+}
+
+
 ########################################################
 ###########Correlation Analysis (Pattern Hunter)########
 ########################################################
@@ -1995,6 +2038,25 @@ GetTopInx <- function (vec, n, dec = T) {
   return(vec)
 }
 
+# Helper function for paorwise permernova
+
+GetPairs <- function(mbSetObj, variable){
+
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+if(variable=="null"){
+  clslbl <- data.frame(sample_data(mbSetObj$dataSet$norm.phyobj))[,1]
+}else{
+  clslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
+}
+
+  co    <- combn(unique(as.character(clslbl)),2)
+
+ res <- apply(data.frame(co),2,function(x) paste(x[1], 'vs', x[2] ))
+
+
+  return(res);
+}
+
 ####################################
 ############ Get Funs ##############
 ####################################
@@ -2016,76 +2078,38 @@ GetSigTable.UNIVAR<-function(mbSetObj){
   GetSigTable(mbSetObj$analSet$univar$resTable, "Univariate analysis");
 }
 
-#'Getter function
-#'@description This function retrieves table from mbSetObj.
-#'@param mbSetObj Input the name of the mbSetObj.
-#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
-#'McGill University, Canada
-#'License: GNU GPL (>= 2)
-#'@export
+
 GetSigTable.Corr<-function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   GetSigTable(mbSetObj$analSet$cor.mat, "Pattern search using correlation analysis");
 }
 
-#'Getter function
-#'@description This function retrieves table from mbSetObj.
-#'@param mbSetObj Input the name of the mbSetObj.
-#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
-#'McGill University, Canada
-#'License: GNU GPL (>= 2)
-#'@export
+
 GetSigTable.METAGENOSEQ<-function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);  
   GetSigTable(mbSetObj$analSet$metagenoseq$resTable, "metagenomeSeq");
 }
 
-#'Getter function
-#'@description This function retrieves table from mbSetObj.
-#'@param mbSetObj Input the name of the mbSetObj.
-#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
-#'McGill University, Canada
-#'License: GNU GPL (>= 2)
-#'@export
+
 GetSigTable.RNASeq<-function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);  
   GetSigTable(mbSetObj$analSet$rnaseq$resTable, "RNAseq method");
 }
 
-#'Getter function
-#'@description This function retrieves table from mbSetObj.
-#'@param mbSetObj Input the name of the mbSetObj.
-#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
-#'McGill University, Canada
-#'License: GNU GPL (>= 2)
-#'@export
+
 GetSigTable.LEFSE<-function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);  
   GetSigTable(mbSetObj$analSet$lefse$resTable, "LEfSe");
 }
 
-#'Getter function
-#'@description This function retrieves table from mbSetObj.
-#'@param mbSetObj Input the name of the mbSetObj.
-#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
-#'McGill University, Canada
-#'License: GNU GPL (>= 2)
-#'@export
-#'@import xtable
+
 GetRFConf.Table<-function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);  
   load_xtable();
   print(xtable::xtable(mbSetObj$analSet$rf$confusion, caption="Random Forest Classification Performance"), size="\\scriptsize");
 }
 
-#'Getter function
-#'@description This function retrieves table from mbSetObj.
-#'@param mbSetObj Input the name of the mbSetObj.
-#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
-#'McGill University, Canada
-#'License: GNU GPL (>= 2)
-#'@export
-#'@import xtable
+
 GetMapTable<-function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);  
   load_xtable();

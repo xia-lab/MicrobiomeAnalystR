@@ -1802,7 +1802,7 @@ PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
 
 PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, metadata, 
                                  showlabel, taxrank, taxa, alphaopt, ellopt, comp.method, format="png", dpi=72,
-                                 custom_col = "none", interactive = FALSE){
+                                 custom_col = "none",pairwiseGrp, pairopt,interactive = FALSE){
   combined <- F;
   mbSetObj <- .get.mbSetObj(mbSetObj);
   module.type <- mbSetObj$module.type;
@@ -1966,7 +1966,7 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
       
     }
     .set.mbSetObj(mbSetObj);
-    PerformCategoryComp(mbSetObj, taxrank, comp.method,distName, metadata);
+    PerformCategoryComp(mbSetObj, taxrank, comp.method,distName, metadata,pairwiseGrp, pairopt);
     mbSetObj <- .get.mbSetObj(mbSetObj);
     ord$stat.info <- mbSetObj$analSet$stat.info;
     
@@ -2754,7 +2754,7 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import vegan
-PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, 
+PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pairwiseGrp, pairopt,
                                 covariates = FALSE, cov.vec = NA, model.additive = TRUE){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -2809,7 +2809,15 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable,
     stat.info <- paste("[PERMANOVA] F-value: ", signif(resTab$F, 5),  "; R-squared: ", signif(resTab$R2, 5), "; p-value: ", signif(resTab$Pr, 5), sep="");   
     stat.info.vec <- c(signif(resTab$F, 5), signif(resTab$R2, 5), signif(resTab$Pr, 5));
     names(stat.info.vec) <- c("F-value", "R-squared", "p-value");
-  }else if(method=="anosim"){ # just one group
+  }else if(method=="pairwise"){
+  grp = sample_data(mbSetObj$dataSet$norm.phyobj)[[pairwiseGrp]]
+    res <- .permanova_pairwise(x = data.dist,  grp);
+   resTab <- res[which(res$pairs==pairopt),];
+     stat.info <- paste("[PERMANOVA] F-value: ", signif(resTab$F.Model, 5),  "; R-squared: ", signif(resTab$R2, 5), "; p-value: ", signif(resTab$pval, 5), sep="");   
+    stat.info.vec <- c(signif(resTab$F.Model, 5), signif(resTab$R2, 5), signif(resTab$pval, 5));
+     names(stat.info.vec) <- c("F-value", "R-squared", "p-value");
+  
+}else if(method=="anosim"){ # just one group
     anosim <- anosim(data.dist, group=group);
     resTab$Rval <- anosim$statistic;
     resTab$pval <- anosim$signif;
