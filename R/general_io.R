@@ -197,16 +197,16 @@ ReadSampleTable <- function(mbSetObj, fileName) {
   }
   
   # look for #NAME, store in a list
-  sam.nm <- substr(colnames(mydata[1]),1,5);
-  sam.nm <- tolower(sam.nm);
-  sam.inx <- grep("#name",sam.nm);
-  if(length(sam.inx) > 0){
+  #sam.nm <- substr(colnames(mydata[1]),1,5);
+  #sam.nm <- tolower(sam.nm);
+  #sam.inx <- grep("#name",sam.nm);
+  #if(length(sam.inx) > 0){
     smpl_nm<-mydata[,1];
     smpl_var<-colnames(mydata[-1]);
-  }else{
-    AddErrMsg("Please make sure you have the label #NAME in your sample data file!");
-    return(0);
-  }
+  #}else{
+  #  AddErrMsg("Please make sure you have the label #NAME in your sample data file!");
+  #  return(0);
+  #}
   
   # converting to character matrix as duplicate row names not allowed in data frame.
   mydata <- as.matrix(mydata[,-1]);
