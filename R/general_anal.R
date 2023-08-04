@@ -2057,6 +2057,22 @@ if(variable=="null"){
   return(res);
 }
 
+
+GetPairResRowNames <- function(mbSetObj){
+ mbSetObj <- .get.mbSetObj(mbSetObj);
+  return(rownames(mbSetObj$analSet$pairTab));
+}
+
+GetPairResColNames <- function(mbSetObj){
+ mbSetObj <- .get.mbSetObj(mbSetObj);
+  return(colnames(mbSetObj$analSet$pairTab));
+}
+
+GetResPairPermanova <- function(mbSetObj){
+ mbSetObj <- .get.mbSetObj(mbSetObj);
+  return(as.matrix(mbSetObj$analSet$pairTab));
+}
+
 ####################################
 ############ Get Funs ##############
 ####################################
