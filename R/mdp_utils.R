@@ -2813,11 +2813,12 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pai
     names(stat.info.vec) <- c("F-value", "R-squared", "p-value");
  
     if(pairwise != "false"){
-    grp = sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]
+     grp = sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]
      res <- .permanova_pairwise(x = data.dist,  grp);
+     #print(res);
      rownames(res) = res$pairs
-    mbSetObj$analSet$pairTab = res[,3:5]
-     print(mbSetObj$analSet$pairTab)
+     mbSetObj$analSet$pairTab = signif(res[,3:6], 5);
+     #print(mbSetObj$analSet$pairTab)
    }
  
 }else if(method=="anosim"){ # just one group
