@@ -320,6 +320,7 @@ CompareMic <- function(mbSetObj, taxalvl,initDE=1,
   
   
   meta.nms <- colnames(sample_data)
+    library(dplyr)
   input.meta <-sample_data@.Data %>% as.data.frame()
   colnames(input.meta) <- meta.nms
   rownames(input.meta) <- input.meta$sample_id
