@@ -1250,7 +1250,7 @@ return(1)
                                  grp,
                                  permutations = 999,
                                  method = 'bray',
-                                 padj = 'bonferroni', ...) {
+                                 padj = 'fdr', ...) {
   f     <- grp
   if (!all(table(f) > 1)) warning('factor has singletons! perhaps lump them?')
   co    <- combn(unique(as.character(f)),2)
@@ -1262,24 +1262,23 @@ return(1)
   } else {
     D <- x
   }
-  cat('Now performing', nco, 'pairwise comparisons. Percent progress:\n')
+  #cat('Now performing', nco, 'pairwise comparisons. Percent progress:\n')
   for(j in 1:nco) {
     cat(round(j/nco*100,0),'...  ')
     ij  <- f %in% c(co[1,j],co[2,j])
     Dij <- as.dist(as.matrix(D)[ij,ij])
     fij <- data.frame(fij = f[ij])
-    a   <- vegan::adonis2(Dij ~ fij, data=fij, permutations = permutations,
-                          ...)
+    a   <- vegan::adonis2(Dij ~ fij, data=fij, permutations = permutations, ...);
     out[j,1] <- paste(co[1,j], 'vs', co[2,j])
     out[j,2] <- a$SumOfSqs[1]
     out[j,3] <- a$F[1]
     out[j,4] <- a$R2[1]
     out[j,5] <- a$`Pr(>F)`[1]
   }
-  cat('\n')
+  #cat('\n')
   out$p.adj <- p.adjust(out$pval, method=padj)
-  attr(out, 'p.adjust.method') <- padj
-  cat('\np-adjust method:', padj, '\n\n')
+  #attr(out, 'p.adjust.method') <- padj
+  #cat('\np-adjust method:', padj, '\n\n')
   return(out)
 }
 
@@ -2069,7 +2068,7 @@ GetPairResColNames <- function(mbSetObj){
 }
 
 GetResPairPermanova <- function(mbSetObj){
- mbSetObj <- .get.mbSetObj(mbSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj);
   return(as.matrix(mbSetObj$analSet$pairTab));
 }
 
