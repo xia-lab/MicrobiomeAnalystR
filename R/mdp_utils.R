@@ -1802,7 +1802,7 @@ PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
 
 PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, metadata, 
                                  showlabel, taxrank, taxa, alphaopt, ellopt, comp.method, format="png", dpi=72,
-                                 custom_col = "none",pairwise,interactive = FALSE){
+                                 custom_col = "none",pairwise, interactive = FALSE){
  
   combined <- F;
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -1967,7 +1967,7 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
       
     }
     .set.mbSetObj(mbSetObj);
-   print(pairwise)
+    #print(pairwise)
     PerformCategoryComp(mbSetObj, taxrank, comp.method,distName, metadata,pairwise);
     mbSetObj <- .get.mbSetObj(mbSetObj);
     ord$stat.info <- mbSetObj$analSet$stat.info;
@@ -2760,7 +2760,7 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pai
                                 covariates = FALSE, cov.vec = NA, model.additive = TRUE){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  print(pairwise)
+  #print(pairwise)
   load_vegan();
 
   if(distnm %in% c("wunifrac", "unifrac")) {
