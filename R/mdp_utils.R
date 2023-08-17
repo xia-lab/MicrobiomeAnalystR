@@ -1967,7 +1967,6 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
       
     }
     .set.mbSetObj(mbSetObj);
-    #print(pairwise)
     PerformCategoryComp(mbSetObj, taxrank, comp.method,distName, metadata,pairwise);
     mbSetObj <- .get.mbSetObj(mbSetObj);
     ord$stat.info <- mbSetObj$analSet$stat.info;
@@ -2760,7 +2759,6 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pai
                                 covariates = FALSE, cov.vec = NA, model.additive = TRUE){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  #print(pairwise)
   load_vegan();
 
   if(distnm %in% c("wunifrac", "unifrac")) {
@@ -2817,8 +2815,7 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pai
      res <- .permanova_pairwise(x = data.dist,  grp);
      #print(res);
      rownames(res) = res$pairs
-     mbSetObj$analSet$pairTab = signif(res[,3:6], 5);
-     #print(mbSetObj$analSet$pairTab)
+    mbSetObj$analSet$pairTab = res[,3:5]
    }
  
 }else if(method=="anosim"){ # just one group
@@ -3423,9 +3420,9 @@ GetHtMetaCpInfo <- function(mbSetObj, meta){
 #'@export
 #'@import metacoder
 PrepareHeatTreePlot <- function(mbSetObj, meta, taxalvl, color, layoutOpt, comparison, 
-                                wilcox.cutoff, switchCmpDirection, imgName, format="png", dpi=72){
+                                wilcox.cutoff, switchCmpDirection, colorMode, showLabels, imgName, format="png", dpi=72){
   load_metacoder();
-  
+
   mbSetObj <- .get.mbSetObj(mbSetObj);  
   tax_o <- taxalvl;
   dm <- mbSetObj$dataSet$proc.phyobj;
@@ -3496,7 +3493,7 @@ PrepareHeatTreePlot <- function(mbSetObj, meta, taxalvl, color, layoutOpt, compa
   PrepareHeatTreePlotDataParse_cmf_diff_table_res <- PrepareHeatTreePlotDataParse_cmf_diff_table(PrepareHeatTreePlotDataParse_cmf_res); #generate diff table
   PrepareHeatTreePlotDataParse_cmf_res <<- PrepareHeatTreePlotDataParse_cmf_res; #generate heat tree
   
-  PrepareHeatTreePlotDataParse_cmf_plot(mbSetObj, color, layoutOpt, comparison, wilcox.cutoff, imgName, format, dpi=72);
+  PrepareHeatTreePlotDataParse_cmf_plot(mbSetObj, color, layoutOpt, comparison, wilcox.cutoff,colorMode, showLabels, imgName, format, dpi=72);
   
   #below is for PDF reporter
   mbSetObj$analSet$heat_tree_plot <- imgName; 
@@ -3589,7 +3586,7 @@ PrepareHeatTreePlotDataParse_cmf_diff_table <- function(PrepareHeatTreePlotDataP
 #'@export
 #'@import metacoder
 #'@import viridis
-PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, comparison, wilcox.cutoff, imgName, format, dpi=72){
+PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, comparison, wilcox.cutoff, colorMode, showLabels, imgName, format, dpi=72){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   load_viridis();
@@ -3620,11 +3617,16 @@ PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, co
   set.seed(56784);
   
   Cairo::Cairo(file=paste0(imgName, ".", format), height = 875, width = 1000, type=format, bg="white", dpi=96);
-  
   wilcox.cutoff <- as.numeric(wilcox.cutoff)
+
+   if(colorMode=="sig"){
+    dm_obj_cmf$data$diff_table$log2_median_ratio[dm_obj_cmf$data$diff_table$wilcox_p_value>wilcox.cutoff]  <- 0
+   }
+
+if(showLabels=="true"){
   if(layoutOpt == "reda"){# two layouts are provided
     box <- heat_tree(dm_obj_cmf,
-                     node_label = ifelse(wilcox_p_value < wilcox.cutoff, taxon_names, NA),  #taxon names
+                     node_label =  ifelse(wilcox_p_value < wilcox.cutoff, taxon_names, NA),  #taxon names
                      node_size = n_obs, # n_obs is a function that calculates, in this case, the number of OTUs per taxon
                      node_color = log2_median_ratio, # A column from `obj$data$diff_table`
                      node_color_interval = c(-8, 8), # The range of `log2_median_ratio` to display
@@ -3639,7 +3641,7 @@ PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, co
                      output_file = NULL);
   } else {
     box <- heat_tree(dm_obj_cmf,
-                     node_label = ifelse(wilcox_p_value < wilcox.cutoff, taxon_names, NA),
+                     node_label =  ifelse(wilcox_p_value < wilcox.cutoff, taxon_names, NA),
                      node_size = n_obs, # n_obs is a function that calculates, in this case, the number of OTUs per taxon
                      node_color = log2_median_ratio, # A column from `obj$data$diff_table`
                      node_color_interval = c(-8, 8), # The range of `log2_median_ratio` to display
@@ -3650,7 +3652,41 @@ PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, co
                      title_size = 0.05,
                      node_label_size_range = c(0.02, 0.05),
                      output_file = NULL);
-  };
+
+  }
+}else{
+if(layoutOpt == "reda"){# two layouts are provided
+    box <- heat_tree(dm_obj_cmf,
+                     node_label =  NA,  #taxon names
+                     node_size = n_obs, # n_obs is a function that calculates, in this case, the number of OTUs per taxon
+                     node_color = log2_median_ratio, # A column from `obj$data$diff_table`
+                     node_color_interval = c(-8, 8), # The range of `log2_median_ratio` to display
+                     node_color_range = color_new, # The color palette used
+                     node_size_axis_label = "Abundance level",
+                     node_color_axis_label = "Median ratio (log2)",
+                     layout = "davidson-harel", # The primary layout algorithm
+                     initial_layout = "reingold-tilford",
+                     title = comparison,
+                     title_size = 0.05,
+                     node_label_size_range = c(0.02, 0.05),
+                     output_file = NULL);
+  } else {
+    box <- heat_tree(dm_obj_cmf,
+                     node_label =  NA,
+                     node_size = n_obs, # n_obs is a function that calculates, in this case, the number of OTUs per taxon
+                     node_color = log2_median_ratio, # A column from `obj$data$diff_table`
+                     node_color_interval = c(-8, 8), # The range of `log2_median_ratio` to display
+                     node_color_range = color_new, # The color palette used
+                     node_size_axis_label = "Abundance level",
+                     node_color_axis_label = "Median ratio (log2)",
+                     title = comparison,
+                     title_size = 0.05,
+                     node_label_size_range = c(0.02, 0.05),
+                     output_file = NULL);
+
+  }
+
+};
   print(box);
   dev.off();
   
@@ -3658,7 +3694,7 @@ PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, co
 }
 
 PlotGroupDataHeattree <- function(mbSetObj, meta, comparison, taxalvl, color, layoutOpt, 
-                                  imgName, format="png", dpi=72){
+                                  showLabels,imgName, format="png", dpi=72){
   load_metacoder();
   
   
@@ -3683,7 +3719,7 @@ PlotGroupDataHeattree <- function(mbSetObj, meta, comparison, taxalvl, color, la
   
   flag <- FALSE;
   
-  PrepareHeatTreePlotAbR(dm, tax_dm, taxalvl, dm_samples_cmf, color, imgName, format, layoutOpt, comparison, flag);
+  PrepareHeatTreePlotAbR(dm, tax_dm, taxalvl, dm_samples_cmf, color, showLabels,imgName, format, layoutOpt, comparison, flag);
   
   #below is for PDF reporter
   mbSetObj$analSet$heat_tree_plot <- imgName; 
@@ -3696,7 +3732,7 @@ PlotGroupDataHeattree <- function(mbSetObj, meta, comparison, taxalvl, color, la
 };
 
 PlotSampleDataHeattree <- function(mbSetObj,comparison, taxalvl, color, layoutOpt, 
-                                   imgName, format="png", dpi=72){
+                                  showLabels, imgName, format="png", dpi=72){
   load_metacoder();
   mbSetObj <- .get.mbSetObj(mbSetObj);
   tax_o <- taxalvl;
@@ -3721,7 +3757,7 @@ PlotSampleDataHeattree <- function(mbSetObj,comparison, taxalvl, color, layoutOp
   dm_samples_cmf <- dm_samples[dm_samples$sample_id %in% comparison, ];
   dm_samples_cmf$meta_com <- comparison;
   
-  PrepareHeatTreePlotAbR(dm, tax_dm, taxalvl, dm_samples_cmf, color, imgName, format, layoutOpt, comparison, flag);
+  PrepareHeatTreePlotAbR(dm, tax_dm, taxalvl, dm_samples_cmf, color,showLabels, imgName, format, layoutOpt, comparison, flag);
   
   #below is for PDF reporter
   mbSetObj$analSet$heat_tree_plot <- imgName; 
@@ -3733,7 +3769,7 @@ PlotSampleDataHeattree <- function(mbSetObj,comparison, taxalvl, color, layoutOp
 };
 
 PlotOverviewDataHeattree <- function(mbSetObj, taxalvl, color, layoutOpt, 
-                                     imgName, format="png", dpi=72){
+                                    showLabels, imgName, format="png", dpi=72){
   load_metacoder();
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -3754,7 +3790,7 @@ PlotOverviewDataHeattree <- function(mbSetObj, taxalvl, color, layoutOpt,
   
   flag <- FALSE;
   
-  PrepareHeatTreePlotAbR(dm, tax_dm, taxalvl, dm_samples_cmf, color, imgName, format, layoutOpt, comparison, flag);  
+  PrepareHeatTreePlotAbR(dm, tax_dm, taxalvl, dm_samples_cmf, color,showLabels, imgName, format, layoutOpt, comparison, flag);  
   
   #below is for PDF reporter
   mbSetObj$analSet$heat_tree_plot <- imgName; 
@@ -3766,7 +3802,7 @@ PlotOverviewDataHeattree <- function(mbSetObj, taxalvl, color, layoutOpt,
 };
 
 PrepareHeatTreePlotAbR <- function(dm = dm, tax_dm = tax_dm, taxalvl = taxalvl, dm_samples_cmf = dm_samples_cmf, 
-                                   color = color, imgName = imgName, format = format, layoutOpt= layoutOpt, comparison = comparison, flag = flag){
+                                   color = color,showLabels, imgName = imgName, format = format, layoutOpt= layoutOpt, comparison = comparison, flag = flag){
   
   otu_dm <- as.data.frame(as(otu_table(dm), "matrix"),check.names=FALSE);
   tax_dm <- as.data.frame(as(tax_table(dm), "matrix"),check.names=FALSE);
@@ -3853,7 +3889,7 @@ PrepareHeatTreePlotAbR <- function(dm = dm, tax_dm = tax_dm, taxalvl = taxalvl, 
   
   Cairo::Cairo(file=paste0(imgName, ".", format), height = 875, width = 1000, type=format, bg="white", dpi=96);
   
-  
+  if(showLabels=="true"){
   if(layoutOpt == "reda"){# two layouts are provided
     box <- heat_tree(dm_obj_cmf,
                      node_label = taxon_names,
@@ -3880,7 +3916,38 @@ PrepareHeatTreePlotAbR <- function(dm = dm, tax_dm = tax_dm, taxalvl = taxalvl, 
                      title_size = 0.05,
                      node_label_size_range = c(0.02, 0.05),
                      output_file = NULL);
-  };
+  }
+}else{
+if(layoutOpt == "reda"){# two layouts are provided
+    box <- heat_tree(dm_obj_cmf,
+                     node_label = NA,
+                     node_size = n_obs, # n_obs is a function that calculates, in this case, the number of OTUs per taxon
+                     node_color = dm_obj_cmf$data$tax_occ[[2]],# A column from `obj$data$tax_occ`
+                     node_color_range = color_new, # The color palette used
+                     node_size_axis_label = "OTU count",
+                     node_color_axis_label = "Samples with reads",
+                     layout = "davidson-harel", # The primary layout algorithm
+                     initial_layout = "reingold-tilford",
+                     title = comparison,
+                     title_size = 0.05,
+                     node_label_size_range = c(0.02, 0.05),
+                     output_file = NULL);
+  } else {
+    box <- heat_tree(dm_obj_cmf,
+                     node_label = NA,
+                     node_size = n_obs, # n_obs is a function that calculates, in this case, the number of OTUs per taxon
+                     node_color = dm_obj_cmf$data$tax_occ[[2]],# A column from `obj$data$tax_occ`
+                     node_color_range = color_new, # The color palette used
+                     node_size_axis_label = "OTU count",
+                     node_color_axis_label = "Samples with reads",
+                     title = comparison,
+                     title_size = 0.05,
+                     node_label_size_range = c(0.02, 0.05),
+                     output_file = NULL);
+  }
+
+}
+   ;
   print(box);
   dev.off();
 }

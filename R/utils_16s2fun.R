@@ -644,7 +644,7 @@ functional_prediction_final$description <- functional_prediction_final$KO<-NULL
 Tax4Fun <- function(Tax4FunInput,folderReferenceData, fctProfiling=TRUE,refProfile="UProC",shortReadMode=TRUE,normCopyNo=TRUE){
   Tax4FunReferenceData <- importTax4FunReferenceData(folderReferenceData)
   ### clean the taxonomy names for match
-  cleanedNms <- CleanTaxaNames(rownames(Tax4FunInput$otuTable))
+  cleanedNms <- DeepCleanTaxaNames(rownames(Tax4FunInput$otuTable))
 
   #Intersect Mapping SILVA to KEGG and user OTU table
 rank <- colnames(cleanedNms)[length(colnames(cleanedNms))]
@@ -755,7 +755,7 @@ subsetSILVAToKEGG <- as.data.frame(as.matrix(subsetSILVAToKEGG))
 } 
 
 
-CleanTaxaNames <- function(nms){
+DeepCleanTaxaNames <- function(nms){
   feat_nm =data.frame(nms,check.names=FALSE);
   names(feat_nm)<-"Rank";
   taxonomy<-suppressWarnings(splitstackshape::cSplit(feat_nm,"Rank",";"));
