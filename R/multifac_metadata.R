@@ -115,7 +115,7 @@ SetMetaAttributes <- function(mbSetObj=NA, init = 1){
   msg <- c(msg, paste0("A total of ", length(colnames(mbSetObj$dataSet$sample_data)), " metadata factors were detected: ", paste0(colnames(mbSetObj$dataSet$sample_data), collapse=", "), "."));
   msg <- c(msg, paste0("The primary metadata factor is: ", colnames(mbSetObj$dataSet$sample_data)[1], ", which contains ", cls.num, " groups."));
 
-  check.inx <-apply(sample_data , 2, function(x){ ( sum(is.na(x))/length(x) + sum(x=="NA")/length(x) + sum(x=="")/length(x) ) >0})
+  check.inx <-apply(sample_data , 2, function(x){(sum(is.na(x))/length(x) + sum(x=="NA", na.rm=TRUE)/length(x) + sum(x=="", na.rm=TRUE)/length(x)) >0})
 
   if(sum(check.inx)>0){
     if(init == 0){
@@ -125,7 +125,7 @@ SetMetaAttributes <- function(mbSetObj=NA, init = 1){
     }
     msg <- c(msg, paste0( "<b>",paste0(colnames(sample_data)[check.inx], collapse=", "),"</b>", " meta-data factors have missing values."));
   }
-  print(msg)
+  #print(msg)
   cls.vec <- vector()
   lowrep.vec <- vector()
   toolow.vec <- vector();
