@@ -243,9 +243,10 @@ ReadSampleTable <- function(mbSetObj, fileName) {
   # as most functions are for discrete groups (not continuous values)
   # require at least one column contains discrete factors with at least two replicates 
   disc.inx <- GetDiscreteInx(my.meta);
-  if(sum(disc.inx) == 0){ # all class labels are unique! 
-     AddErrMsg("It seems that your meta data values are unique! MicrobiomeAnalyst requires some biological replicates for robust analysis");
-    na.msg <- c("<font style=\"color:red\"><b> No.</b></font>", "It seems that all your metadata values are unique! MicrobiomeAnalyst requires some biological replicates for robust analysis!");
+
+  if(sum(disc.inx) == 0){ # No discrete column detected
+    AddErrMsg("Metadata Table: make sure there is at least one column contains experimental design for group comparisons (i.e., the primary metadata), with each group contains at least 3 replicate. No unique values are allowed in the primary metadata column.");
+    na.msg <- c("<font style=\"color:red\"><b> No.</b></font>", "It seems that some of your metadata values are unique! Please make sure at least 3 replicate per group!");
     mbSetObj$poor.replicate <- TRUE;
     mbSetObj$dataSet$sample_data <- my.meta
     mbSetObj$dataSet$meta_info$disc.inx <- 0;

@@ -275,8 +275,8 @@ Read16SBiomData <- function(mbSetObj, dataName, taxa_type, ismetadata){
     disc.inx <- GetDiscreteInx(sample_data);
     if(sum(disc.inx) == 0){ # all class labels are unique! 
        
-        AddErrMsg("It seems that your meta data values are unique! MicrobiomeAnalyst requires some biological replicates for robust analysis");
-        msg <- c(msg, "It seems that all your meta data values are unique! MicrobiomeAnalyst requires some biological replicates for robust analysis");
+        AddErrMsg("Metadata Table: make sure there is at least one column contains experimental design for group comparisons (i.e., the primary metadata), with each group contains at least 3 replicate. No unique values are allowed in the primary metadata column.");
+        msg <- c(msg, "It seems that some of your metadata values are unique! MicrobiomeAnalyst requires some biological replicates for robust analysis");
         mbSetObj$poor.replicate <- TRUE;
         mbSetObj$dataSet$sample_data <- sample_data
        return(0)
