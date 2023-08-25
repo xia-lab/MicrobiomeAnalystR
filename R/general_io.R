@@ -373,13 +373,12 @@ IsPoorReplicate <- function(mbSetObj){
 
 GetResMat <- function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  return(as.matrix(mbSetObj$analSet$resTable));
+  return(as.matrix(signif(mbSetObj$analSet$resTable),5));
 }
 
 GetResMetabo <- function(){
   return(as.matrix(current.proc$met$res_deAnal));
 }
-
 
 # type can be all, discrete or continuous
 GetMetaInfo <- function(mbSetObj, type="disc"){

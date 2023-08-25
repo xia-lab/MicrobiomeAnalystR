@@ -17,10 +17,9 @@
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PerformAlphaDiversityComp<-function(mbSetObj, opt, metadata){
+PerformAlphaDiversityComp<-function(mbSetObj, opt, metadata, pair.wise = "false"){
   
   mbSetObj <- .get.mbSetObj(mbSetObj); 
-  
   data <- mbSetObj$analSet$alpha;
   cls <- as.factor(data[,metadata]);
   x <- data$value;
@@ -34,6 +33,34 @@ PerformAlphaDiversityComp<-function(mbSetObj, opt, metadata){
       res <- kruskal.test(x ~ cls);
       stat.info <- paste("p-value: ", signif(res$p.value, 5), "; [Kruskal-Wallis] statistic: ", signif(res$statistic, 5) , sep="");
     }
+
+    if(pair.wise != "false"){
+        # get pairs
+          co    <- combn(unique(as.character(cls)),2);
+          nco   <- NCOL(co);
+          out   <- data.frame(matrix(NA, nrow=nco, ncol=3));
+          dimnames(out)[[2]] <- c('pairs', 'statistic', 'pval');
+
+          for(j in 1:nco) {
+
+            inx1 <- cls %in% co[1,j];
+            inx2 <- cls %in% co[2,j];
+
+            if(opt=="tt"){
+                res <- t.test(x[inx1], x[inx2]);
+            }else{
+                res <- wilcox.test(x[inx1], x[inx2]);
+            }
+
+            out[j,1] <- paste(co[1,j], 'vs', co[2,j]);
+            out[j,2] <- res$statistic;
+            out[j,3] <- res$p.value;
+         }
+         
+         # add adjusted p value
+         out$p.adj <- p.adjust(out$pval, method="fdr");
+    }
+
   }else{
     inx1 <- which(cls==levels(cls)[1]);
     inx2 <- which(cls==levels(cls)[2]);
@@ -45,10 +72,23 @@ PerformAlphaDiversityComp<-function(mbSetObj, opt, metadata){
       res <- wilcox.test(x[inx1], x[inx2]);
       stat.info <- paste("p-value: ", signif(res$p.value, 5), "; [Mann-Whitney] statistic: ", signif(res$statistic, 5), sep="");
     }
+
+    if(pair.wise != "false"){ # same for two group case
+        out <- list();
+        out$pairs <- paste(levels(cls)[1], 'vs', levels(cls)[2]);
+        out$statistic <- signif(res$statistic, 5);
+        out$p.adj <- out$p.value <- signif(res$p.value, 5);
+        out<- data.frame(out);
+    }
   }
   
   mbSetObj$analSet$alpha.stat.info <- stat.info;
-  
+  if(pair.wise != "false"){ # same for two group case
+    rownames(out) <- out$pairs;
+    out$pairs <- NULL;
+    mbSetObj$analSet$alpha.stat.pair <- mbSetObj$analSet$resTable <- out;
+  }
+
   if(.on.public.web){
     .set.mbSetObj(mbSetObj)
     return(stat.info);
@@ -2811,11 +2851,13 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pai
     names(stat.info.vec) <- c("F-value", "R-squared", "p-value");
  
     if(pairwise != "false"){
-     grp = sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]
-     res <- .permanova_pairwise(x = data.dist,  grp);
-     #print(res);
-     rownames(res) = res$pairs
-    mbSetObj$analSet$pairTab = res[,3:5]
+      grp = sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]
+      res <- .permanova_pairwise(x = data.dist,  grp);
+      #print(res);
+      rownames(res) <- res$pairs;
+      # mbSetObj$analSet$pairTab = signif(res[,3:5], 5);
+      # in this case, save a local copy for report generation, but also for general I/O parsing to web interface
+       mbSetObj$analSet$beta.stat.pair <- mbSetObj$analSet$resTable <- signif(res[,3:5], 5);
    }
  
 }else if(method=="anosim"){ # just one group

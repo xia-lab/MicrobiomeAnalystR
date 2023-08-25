@@ -2031,45 +2031,10 @@ template.match <- function(x, template, dist.name) {
 
 # Helper function for volcano plot
 GetTopInx <- function (vec, n, dec = T) {
-  inx <- order(vec, decreasing = dec)[1:n]
-  vec <- rep(F, length = length(vec))
-  vec[inx] <- T
-  return(vec)
-}
-
-# Helper function for paorwise permernova
-
-GetPairs <- function(mbSetObj, variable){
-
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-if(variable=="null"){
-  clslbl <- data.frame(sample_data(mbSetObj$dataSet$norm.phyobj))[,1]
-}else{
-  clslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
-}
-
-  co    <- combn(unique(as.character(clslbl)),2)
-
- res <- apply(data.frame(co),2,function(x) paste(x[1], 'vs', x[2] ))
-
-
-  return(res);
-}
-
-
-GetPairResRowNames <- function(mbSetObj){
- mbSetObj <- .get.mbSetObj(mbSetObj);
-  return(rownames(mbSetObj$analSet$pairTab));
-}
-
-GetPairResColNames <- function(mbSetObj){
- mbSetObj <- .get.mbSetObj(mbSetObj);
-  return(colnames(mbSetObj$analSet$pairTab));
-}
-
-GetResPairPermanova <- function(mbSetObj){
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  return(as.matrix(mbSetObj$analSet$pairTab));
+  inx <- order(vec, decreasing = dec)[1:n];
+  vec <- rep(F, length = length(vec));
+  vec[inx] <- T;
+  return(vec);
 }
 
 ####################################
