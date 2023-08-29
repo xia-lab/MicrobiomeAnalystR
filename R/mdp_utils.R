@@ -83,10 +83,11 @@ PerformAlphaDiversityComp<-function(mbSetObj, opt, metadata, pair.wise = "false"
   }
   
   mbSetObj$analSet$alpha.stat.info <- stat.info;
-  if(pair.wise != "false"){ # same for two group case
+  if(pair.wise != "false"){ 
     rownames(out) <- out$pairs;
     out$pairs <- NULL;
     mbSetObj$analSet$alpha.stat.pair <- mbSetObj$analSet$resTable <- out;
+    fast.write(signif(out,5), file="pairwise_alpha.csv");
   }
 
   if(.on.public.web){
@@ -2851,13 +2852,19 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pai
     names(stat.info.vec) <- c("F-value", "R-squared", "p-value");
  
     if(pairwise != "false"){
-      grp = sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]
-      res <- .permanova_pairwise(x = data.dist,  grp);
-      #print(res);
-      rownames(res) <- res$pairs;
-      # mbSetObj$analSet$pairTab = signif(res[,3:5], 5);
-      # in this case, save a local copy for report generation, but also for general I/O parsing to web interface
-       mbSetObj$analSet$beta.stat.pair <- mbSetObj$analSet$resTable <- signif(res[,3:5], 5);
+        grp <- sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]
+       if(length(levels(grp)) == 2){ # same as before  
+            res <- data.frame(t(c(stat.info.vec, p.adj=signif(resTab$Pr, 5))));
+            rownames(res) <- paste(levels(grp)[1], ".vs.", levels(grp)[2]);
+            mbSetObj$analSet$beta.stat.pair <- mbSetObj$analSet$resTable <- res;
+       }else{
+            res <- .permanova_pairwise(x = data.dist,  grp);
+            rownames(res) <- res$pairs;
+            res$pairs <- NULL;
+            # in this case, save a local copy for report generation, but also for general I/O parsing to web interface
+            mbSetObj$analSet$beta.stat.pair <- mbSetObj$analSet$resTable <- res[,2:5];
+      }
+      fast.write(signif(res,5), file="pairwise_permanova.csv");
    }
  
 }else if(method=="anosim"){ # just one group
