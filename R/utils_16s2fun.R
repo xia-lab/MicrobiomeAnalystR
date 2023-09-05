@@ -660,15 +660,15 @@ keepidx <-  colSums(subsetOTUTables)>0
 subsetOTUTables <- subsetOTUTables[,keepidx]
 subsetSILVAToKEGG <- Tax4FunReferenceData$SilvaToKEGGMappingMat[indexSILVAToKEGG,]
 subsetSILVAToKEGG <- as.data.frame(as.matrix(subsetSILVAToKEGG))
-   
+
   if(length(which(keepidx==F))>0){
     rmidx = which(keepidx==F)
-    rmsmp = colnames(subsetOTUTables)[rmidx]
+    rmsmp = names(rmidx)
     if(length(rmidx)==1){
-      current.msg<<-paste0("Sample ", rmsmp, " was removed during the processing due to the abundance of all the matched taxa are 0 in this sample.")
+      current.msg <<- paste0("Sample ", rmsmp, " was removed during the processing due to the abundance of all the matched taxa are 0 in this sample.")
     }else{
       rmsmp <- paste(rmsmp,collapse = ", ")
-      current.msg<<-paste0("Samples ", rmsmp, " were removed during the processing due to the abundance of all the matched taxa are 0 in these samples.")
+      current.msg <<- paste0("Samples ", rmsmp, " were removed during the processing due to the abundance of all the matched taxa are 0 in these samples.")
     }
   }
  
