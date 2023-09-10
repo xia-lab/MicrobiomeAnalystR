@@ -676,6 +676,7 @@ generateResFigures <- function(mbSetObj = NA){
   require(phyloseq);
   require(ggplot2);
   seqtab.nochim <- dataObj[["res"]][["seqtab.nochim"]];
+  write.table(seqtab.nochim, file = "seq_abundance.txt", sep = "\t", row.names = FALSE, quote = FALSE)
   samples.out <- colnames(seqtab.nochim)
   
   Samples <- sapply(strsplit(samples.out, "_F_filt.fastq.gz"), `[`, 1)
@@ -689,7 +690,7 @@ generateResFigures <- function(mbSetObj = NA){
   rownames(samdf) <- Samples;
   
   taxa <- dataObj[["res"]][["taxa"]]
-  
+  write.table(taxa, file = "taxonomy_annotation.txt", sep = "\t", row.names = FALSE, quote = FALSE)
   ## merge seqtab.nochim and taxa into OTU abundance table
   taxa_nms <- apply(taxa, 1, FUN = function(x){
     if(is.na(x[6])){x[6] <- "uncultured"}
