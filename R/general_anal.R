@@ -809,8 +809,10 @@ PlotLEfSeSummary <- function(mbSetObj, ldaFeature, layoutOptlf, imgName, format=
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   set.seed(280561493);
-  mbSetObj$analSet$lefse_plot <- imgName;
+  
   imgName = paste(imgName, ".", format, sep="");
+  mbSetObj$analSet$lefse_plot <- imgName;
+
   ldabar <- ldabar;
   
   if(nrow(ldabar) == 0){
