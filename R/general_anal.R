@@ -118,33 +118,27 @@ PlotRF.Classify<-function(mbSetObj, feature, imgName, format="png", dpi=72, widt
   imgName = paste(imgName,".", format, sep="");
   
   mbSetObj$imgSet$rf.cls <- imgName;
+
+  if (feature < 5) {
+    h <- feature * 1.2
+  } else if (feature < 10) {
+    h <- feature * 1.4
+  } else if (feature < 15) {
+    h <- feature / 1.6
+  } else if (feature < 20) {
+    h <- feature / 1.8
+  } else if (feature < 25) {
+    h <- feature / 2
+  } else if (feature < 30) {
+    h <- feature / 2.2
+  } else if (feature < 40) {
+    h <- feature / 2.5
+  } else {
+    h <- feature / 10
+  }
   
   if(is.na(width)){
-    if(feature < 5 ){
-      h <- feature*1.2;
-      w <- 9;
-    } else if (feature < 10){
-      h <- feature*1.4;
-      w <- 9;
-    } else if (feature < 15){
-      h <- feature/1.6;
-      w <- 9;
-    } else if (feature < 20){
-      h <- feature/1.8;
-      w <- 9;
-    } else if (feature < 25){
-      h <- feature/2;
-      w <- 9;
-    } else if (feature < 30){
-      h <- feature/2.2;
-      w <- 9;
-    } else if (feature < 40){
-      h <- feature/2.5;
-      w <- 9;
-    } else {
-      h <- feature/10;
-      w <- 9;
-    }
+    w <- 9;
   }else if(width == 0){
     w <- 8;
   }else{
