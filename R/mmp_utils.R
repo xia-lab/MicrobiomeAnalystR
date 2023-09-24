@@ -3266,7 +3266,7 @@ PlotDiagnostic <- function(imgName, dpi=72, format="png",alg){
     h=8
   }
   
-  Cairo(file=imgNm, width=10, height=h, type="png",unit="in", bg="white", dpi=dpi);
+  Cairo(file=imgNm, width=10, height=h, type=format,unit="in", bg="white", dpi=dpi);
   if(alg == "procrustes"){
     procrustes.res <- qs::qread("procrustes.res.qs")
     res <- procrustes.res$dim.res[[length(procrustes.res$dim.res)]]
