@@ -3545,7 +3545,7 @@ PrepareHeatTreePlot <- function(mbSetObj, meta, taxalvl, color, layoutOpt, compa
   PrepareHeatTreePlotDataParse_cmf_plot(mbSetObj, color, layoutOpt, comparison, wilcox.cutoff,colorMode, showLabels, imgName, format, dpi=72);
   
   #below is for PDF reporter
-  mbSetObj$analSet$heat_tree_plot <- imgName; 
+  mbSetObj$analSet$heat_tree_plot <- paste0(imgName,".",format); 
   mbSetObj$analSet$heat_tree_meta <- meta;
   mbSetObj$analSet$heat_tree_tax <- tax_o;
   mbSetObj$analSet$heat_tree_comparison <- comparison;

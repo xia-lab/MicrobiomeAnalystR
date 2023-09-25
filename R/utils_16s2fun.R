@@ -320,29 +320,28 @@ my.16sfun.anot<-function(mbSetObj, type, pipeline,ggversion) {
     result_path <- result_path[!apply(result_path==0,1,all), ]; 
     mbSetObj$analSet$pathway.pred<- result_path;
     result <- result[!apply(result==0,1,all), ]; #filtering zero counts across all
-    mbSetObj$analSet$func.pred.tax4fun2<-result
+    mbSetObj$analSet$func.pred <- mbSetObj$analSet$func.pred.tax4fun2<-result
   }else if(func.meth == "Tax4Fun"){
     kos <- matrix(rownames(result))
     colnames(kos) <- "#NAME"
     tax4_feats <- cbind(kos, result)
     fast.write(tax4_feats, file="functionalprof_tax4fun.csv", row.names = FALSE);
     result <- result[!apply(result==0,1,all), ]; #filtering zero counts across all
-     mbSetObj$analSet$func.pred.tax4fun<-result
+    mbSetObj$analSet$func.pred <- mbSetObj$analSet$func.pred.tax4fun<-result
   }else if(func.meth == "picrust12"){
     kos <- matrix(rownames(result))
     colnames(kos) <- "#NAME"
     picrust_feats <- cbind(kos, result)
     fast.write(picrust_feats, file="functionalprof_picrust_gg12.csv", row.names=FALSE);
-     result <- result[!apply(result==0,1,all), ]; #filtering zero counts across all
-    mbSetObj$analSet$func.pred.gg12<-result
+    result <- result[!apply(result==0,1,all), ]; #filtering zero counts across all
+    mbSetObj$analSet$func.pred <- mbSetObj$analSet$func.pred.gg12<-result
    }else if(func.meth == "picrust13"){
     kos <- matrix(rownames(result))
     colnames(kos) <- "#NAME"
     picrust_feats <- cbind(kos, result)
     fast.write(picrust_feats, file="functionalprof_picrust_gg13.csv", row.names=FALSE);
     result <- result[!apply(result==0,1,all), ]; #filtering zero counts across all
-    mbSetObj$analSet$func.pred.gg13<-result
-
+    mbSetObj$analSet$func.pred <- mbSetObj$analSet$func.pred.gg13<-result
    }
 
  
