@@ -207,8 +207,9 @@ scale_colours = function(mat, col = rainbow(10), breaks = NA){
         dat <- try(read.csv(fileName, header=TRUE, comment.char = "", check.names=F, as.is=T));
       }
   }
-  # need to remove potential empty columns
+  # need to remove potential empty columns and rows
   dat <- dat[!sapply(dat, function(x) all(x == "") || all(is.na(x)))];
+  dat <- dat[!apply(dat, 1, function(x)  all(x == "" | is.na(x))),];
   return(dat);
 }
 
