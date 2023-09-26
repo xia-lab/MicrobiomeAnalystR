@@ -307,8 +307,8 @@ GetSanityVec <- function(paired){
   } else if(file.exists("meta_its.qs")){
     meta_df <-qs::qread("meta_its.qs")
   }else{
-meta_df <- data.frame()
-   }
+    meta_df <- data.frame()
+  }
   if(paired == 2){
     allNames <- vapply(allUPFiles, function(x){
       gsub("_R1.fastq|_R2.fastq|_R1.fq|_R2.fq", "", x)
