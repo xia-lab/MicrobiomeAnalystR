@@ -86,6 +86,7 @@ Read16STabData <- function(mbSetObj, dataName) {
   
   msg <- NULL;
   mydata <- .readDataTable(dataName);
+
   if(any(is.na(mydata)) || class(mydata) == "try-error"){
     AddErrMsg("Failed to read in the OTU abundance data! Please make sure the data is in the right format and do not have empty cells or NA.");
     return(0);
