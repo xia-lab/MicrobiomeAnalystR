@@ -564,7 +564,13 @@ summaryRes <- function(mbSetObj = NA){
                           " OTUs found from all files after de-noising.");
     
   }
-  
+  mbSetObj[["analSet"]]$summsg <- c(
+    sampleMsg,
+    OTU_total_Msg,
+    NonChim_Msg,
+    DeNoise_Msg,
+    Uni_taxa_Msg)
+
   if (.on.public.web) {
     .set.mbSetObj(mbSetObj)
     return(c(
