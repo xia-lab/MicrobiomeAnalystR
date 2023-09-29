@@ -209,9 +209,8 @@ ReadSampleTable <- function(mbSetObj, fileName) {
   #}
   
   # converting to character matrix as duplicate row names not allowed in data frame.
-
-    mydata <- sapply(mydata[,-1], format, trim = TRUE)
-
+#mydata <- as.matrix(mydata[,-1]);
+mydata <- sapply(mydata[,-1,drop=F], format, trim = TRUE)
   if(nrow(mydata)==1){
     AddErrMsg("Only one sample in the dataset or the metadata file must be transposed!")
     return(0);
