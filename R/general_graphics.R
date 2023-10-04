@@ -237,6 +237,7 @@ PlotBoxData <- function(mbSetObj, boxplotName, feat, format="png", dpi=72){
   load_ggplot();
   load_grid();
   load_gridExtra();
+  load_phyloseq();
   
   variable <-  mbSetObj$analSet$var.type 
   
@@ -273,6 +274,7 @@ PlotBoxMultiData <- function(mbSetObj, boxplotName, analysis.var, feat, format="
   load_ggplot();
   load_grid();
   load_gridExtra();
+  load_phyloseq();
   
   variable <-  analysis.var
   var.type <- mbSetObj$dataSet$meta.types[names(mbSetObj$dataSet$meta.types) == variable]
@@ -338,6 +340,7 @@ PlotBoxMultiMetabo <- function(mbSetObj, boxplotName, analysis.var, feat, format
   load_ggplot();
   load_grid();
   load_gridExtra();
+  load_phyloseq();
   
   variable <-  analysis.var
   var.type <- mbSetObj$dataSet$meta.types[names(mbSetObj$dataSet$meta.types) == variable]

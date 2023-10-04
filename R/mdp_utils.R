@@ -361,6 +361,8 @@ PrepareCorrExpValues <- function(mbSetObj, meta, taxalvl, color, layoutOpt, comp
 }
 
 PrepareBoxPlot <- function(mbSetObj, taxrank, variable){
+
+  load_phyloseq();
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -793,6 +795,8 @@ PlotOverallPieGraph<-function(mbSetObj, taxalvl, feat_cnt, calcmeth,
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   load_reshape();
+  load_phyloseq();
+
   set.seed(28053448);
   
   #using filtered data
@@ -931,6 +935,7 @@ PlotGroupPieGraph <- function(mbSetObj, taxalvl, metadata, clslevel,
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   load_reshape();
+  load_phyloseq();
   
   set.seed(28053443);
   
@@ -1058,8 +1063,11 @@ PlotGroupPieGraph <- function(mbSetObj, taxalvl, metadata, clslevel,
 #'@import reshape
 PlotSamplePieGraph<-function(mbSetObj, taxalvl, smplnm, feat_cnt, toptaxapie, pietoptaxaopt){
   mbSetObj <- .get.mbSetObj(mbSetObj);
+
   load_reshape();
+  load_phyloseq();
   set.seed(28053443);
+
   #using filtered data
   data <- mbSetObj$dataSet$filt.data;
   
@@ -1526,6 +1534,7 @@ PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
   
   if(.on.public.web){
     load_reshape();
+    load_phyloseq();
   }
   
   #using filtered data
@@ -2207,6 +2216,7 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
   mbSetObj <- .get.mbSetObj(mbSetObj);
   load_reshape();
   load_viridis();
+  load_phyloseq();
   
   if(mbSetObj$module.type == "meta"){
     if(viewOpt=="smpl_grp"){
@@ -2504,10 +2514,14 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
 PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, imgOpt, 
                               feat_cnt, colpalopt, calcmeth, toptaxa, abunTopTaxaOpt, 
                               appendnm, format="png", dpi=72, interactive = FALSE){
-  mbSetObj <- .get.mbSetObj(mbSetObj);
+
   load_reshape();
   load_ggplot();
   load_viridis();
+  load_phyloseq(); 
+
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+
   if(mbSetObj$module.type == "meta"){
     data1 <- qs::qread("merged.data.raw.qs");
     #data1 <- subsetPhyloseqByDataset(mbSetObj, data1);
@@ -2918,6 +2932,7 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pai
 PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, facet2, imgOpt,
                                      feat_cnt, colpalopt, calcmeth, toptaxa,abunTopTaxaOpt, 
                                      appendnm, format="png", dpi=80, interactive = FALSE){
+  load_phyloseq();
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -3317,6 +3332,8 @@ PlotRarefactionCurve <- function(mbSetObj, data.src, linecolor, linetype, facet,
 #'License: GNU GPL (>= 2)
 #'@export
 PlotPhylogeneticTree <-function(mbSetObj, color, shape, taxa, treeshape, imgName, format="png", dpi=72){
+
+  load_phyloseq();
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   

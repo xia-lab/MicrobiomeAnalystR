@@ -61,6 +61,12 @@ Init.mbSetObj <- function(){
   BiocParallel::register(BiocParallel::SerialParam());
   Sys.setenv("OMP_NUM_THREADS" = 2); 
   Sys.setenv("OPENBLAS_NUM_THREADS" = 2);
+
+  if(.on.public.web){ 
+    Set.Config("web");
+  } else {    
+    Set.Config("api");
+  }
   
   # preload some general package
   load_cairo();

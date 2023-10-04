@@ -328,6 +328,8 @@ PlotImpVar <- function(mbSetObj, imp.vec, xlbl, feature, color.BW=FALSE){
 
 PerformUnivarTest <- function(mbSetObj, variable, p.lvl, shotgunid, taxrank, statOpt){
 
+  load_phyloseq();
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   #rather than whole name from taxonomy just last name.
@@ -800,6 +802,8 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
 #'License: GNU GPL (>= 2)
 #'@export
 PlotLEfSeSummary <- function(mbSetObj, ldaFeature, layoutOptlf, imgName, format="png", width = NA, dpi=72, colOpt="default") {
+
+  load_phyloseq();
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   set.seed(280561493);
@@ -893,6 +897,8 @@ PlotLEfSeSummary <- function(mbSetObj, ldaFeature, layoutOptlf, imgName, format=
 #'@export
 
 PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="default", color.BW=FALSE){
+
+  load_phyloseq();
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   if(layoutOptlf == "dot") {
@@ -1125,6 +1131,9 @@ return(1)
 
 
 .prepare_rnaseq<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank){
+
+  load_phyloseq();
+
   mbSetObj <-.get.mbSetObj(mbSetObj);
 
   taxrank <<- taxrank;
@@ -1304,6 +1313,8 @@ return(1)
 #'@export
 
 FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, feat){
+
+  load_phyloseq();
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -1425,6 +1436,8 @@ FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, feat){
 #'License: GNU GPL (>= 2)
 #'@export
 PlotCorr <- function(mbSetObj, imgName, format="png", dpi=72,appendnm, width=NA){
+
+  load_phyloseq();
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   

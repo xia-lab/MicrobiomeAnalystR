@@ -489,6 +489,7 @@ ApplyMetaboFilter <- function(mbSetObj=NA, filter,  rsd){
 #'@export
 UpdateSampleItems <- function(mbSetObj){
   
+  load_phyloseq();
   mbSetObj <- .get.mbSetObj(mbSetObj);
   dataName <- mbSetObj$dataSet$name;
   module.type <- mbSetObj$module.type;
