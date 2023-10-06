@@ -1426,6 +1426,8 @@ PlotPiechart <- function(mbSetObj, rel_perct, pieName, format="png", dpi=72) {
 PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName, metadata, 
                         taxrank, colors = "default", format="png", dpi=72, interactive = FALSE){
 
+  load_phyloseq();
+
   mbSetObj <- .get.mbSetObj(mbSetObj);  
   set.seed(13133);
   
@@ -1857,8 +1859,11 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
   combined <- F;
   mbSetObj <- .get.mbSetObj(mbSetObj);
   module.type <- mbSetObj$module.type;
+
   load_datatable();
   load_viridis();
+  load_phyloseq();
+
   set.seed(13134);
   if(module.type == "meta" && !combined){
     mdata.all <- mbSetObj$mdata.all;
@@ -3243,6 +3248,8 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
 #'@export
 PlotRarefactionCurve <- function(mbSetObj, data.src, linecolor, linetype, facet, step=5, 
                                  imgName, format="png", dpi=72, interactive = FALSE){
+
+  load_phyloseq();
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   # should use unfiltered data
@@ -3488,6 +3495,7 @@ GetHtMetaCpInfo <- function(mbSetObj, meta){
 PrepareHeatTreePlot <- function(mbSetObj, meta, taxalvl, color, layoutOpt, comparison, 
                                 wilcox.cutoff, switchCmpDirection, colorMode, showLabels, imgName, format="png", dpi=72){
   load_metacoder();
+  load_phyloseq();
 
   mbSetObj <- .get.mbSetObj(mbSetObj);  
   tax_o <- taxalvl;
