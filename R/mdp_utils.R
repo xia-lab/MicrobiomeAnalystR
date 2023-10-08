@@ -2156,15 +2156,18 @@ PlotFunAnotSummary<-function(mbSetObj, imgName, format="png",funanno, dpi=72){
   set.seed(280561499);
    
   if(funanno=="gg12"){
-   func.file = "func.pred.gg12"
+    func.file = "func.pred.gg12"
+    mbSetObj$analSet$funcode <- "picrust_ko";
   }else if(funanno=="gg13"){
     func.file = "func.pred.gg13"
+    mbSetObj$analSet$funcode <- "picrust_ko";
   }else if(funanno =="tax4fun2"){
- func.file = "func.pred.tax4fun2"
- }else{
- func.file = "func.pred.tax4fun"
-
-}
+    func.file = "func.pred.tax4fun2";
+    mbSetObj$analSet$funcode <- "tax4fun2_ko";
+  }else{
+    func.file = "func.pred.tax4fun"
+    mbSetObj$analSet$funcode <- "tax4fun_ko";
+  }
   
   if(is.null(mbSetObj$analSet[[func.file]])){
     result <- qs::qread(func.file);
