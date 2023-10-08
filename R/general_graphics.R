@@ -251,7 +251,20 @@ PlotBoxData <- function(mbSetObj, boxplotName, feat, format="png", dpi=72){
   a <- as.numeric(data[,feat]);
   min.val <- min(abs(a[a!=0]))/5;
   data$log_feat <- log2((a + sqrt(a^2 + min.val))/2);
-  boxplotName = paste(boxplotName,".",format, sep="");
+  boxplotName <- paste(boxplotName,".",format, sep="");
+  if(is.null(mbSetObj$imgSet$boxplots)){
+    mbSetObj$imgSet$boxplots <- boxplotName;
+    mbSetObj$analSet$boxplot_feats <- feat;
+  } else {
+    idxft <- which(mbSetObj$analSet$boxplot_feats == feat)
+    if(length(idxft)==0){
+        mbSetObj$analSet$boxplot_feats <- c(mbSetObj$analSet$boxplot_feats, feat)
+        mbSetObj$imgSet$boxplots <- c(mbSetObj$imgSet$boxplots, boxplotName);
+    } else {        
+        mbSetObj$imgSet$boxplots[idxft] <- boxplotName;
+    }
+  }
+
   Cairo::Cairo(file=boxplotName,width=720, height=360, type=format, bg="white",dpi=dpi);
 
   box=ggplot(data, aes(x=data$class, y = data[,feat])) + stat_boxplot(geom ='errorbar') + 
