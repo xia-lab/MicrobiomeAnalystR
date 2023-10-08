@@ -448,388 +448,389 @@ PlotBoxMultiMetabo <- function(mbSetObj, boxplotName, analysis.var, feat, format
 #'@import viridis
 
 PlotHeatmap<-function(mbSetObj, plotNm, dataOpt="norm", 
-                       scaleOpt="row",smplDist, clstDist, palette, metadata,
-                      taxrank, viewOpt, doclust, format="png",  colname,rowname, fontsize_col, fontsize_row,
-                      annoPer,fzAnno,
+                      scaleOpt="row", smplDist, clstDist, palette, metadata,
+                      taxrank, viewOpt, doclust, format="png", colname,rowname, 
+                      fontsize_col, fontsize_row, annoPer, fzAnno,
                       appendnm="F", rowV=F, colV=T, var.inx=NA, border=T, width=NA, dpi=72){
 
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  load_iheatmapr();
-  load_rcolorbrewer();
-  load_viridis();
+    mbSetObj <- .get.mbSetObj(mbSetObj);
+    load_iheatmapr();
+    load_rcolorbrewer();
+    load_viridis();
 
-  set.seed(2805614);
-  #used for color pallete
-  variable <<- metadata;
+    set.seed(2805614);
+    #used for color pallete
+    variable <<- metadata;
     if(dataOpt=="norm"){
-    
-    if(mbSetObj$module.type!="mdp"){
-  
-    taxrank <- "OTU";
-  }
 
-    if(!(exists("phyloseq_objs"))){
-    phyloseq_objs <- readDataQs("phyloseq_objs.qs",mbSetObj$module.type,dataName)
-   }
-     data <- phyloseq_objs$merged_obj[[taxrank]]
-     if(is.null(data)){
-        AddErrMsg("Errors in projecting to the selected taxanomy level!");
-        return(0);
-      }
-   
- 
- 
-  }else{
-
-   data <- mbSetObj$dataSet$proc.phyobj;
-
- if(mbSetObj$module.type!="mdp"){
-    taxrank <- "OTU";
-  }
-
-  }
-
-  #if more than 500 features will be present;subset to most abundant=>500 features.
-  #OTUs already in unique names;
-  if(ntaxa(data)>500){
-    data = prune_taxa(names(sort(taxa_sums(data), TRUE))[1:500], data);
-    viewOpt == "overview";
-  }
- if(taxrank=="OTU"){
-    data1 <- as.matrix(otu_table(data));
-    rownames(data1) <- taxa_names(data);
-  }else{
-    #merging at taxonomy levels
-    data <- fast_tax_glom_mem(data,taxrank);
-    if(is.null(data)){
-      AddErrMsg("Errors in projecting to the selected taxanomy level!");
-      return(0);
-    }
-    nm <- as.character(tax_table(data)[,taxrank]);
-    y <- which(is.na(nm)==TRUE);
-    #converting NA values to unassigned
-    nm[y] <- "Not_Assigned";
-    data1 <- as.matrix(otu_table(data));
-    
-    if(appendnm=="T"){
-      all_nm <- colnames(tax_table(data));
-      hg_nmindx <- which(all_nm==taxrank)-1;
-      
-      if(hg_nmindx!=0){
-        nma <- as.character(tax_table(data)[,hg_nmindx]);
-        y1 <- which(is.na(nma)==TRUE);
-        nma[y1] <- "Not_Assigned";
-        nm <- paste0(nma,"_",nm);
-        ind <- which(nm=="Not_Assigned_Not_Assigned");
-        nm[ind] <- "Not_Assigned";
-        nm <- gsub("_Not_Assigned", "",nm, perl = TRUE);
-      }
-    }
-    
-    rownames(data1) <- nm;
-    #all NA club together
-    data1 <- (t(sapply(by(data1,rownames(data1),colSums),identity)));
-    nm <- rownames(data1);
-  }
-  
-  # arrange samples on the basis of slected experimental factor and using the same for annotation also
-  annotation <- data.frame(sample_data(data));
-  
-  ind <- which(colnames(annotation)!=metadata && colnames(annotation)!="sample_id");
- 
-  if(length(ind)>0){
-    ind1 <- ind[1]
-    annotation <- annotation[order(annotation[,metadata],annotation[,ind1]),];
-  }else{
-    annotation <- annotation[order(annotation[,metadata]),];
-  }
-  
-  # remove those columns that all values are unique (continuous or non-factors)
-  #uniq.inx <- apply(annotation, 2, function(x){length(unique(x)) == length(x)});
-  #there is an additional column sample_id which need to be removed first
-  # get only good meta-data
-  good.inx <- GetDiscreteInx(annotation);
-  if(sum(good.inx)>0){
-    annotation <- annotation[,good.inx, drop=FALSE];
-    sam.ord <- rownames(annotation);
-    data1 <- data1[,sam.ord];
-  }else{
-    annotation <- NA;
-  }
-  # set up colors for heatmap
-
-if(palette=="gbr"){
-    colors <- grDevices::colorRampPalette(c("green", "black", "red"), space="rgb")(256);
-  }else if(palette == "heat"){
-    colors <- grDevices::heat.colors(256);
-  }else if(palette == "topo"){
-    colors <- grDevices::topo.colors(256);
-  }else if(palette == "gray"){
-    colors <- grDevices::colorRampPalette(c("grey90", "grey10"), space="rgb")(256);
-  }else if(palette == "byr"){
-    colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdYlBu"))(256));
-  }else if(palette == "viridis") {
-    colors <- rev(viridis::viridis(10))
-  }else if(palette == "plasma") {
-    colors <- rev(viridis::plasma(10))
-  }else  if(palette == "npj"){
-   colors <- c("#00A087FF","white","#E64B35FF")
-  }else  if(palette == "aaas"){
-    colors <- c("#4DBBD5FF","white","#E64B35FF");
-  }else  if(palette == "d3"){
-    colors <- c("#2CA02CFF","white","#FF7F0EFF");
-  }else {
-    colors <- c("#0571b0","#92c5de","white","#f4a582","#ca0020");
-  }
-
-   plotjs = paste0(plotNm, ".json");
-  plotNm = paste(plotNm, ".", "pdf", sep="");
-  #print(plotNm)
-  mbSetObj$imgSet$heatmap<-plotNm;
-
-
-  if(doclust=="T"){
-    rowV<-TRUE;
-  }
-
-
-if (!(is.null(mbSetObj$analSet$heat.taxalvl))) {
-  if (mbSetObj$analSet$heat.taxalvl != taxrank) {
-    annoPer <- fontsize_col <- fontsize_row <- fzAnno <- "0.0"
-    mbSetObj$analSet$heatVar <- 1
-  } else {
-    mbSetObj$analSet$heatVar <- 0
-  }
-} else {
-  mbSetObj$analSet$heatVar <- 0
-}
-
-data1sc <- as.matrix(apply(data1, 2, as.numeric))
-rownames(data1sc) <- rownames(data1)
-data1sc <- scale_mat(data1sc, scaleOpt)
-dend_row <- hclust(dist(data1sc, method = smplDist), method = clstDist)
-
-if (annoPer != "0.0") {
-  sz <- max(as.numeric(annoPer) / 100, 0.015)
-  bf <- min(0.01, (sz / 3))
-
-  if (nrow(data1sc) > 120) {
-    if (viewOpt != "overview") {
-      map.height <- nrow(data1sc) * 13
-      map.width <- 1450
-    } else if (viewOpt == "overview") {
-      map.height <- max(1000, nrow(data1sc) * 9)
-      map.height <- min(2000, map.height)
-      map.width <- 1200
-    }
-  } else {
-    if (viewOpt != "overview") {
-      map.height <- max(nrow(data1sc) * 30, 700)
-      map.width <- 1450
-    } else if (viewOpt == "overview") {
-      map.height <- max(nrow(data1sc) * 25, 700)
-      map.width <- 1200
-    }
-  }
-  if (fontsize_col == "0.0") {
-    fzCol <- max(12, map.height / nrow(data1sc) / 7)
-  } else {
-    fzCol <- as.numeric(fontsize_col)
-  }
-
-  if (viewOpt != "overview") {
-    if (fontsize_row == "0.0") {
-      fzRow <- 8 + map.height / nrow(data1sc) / 9
-    } else {
-      fzRow <- as.numeric(fontsize_row)
-    }
-  } else {
-    if (fontsize_row == "0.0") {
-      fzRow <- 6 + map.height / nrow(data1sc) / 9
-    } else {
-      fzRow <- as.numeric(fontsize_row)
-    }
-  }
-} else {
-  if (nrow(data1sc) > 120) {
-    if (mbSetObj[["module.type"]] == "mdp") {
-      if (viewOpt != "overview") {
-        map.height <- nrow(data1sc) * 12
-        map.width <- 1450
-        if (ncol(annotation) == 1) {
-          sz <- max(0.013, 20 / map.height)
-        } else {
-          sz <- max(0.015, 3 * ncol(annotation) / map.height)
+        if(mbSetObj$module.type!="mdp"){
+            taxrank <- "OTU";   
         }
-      } else if (viewOpt == "overview") {
-        map.height <- max(1000, nrow(data1sc) * 9)
-        map.width <- 1200
-        if (ncol(annotation) == 1) {
-          sz <- max(0.013, 20 / map.height)
+
+        if(!(exists("phyloseq_objs"))){
+            phyloseq_objs <- readDataQs("phyloseq_objs.qs",mbSetObj$module.type,dataName)
+        }
+
+        data <- phyloseq_objs$merged_obj[[taxrank]]
+        if(is.null(data)){
+            AddErrMsg("Errors in projecting to the selected taxanomy level!");
+            return(0);
+        }
+
+    } else {
+        data <- mbSetObj$dataSet$proc.phyobj;
+        if(mbSetObj$module.type!="mdp"){
+           taxrank <- "OTU";
+        }
+    }
+
+    #if more than 500 features will be present;subset to most abundant=>500 features.
+    #OTUs already in unique names;
+    if(ntaxa(data)>500){
+      data = prune_taxa(names(sort(taxa_sums(data), TRUE))[1:500], data);
+      viewOpt == "overview";
+    }
+
+    if(taxrank=="OTU"){
+       data1 <- as.matrix(otu_table(data));
+       rownames(data1) <- taxa_names(data);
+    } else {
+       #merging at taxonomy levels
+       data <- fast_tax_glom_mem(data,taxrank);
+       if(is.null(data)){
+         AddErrMsg("Errors in projecting to the selected taxanomy level!");
+         return(0);
+       }
+       nm <- as.character(tax_table(data)[,taxrank]);
+       y <- which(is.na(nm)==TRUE);
+       #converting NA values to unassigned
+       nm[y] <- "Not_Assigned";
+       data1 <- as.matrix(otu_table(data));
+
+       if(appendnm=="T"){
+         all_nm <- colnames(tax_table(data));
+         hg_nmindx <- which(all_nm==taxrank)-1;
+
+         if(hg_nmindx!=0){
+           nma <- as.character(tax_table(data)[,hg_nmindx]);
+           y1 <- which(is.na(nma)==TRUE);
+           nma[y1] <- "Not_Assigned";
+           nm <- paste0(nma,"_",nm);
+           ind <- which(nm=="Not_Assigned_Not_Assigned");
+           nm[ind] <- "Not_Assigned";
+           nm <- gsub("_Not_Assigned", "",nm, perl = TRUE);
+         }
+       }
+
+       rownames(data1) <- nm;
+       #all NA club together
+       data1 <- (t(sapply(by(data1,rownames(data1),colSums),identity)));
+       nm <- rownames(data1);
+    }
+  
+    # arrange samples on the basis of slected experimental factor and using the same for annotation also
+    annotation <- data.frame(sample_data(data));
+
+    ind <- which(colnames(annotation)!=metadata && colnames(annotation)!="sample_id");
+
+    if(length(ind)>0){
+      ind1 <- ind[1]
+      annotation <- annotation[order(annotation[,metadata],annotation[,ind1]),];
+    }else{
+      annotation <- annotation[order(annotation[,metadata]),];
+    }
+  
+    # remove those columns that all values are unique (continuous or non-factors)
+    #uniq.inx <- apply(annotation, 2, function(x){length(unique(x)) == length(x)});
+    #there is an additional column sample_id which need to be removed first
+    # get only good meta-data
+    good.inx <- GetDiscreteInx(annotation);
+    if(sum(good.inx)>0){
+      annotation <- annotation[,good.inx, drop=FALSE];
+      sam.ord <- rownames(annotation);
+      data1 <- data1[,sam.ord];
+    } else {
+      annotation <- NA;
+    }
+    # set up colors for heatmap
+
+    if(palette=="gbr"){
+        colors <- grDevices::colorRampPalette(c("green", "black", "red"), space="rgb")(256);
+    }else if(palette == "heat"){
+        colors <- grDevices::heat.colors(256);
+    }else if(palette == "topo"){
+        colors <- grDevices::topo.colors(256);
+    }else if(palette == "gray"){
+        colors <- grDevices::colorRampPalette(c("grey90", "grey10"), space="rgb")(256);
+    }else if(palette == "byr"){
+        colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdYlBu"))(256));
+    }else if(palette == "viridis") {
+        colors <- rev(viridis::viridis(10))
+    }else if(palette == "plasma") {
+        colors <- rev(viridis::plasma(10))
+    }else if(palette == "npj"){
+        colors <- c("#00A087FF","white","#E64B35FF")
+    }else if(palette == "aaas"){
+        colors <- c("#4DBBD5FF","white","#E64B35FF");
+    }else if(palette == "d3"){
+        colors <- c("#2CA02CFF","white","#FF7F0EFF");
+    }else {
+        colors <- c("#0571b0","#92c5de","white","#f4a582","#ca0020");
+    }
+
+    plotjs <- paste0(plotNm, ".json");
+    plotwidget <- paste0(plotNm, ".rda");
+    plotNm <- paste(plotNm, ".", "pdf", sep="");
+    #print(plotNm)
+    mbSetObj$imgSet$heatmap<-plotNm;
+
+    if(doclust=="T"){
+        rowV<-TRUE; 
+    }
+
+    if (!(is.null(mbSetObj$analSet$heat.taxalvl))) {
+      if (mbSetObj$analSet$heat.taxalvl != taxrank) {
+        annoPer <- fontsize_col <- fontsize_row <- fzAnno <- "0.0"
+        mbSetObj$analSet$heatVar <- 1
+      } else {
+        mbSetObj$analSet$heatVar <- 0
+      }
+    } else {
+      mbSetObj$analSet$heatVar <- 0
+    }
+
+    data1sc <- as.matrix(apply(data1, 2, as.numeric))
+    rownames(data1sc) <- rownames(data1)
+    data1sc <- scale_mat(data1sc, scaleOpt)
+    dend_row <- hclust(dist(data1sc, method = smplDist), method = clstDist)
+
+    if (annoPer != "0.0") {
+      sz <- max(as.numeric(annoPer) / 100, 0.015)
+      bf <- min(0.01, (sz / 3))
+
+      if (nrow(data1sc) > 120) {
+        if (viewOpt != "overview") {
+          map.height <- nrow(data1sc) * 13
+          map.width <- 1450
+        } else if (viewOpt == "overview") {
+          map.height <- max(1000, nrow(data1sc) * 9)
+          map.height <- min(2000, map.height)
+          map.width <- 1200
+        }
+      } else {
+        if (viewOpt != "overview") {
+          map.height <- max(nrow(data1sc) * 30, 700)
+          map.width <- 1450
+        } else if (viewOpt == "overview") {
+          map.height <- max(nrow(data1sc) * 25, 700)
+          map.width <- 1200
+        }
+      }
+      if (fontsize_col == "0.0") {
+        fzCol <- max(12, map.height / nrow(data1sc) / 7)
+      } else {
+        fzCol <- as.numeric(fontsize_col)
+      }
+
+      if (viewOpt != "overview") {
+        if (fontsize_row == "0.0") {
+          fzRow <- 8 + map.height / nrow(data1sc) / 9
         } else {
-          sz <- 4 * ncol(annotation) / map.height
+          fzRow <- as.numeric(fontsize_row)
+        }
+      } else {
+        if (fontsize_row == "0.0") {
+          fzRow <- 6 + map.height / nrow(data1sc) / 9
+        } else {
+          fzRow <- as.numeric(fontsize_row)
         }
       }
     } else {
+      if (nrow(data1sc) > 120) {
+        if (mbSetObj[["module.type"]] == "mdp") {
+          if (viewOpt != "overview") {
+            map.height <- nrow(data1sc) * 12
+            map.width <- 1450
+            if (ncol(annotation) == 1) {
+              sz <- max(0.013, 20 / map.height)
+            } else {
+              sz <- max(0.015, 3 * ncol(annotation) / map.height)
+            }
+          } else if (viewOpt == "overview") {
+            map.height <- max(1000, nrow(data1sc) * 9)
+            map.width <- 1200
+            if (ncol(annotation) == 1) {
+              sz <- max(0.013, 20 / map.height)
+            } else {
+              sz <- 4 * ncol(annotation) / map.height
+            }
+          }
+        } else {
+          if (viewOpt != "overview") {
+            map.height <- nrow(data1sc) * 8
+            map.width <- 1200
+          } else if (viewOpt == "overview") {
+            map.height <- nrow(data1sc) * 7
+            map.width <- 1450
+          }
+          sz <- 0.013
+        }
+      } else {
+        if (viewOpt != "overview") {
+          map.height <- max(nrow(data1sc) * 30, 700)
+          map.width <- 1450
+          if (ncol(annotation) == 1) {
+            sz <- 0.03 + 20 / map.height
+          } else {
+            sz <- max(0.03, 5 * ncol(annotation) / map.height)
+          }
+        } else if (viewOpt == "overview") {
+          map.height <- max(nrow(data1sc) * 25, 700)
+          map.width <- 1200
+
+          if (ncol(annotation) == 1) {
+            sz <- 0.03 + 5 / map.height
+          } else {
+            sz <- max(0.03, 3 * ncol(annotation) / map.height)
+          }
+        }
+      }
+
+      if (fontsize_col == "0.0") {
+        fzCol <- max(13, map.height / nrow(data1sc) / 7)
+      } else {
+        fzCol <- as.numeric(fontsize_col)
+      }
+
       if (viewOpt != "overview") {
-        map.height <- nrow(data1sc) * 8
-        map.width <- 1200
-      } else if (viewOpt == "overview") {
-        map.height <- nrow(data1sc) * 7
-        map.width <- 1450
+        if (fontsize_row == "0.0") {
+          fzRow <- 8 + map.height / nrow(data1sc) / 9
+        } else {
+          fzRow <- as.numeric(fontsize_row)
+        }
+      } else {
+        if (fontsize_row == "0.0") {
+          fzRow <- 6 + map.height / nrow(data1sc) / 9
+        } else {
+          fzRow <- as.numeric(fontsize_row)
+        }
       }
-      sz <- 0.013
     }
-  } else {
+
+    if (ncol(annotation) == 1) {
+      bf <- 0.0009
+    } else {
+      bf <- min(0.009, (sz / 4))
+    }
+
+    if (fzAnno != "0.0") {
+      fzAnno <- as.numeric(fzAnno)
+    } else {
+      fzAnno <- 10 + sz * 60 # max(12,map.height * sz)
+    }
+
+    fzCol <- round(fzCol, 1)
+    fzRow <- round(fzRow, 1)
+    fzAnno <- round(fzAnno, 1)
+
+    if(sz<0.01){sz=0.015}
+    cb_grid <- setup_colorbar_grid(nrow = min(20, round(map.height / 140)), x_start = 1.1, y_start = 0.95, x_spacing = 0.15)
+    if (colname == "T" && rowname == "T") {
+      p <- iheatmap(data1sc,
+        colorbar_grid = cb_grid, name = "Abundance", x_categorical = TRUE,
+        layout = list(font = list(size = fzAnno)),
+        colors = colors
+      ) %>%
+        add_row_dendro(dend_row, side = "right") %>%
+        add_col_labels(size = 0.2, font = list(size = fzCol)) %>%
+        add_row_labels(size = 0.2, font = list(size = fzRow), side = "left") %>%
+        add_col_annotation(annotation,
+          side = "top",
+          size = sz,
+          buffer = bf,
+          inner_buffer = bf / 3
+        )
+    } else if (colname == "T" && rowname == "F") {
+      p <- iheatmap(data1,
+        colorbar_grid = cb_grid, name = "Abundance", x_categorical = TRUE,
+        layout = list(font = list(size = fzAnno)),
+        colors = colors
+      ) %>%
+        add_row_dendro(dend_row, side = "right") %>%
+        add_col_labels(size = 0.2, font = list(size = fzCol)) %>%
+        add_col_annotation(annotation,
+          side = "top",
+          size = sz,
+          buffer = bf,
+          inner_buffer = bf / 3
+        )
+    } else if (colname == "F" && rowname == "T") {
+      p <- iheatmap(data1,
+        colorbar_grid = cb_grid, name = "Abundance", x_categorical = TRUE,
+        layout = list(font = list(size = fzAnno)),
+        colors = colors
+      ) %>%
+        add_row_dendro(dend_row, side = "right") %>%
+        add_row_labels(size = 0.2, font = list(size = fzRow), side = "left") %>%
+        add_col_annotation(annotation,
+          side = "top",
+          size = sz,
+          buffer = bf,
+          inner_buffer = bf / 3
+        )
+    } else if (colname == "F" && rowname == "F") {
+      p <- iheatmap(data1,
+        colorbar_grid = cb_grid, name = "Abundance", x_categorical = TRUE,
+        layout = list(font = list(size = fzAnno)),
+        colors = colors
+      ) %>%
+        add_row_dendro(dend_row, side = "right") %>%
+        add_col_annotation(annotation,
+          side = "top",
+          size = sz,
+          buffer = bf,
+          inner_buffer = bf / 3
+        )
+    }
+    if (doclust == "T") {
+      dend_col <- hclust(dist(t(data1), method = smplDist), method = clstDist)
+      p <- p %>% add_col_dendro(dend_col)
+    }
+
+    print("Running into this heatmap function ---> 798 --> plotwidget")
+    print(plotwidget)
+    pwidget <- to_widget(p)
+    save(pwidget, file = plotwidget)
+
+    #f <- basename(tempfile('iheatmapr', '.', '.html'))
+    #on.exit(unlink(f), add = TRUE)
+    #pdfplot <- list(p=p,plotNm=plotNm,f=f,to_widget=to_widget)
+    #save(pdfplot,file="pdfplot.rda");
+
+    #rmfile <- gsub(".html","_files",f)
+    #unlink(rmfile, recursive = TRUE)
+
+    as_list <- to_plotly_list(p)
     if (viewOpt != "overview") {
-      map.height <- max(nrow(data1sc) * 30, 700)
-      map.width <- 1450
-      if (ncol(annotation) == 1) {
-        sz <- 0.03 + 20 / map.height
-      } else {
-        sz <- max(0.03, 5 * ncol(annotation) / map.height)
-      }
-    } else if (viewOpt == "overview") {
-      map.height <- max(nrow(data1sc) * 25, 700)
-      map.width <- 1200
-
-      if (ncol(annotation) == 1) {
-        sz <- 0.03 + 5 / map.height
-      } else {
-        sz <- max(0.03, 3 * ncol(annotation) / map.height)
-      }
-    }
-  }
-
-  if (fontsize_col == "0.0") {
-    fzCol <- max(13, map.height / nrow(data1sc) / 7)
-  } else {
-    fzCol <- as.numeric(fontsize_col)
-  }
-
-  if (viewOpt != "overview") {
-    if (fontsize_row == "0.0") {
-      fzRow <- 8 + map.height / nrow(data1sc) / 9
+      as_list[["layout"]][["width"]] <- map.width
+      as_list[["layout"]][["height"]] <- map.height
     } else {
-      fzRow <- as.numeric(fontsize_row)
+      as_list[["layout"]][["width"]] <- 1200
+      as_list[["layout"]][["height"]] <- min(map.height,2000)
     }
-  } else {
-    if (fontsize_row == "0.0") {
-      fzRow <- 6 + map.height / nrow(data1sc) / 9
-    } else {
-      fzRow <- as.numeric(fontsize_row)
-    }
-  }
-}
+    as_list[["layout"]][["annoHeight"]] <- round(sz * 100, 1)
+    as_json <- attr(as_list, "TOJSON_FUNC")(as_list)
+    as_json <- paste0("{ \"x\":", as_json, ",\"evals\": [],\"jsHooks\": []}")
 
-if (ncol(annotation) == 1) {
-  bf <- 0.0009
-} else {
-  bf <- min(0.009, (sz / 4))
-}
+    write(as_json, plotjs)
 
-if (fzAnno != "0.0") {
-  fzAnno <- as.numeric(fzAnno)
-} else {
-  fzAnno <- 10 + sz * 60 # max(12,map.height * sz)
-}
-
-fzCol <- round(fzCol, 1)
-fzRow <- round(fzRow, 1)
-fzAnno <- round(fzAnno, 1)
-
-if(sz<0.01){sz=0.015}
-cb_grid <- setup_colorbar_grid(nrow = min(20, round(map.height / 140)), x_start = 1.1, y_start = 0.95, x_spacing = 0.15)
-if (colname == "T" && rowname == "T") {
-  p <- iheatmap(data1sc,
-    colorbar_grid = cb_grid, name = "Abundance", x_categorical = TRUE,
-    layout = list(font = list(size = fzAnno)),
-    colors = colors
-  ) %>%
-    add_row_dendro(dend_row, side = "right") %>%
-    add_col_labels(size = 0.2, font = list(size = fzCol)) %>%
-    add_row_labels(size = 0.2, font = list(size = fzRow), side = "left") %>%
-    add_col_annotation(annotation,
-      side = "top",
-      size = sz,
-      buffer = bf,
-      inner_buffer = bf / 3
-    )
-} else if (colname == "T" && rowname == "F") {
-  p <- iheatmap(data1,
-    colorbar_grid = cb_grid, name = "Abundance", x_categorical = TRUE,
-    layout = list(font = list(size = fzAnno)),
-    colors = colors
-  ) %>%
-    add_row_dendro(dend_row, side = "right") %>%
-    add_col_labels(size = 0.2, font = list(size = fzCol)) %>%
-    add_col_annotation(annotation,
-      side = "top",
-      size = sz,
-      buffer = bf,
-      inner_buffer = bf / 3
-    )
-} else if (colname == "F" && rowname == "T") {
-  p <- iheatmap(data1,
-    colorbar_grid = cb_grid, name = "Abundance", x_categorical = TRUE,
-    layout = list(font = list(size = fzAnno)),
-    colors = colors
-  ) %>%
-    add_row_dendro(dend_row, side = "right") %>%
-    add_row_labels(size = 0.2, font = list(size = fzRow), side = "left") %>%
-    add_col_annotation(annotation,
-      side = "top",
-      size = sz,
-      buffer = bf,
-      inner_buffer = bf / 3
-    )
-} else if (colname == "F" && rowname == "F") {
-  p <- iheatmap(data1,
-    colorbar_grid = cb_grid, name = "Abundance", x_categorical = TRUE,
-    layout = list(font = list(size = fzAnno)),
-    colors = colors
-  ) %>%
-    add_row_dendro(dend_row, side = "right") %>%
-    add_col_annotation(annotation,
-      side = "top",
-      size = sz,
-      buffer = bf,
-      inner_buffer = bf / 3
-    )
-}
-if (doclust == "T") {
-  dend_col <- hclust(dist(t(data1), method = smplDist), method = clstDist)
-  p <- p %>% add_col_dendro(dend_col)
-}
-
-#f <- basename(tempfile('iheatmapr', '.', '.html'))
-#on.exit(unlink(f), add = TRUE)
-#pdfplot <- list(p=p,plotNm=plotNm,f=f,to_widget=to_widget)
-#save(pdfplot,file="pdfplot.rda");
-
-#rmfile <- gsub(".html","_files",f)
-#unlink(rmfile, recursive = TRUE)
-
-as_list <- to_plotly_list(p)
-if (viewOpt != "overview") {
-  as_list[["layout"]][["width"]] <- map.width
-  as_list[["layout"]][["height"]] <- map.height
-} else {
-  as_list[["layout"]][["width"]] <- 1200
-  as_list[["layout"]][["height"]] <- min(map.height,2000)
-}
-as_list[["layout"]][["annoHeight"]] <- round(sz * 100, 1)
-as_json <- attr(as_list, "TOJSON_FUNC")(as_list)
-as_json <- paste0("{ \"x\":", as_json, ",\"evals\": [],\"jsHooks\": []}")
-
-write(as_json, plotjs)
-
-# storing for Report Generation
-mbSetObj$analSet$heatmap <- data1
-mbSetObj$analSet$heatmap.dist <- smplDist
-mbSetObj$analSet$heatmap.clust <- clstDist
-mbSetObj$analSet$heat.taxalvl <- taxrank
-return(.set.mbSetObj(mbSetObj))
+    # storing for Report Generation
+    mbSetObj$analSet$heatmap <- data1
+    mbSetObj$analSet$heatmap.dist <- smplDist
+    mbSetObj$analSet$heatmap.clust <- clstDist
+    mbSetObj$analSet$heat.taxalvl <- taxrank
+    mbSetObj$imgSet$heatmap_int <- plotwidget
+    return(.set.mbSetObj(mbSetObj))
 }
 
 
