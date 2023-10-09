@@ -1252,12 +1252,14 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
                           sign, cor.thresh=0.5,corp.thresh=0.05,
                           potential.thresh=0.5,predpval.thresh=0.05,
                           var.inx=NA, border=T, width=NA, dpi=72){
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
   load_iheatmapr();
   load_rcolorbrewer();
   load_viridis();
   current.msg<<- NULL
   set.seed(2805614);
+
   #used for color pallete
   ######set up plot
   #colors for heatmap
@@ -1287,6 +1289,7 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
   }
   
   plotjs = paste0(plotNm, ".json");
+  plotwidget <- paste0(plotNm, ".rda")
   plotNm = paste(plotNm, ".", format, sep="");
   mbSetObj$imgSet$IntegrationHeatmap<-plotNm;
   if(htMode=="predht"){  ####using  prediction pair pval
@@ -1344,14 +1347,10 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
         anno.mat <- reshape2::melt(corr.mat,value.name = "correlation")
         anno.mat <- anno.mat[which(anno.mat$correlation>cor.thresh),]
         if(is.null(anno.mat) | nrow(anno.mat)==0){
-          current.msg <<- paste("No significant statistical correlation was detected using current parameters!");
-          
+          current.msg <<- paste("No significant statistical correlation was detected using current parameters!");          
         }else{
-          if(is.null(dim(corr.pval))){
-            
-            current.msg <<- paste("No significant statistical correlation was detected! The triangle only show the ones pass the correlation thresh hold!");
-            
-            
+          if(is.null(dim(corr.pval))){            
+            current.msg <<- paste("No significant statistical correlation was detected! The triangle only show the ones pass the correlation thresh hold!");            
           }else{
             corr.pval <- corr.pval[which(rownames(corr.pval) %in% as.character(micnms)),
                                    which(colnames(corr.pval) %in% metnms)]
@@ -1390,11 +1389,9 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
     data.mtr <- current.proc$corr.mat
     corr.pval <- current.proc$corr.pval
     
-    if(nrow(data.mtr)==0){
-      
+    if(nrow(data.mtr)==0){      
       current.msg <<- paste("No statistical correlation was detected using current parameters!");
-      return(0)
-      
+      return(0)      
     }else{
       micnms <- rownames(data.mtr)
       metnms <- colnames(data.mtr)
@@ -1423,8 +1420,7 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
         anno.mat <- unique(left_join(anno.mat0,anno.pval))
         anno.mat <- anno.mat[!(is.na(anno.mat$pval)),]
         if(nrow(anno.mat)==0){
-          current.msg <<- paste("No significant correlation was detected using current parameters!");
-          
+          current.msg <<- paste("No significant correlation was detected using current parameters!");          
         }else{
           anno.mat$size <- as.numeric(ReScale(-log(anno.mat$pval),8,12))
           annols <- vector("list",length=nrow( anno.mat))
@@ -1432,8 +1428,7 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
         
       }
       
-      # anno.mat$value <- as.character(round(anno.mat$value,2))
-      
+      # anno.mat$value <- as.character(round(anno.mat$value,2))      
     }
     
     if(overlay=="true"){
@@ -1446,21 +1441,17 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
         }else{
           anno.mat <- anno.mat0
           anno.mat <- unique(left_join(anno.mat,pred.de)) %>% filter(!(is.na(P_value)))
-        }
-        
+        }        
       }else{
         anno.mat <- anno.mat0
-        anno.mat <- unique(left_join(anno.mat,pred.de)) %>% filter(!(is.na(P_value)))
-        
+        anno.mat <- unique(left_join(anno.mat,pred.de)) %>% filter(!(is.na(P_value)))        
       }
       if(nrow(anno.mat)==0){
         if(!is.null(current.msg)){
           current.msg <<- c(current.msg," No overlay prediction result was detected using current parameters!")
         }else{
-          current.msg <<- paste("No overlay prediction result was detected using current parameters!");
-          
-        }
-        
+          current.msg <<- paste("No overlay prediction result was detected using current parameters!");          
+        }        
       }else{
         anno.mat$size <- as.numeric(ReScale(-log(anno.mat$pval),8,12))
         annols <- vector("list",length=nrow( anno.mat))
@@ -1495,27 +1486,25 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
     p <- p %>% add_row_dendro(dend_row, side = "right")
   }
   
-  if (colname == "true" ){
-    
+  if (colname == "true" ){    
     p <- p %>%  add_col_labels(size = 0.1, font = list(size = fzCol))
   }
   
-  if (colname == "true" ){
-    
+  if (colname == "true" ){    
     p <- p %>% add_row_labels(size = 0.1, font = list(size = fzRow), side = "left")
   }
-  
-  
+    
   if (clustCol == "true") {
     dend_col <- hclust(dist(t(data1), method = smplDist), method = clstDist)
     p <- p %>% add_col_dendro(dend_col)
   }
   
+  pwidget <- to_widget(p)
+  save(pwidget, file = plotwidget)
   
   as_list <- to_plotly_list(p)
   ### add the layer for  annotation
-  if(exists("annols")){
-    
+  if(exists("annols")){    
     annht <- as_list$layout$annotations
     annht <- data.frame(label=unlist(lapply(annht,function(x) x[["text"]])),
                         X= unlist(lapply(annht,function(x)  x[["x"]])),
@@ -1562,9 +1551,7 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
         }       
       } 
     }
-    
-    
-    
+
     as_list$layout$annotations <- c(as_list$layout$annotations,annols)
   }
   
@@ -1600,6 +1587,7 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
   mbSetObj$analSet$integration$overlay <- overlay
   mbSetObj$analSet$integration$htMode <- htMode
   mbSetObj$analSet$integration$sign <- sign
+  mbSetObj$imgSet$heatmap_cormmp <- plotwidget
   message("heatmap done")
   .set.mbSetObj(mbSetObj)
   return(overlyNum)
