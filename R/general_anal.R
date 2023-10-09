@@ -26,7 +26,10 @@
 #'@export
 #'@import randomForest
 RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank){
+
   load_randomforest();
+  load_phyloseq();
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   # set up random numbers
@@ -144,7 +147,7 @@ PlotRF.Classify<-function(mbSetObj, feature, imgName, format="png", dpi=72, widt
   }else{
     w <- width;
   }
-  
+
   Cairo::Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
   par(mar=c(4,4,3,2));
   cols <- grDevices::rainbow(length(levels(mbSetObj$analSet$cls))+1);
@@ -169,7 +172,8 @@ PlotRF.Classify<-function(mbSetObj, feature, imgName, format="png", dpi=72, widt
 #'License: GNU GPL (>= 2)
 #'@export
 PlotRF.VIP<-function(mbSetObj, feature, imgName, format="png", dpi=72, width=NA){
-  
+
+  load_phyloseq();
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   imgName = paste(imgName, ".", format, sep="");
