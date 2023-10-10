@@ -22,6 +22,7 @@ PerformSeqCheck <- function(home_dir = ""){
   } else {
     p1 <- plotQualityProfile(fnFs[1:2])
   }
+  qs::qsave(p1, "diagnotics_plot_src.qs");
   Cairo::Cairo(1600, 1250,file = paste0("diagnotics.png"),dpi = 180,bg = "white")
   print(p1)
   dev.off()
@@ -800,6 +801,16 @@ libSizeQuickView <- function(dataObj){
   text(x=smpl.sums,y=1:length(smpl.sums),labels= round(smpl.sums), col="blue", pos=4, xpd=T);
   dev.off();
   
+}
+
+plotSeqDiagnotics <- function(imageName = "diagnotics", format = "png", dpi = 120){    
+    if(file.exists("diagnotics_plot_src.qs")){
+        p1 <- qs::qread("diagnotics_plot_src.qs")
+        Cairo::Cairo(1600, 1250,file = paste0(imageName, ".",format), dpi = dpi, bg = "white", type=format)
+        print(p1)
+        dev.off()            
+    }
+    return(1)
 }
 
 ### Testing code
