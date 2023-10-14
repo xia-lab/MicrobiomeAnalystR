@@ -541,10 +541,10 @@ PlotHeatmap<-function(mbSetObj, plotNm, dataOpt="norm",
        nm <- rownames(data1);
     }
   
-    # arrange samples on the basis of slected experimental factor and using the same for annotation also
+    # arrange samples on the basis of selected experimental factor and using the same for annotation also
     annotation <- data.frame(sample_data(data));
 
-    ind <- which(colnames(annotation)!=metadata && colnames(annotation)!="sample_id");
+    ind <- which(!colnames(annotation) %in% c(metadata, "sample_id"));
 
     if(length(ind)>0){
       ind1 <- ind[1]
