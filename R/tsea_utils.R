@@ -177,9 +177,15 @@ CalculateHyperScore <- function(mbSetObj){
   nm.map <- GetFinalNameMap(mbSetObj);
   valid.inx <- !(is.na(nm.map$Strain)| duplicated(nm.map$Strain));
   ora.vec <- nm.map$Strain[valid.inx];
-  q.size <- length(ora.vec);
 
-  if(is.na(ora.vec) || q.size==0) {
+  q.size <- length(ora.vec);
+  if(q.size==0) {
+    print("Query taxa is missing!");
+    return(0);
+  }
+
+  if(all(is.na(ora.vec))) {
+    print("Query taxa are all NA!");
     return(0);
   }
     
