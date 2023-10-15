@@ -197,7 +197,7 @@ scale_colours = function(mat, col = rainbow(10), breaks = NA){
 #'@export
 .readDataTable <- function (fileName) {
   dat <- try(data.table::fread(fileName, header=TRUE, check.names=FALSE, blank.lines.skip=TRUE, data.table=FALSE));
-  if(class(dat) == "try-error" || any(dim(dat) == 0)){
+  if(any(c(class(dat) == "try-error", any(dim(dat) == 0)))){
       print("Using slower file reader ...");
       formatStr <- substr(fileName, nchar(fileName)-2, nchar(fileName))
       if(formatStr == "txt"){
@@ -571,7 +571,7 @@ case_when <- function(...) {
   
   for (i in seq_len(n)) {
     f <- formulas[[i]]
-    if (!inherits(f, "formula") || length(f) != 3) {
+    if (any(c(!inherits(f, "formula"), length(f) != 3))) {
       stop(sprintf(
         "Case %s (`%s`) must be a two-sided formula, not a %s",
         i,
@@ -872,7 +872,7 @@ rowcoltt =  function(x, fac, tstatOnly, which, na.rm) {
   }
   
   f = checkfac(fac)
-  if ((f$nrgrp > 2) || (f$nrgrp <= 0))
+  if (any(c((f$nrgrp > 2), (f$nrgrp <= 0))))
     stop("Number of groups is ", f$nrgrp, ", but must be >0 and <=2 for 'rowttests'.")
 
   if (typeof(x) == "integer")

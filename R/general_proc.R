@@ -69,7 +69,7 @@ SanityCheckData <- function(mbSetObj, filetype, disableFilter = FALSE){
   # from abundance table
   sample_no <- ncol(mbSetObj$dataSet$data.orig);
   
-  if(filetype=="biom"||filetype=="mothur"){
+  if(any(c(filetype=="biom", filetype=="mothur"))){
     samplemeta_no <- nrow(mbSetObj$dataSet$sample_data);
   }else{
     samplemeta_no <- sample_no;
@@ -1287,7 +1287,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
   }
   #standard name to be used
   classi.lvl<- c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species");
-  if(mbSetObj$module.type == "mdp" || mbSetObj$micDataType =="otu" |mbSetObj$module.type == "ppd" |mbSetObj$module.type == "meta" ){
+  if(any(c(mbSetObj$module.type == "mdp", mbSetObj$micDataType =="otu", mbSetObj$module.type == "ppd", mbSetObj$module.type == "meta"))){
     if(type=="text"){
       # prepare data for phyloseq visualization.
       # if features names are present in specific taxonomy format (greengenes or silva).
@@ -1324,7 +1324,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
             #phyloseq taxonomy object
             taxa_table <- tax_table(taxmat);
             taxa_names(taxa_table)<-rownames(taxmat);
-          }else if(taxa_type=="Greengenes"||taxa_type=="QIIME"){
+          }else if(any(c(taxa_type=="Greengenes", taxa_type=="QIIME"))){
             my.parser<-lapply(feat_nm, parse_taxonomy_qiime); # note, this functions will remove empty strings, replace with NA!?
             taxa_table<-build_tax_table(my.parser);
             
@@ -1344,7 +1344,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
               taxa_table[ind,]<-rep("Not_Assigned",ncol(taxa_table));
             }
             taxa_names(taxa_table)<-c(1:nrow(taxa_table));
-          }else if(taxa_type=="GreengenesID"||taxa_type=="Others/Not_specific"){
+          }else if(any(c(taxa_type=="GreengenesID", taxa_type=="Others/Not_specific"))){
             
             # need to parse Taxonomy still!
             load_splitstackshape();               
@@ -1527,7 +1527,7 @@ if(taxalabel=="T"){# for mapping to the database in mmp module
       missing_vector <- paste0("New_OTU", seq_along(missing.inx))
       mynames1[missing.inx] <- missing_vector
       
-    } else if(type == "biom"||type == "mothur"){
+    } else if(any(c(type == "biom", type == "mothur"))){
       # creating phyloseq object
       feat_nm<-rownames(data.proc);
        if(isNormInput=="false"){

@@ -879,7 +879,7 @@ MicIDmap <- function(netModel,predDB,taxalvl="all"){
       mic.map <- doKeggNameMatch(mic.vec[[taxalvl]],taxalvl)
       
     }
-    if(is.null(mic.map)||length(mic.map)==0){
+    if(any(c(is.null(mic.map), length(mic.map)==0))){
       current.msg<<-paste0("No ",taxalvl, " was found in kegg database!")
       return(0)
     }
@@ -888,7 +888,7 @@ MicIDmap <- function(netModel,predDB,taxalvl="all"){
     sig.mic<<-unlist(strsplit(sig.mic,split=";"))
     
     
-    if(is.null(sig.mic)||length(sig.mic)==0){
+    if(any(c(is.null(sig.mic), length(sig.mic)==0))){
       current.msg<<-paste0("No significant ",taxalvl, " was found in kegg database! Taxonomy level can be change on comparison analysis page!")
     }
   }
@@ -3393,7 +3393,7 @@ PlotDiagnosticPca <- function(imgNm, dpi=72, format="png",type="diablo"){
     grid.arrange(grobs =fig.list, nrow=length(fig.list))
     dev.off(); 
     mbSetObj$imgSet$diablo$pca <- imgNm;
-  }else if(type == "rcca" || type == "spls"){
+  }else if(any(c(type == "rcca", type == "spls"))){
     res = reductionSet$dim.res 
     Factor <- as.factor(reductionSet$meta$newcolumn)
     library(ggplot2)
@@ -3535,7 +3535,7 @@ PlotDiagnosticLoading <- function(imgNm, dpi=72, format="png",type="diablo"){
     Cairo(file=imgNm, width=13, height=h, type=format, bg="white", unit="in", dpi=dpi);
     grid.arrange(grobs =fig.list, nrow=length(fig.list))
     dev.off();
-  }else if(type == "rcca" || type == "spls"){
+  }else if(any(c(type == "rcca", type == "spls"))){
     Cairo(file=imgNm, width=12, height=10, type=format, bg="white", unit="in", dpi=dpi);
     plotVar(reductionSet$dim.res, comp = 1:2, cutoff = 0.5, var.names = c(TRUE, TRUE),
             cex = c(4, 4), title = 'rCCA comp 1 - 2')

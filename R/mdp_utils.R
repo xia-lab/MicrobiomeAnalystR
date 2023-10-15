@@ -741,7 +741,7 @@ prevalence <- function(x, detection=0, sort=FALSE, count=FALSE,
     } else {
       prev <- sum(x > detection)
     }
-  } else if (is.matrix(x) || is.data.frame(x)) {
+  } else if (any(c(is.matrix(x), is.data.frame(x)))) {
     
     if (include.lowest) {
       prev <- rowSums(x >= detection)
@@ -762,7 +762,7 @@ prevalence <- function(x, detection=0, sort=FALSE, count=FALSE,
 prevalence_nsamples <- function(x) {
   if (is.vector(x)) {
     n <- length(x)
-  } else if (is.matrix(x) || is.data.frame(x)) {
+  } else if (any(c(is.matrix(x), is.data.frame(x)))) {
     n <- ncol(x)
   }
   n
@@ -2740,7 +2740,7 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
                                           size = 0.5, linetype = "solid"),
           axis.line = element_line(colour = "lightgrey"));
   
-  if(facet2 == "null" || facet2 == "none" || facet2 == facet){
+  if(any(c(facet2 == "null", facet2 == "none", facet2 == facet))){
     box <- box +
       facet_grid(as.formula(paste("~", facet)), scales = "free", space = "free") 
   } else {

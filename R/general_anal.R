@@ -1321,7 +1321,7 @@ FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, feat){
   load_phyloseq();
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
+
   if(mbSetObj$module.type=="mdp"){
     mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
     data <- merge_phyloseq(data, mbSetObj$dataSet$taxa_table);
@@ -1371,7 +1371,7 @@ FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, feat){
   boxdata <- as.data.frame(data1,check.names=FALSE);
   boxdata$class <- clslbl;
   mbSetObj$analSet$boxdata <- boxdata;
-  
+ 
   if(dist.name == "sparcc"){
     
     permNum <- 100
@@ -1399,8 +1399,7 @@ FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, feat){
     colnames(cor.res) <- c("Correlation", "T-Stat", "P-Value", "FDR");
     ord.inx <- order(cor.res[,3])
     sig.mat <-signif(cor.res[ord.inx,],5);
-  }
-  
+  } 
   fileName <- "correlation_feature.csv";
   fast.write(sig.mat,file=fileName);
   mbSetObj$analSet$resTable <- as.data.frame(sig.mat,check.names=FALSE);
@@ -1628,13 +1627,12 @@ PlotCorr <- function(mbSetObj, imgName, format="png", dpi=72,appendnm, width=NA)
 #'@export
 
 
-Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, variable,appendname){
+Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, variable, appendname){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   if(pattern %in% names(mbSetObj$dataSet$sample_data)){
     new.template = as.numeric(sample_data(mbSetObj$dataSet$norm.phyobj)[[pattern]])
   }else{
-    
     
     if(!.on.public.web){
       clslbl <- sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]];
@@ -1655,7 +1653,7 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, 
     new.template <- vector(mode="numeric", length=length(clslbl))
     # expand to match each levels in the analSet$cls
     all.lvls <- levels(clslbl);
-    
+
     if(length(templ)!=length(all.lvls)){
       AddErrMsg("Wrong template - must the same length as the group number!");
       return(0);
@@ -1707,9 +1705,7 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, 
           nm[ind] <- "Not_Assigned";
           nm <- gsub("_Not_Assigned", "",nm, perl = TRUE);
         }
-        
-        
-        
+
         idx.table =  data.frame(original = rownames(phyloseq_objs$count_tables[[taxrank.inx]]),
                                 taxPrepend = nm[nm.idx],stringsAsFactors = F)
         idx.table$taxPrepend[is.na(idx.table$taxPrepend)] <-  'Not_Assigned'
@@ -1724,10 +1720,10 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, 
     taxrank <- "OTU";
     data <- as.matrix(otu_table(mbSetObj$dataSet$norm.phyobj));
   }
-  
+
   data <- t(data);
   qs::qsave(data, "match_data.qs")
-  
+ 
   clslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   boxdata <- as.data.frame(data,check.names=FALSE);
   boxdata$class <- clslbl;
@@ -1766,7 +1762,7 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, 
   }else{
     AddErrMsg("Distance measure invalid!")
   }
-  
+
   fileName <- "correlation_feature.csv";
   fast.write(sig.mat, file=fileName);
   mbSetObj$analSet$resTable <- as.data.frame(sig.mat,check.names=FALSE);

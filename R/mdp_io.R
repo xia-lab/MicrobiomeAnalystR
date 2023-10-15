@@ -87,7 +87,7 @@ Read16STabData <- function(mbSetObj, dataName) {
   msg <- NULL;
   mydata <- .readDataTable(dataName);
 
-  if(any(is.na(mydata)) || class(mydata) == "try-error"){
+  if(any(c(any(is.na(mydata)), class(mydata) == "try-error"))){
     AddErrMsg("Failed to read in the OTU abundance data! Please make sure the data is in the right format and do not have empty cells or NA.");
     return(0);
   }
@@ -163,7 +163,7 @@ Read16SBiomData <- function(mbSetObj, dataName, taxa_type, ismetadata){
 
   msg <- NULL;
 
-  if(taxa_type=="Greengenes"||taxa_type=="GreengenesID"){
+  if(any(c(taxa_type=="Greengenes", taxa_type=="GreengenesID"))){
     
     mydata <- tryCatch( 
       
@@ -355,7 +355,7 @@ ReadMothurData<-function(mbSetObj, dataName, taxdataNm, taxa_type){
 
   #taxonomy table
     
-  if(taxa_type=="Greengenes"||taxa_type=="GreengenesID"){
+  if(any(c(taxa_type=="Greengenes", taxa_type=="GreengenesID"))){
     tax_data <- import_mothur(mothur_constaxonomy_file = taxdataNm,parseFunction = parse_taxonomy_greengenes);
   }else{
     tax_data <- import_mothur(mothur_constaxonomy_file = taxdataNm,parseFunction = parse_taxonomy_default);
@@ -417,7 +417,7 @@ ReadMothurData<-function(mbSetObj, dataName, taxdataNm, taxa_type){
 #'@export
 Read16STaxaTable <- function(mbSetObj, dataName) {
   mydata <- .readDataTable(dataName);
-  if(is.null(mydata) || class(mydata) == "try-error"){
+  if(any(c(is.null(mydata), class(mydata) == "try-error"))){
     AddErrMsg("Failed to read in the taxonomic data! Please make sure the data is in the right format.");
     return(0);
   }
@@ -560,7 +560,7 @@ ReadPeakList <- function(mbSetObj=NA, dataName = NA, rankOpt="pval",rtOpt,mode,i
 
   mydata <- data.frame(.readDataTable(dataName));
 
-  if(is.null(mydata) || class(mydata) == "try-error"){
+  if(any(c(is.null(mydata), class(mydata) == "try-error"))){
     AddErrMsg("Failed to read in the peak list! Please make sure the data is in the right format.");
     return(0);
   }

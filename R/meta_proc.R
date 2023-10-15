@@ -491,7 +491,7 @@ ReadSampleTableMeta <- function(mbSetObj, fileName) {
   mydata <- .readDataTable(fileName);
 
   mydata[is.na(mydata)] <- "NA";
-  if(any(is.na(mydata)) || class(mydata) == "try-error"){
+  if(any(c(any(is.na(mydata)), class(mydata) == "try-error"))){
     AddErrMsg("Failed to read in the metadata! Please make sure that the metadata file is in the right format and does not have empty cells or NA.");
     return(0);
   }

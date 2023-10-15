@@ -197,7 +197,7 @@ ReadSampleTable <- function(mbSetObj, fileName) {
   load_phyloseq();
   mydata <- .readDataTable(fileName);
   mydata[is.na(mydata)] <- "Not Available";
-  if(any(is.na(mydata)) || class(mydata) == "try-error"){
+  if(any(c(any(is.na(mydata)), class(mydata) == "try-error"))){
     AddErrMsg("Failed to read in the metadata! Please make sure that the metadata file is in the right format and does not have empty cells or NA.");
     return(0);
   }
@@ -537,7 +537,7 @@ ValidateFeatureName <- function(mbSetObj, taxlvl, nm){
 # save the processed data with class names
 PrepareDownloadData <- function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  if(mbSetObj$module.type == "mdp" || mbSetObj$module.type == "sdp"){
+  if(mbSetObj$module.type %in% c("mdp","sdp")){
     if(!is.null(mbSetObj$dataSet$data.orig)){
       fast.write(mbSetObj$dataSet$data.orig, file="data_original.csv");
     }
