@@ -1608,6 +1608,7 @@ if(taxalabel=="T"){# for mapping to the database in mmp module
     #also using unique names for our further data
     prefilt.data <- readDataQs("data.prefilt", module.type, dataName);
     rownames(prefilt.data)<-taxa_names(mbSetObj$dataSet$taxa_table);
+   
     saveDataQs(prefilt.data, "data.prefilt", module.type, dataName);
     
   }else if(mbSetObj$module.type == "sdp"| mbSetObj$micDataType =="ko"){
@@ -1626,8 +1627,7 @@ if(taxalabel=="T"){# for mapping to the database in mmp module
     mbSetObj$dataSet$sample_data<-sample_data(mbSetObj$dataSet$sample_data, errorIfNULL=TRUE);
     mbSetObj$dataSet$proc.phyobj <- merge_phyloseq(data.proc, mbSetObj$dataSet$sample_data);
   }
-  
-  #qs::qsave(mbSetObj$dataSet$proc.phyobj,"/Users/lzy/Documents/MicrobiomeAnalystR-master/guest/proc.phyobj.orig.rds")
+  mbSetObj$dataSet$proc.phyobj@tax_table <- mbSetObj$dataSet$proc.phyobj@tax_table[,!is.na(colnames(mbSetObj$dataSet$proc.phyobj@tax_table))]
   saveDataQs(mbSetObj$dataSet$proc.phyobj, "proc.phyobj.orig", module.type, dataName);
   #do some data cleaning
   mbSetObj$dataSet$data.prefilt <- NULL;

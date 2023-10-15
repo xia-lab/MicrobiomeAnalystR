@@ -1251,6 +1251,7 @@ return(1)
 }
 
 
+
 ########################################################
 ###########)Permanova_Pairwise##########################
 ########################################################
@@ -1319,13 +1320,15 @@ return(1)
 FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, feat){
 
   load_phyloseq();
-  
+   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-
+ 
+  mbSetObj$dataSet$proc.phyobj@tax_table <- mbSetObj$dataSet$proc.phyobj@tax_table[,!is.na(colnames(mbSetObj$dataSet$proc.phyobj@tax_table))]
+  mbSetObj$dataSet$norm.phyobj@tax_table <- mbSetObj$dataSet$norm.phyobj@tax_table[,!is.na(colnames(mbSetObj$dataSet$norm.phyobj@tax_table))]
+ 
   if(mbSetObj$module.type=="mdp"){
     mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
     data <- merge_phyloseq(data, mbSetObj$dataSet$taxa_table);
-    
     if(taxrank=="OTU"){
       taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
       data <- merge_phyloseq(mbSetObj$dataSet$norm.phyobj, taxa_table);
@@ -1630,10 +1633,10 @@ PlotCorr <- function(mbSetObj, imgName, format="png", dpi=72,appendnm, width=NA)
 Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, variable, appendname){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
+
   if(pattern %in% names(mbSetObj$dataSet$sample_data)){
     new.template = as.numeric(sample_data(mbSetObj$dataSet$norm.phyobj)[[pattern]])
   }else{
-    
     if(!.on.public.web){
       clslbl <- sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]];
     }
