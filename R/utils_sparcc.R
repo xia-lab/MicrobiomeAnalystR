@@ -26,7 +26,7 @@ my.sparcc.net <- function(mbSetObj=NULL, corr.net.name, networkType="static", ne
   nms <- V(g)$name;
   taxa <- taxa[match(nms, taxa[,length(colnames(taxa))]),]
   
-  if(!colorOpt %in% colnames(taxa) && colorOpt != "expr"){
+  if(all(c(!colorOpt %in% colnames(taxa), colorOpt != "expr"))){
     
     current.msg <<- "Invalid taxa is selected for coloring (must be same or higher taxonomy level of selected taxa used for correlation calculation)"
     return(0);

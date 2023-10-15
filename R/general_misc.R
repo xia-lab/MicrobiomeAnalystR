@@ -33,11 +33,10 @@ GetRandomNumbers <- function(){
 GetBashFullPath<-function(){
   path <- system("which bash", intern=TRUE);
     
-  if((length(path) == 0) && (typeof(path) == "character")){
+  if(length(path) == 0){
     print("Could not find bash in the PATH!");
     return("NA");
   }
-#print(path)
   return(path);
 }
 
@@ -869,12 +868,8 @@ rowcolFt =  function(x, fac, var.equal, which = 1L) {
 rowcoltt =  function(x, fac, tstatOnly, which, na.rm) {
  
   if(.on.public.web){
-  
     dyn.load(.getDynLoadPath());
   }
-
-  if (!missing(tstatOnly) && (!is.logical(tstatOnly) || is.na(tstatOnly)))
-      stop(sQuote("tstatOnly"), " must be TRUE or FALSE.")
   
   f = checkfac(fac)
   if ((f$nrgrp > 2) || (f$nrgrp <= 0))

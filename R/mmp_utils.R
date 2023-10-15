@@ -1775,7 +1775,7 @@ enrich2json <- function(){
   hits = dat.in$subsets
   file.nm = dat.in$filenm;
   my.res <- dat.in$my.res;
-  if(length(my.res)==1 && is.na(my.res)){
+  if(all(c(length(my.res)==1, is.na(my.res)))){
     AddErrMsg("No match was found to the selected metabolite set library!");
     return(0);
   }

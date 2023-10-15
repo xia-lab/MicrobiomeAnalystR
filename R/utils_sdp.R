@@ -286,7 +286,7 @@ PlotFunctionStack<-function(mbSetObj, summaryplot, functionlvl, abundcal, geneid
   data <- mbSetObj$dataSet$proc.phyobj;
   smpl_nm <- sample_names(data);
   clsLbl <- factor(sample_data(data)[[metadata]]);
-  if(length(levels(clsLbl)) > 9 && min(table(clsLbl)) < 3){
+  if(all(c(length(levels(clsLbl)) > 9, min(table(clsLbl)) < 3))){
     AddErrMsg("Too many facets to be displayed - please select a more meaningful facet option with at least 3 samples per group.");
     return(0);
   }
@@ -630,7 +630,7 @@ PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",fi
   hits = dat.in$subsets
   file.nm = dat.in$filenm;
   my.res <- dat.in$my.res;
-  if(length(my.res)==1 && is.na(my.res)){
+  if(all(c(length(my.res)==1, is.na(my.res)))){
         AddErrMsg("No match was found to the selected metabolite set library!");
         return(0);
   }
@@ -699,7 +699,7 @@ PerformKOEnrichAnalysis_Table <- function(mbSetObj, file.nm){
     my.res <- RS.eval(rsc, my.fun());
     RS.close(rsc);
 
-    if(length(my.res)==1 && is.na(my.res)){
+    if(all(c(length(my.res)==1, is.na(my.res)))){
         AddErrMsg("No match was found to the selected metabolite set library!");
         return(0);
     }

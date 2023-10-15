@@ -408,7 +408,7 @@ ApplyMetaboFilter <- function(mbSetObj=NA, filter,  rsd){
   feat.nms <- colnames(int.mat);
   nm <- NULL;
   msg <- "";
-  if(filter == "none" && feat.num < 5000) { # only allow for less than 4000
+  if(all(c(filter == "none", feat.num < 5000))) { # only allow for less than 4000
     remain <- rep(TRUE, feat.num);
     msg <- paste(msg, "No filtering was applied");
   }else {
@@ -1032,7 +1032,7 @@ PlotLibSizeView <- function(mbSetObj, imgName,format="png", dpi=72, dataName="")
   }
   module.type <- mbSetObj$module.type;
   
-  if(mbSetObj$module.type == "meta" && !ind){
+  if(all(c(mbSetObj$module.type == "meta", !ind))){
     sums.list <- list();
     for(i in 1:length(mbSetObj$dataSets)){
       dataName <- mbSetObj$dataSets[[i]]$name;

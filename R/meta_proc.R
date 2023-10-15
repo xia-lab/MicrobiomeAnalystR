@@ -1117,7 +1117,7 @@ PlotLibSizeHistogram <- function(mbSetObj, imgName,format="png", dpi=72, dataNam
   }
   module.type <- mbSetObj$module.type;
   
-  if(mbSetObj$module.type == "meta" && !ind){
+  if(all(c(mbSetObj$module.type == "meta", !ind))){
     sums.list <- list();
     for(i in 1:length(mbSetObj$dataSets)){
       dataName <- mbSetObj$dataSets[[i]]$name;

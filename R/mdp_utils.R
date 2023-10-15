@@ -621,7 +621,7 @@ abundances<-function(x, transform="identity") {
     # Pick OTU matrix
     otu <- get_taxa(x)
     # Ensure that taxa are on the rows
-    if (!taxa_are_rows(x) && ntaxa(x) > 1 && nsamples(x) > 1) {
+    if (all(c(!taxa_are_rows(x), ntaxa(x) > 1, nsamples(x) > 1))) {
       otu <- t(otu)
     }
     if (ntaxa(x) == 1) {
@@ -1865,7 +1865,7 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
   load_phyloseq();
 
   set.seed(13134);
-  if(module.type == "meta" && !combined){
+  if(all(c(module.type == "meta", !combined))){
     mdata.all <- mbSetObj$mdata.all;
     sel.nms <- names(mdata.all)[mdata.all==1];
     dataNames <- sel.nms;
@@ -1878,7 +1878,7 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
     if(module.type == "meta"){
       mbSetObj$dataSet <- readDataset(dataName);
     }
-    if(module.type == "meta" && combined){
+    if(all(c(module.type == "meta", combined))){
       proc.phyobj <- qs::qread("merged.data.raw.qs");
       norm.phyobj <- qs::qread("merged.data.qs");
       proc.phyobj <- subsetPhyloseqByDataset(mbSetObj, proc.phyobj);
@@ -2014,7 +2014,7 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
       ord$vectors <- as.data.frame(ord$vectors);
       ord$vectors <- cbind(sample_data(data)$loading, ord$vectors);
       colnames(ord$vectors)[1] <- "loading"
-    }else if(colopt == "alphadiv" && module.type == "meta"){
+    }else if(all(c(colopt == "alphadiv", module.type == "meta"))){
       ord$vectors <- as.data.frame(ord$vectors);
       
       ord$vectors <- cbind(sample_data(data)[,alphaopt], ord$vectors);
@@ -2032,7 +2032,7 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
   plotNm = paste(plotNm, ".", format, sep="");
   mbSetObj$imgSet$beta2d<-plotNm;
   
-  if(module.type == "meta" && !combined){
+  if(all(c(module.type == "meta", !combined))){
     dat.num <- length(ord.list);
     if(dat.num > 3){
       colNum=2;
@@ -2267,7 +2267,7 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
       metadata <- "newnewnew";
     }
     clsLbl <- factor(sam[[metadata]]);
-    if(length(levels(clsLbl)) > 9 && min(table(clsLbl)) < 3){
+    if(all(c(length(levels(clsLbl)) > 9, min(table(clsLbl)) < 3))){
       AddErrMsg("Too many facets to be displayed - please select a more meaningful facet option with at least 3 samples per group.");
       return(0);
     }
@@ -2559,7 +2559,7 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
     return(0)
   }
   
-  if(length(levels(clsLbl)) > 9 && min(table(clsLbl)) < 3){
+  if(all(c(length(levels(clsLbl)) > 9, min(table(clsLbl)) < 3))){
     AddErr("Too many facets to be displayed - please select a more meaningful facet option with at least 3 samples per group.");
     return(0);
   }
@@ -2689,7 +2689,7 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
   data$variable <- factor(data$variable, levels = var_level) # change the factor level of taxa
   levels(data$variable) <- sub("^X", "", levels(data$variable));
   
-  if(facet2 != "null" && facet2 != "none" && facet2 != facet){
+  if(all(c(facet2 != "null", facet2 != "none", facet2 != facet))){
     data$variable2 <- sam[[facet2]][match(data$sample, row.names(sam))]; 
   }
   

@@ -158,7 +158,7 @@ SetMetaAttributes <- function(mbSetObj=NA, init = 1){
              mbSetObj$dataSet$meta.types[i] = "cont";
              cls.vec <- c(cls.vec, meta.name)
            }else{
-             if(!check.inx[i] && !meta.name %in% toolow.vec){
+             if(all(c(!check.inx[i], !meta.name %in% toolow.vec))){
              lowrep.vec <- c(lowrep.vec, meta.name)
              }
            }
@@ -179,11 +179,11 @@ SetMetaAttributes <- function(mbSetObj=NA, init = 1){
   }
 
 
-  if(length(toolow.vec)>0 && init == 1){
+  if(all(c(length(toolow.vec)>0, init == 1))){
     msg <- c(msg, paste0( "<b>",paste0(toolow.vec, collapse=", "),"</b>", " meta-data factors have too many groups with low replicates (less than 3) per group."));
   }
 
-  if(length(lowrep.vec)>0 && init == 1){
+  if(all(c(length(lowrep.vec)>0, init == 1))){
     msg <- c(msg, paste0( "<b>",paste0(lowrep.vec, collapse=", "),"</b>", " meta-data factors have some groups with low replicates (less than 3) per group."));
   }
 

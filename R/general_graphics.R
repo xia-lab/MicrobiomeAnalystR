@@ -748,7 +748,7 @@ PlotHeatmap<-function(mbSetObj, plotNm, dataOpt="norm",
 
     if(sz<0.01){sz=0.015}
     cb_grid <- setup_colorbar_grid(nrow = min(20, round(map.height / 140)), x_start = 1.1, y_start = 0.95, x_spacing = 0.15)
-    if (colname == "T" && rowname == "T") {
+    if (all(c(colname == "T", rowname == "T"))) {
       p <- iheatmap(data1sc,
         colorbar_grid = cb_grid, name = "Abundance", x_categorical = TRUE,
         layout = list(font = list(size = fzAnno)),
@@ -763,7 +763,7 @@ PlotHeatmap<-function(mbSetObj, plotNm, dataOpt="norm",
           buffer = bf,
           inner_buffer = bf / 3
         )
-    } else if (colname == "T" && rowname == "F") {
+    } else if (all(c(colname == "T", rowname == "F"))) {
       p <- iheatmap(data1,
         colorbar_grid = cb_grid, name = "Abundance", x_categorical = TRUE,
         layout = list(font = list(size = fzAnno)),
@@ -777,7 +777,7 @@ PlotHeatmap<-function(mbSetObj, plotNm, dataOpt="norm",
           buffer = bf,
           inner_buffer = bf / 3
         )
-    } else if (colname == "F" && rowname == "T") {
+    } else if (all(c(colname == "F", rowname == "T"))) {
       p <- iheatmap(data1,
         colorbar_grid = cb_grid, name = "Abundance", x_categorical = TRUE,
         layout = list(font = list(size = fzAnno)),
@@ -791,7 +791,7 @@ PlotHeatmap<-function(mbSetObj, plotNm, dataOpt="norm",
           buffer = bf,
           inner_buffer = bf / 3
         )
-    } else if (colname == "F" && rowname == "F") {
+    } else if (all(c(colname == "F", rowname == "F"))) {
       p <- iheatmap(data1,
         colorbar_grid = cb_grid, name = "Abundance", x_categorical = TRUE,
         layout = list(font = list(size = fzAnno)),
@@ -888,7 +888,7 @@ GetColorSchema <- function(mbSetObj, grayscale=F){
       colors[claslbl == lvs[i]] <- dist.cols[i];
     }
   }else{
-    if(exists("colVec") && !any(colVec =="#NA") ){
+    if(all(c(exists("colVec"), !any(colVec =="#NA")))){
       cols <- vector(mode="character", length=length(claslbl));
       clsVec <- as.character(claslbl);
       grpnms <- names(colVec);

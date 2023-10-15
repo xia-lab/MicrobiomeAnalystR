@@ -408,9 +408,9 @@ if(case==1){
   for ( i in colnames(metadata) ) {
     mlevels <- unique(na.omit(metadata[,i]));
     numeric_levels <- grep('^-?[0-9.]+[eE+-]?', mlevels, value = T);
-    if ( ( length(mlevels[! (mlevels %in% c("UNK"))]) > 1 ) &&  # modification to allow setting reference when only two classes in metadata
-         ( i %in% fixed_effects ) &&
-         ( length(numeric_levels) == 0)) {
+    if (all(c( ( length(mlevels[! (mlevels %in% c("UNK"))]) > 1 ),  # modification to allow setting reference when only two classes in metadata
+         ( i %in% fixed_effects ),
+         ( length(numeric_levels) == 0)))) {
       split_reference <- unlist(strsplit(reference, "[,;]"));
       if (! i %in% split_reference ) {
         stop(paste("Please provide the reference for the variable '",
