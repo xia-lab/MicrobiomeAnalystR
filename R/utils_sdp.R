@@ -810,17 +810,20 @@ PerformKOProjection <- function(mbSetObj){
     current.msg <<- paste(" Due to computational constraints, only top 5000 features will be used. ", collapse="\n");
   }
 
+# print(resTable[1:5,]);
   mbSetObj$analSet$sig.mat <- resTable;
-  gene.mat <- data.matrix(-log10(resTable$Pvalues));
+
+  p.inx <- colnames(resTable) %in% c("P-value", "Pvalues");
+  gene.mat <- data.matrix(-log10(resTable[,p.inx]));
   rownames(gene.mat) <- row.names(resTable);
   gene.mat <- RemoveDuplicates(gene.mat, "sum", quiet=F);
   mbSetObj$analSet$ko.uniq <- gene.mat;
   id.type <- mbSetObj$analSet$id.type;
     
-  if(is.na(id.type) || id.type == "NA"){
+  if(any(c(is.na(id.type),is.null(id.type), id.type == "NA"))){
     id.type <- "ko";
   }
-    
+
   kos <- doKOFiltering(rownames(gene.mat),id.type);
     
   if(sum(!is.na(kos)) < 2){
