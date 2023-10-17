@@ -350,25 +350,28 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
   
   mod<-lapply(res.list, function(x) x$AlphaDiversity) %>%
     do.call(bind_rows, .) %>%
-    plyr::mutate(study_condition=factor(study_condition, levels=c("control","CRC"))) %>%
+    plyr::mutate(study_condition=factor(study_condition)) %>%
     group_by(Metric)
   
   AlphaCombined<-tibble(dataset=character(0), Metric=character(0), log2FC=numeric(0), Pvalue=numeric(0), mean_LFD=numeric(0), mean_HFD=numeric(0), CI_low=numeric(0), CI_high=numeric(0))
-  for(i in unique(mod$Metric)){
-    fit<-lmerTest::lmer(log2FC~study_condition+(1|dataset), data=subset(mod, Metric==i))
-    cf<-confint(fit,level = 0.95)
-    
-    AlphaCombined<-bind_rows(AlphaCombined, tibble(
-      dataset="Combined", 
-      Metric=i, 
-      log2FC=summary(fit)$coefficients["study_conditionCRC", "Estimate"], 
-      Pvalue=anova(fit)$`Pr(>F)`, 
-      mean_LFD=NA, 
-      mean_HFD=NA, 
-      CI_low=cf["study_conditionCRC",1], 
-      CI_high=cf["study_conditionCRC",2]
-    ))
-  }
+    control_level <- levels(mod$study_condition)[1];
+    non_control_level <- levels(mod$study_condition)[2];
+
+for(i in unique(mod$Metric)){
+  fit <- lmerTest::lmer(log2FC ~ study_condition + (1|dataset), data=subset(mod, Metric==i))
+  cf <- confint(fit, level = 0.95)
+  
+  AlphaCombined <- bind_rows(AlphaCombined, tibble(
+    dataset="Combined", 
+    Metric=i, 
+    log2FC=summary(fit)$coefficients[paste0("study_condition", non_control_level), "Estimate"], 
+    Pvalue=anova(fit)$`Pr(>F)`, 
+    mean_LFD=NA, 
+    mean_HFD=NA, 
+    CI_low=cf[paste0("study_condition", non_control_level),1], 
+    CI_high=cf[paste0("study_condition", non_control_level),2]
+  ))
+}
   
   NSamples<-
     lapply(names(res.list), function(x) tibble(dataset=x, Nsamples=length(unique(res.list[[x]]$AlphaDiversity$sample_id)))) %>% 
@@ -437,7 +440,7 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
   fast.write(mbSetObj$analSet$alpha.summary, "alpha_summary.csv", row.names = TRUE);
   mbSetObj$imgSet$alpha <- imgName;
   mbSetObj$analSet$alpha.taxalvl <- taxrank
-   mbSetObj$analSet$alpha.meta <- sel.meta
+  mbSetObj$analSet$alpha.meta <- sel.meta
   return(.set.mbSetObj(mbSetObj));
 }
 

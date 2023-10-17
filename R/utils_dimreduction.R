@@ -6,16 +6,13 @@
 ## Y. Lu   
 ## J. Xia, jeff.xia@mcgill.ca
 ###################################################
-
+#procrustes or diablo
 my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="globalscore", dimn=10,analysisVar, diabloPar=0.2){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   if(method == ""){
     method="globalscore"
   }
   dimn = as.numeric(dimn);
-  if(dimn == 2){
-    dimn = 3;
-  }
   
   d.list = vector("list",length = 2)
   names(d.list) <- c("mic","met")
@@ -135,11 +132,7 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
     ndat2 <- decostand(t(d.list$met$data.proc), method = "standardize")
     pca.dat2 <- rda(ndat2)
     
-    if(dimn == 2){
-      choicesVec = c(1,2)
-    }else{
-      choicesVec = c(1,2,3)
-    }
+    choicesVec = c(1,2,3)
     res= lapply(pca.dat1,function(x) procrustes(x, pca.dat2, choices=choicesVec, symmetric = T, scale = TRUE))
     res2= lapply(pca.dat1,function(x) protest(X = x, Y = pca.dat2, scores = "sites", permutations = 999) )
     
@@ -169,17 +162,19 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
     qs::qsave(combined.res,"combined.res.qs")
     qs::qsave(procrustes.res,"procrustes.res.qs")
   }
-  if(reductionOpt != "mcia"){ # had to rescale with segment points
+
     pos.xyz <- lapply(pos.xyz,function(x) as.data.frame(x)[,c(1:3)]);
     pos.xyz <- lapply(pos.xyz,function(x) unitAutoScale(x));
     pos.xyz <- lapply(pos.xyz, "rownames<-", names[[1]]);
-  }
-  if(reductionOpt %in% c("diablo", "spls")){
+
+  if(reductionOpt %in% c("diablo")){
     names2 <- lapply(pos.xyz2, function(x) rownames(x))
     pos.xyz <- lapply(pos.xyz,function(x) as.data.frame(x)[,c(1:3)]);
     pos.xyz2 <- lapply(pos.xyz2, function(x) unitAutoScale(x));
     pos.xyz2 <- lapply(pos.xyz2, "rownames<-", names2[[1]]);
   }
+
+  
   
   
   if(reductionOpt != "procrustes"){
@@ -193,15 +188,9 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
       loadingSymbols=list(OTU=loadingSymbols)
     }
   }
-  if(reductionOpt %in% c("o2pls", "mcia","rcca", "mbpca", "diablo", "rcca", "spls")){
+  if(reductionOpt == "diablo"){
     loading.pos.xyz = lapply(loading.pos.xyz,as.data.frame)
     loading.pos.xyz <- lapply(loading.pos.xyz,unitAutoScale);
-    
-    #rownames(loading.pos.xyz) = loadingNames
-    
-    # for(i in 1:length(names(data.list))){
-    #   loadingNames <- gsub(paste0("_", names(data.list)[i]), "", loadingNames)
-    # }
     
     diablo.res$dim.res <- res
     diablo.res$pos.xyz <- pos.xyz
@@ -217,23 +206,10 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
   }
   reductionOptGlobal <<- reductionOpt
   
-  
   mbSetObj$analSet$dimrdc<-reductionOpt;
   
   .set.mbSetObj(mbSetObj);
   
-  if(dimn == 2){
-    netData <-list();
-    netData$score=pos.xyz
-    if(reductionOpt %in% loadingOpts){
-      netData$loading = list(pos=loading.pos.xyz, name=loadingSymbols);
-    }else{
-      netData$loading = "NA";
-    }
-    sink(TwoDJsonName);
-    cat(toJSON(netData));
-    sink();
-  }
   return(1)
 }
 
