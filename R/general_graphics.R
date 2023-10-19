@@ -888,7 +888,8 @@ GetColorSchema <- function(mbSetObj, grayscale=F){
       colors[claslbl == lvs[i]] <- dist.cols[i];
     }
   }else{
-    if(all(c(exists("colVec"), !any(colVec =="#NA")))){
+    if( exists("colVec")){
+       if(any(colVec =="#NA")){
       cols <- vector(mode="character", length=length(claslbl));
       clsVec <- as.character(claslbl);
       grpnms <- names(colVec);
@@ -897,6 +898,7 @@ GetColorSchema <- function(mbSetObj, grayscale=F){
         cols[clsVec == grpnms[i]] <- colVec[i];
       }
       colors <- cols;
+   }
     }else{
       colors <- as.numeric(claslbl)+1;
     }
