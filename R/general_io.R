@@ -446,13 +446,13 @@ GetMetaTaxaInfo <- function(mbSetObj){
 
 GetSampleGrpInfo <- function(mbSetObj, clsLbl){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  return(levels(factor(get_variable(mbSetObj$dataSet$norm.phyobj, clsLbl))));
+  return(levels(factor(phyloseq::get_variable(mbSetObj$dataSet$norm.phyobj, clsLbl))));
 }
 
 GetSampleGrpNo <- function(mbSetObj, clsLbl){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   #Issue with phyloslim (after merging into phyloslim object the sample variable are converted to numeric again rather than factor)
-  return(length(levels(factor(get_variable(mbSetObj$dataSet$norm.phyobj, clsLbl)))));
+  return(length(levels(factor(phyloseq::get_variable(mbSetObj$dataSet$norm.phyobj, clsLbl)))));
 }
 
 GetTaxaNames<- function(mbSetObj, taxlvl){

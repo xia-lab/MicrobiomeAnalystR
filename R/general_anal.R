@@ -1648,10 +1648,11 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, 
     
     templ <- as.numeric(ClearStrings(strsplit(pattern, "-")[[1]]));
 
-    if(all(templ==templ[1])){
-      AddErrMsg("Cannot calculate correlation on constant values!");
-      return(0);
+    if (all(na.omit(templ) == na.omit(templ)[1])) {
+      AddErrMsg("Cannot calculate correlation on constant values!")
+      return(0)
     }
+
     
     new.template <- vector(mode="numeric", length=length(clslbl))
     # expand to match each levels in the analSet$cls
@@ -1986,7 +1987,7 @@ phyloseq_to_edgeR = function(physeq, group, method="RLE", ...){
   # Check `group` argument
   if( identical(all.equal(length(group), 1), TRUE) & nsamples(physeq) > 1 ){
     # Assume that group was a sample variable name (must be categorical)
-    group = get_variable(physeq, group)
+    group = phyloseq::get_variable(physeq, group)
   }
   # Define gene annotations (`genes`) as tax_table
   taxonomy = tax_table(physeq, errorIfNULL=FALSE)
