@@ -803,7 +803,7 @@ libSizeQuickView <- function(dataObj){
   
 }
 
-plotSeqDiagnotics <- function(imageName = "diagnotics", format = "png", dpi = 120){    
+plotSeqDiagnotics <- function(imageName = "diagnotics", format = "png", dpi = 120){
     if(file.exists("diagnotics_plot_src.qs")){
         p1 <- qs::qread("diagnotics_plot_src.qs")
         Cairo::Cairo(1600, 1250,file = paste0(imageName, ".",format), dpi = dpi, bg = "white", type=format)
