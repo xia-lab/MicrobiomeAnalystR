@@ -771,7 +771,14 @@ generateResFigures <- function(mbSetObj = NA){
   }
 }
 
-libSizeQuickView <- function(dataObj){
+libSizeQuickView <- function(dataObj = NULL, format = "png", dpi = 72){
+
+  if(is.null(dataObj)){
+    load("dataObj_completed.rda");
+  } else {
+    save(dataObj, file = "dataObj_completed.rda")
+  }
+
   {
     otu_table <- dataObj[["res"]][["otu_table"]]
     rownames(otu_table) <- NULL
@@ -792,8 +799,15 @@ libSizeQuickView <- function(dataObj){
   vip.nms <- substr(vip.nms, 1, 16);
   
   myH <- ncol(data_bef)*25 + 50;
-
-  Cairo::Cairo(file="libsize_quickview.png", width=840, height=myH, type="png", bg="white",dpi=72);
+  if(format == "png"){
+      myW = 840
+  } else {
+      myW = 840
+      myH = myH
+  }
+  
+  # plot libsize_quickview
+  Cairo::Cairo(file=paste0("libsize_quickview.", format), width=myW, height=myH, type=format, bg="white",dpi=dpi);
   xlim.ext <- GetExtendRange(smpl.sums, 10);
   par(mar=c(4,10,2,2));
   dotchart(smpl.sums, col="forestgreen", xlim=xlim.ext, pch=19, xlab="Read Counts", main="Library Raw Size Overview");
