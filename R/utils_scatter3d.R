@@ -76,7 +76,7 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
       id=names[i],
       label=names[i],
       size=nodeSize,
-      meta=meta.vec[i],
+      meta=metadf[i],
       fx = unname(pos.xyz[i,1])*1000,
       fy = unname(pos.xyz[i,2])*1000,
       fz = unname(pos.xyz[i,3])*1000,
