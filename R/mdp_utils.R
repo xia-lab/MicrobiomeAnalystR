@@ -2819,7 +2819,7 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import vegan
-PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pairwise,
+PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pairwise=FALSE,
                                 covariates = FALSE, cov.vec = NA, model.additive = TRUE){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
