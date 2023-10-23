@@ -9,7 +9,7 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
   ## 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   res <- mbSetObj$analSet$pca$score
-
+  print(res);
   nodes <- vector(mode="list");
   names <- res$name;
   if(ncol(res$xyz) > nrow(res$xyz)){
@@ -40,6 +40,9 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
   pos.xyz <- pos.xyz[1:(nrow(pos.xyz) - 2), ]
   
   metadf <- res$facA
+  if(!is.factor(metadf)){
+    metadf <- as.factor(metadf);
+  }
   col = vector();
   
   meta.vec <- levels(metadf)
