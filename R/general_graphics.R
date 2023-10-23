@@ -745,9 +745,10 @@ PlotHeatmap<-function(mbSetObj, plotNm, dataOpt="norm",
     fzCol <- round(fzCol, 1)
     fzRow <- round(fzRow, 1)
     fzAnno <- round(fzAnno, 1)
-
+ 
     if(sz<0.01){sz=0.015}
     cb_grid <- setup_colorbar_grid(nrow = min(20, round(map.height / 140)), x_start = 1.1, y_start = 0.95, x_spacing = 0.15)
+      
     if (all(c(colname == "T", rowname == "T"))) {
       p <- iheatmap(data1sc,
         colorbar_grid = cb_grid, name = "Abundance", x_categorical = TRUE,
@@ -764,7 +765,7 @@ PlotHeatmap<-function(mbSetObj, plotNm, dataOpt="norm",
           inner_buffer = bf / 3
         )
     } else if (all(c(colname == "T", rowname == "F"))) {
-      p <- iheatmap(data1,
+      p <- iheatmap(data1sc,
         colorbar_grid = cb_grid, name = "Abundance", x_categorical = TRUE,
         layout = list(font = list(size = fzAnno)),
         colors = colors
@@ -778,7 +779,7 @@ PlotHeatmap<-function(mbSetObj, plotNm, dataOpt="norm",
           inner_buffer = bf / 3
         )
     } else if (all(c(colname == "F", rowname == "T"))) {
-      p <- iheatmap(data1,
+      p <- iheatmap(data1sc,
         colorbar_grid = cb_grid, name = "Abundance", x_categorical = TRUE,
         layout = list(font = list(size = fzAnno)),
         colors = colors
@@ -792,7 +793,7 @@ PlotHeatmap<-function(mbSetObj, plotNm, dataOpt="norm",
           inner_buffer = bf / 3
         )
     } else if (all(c(colname == "F", rowname == "F"))) {
-      p <- iheatmap(data1,
+      p <- iheatmap(data1sc,
         colorbar_grid = cb_grid, name = "Abundance", x_categorical = TRUE,
         layout = list(font = list(size = fzAnno)),
         colors = colors
@@ -834,7 +835,7 @@ PlotHeatmap<-function(mbSetObj, plotNm, dataOpt="norm",
     as_json <- paste0("{ \"x\":", as_json, ",\"evals\": [],\"jsHooks\": []}")
 
     write(as_json, plotjs)
-
+ 
     # storing for Report Generation
     mbSetObj$analSet$heatmap <- data1
     mbSetObj$analSet$heatmap.dist <- smplDist
@@ -888,18 +889,19 @@ GetColorSchema <- function(mbSetObj, grayscale=F){
       colors[claslbl == lvs[i]] <- dist.cols[i];
     }
   }else{
-    if(exists("colVec") && !any(colVec =="#NA")){
-      cols <- vector(mode="character", length=length(claslbl));
-      clsVec <- as.character(claslbl);
-      grpnms <- names(colVec);
+    colors <- as.numeric(claslbl)+1;
+    if(exists("colVec")){
+       if(any(colVec =="#NA")){
+            cols <- vector(mode="character", length=length(claslbl));
+            clsVec <- as.character(claslbl);
+            grpnms <- names(colVec);
       
-      for(i in 1:length(grpnms)){
-        cols[clsVec == grpnms[i]] <- colVec[i];
-      }
-      colors <- cols;
-    }else{
-      colors <- as.numeric(claslbl)+1;
-    }
+            for(i in 1:length(grpnms)){
+                cols[clsVec == grpnms[i]] <- colVec[i];
+            }
+            colors <- cols;
+        }
+     }
   }
   return (colors);
 }
