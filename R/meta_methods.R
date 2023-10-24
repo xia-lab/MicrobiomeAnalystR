@@ -407,7 +407,8 @@ for(i in unique(mod$Metric)){
       facet_grid(~Metric, scales="free_x") +
       scale_color_manual(values=c("green", "red", "black"))  +
       theme(panel.border = element_blank(), axis.line = element_line()) +
-      theme(axis.text.x=element_text(angle=45, hjust=1));
+      theme(axis.text.x=element_text(angle=45, hjust=1)) + 
+      theme(text = element_text(size = 16));
     
     Cairo::Cairo(file = imgName, unit="px", dpi=dpi, width=800, height=600, type=format, bg="white");
     print(fig);
@@ -429,7 +430,8 @@ for(i in unique(mod$Metric)){
                    color = "black",
                    position = position_dodge(0.2))+ 
       scale_fill_discrete(name = "Metadata") +
-      facet_grid( .~ Metric, scales = "free_x");
+      facet_grid( .~ Metric, scales = "free_x") + 
+      theme(text = element_text(size = 16));
     
     Cairo::Cairo(file = imgName, unit="px", dpi=dpi, width=800, height=600, type=format, bg="white");
     print(box1);
