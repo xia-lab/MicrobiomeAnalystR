@@ -5,8 +5,7 @@
 SanityCheckSampleData <- function(mbSetObj=NA){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   dataName <- mbSetObj$dataSet$name;
-  module.type <- mbSetObj$module.type;
-
+  module.type <- mbSetObj$module.type; 
   metadata <- mbSetObj$dataSet$sample_data
   smpl.nms <- rownames(metadata)
   
@@ -109,6 +108,7 @@ SetMetaAttributes <- function(mbSetObj=NA, init = 1){
   msg <- NULL;
   mbSetObj <- .get.mbSetObj(mbSetObj);
   sample_data  <- mbSetObj$dataSet$sample_data
+  
   init <- as.numeric(init);
   cls.lbl <- sample_data[,1];
   cls.num <- length(levels(cls.lbl));

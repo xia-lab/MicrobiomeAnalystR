@@ -191,7 +191,7 @@ SetModuleType <- function(mbSetObj, nm){
 #'License: GNU GPL (>= 2)
 #'@export
 ReadSampleTable <- function(mbSetObj, fileName) {
-  
+  load_stringr();
   mbSetObj <- .get.mbSetObj(mbSetObj);
   module.type <- mbSetObj$module.type;
   load_phyloseq();
@@ -233,7 +233,8 @@ mydata <- sapply(mydata[,-1,drop=F], format, trim = TRUE)
     na.msg1 <- paste("A total of", sum(na.inx), "empty or NA values were replaced by 'Unknown'.");
   }
   #Check group label names for spaces and replace with underscore
-  my.meta <- data.frame(mydata,check.names=FALSE);
+  my.meta<- data.frame(apply(mydata,2,function(x) str_trim(x,side="both")),check.names=FALSE);
+  rownames(my.meta) <- smpl_nm;
   my.meta.blank <- any(grepl("[[:blank:]]", my.meta)| grepl("[[:blank:]]", names(my.meta)));
   if(my.meta.blank){
     names(my.meta) <- gsub("\\s+","_", names(my.meta));
