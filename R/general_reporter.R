@@ -942,7 +942,7 @@ CreateCORRdoc <- function(mbSetObj){
     }
 
     descr <- c("\\subsection{Pattern Search}\n",
-               "Paatern Search can be used to identify which features are correlated with a feature of interest.",
+               "Pattern Search can be used to identify which features are correlated with a feature of interest.",
                "Basically,correlation analysis is used to identify if certain features show particular patterns",
                "under different conditions. Users first need to define a pattern in the form of a series of hyphenated numbers.",
                "For example, in a time-series study with four time points, a pattern of of",

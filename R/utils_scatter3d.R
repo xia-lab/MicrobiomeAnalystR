@@ -9,7 +9,6 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
   ## 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   res <- mbSetObj$analSet$pca$score
-  print(res);
   nodes <- vector(mode="list");
   names <- res$name;
   if(ncol(res$xyz) > nrow(res$xyz)){
@@ -45,9 +44,9 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
   }
   col = vector();
   
-  meta.vec <- levels(metadf)
+  meta.vec <- metadf
   meta.vec.num = as.integer(metadf)
-  col.s <- gg_color_hue(length(unique(meta.vec)))
+  col.s <- gg_color_hue(length(levels(metadf)))
   for(i in 1:length(meta.vec.num)){
     col[i] = col.s[meta.vec.num[i]];
   }
@@ -68,7 +67,7 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
     }
     legendData2 <- list(label=unique(meta.vec2),shape=shape.s);
   }
-  
+
   nodeSize = 18;
   
   for(i in 1:length(names)){
@@ -76,7 +75,7 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
       id=names[i],
       label=names[i],
       size=nodeSize,
-      meta=metadf[i],
+      meta=meta.vec[i],
       fx = unname(pos.xyz[i,1])*1000,
       fy = unname(pos.xyz[i,2])*1000,
       fz = unname(pos.xyz[i,3])*1000,

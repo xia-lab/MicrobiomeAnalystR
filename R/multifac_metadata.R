@@ -349,6 +349,7 @@ UpdateMetaOrder <- function(mbSetObj=NA, metaName){
 
 GetUniqueMetaNames <-function(mbSetObj=NA, metadata){
   mbSetObj <- .get.mbSetObj(mbSetObj);
+  print(head(mbSetObj[["dataSet"]]));
   data.type <- mbSetObj[["dataSet"]][["meta.types"]][metadata];
   
   if(data.type == "cont"){
