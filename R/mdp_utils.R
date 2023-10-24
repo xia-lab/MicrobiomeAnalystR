@@ -265,6 +265,7 @@ rescale2NewRange <- function(qvec, a, b){
 }
 
 PrepareCorrExpValues <- function(mbSetObj, meta, taxalvl, color, layoutOpt, comparison, wilcox.cutoff){
+  load_phyloseq();
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   load_metacoder();
@@ -2818,7 +2819,7 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import vegan
-PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pairwise,
+PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pairwise=FALSE,
                                 covariates = FALSE, cov.vec = NA, model.additive = TRUE){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -2841,7 +2842,7 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pai
   data <- transform_sample_counts(data, function(x) x/sum(x));
 
   data.dist <- phyloseq::distance(data, method=distnm);
-  group <- get_variable(data,variable);
+  group <- phyloseq::get_variable(data,variable);
   stat.info <- "";
   resTab <- list();
  
@@ -3428,7 +3429,8 @@ PlotPhylogeneticTree <-function(mbSetObj, color, shape, taxa, treeshape, imgName
 #########################
 
 GetHtGroupItems <- function(mbSetObj, meta){
-  
+  load_phyloseq();
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
   dm <- mbSetObj$dataSet$proc.phyobj;  
   dm_samples = as(sample_data(dm), "data.frame");
@@ -3451,6 +3453,8 @@ SetGroupItems <- function(mbSetObj, groups){
 }
 
 GetHtMetaCpInfo <- function(mbSetObj, meta){
+  load_phyloseq();
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
   dm <- mbSetObj$dataSet$proc.phyobj;  
   dm_samples = as(sample_data(dm), "data.frame");
@@ -3773,7 +3777,7 @@ if(layoutOpt == "reda"){# two layouts are provided
 PlotGroupDataHeattree <- function(mbSetObj, meta, comparison, taxalvl, color, layoutOpt, 
                                   showLabels,imgName, format="png", dpi=72){
   load_metacoder();
-  
+  load_phyloseq();
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   tax_o <- taxalvl;
@@ -3811,6 +3815,8 @@ PlotGroupDataHeattree <- function(mbSetObj, meta, comparison, taxalvl, color, la
 PlotSampleDataHeattree <- function(mbSetObj,comparison, taxalvl, color, layoutOpt, 
                                   showLabels, imgName, format="png", dpi=72){
   load_metacoder();
+  load_phyloseq();
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
   tax_o <- taxalvl;
   
@@ -3848,7 +3854,8 @@ PlotSampleDataHeattree <- function(mbSetObj,comparison, taxalvl, color, layoutOp
 PlotOverviewDataHeattree <- function(mbSetObj, taxalvl, color, layoutOpt, 
                                     showLabels, imgName, format="png", dpi=72){
   load_metacoder();
-  
+  load_phyloseq();
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
   tax_o <- taxalvl;
   

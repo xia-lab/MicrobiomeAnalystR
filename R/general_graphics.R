@@ -889,20 +889,19 @@ GetColorSchema <- function(mbSetObj, grayscale=F){
       colors[claslbl == lvs[i]] <- dist.cols[i];
     }
   }else{
-    if( exists("colVec")){
+    colors <- as.numeric(claslbl)+1;
+    if(exists("colVec")){
        if(any(colVec =="#NA")){
-      cols <- vector(mode="character", length=length(claslbl));
-      clsVec <- as.character(claslbl);
-      grpnms <- names(colVec);
+            cols <- vector(mode="character", length=length(claslbl));
+            clsVec <- as.character(claslbl);
+            grpnms <- names(colVec);
       
-      for(i in 1:length(grpnms)){
-        cols[clsVec == grpnms[i]] <- colVec[i];
-      }
-      colors <- cols;
-   }
-    }else{
-      colors <- as.numeric(claslbl)+1;
-    }
+            for(i in 1:length(grpnms)){
+                cols[clsVec == grpnms[i]] <- colVec[i];
+            }
+            colors <- cols;
+        }
+     }
   }
   return (colors);
 }
