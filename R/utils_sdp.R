@@ -639,7 +639,7 @@ PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",fi
     nms <- rownames(my.res);
     hits <- hits[nms];
 
-    Save2KEGGJSON(hits, my.res, file.nm);
+    mbSetObj <- Save2KEGGJSON(mbSetObj, hits, my.res, file.nm);
     .set.mbSetObj(mbSetObj);
     return(1);
 }
@@ -708,7 +708,7 @@ PerformKOEnrichAnalysis_Table <- function(mbSetObj, file.nm){
     nms <- rownames(my.res);
     hits <- hits[nms];
 
-    Save2KEGGJSON(hits, my.res, file.nm);
+    mbSetObj <- Save2KEGGJSON(mbSetObj, hits, my.res, file.nm);
     return(.set.mbSetObj(mbSetObj));
 }
 
@@ -942,13 +942,13 @@ PerformKOEnrichAnalysis_List <- function(mbSetObj, file.nm){
       }
     }
   }
-  Save2KEGGJSON(hits.query, res.mat, file.nm);
+  mbSetObj <- Save2KEGGJSON(mbSetObj, hits.query, res.mat, file.nm);
   return(.set.mbSetObj(mbSetObj));
 }
 
 # Utility function
 # for KO01100
-Save2KEGGJSON <- function(hits.query, res.mat, file.nm){
+Save2KEGGJSON <- function(mbSetObj, hits.query, res.mat, file.nm){
 
   resTable <- data.frame(Pathway=rownames(res.mat), res.mat,check.names=FALSE);
   current.msg <<- "Functional enrichment analysis was completed";
@@ -989,9 +989,11 @@ Save2KEGGJSON <- function(hits.query, res.mat, file.nm){
   sink(json.nm)
   cat(json.mat);
   sink();
+  mbSetObj$analSet$associationResTable <- resTable;
   
   # write csv
   fast.write(resTable, file=paste(file.nm, ".csv", sep=""), row.names=F);
+  return(mbSetObj)
 }
 
 # Utility function
