@@ -461,7 +461,7 @@ PlotFunctionStack<-function(mbSetObj, summaryplot, functionlvl, abundcal, geneid
 PerformKOmapping <- function(mbSetObj, geneIDs, type){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
+  mbSetObj$dataSet$data.type <- "ko.list";
   mbSetObj$analSet <- list();
   mbSetObj$analSet$orig <- geneIDs;
   current.msg <<- NULL;
@@ -502,7 +502,7 @@ PerformKOmapping <- function(mbSetObj, geneIDs, type){
     gene.mat <- gene.mat[gd.inx, ,drop=F];
     mbSetObj$analSet$ko.mapped <- mbSetObj$analSet$data <- gene.mat; # data will be updated, ko.map will keep intact
     current.msg <<- paste("A total of unique", nrow(gene.mat), "KO genes were mapped to KEGG network!");
-
+    mbSetObj$dataSet$map.msg <- paste("A total of ```", nrow(gene.mat), "``` KO genes were mapped to our database!")
     return(.set.mbSetObj(mbSetObj));
   }
 }

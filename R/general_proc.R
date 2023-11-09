@@ -622,14 +622,14 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
         data <- sweep(data, 2, colSums(data), FUN="/")
         data <- data*10000000;
         if(i==1){
-          msg <- c(msg, paste("Performed total sum normalization."));
+          msg <- c(msg, paste("Performed ```total sum scaling``` normalization."));
         }
       }else if(scale.opt=="upperquartile"){
         load_edgeR();
         otuUQ <- edgeRnorm(data,method="upperquartile");
         data <- as.matrix(otuUQ$counts);
         if(i==1){
-          msg <- c(msg, paste("Performed upper quartile normalization"));
+          msg <- c(msg, paste("Performed ```upper quartile``` normalization"));
         }
       }else if(scale.opt=="CSS"){
         load_metagenomeseq();
@@ -639,7 +639,7 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
         data <- cumNorm(dataMR,p=cumNormStat(dataMR));
         data <- MRcounts(data,norm = T);
         if(i==1){
-          msg <- c(msg, paste("Performed cumulative sum scaling normalization"));
+          msg <- c(msg, paste("Performed ```cumulative sum scaling``` normalization"));
         }
       }else{
         if(scale.opt!="auto" & i==1){
@@ -658,19 +658,19 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
         otuRLE <- edgeRnorm(data,method="RLE");
         data <- as.matrix(otuRLE$counts);
         if(i==1){        
-          msg <- c(msg, paste("Performed RLE Normalization"));
+          msg <- c(msg, paste("Performed ```RLE``` Normalization"));
         }
       }else if(transform.opt=="TMM"){
         load_edgeR();   
         otuTMM <- edgeRnorm(data,method="TMM");
         data <- as.matrix(otuTMM$counts);
         if(i==1){        
-          msg <- c(msg, paste("Performed TMM Normalization"));
+          msg <- c(msg, paste("Performed ```TMM``` Normalization"));
         }
       }else if(transform.opt=="clr"){
         data <- apply(data, 2, clr_transform);
         if(i==1){        
-          msg <- "Performed centered-log-ratio normalization."
+          msg <- "Performed ```centered-log-ratio (CLR)``` normalization."
         }
       }else{
         if(scale.opt!="auto" & i==1){
@@ -696,15 +696,12 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
       tax.tab <- tax.tab[!(duplicated(nm)),] 
       tax.tab[which(rownames(tax.tab)=="Not_Assigned"),] <- NA
       data.list$merged_obj[[i]] <- merge_phyloseq(otu.tab, sample_data(data.list$merged_obj[[i]]), tax.tab);
- 
     }
-    
   }
 
   #using the OTU level for plotting when first initialize
   mbSetObj$dataSet$norm.phyobj <- data.list$merged_obj[["OTU"]];
-  current.msg <<- paste(msg, collapse=" ");
-  mbSetObj$dataSet$norm.msg <- current.msg;
+  mbSetObj$dataSet$norm.msg <- msg;
   
   ### prepare for mmp module
   if(exists("current.proc")){
