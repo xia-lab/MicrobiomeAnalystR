@@ -261,7 +261,7 @@ mydata <- sapply(mydata[,-1,drop=F], format, trim = TRUE)
     return(0);
   }else{
     
-    na.msg <- c(na.msg, "<font style=\"color:green\"><b> Yes. </b></font>");
+    na.msg <- c(na.msg, "Containing at least one discrete factor: <font style=\"color:green\"><b> Yes. </b></font>");
     if(sum(disc.inx) == length(disc.inx)){
       na.msg <- c(na.msg,"All metadata columns are OK!")
     }else{

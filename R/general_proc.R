@@ -377,9 +377,9 @@ ApplyVarianceFilter <- function(mbSetObj, filtopt, filtPerct){
   #qs::qsave(mbSetObj$dataSet$filt.data, file="filt.data.orig"); # save an copy
   saveDataQs(mbSetObj$dataSet$filt.data, "filt.data.orig", module.type, dataName);
   
-  rm.msg1 <- paste("A total of ", sum(!remain), " low variance features were removed based on ", filtopt, ".", sep="");
-  rm.msg2 <- paste("The number of features remains after the data filtering step:", nrow(data));
-  current.msg <<- paste(c(current.msg, rm.msg1, rm.msg2), collapse=" ");
+  rm.msg1 <- paste("A total of ```", sum(!remain), "``` low variance features were removed based on ```", filtopt, "```.", sep="");
+  rm.msg2 <- paste("The number of features remains after the data filtering step: ```", nrow(data), "```.");
+  current.msg <<- c(current.msg, rm.msg1, rm.msg2);
   mbSetObj$dataSet$filt.msg <- current.msg;
   return(.set.mbSetObj(mbSetObj));
   
