@@ -237,11 +237,8 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
 
   mbSetObj$analSet$cornet.taxa = taxrank;
 
-  if(current.msg == "Only the top 500 features are kept, ranked by their variance!"){
-    current.msg <<- paste(current.msg, method, "network analysis performed successfully!")
-  }else{
-    current.msg <<- paste(method, "network analysis performed successfully!")
-  }
+  current.msg <<- paste(current.msg, method, "network analysis performed successfully!")
+ 
   return(.set.mbSetObj(mbSetObj));
 }
 
