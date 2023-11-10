@@ -780,6 +780,16 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
   mbSetObj$analSet$id.type <- shotgunid;
   mbSetObj$analSet$meta <- variable;
   
+  # record paramet
+  
+  mbSetObj$paramSet$lefse <- list(
+        taxalvl = taxrank,
+        p.val = p.lvl,
+        p.type = pvalOpt,
+        lda.lvl = lda.lvl,
+        factor = variable
+   );
+
   return(.set.mbSetObj(mbSetObj));
 }
 
