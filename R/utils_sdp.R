@@ -63,7 +63,7 @@ UpdateListInput <- function(mbSetObj, minL, maxL=Inf){
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-ReadShotgunTabData <- function(mbSetObj, dataName, geneidtype, datatype) {
+ReadShotgunTabData <- function(mbSetObj, dataName, geneidtype,is.normalized) {
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
@@ -108,6 +108,7 @@ ReadShotgunTabData <- function(mbSetObj, dataName, geneidtype, datatype) {
   mbSetObj$dataSet$read.msg<-current.msg;
   mbSetObj$dataSet$data.type<-"text";
   mbSetObj$dataSet$gene.id<-geneidtype;
+ mbSetObj$dataSet$is.normalized <- is.normalized;
 
   return(.set.mbSetObj(mbSetObj));
 
@@ -122,7 +123,7 @@ ReadShotgunTabData <- function(mbSetObj, dataName, geneidtype, datatype) {
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import biomformat
-ReadShotgunBiomData <- function(mbSetObj, dataName, geneidtype, module.type, ismetadata) {
+ReadShotgunBiomData <- function(mbSetObj, dataName, geneidtype, module.type, ismetadata,is.normalized) {
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -171,7 +172,7 @@ ReadShotgunBiomData <- function(mbSetObj, dataName, geneidtype, module.type, ism
   mbSetObj$module.type<-module.type;
   mbSetObj$dataSet$data.orig <- otu.dat;
   mbSetObj$dataSet$gene.id<-geneidtype;
-  
+  mbSetObj$dataSet$is.normalized <- is.normalized;
   return(.set.mbSetObj(mbSetObj));
   
 }

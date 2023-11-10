@@ -517,6 +517,7 @@ ComputeColorGradientCorr <- function(nd.vec, centered=TRUE){
       }
     };
   }
+  
   res <- apply(data, 2, my.fun);
   return(t(res));
 }

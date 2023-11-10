@@ -12,7 +12,7 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
   mbSetObj <- .get.mbSetObj(mbSetObj);
   mbSetObj$dataSet$cor.method <- cor.method
   mbSetObj$analSet$abund.opt <- abundOpt
-  
+  current.msg <<- "" 
   if(.on.public.web){
     load_ppcor();
     load_igraph();
@@ -78,7 +78,7 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
     if(!exists("phyloseq_objs")){
       phyloseq_objs <- qs::qread("phyloseq_objs.qs")
     }
-    
+ 
     if(taxrank=="OTU"){
       data1 <- phyloseq_objs$count_tables$OTU
     }else{
@@ -88,7 +88,7 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
     
     data <- t(data1);
     qs::qsave(data, "network_cor_data.qs")
-    
+ 
     data <- data[which(rownames(data) %in% mbSetObj$dataSet$selected.grps),]
     data[data==0|is.na(data)] <- .00001
     
@@ -236,6 +236,7 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
   }
 
   mbSetObj$analSet$cornet.taxa = taxrank;
+
   if(current.msg == "Only the top 500 features are kept, ranked by their variance!"){
     current.msg <<- paste(current.msg, method, "network analysis performed successfully!")
   }else{

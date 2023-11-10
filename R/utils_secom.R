@@ -5,7 +5,9 @@
 ###################################################
 
 my.secom.anal<-function(mbSetObj,taxrank,R,corr_cut, max_p,mode,method='pearson',n_cl=2) {
-
+  print(corr_cut)
+  print(max_p)
+  print(mode)
   mbSetObj <- .get.mbSetObj(mbSetObj);
    if(!exists("phyloseq_prenorm_objs")){
      phyloseq_prenorm_objs <- qs::qread("phyloseq_prenorm_objs.qs")
@@ -14,7 +16,8 @@ my.secom.anal<-function(mbSetObj,taxrank,R,corr_cut, max_p,mode,method='pearson'
   feature_table <- phyloseq_prenorm_objs$count_tables[[taxrank]]
   meta_data <- mbSetObj$dataSet$sample_data
   abn_list = abn_est(feature_table,meta_data, taxrank, pseudo=0,tax_keep=NULL)
-  
+ 
+
   s_diff_hat = abn_list$s_diff_hat
   y_hat = abn_list$y_hat
   

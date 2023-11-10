@@ -401,17 +401,17 @@ CompareMet <- function(mbSetObj, analysisVar,
   # current.proc$sample<<-data.frame(mbSetObj$dataSet$sample_data)
   require(dplyr)
   
+
   if(analysisVar=="null" | is.null(analysisVar)){
     analysisVar = names(current.proc$meta_para$sample_data)[1]
   }
   current.proc$met$plvl<<-plvl
   current.proc$met$alg<<-alg
+ 
   metdat <-current.proc$met$data.proc
   sample_data <-  mbSetObj$dataSet$sample_data
   sample_type <- mbSetObj$dataSet$meta_info
   metdat.de <- performLimma(metdat,sample_data,sample_type,analysisVar)
-  
-  
   fast.write(metdat.de, file="limma_output.csv");
   current.proc$met$res_deAnal <<- metdat.de
   mbSetObj$dataSet$metabolomics$resTable <- metdat.de
@@ -547,8 +547,7 @@ performLimma <-function(data,sample_data,sample_type,analysisVar){
     return()
   }else{
     rownames(res) <- rownames(fit$p.value)
-  }
-  
+  } 
   res <- na.omit(res)
   res <- res[order(res[,2], decreasing=FALSE),]
   res[res == "NaN"] = 1

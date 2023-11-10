@@ -1805,6 +1805,7 @@ ProcessMaaslin <- function(
     ref = NULL,
     block = "NA",
     taxrank = "NA",
+    model="LM",
     imgNm = "NA",
     thresh = 0.05){
 
@@ -1814,9 +1815,12 @@ ProcessMaaslin <- function(
       .load.scripts.on.demand("utils_maaslin.Rc");    
     }
   }
-  .perform.my.maaslin(mbSetObj,analysis.var,is.norm,comp, ref, block, taxrank,imgNm, thresh);
+  .perform.my.maaslin(mbSetObj,analysis.var,is.norm,comp, ref, block, taxrank,model,imgNm, thresh);
 }
-
+setMaaslinModel <- function(model){
+print("model")
+model<<-model
+}
 ###################
 ## Transformation #
 ###################
@@ -1832,7 +1836,7 @@ transformFeatures = function(features, transformation) {
 ## Normalization #
 ##################
 
-normalizeFeatures = function(features, normalization) {
+normalizeFeatures = function(features, normalization) { 
   if (normalization == 'TSS')
   {
     features <- TSSnorm(features)
@@ -1842,7 +1846,7 @@ normalizeFeatures = function(features, normalization) {
   {
     features <- features
   }
-  
+ 
   return(features)
 }
 

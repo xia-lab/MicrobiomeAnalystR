@@ -269,6 +269,7 @@ PrepareCorrExpValues <- function(mbSetObj, meta, taxalvl, color, layoutOpt, comp
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   load_metacoder();
+
   tax_o <- taxalvl;
   dm <- mbSetObj$dataSet$proc.phyobj;
   dims <- ncol(tax_table(dm))
