@@ -454,7 +454,14 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, shotgunid, taxrank, sta
   mbSetObj$analSet$id.type <- shotgunid;
   mbSetObj$analSet$univar$resTable <- mbSetObj$analSet$resTable <- resTable;
   mbSetObj$analSet$univar.taxalvl <- taxrank;
-  
+
+  # record parameters
+  mbSetObj$paramSet$univar <- list(
+        exp.factor = variable,
+        anal.type = "t-tests",
+        taxalvl = taxrank,
+        p.lvl = p.lvl
+    );
   return(.set.mbSetObj(mbSetObj));
 }
 
@@ -780,7 +787,7 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
   mbSetObj$analSet$id.type <- shotgunid;
   mbSetObj$analSet$meta <- variable;
   
-  # record paramet
+  # record parameters
   
   mbSetObj$paramSet$lefse <- list(
         taxalvl = taxrank,
