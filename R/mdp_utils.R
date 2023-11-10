@@ -86,8 +86,8 @@ PerformAlphaDiversityComp<-function(mbSetObj, opt, metadata, pair.wise = "false"
   if(pair.wise != "false"){ 
     rownames(out) <- out$pairs;
     out$pairs <- NULL;
-    mbSetObj$analSet$alpha.stat.pair <- mbSetObj$analSet$resTable <- out;
-    fast.write(signif(out,5), file="pairwise_alpha.csv");
+    mbSetObj$analSet$alpha.stat.pair <- mbSetObj$analSet$resTable <- signif(out,5);
+    fast.write(mbSetObj$analSet$resTable, file="pairwise_alpha.csv");
   }
 
   if(.on.public.web){
@@ -569,9 +569,6 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
     theme(axis.text=element_text(size=10), axis.title=element_text(size=11.5), legend.title=element_text(size=11));
   
   print(p);
-  
-  mbSetObj$analSet$core<-as.matrix(core.nm);
-  mbSetObj$analSet$core.taxalvl<-taxrank;
   dev.off();
   
   if(interactive){
@@ -586,7 +583,16 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
     p <- p %>% layout(xaxis = ax, yaxis = ax)
     htmlwidgets::saveWidget(p, "core_interactive.html")
   }
-  
+  mbSetObj$analSet$core<-signif(as.matrix(core.nm),5);
+  mbSetObj$analSet$core.taxalvl<-taxrank;
+  mbSetObj$paramSet$core <- list(
+        taxalvl=taxrank,
+        preval=preval, 
+        detection=detection,
+        analOpt = analOpt,
+        expFact = expFact, 
+        group = group
+    );
   return(.set.mbSetObj(mbSetObj));
 }
 
@@ -2879,15 +2885,13 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pai
        if(length(levels(grp)) == 2){ # same as before  
             res <- data.frame(t(c(stat.info.vec, p.adj=signif(resTab$Pr, 5))));
             rownames(res) <- paste(levels(grp)[1], ".vs.", levels(grp)[2]);
-            mbSetObj$analSet$beta.stat.pair <- mbSetObj$analSet$resTable <- res;
        }else{
             res <- .permanova_pairwise(x = data.dist,  grp);
             rownames(res) <- res$pairs;
             res$pairs <- NULL;
-            # in this case, save a local copy for report generation, but also for general I/O parsing to web interface
-            mbSetObj$analSet$beta.stat.pair <- mbSetObj$analSet$resTable <- res[,2:5];
       }
-      fast.write(signif(res,5), file="pairwise_permanova.csv");
+      mbSetObj$analSet$beta.stat.pair <- mbSetObj$analSet$resTable <- signif(res[,2:5],5);
+      fast.write(mbSetObj$analSet$resTable, file="pairwise_permanova.csv");
    }
  
 }else if(method=="anosim"){ # just one group
