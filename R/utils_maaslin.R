@@ -725,7 +725,7 @@ if(case==1){
       })
  
 nafeat =which(!unlist(lapply(outputs,function(x) any(is.na(x[["para"]]$pval)|any(is.nan(x[["para"]]$pval))))))
-outputs <- outputs[nafeat]
+outputs <- outputs[nafeat] 
     # stop the cluster
     if (!is.null(cluster))
       parallel::stopCluster(cluster)

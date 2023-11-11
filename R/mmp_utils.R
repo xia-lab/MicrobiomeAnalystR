@@ -3692,13 +3692,12 @@ RemoveData <- function(dataName){
 }
 
 GetMicMetDataDims <- function(dataType,dataName){
-  
-  
+ 
   if(is.null(current.proc$mic)){
     
-    data<-read.csv(dataName)
+    data<-data.table::fread(dataName)
     dm <- dim(data);
-    dm[2] <- dm[2]-1
+    dm[2] <- dm[2]
     naNum <- sum(is.na(data));
     
     

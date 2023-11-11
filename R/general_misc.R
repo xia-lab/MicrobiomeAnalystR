@@ -197,6 +197,7 @@ scale_colours = function(mat, col = rainbow(10), breaks = NA){
 #'@export
 .readDataTable <- function (fileName) {
   dat <- try(data.table::fread(fileName, header=TRUE, check.names=FALSE, blank.lines.skip=TRUE, data.table=FALSE));
+ 
   if(any(c(class(dat) == "try-error", any(dim(dat) == 0)))){
       print("Using slower file reader ...");
       formatStr <- substr(fileName, nchar(fileName)-2, nchar(fileName))
