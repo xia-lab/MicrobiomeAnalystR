@@ -25,7 +25,7 @@ CreateMMPFakeFile <- function(mbSetObj,isNormalized="true",isNormalizedMet="true
   if(isNormalized=="true"){
     
     mbSetObj$dataSet$filt.data <- mbSetObj$dataSet$data.orig
-    mbSetObj$dataSet$filt.msg <- "No filtration has been performed for microbiome data since it has been transformed."
+    mbSetObj$dataSet$filt.msg <- "No data filtering has been performed for microbiome data since it has been transformed."
     
     mbSetObj$dataSet$norm.phyobj <- mbSetObj$dataSet$proc.phyobj
     mbSetObj$dataSet$norm.msg <- "No normalization has been performed for microbiome data since it has been transformed."

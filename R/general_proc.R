@@ -1656,7 +1656,7 @@ return(0)
 
 }
 mbSetObj$dataSet$filt.data <- mbSetObj$dataSet$data.orig
-mbSetObj$dataSet$filt.msg <- "No filtration has been performed since the input data has been transformed."
+mbSetObj$dataSet$filt.msg <- "No data filtering has been performed since the input data has been transformed."
 
 mbSetObj$dataSet$norm.phyobj <- mbSetObj$dataSet$proc.phyobj
 mbSetObj$dataSet$norm.msg <- "No normalization has been performed since the input data has been transformed."
