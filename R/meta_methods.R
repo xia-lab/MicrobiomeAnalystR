@@ -142,6 +142,7 @@ PerformMetaEffectSize <- function(mbSetObj=NA, imgName="", taxrank="OTU", selMet
   mbSetObj$analSet$effectsize$selMeta <- selMeta;
   mbSetObj$analSet$effectsize$ef.method <- ef.method;
   mbSetObj$analSet$effectsize$thresh <- BHth;
+  mbSetObj$analSet$meta.restbl <- res[[2]]$meta.restbl;
   .set.mbSetObj(mbSetObj);
   return(saveSet(res[[2]], "analSet", length(sig.inx)));
 }
@@ -218,7 +219,8 @@ SetupMetaStats <- function(BHth, paramSet,analSet){
   dat.mat <- cbind(fc.mat, pval.mat, meta.mat);
   dat.mat <- signif(dat.mat, 5);
   # save the result
-  res <- cbind(ID=metade.genes, dat.mat);
+  res <- cbind(ID=metade.genes, dat.mat); 
+  analSet$meta.restbl <- res;
   fast.write(res, file=paste("meta_sig_genes_", paramSet$inmex.method, ".csv", sep=""), row.names=F);
   
   return(list(paramSet, analSet))
