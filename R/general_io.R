@@ -253,7 +253,7 @@ mydata <- sapply(mydata[,-1,drop=F], format, trim = TRUE)
 
   if(sum(disc.inx) == 0){ # No discrete column detected
     AddErrMsg("Metadata Table: make sure there is at least one column contains experimental design for group comparisons (i.e., the primary metadata), with each group contains at least 3 replicate. No unique values are allowed in the primary metadata column.");
-    na.msg <- c("<font style=\"color:red\"><b> No.</b></font>", "It seems that some of your metadata values are unique! Please make sure at least 3 replicate per group!");
+    na.msg <- c("<font style=\"color:red\"><b> No.</b></font>", "Cannot find a suitable variable as the primary metadata! Please make sure at least 3 replicate per group!");
     mbSetObj$poor.replicate <- TRUE;
     mbSetObj$dataSet$sample_data <- my.meta
     mbSetObj$dataSet$meta_info$disc.inx <- 0;
@@ -261,12 +261,12 @@ mydata <- sapply(mydata[,-1,drop=F], format, trim = TRUE)
     return(0);
   }else{
     
-    na.msg <- c(na.msg, "<font style=\"color:green\"><b> Yes. </b></font>");
+    na.msg <- c(na.msg, "Containing at least one discrete factor: <font style=\"color:green\"><b> Yes. </b></font>");
     if(sum(disc.inx) == length(disc.inx)){
-      na.msg <- c(na.msg,"All metadata columns are OK!")
+      na.msg <- c(na.msg,"All metadata columns are discrete!")
     }else{
-      bad.meta<- paste(names(disc.inx)[!disc.inx], collapse="; ");
-      na.msg <- c(na.msg, paste0("<font style=\"color:red\">Detected presence of unique values, the following metadata columns are excluded: <b>", bad.meta, "</b></font>"));
+      cont.meta<- paste(names(disc.inx)[!disc.inx], collapse="; ");
+      na.msg <- c(na.msg, paste0("Continuous variable(s): <b>", cont.meta, "</b>"));
     }
     
     mbSetObj$dataSet$meta_info$disc.inx <- disc.inx;

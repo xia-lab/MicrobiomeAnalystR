@@ -547,7 +547,7 @@ ReadSampleTableMeta <- function(mbSetObj, fileName) {
   # require at least one column contains discrete factors with at least two replicates 
   disc.inx <- GetDiscreteInx(my.meta);
   if(sum(disc.inx) == 0){ # all class labels are unique! 
-    na.msg <- c("<font style=\"color:red\"><b> No.</b></font>", "It seems that all your metadata values are unique! MicrobiomeAnalyst requires some biological replicates for robust analysis!");
+    na.msg <- c("<font style=\"color:red\"><b> No.</b></font>", "Cannot find a suitable variable as the primary metadata! MicrobiomeAnalyst requires some biological replicates for robust analysis!");
     mbSetObj$poor.replicate <- TRUE;
     dataSet$sample_data <- my.meta[which(rownames(my.meta) %in% rownames(dataSet$data.orig)),]
     dataSet$meta_info$disc.inx <- 0;
@@ -556,10 +556,10 @@ ReadSampleTableMeta <- function(mbSetObj, fileName) {
     
     na.msg <- c(na.msg, "<font style=\"color:green\"><b> Yes. </b></font>");
     if(sum(disc.inx) == length(disc.inx)){
-      na.msg <- c(na.msg,"All metadata columns are OK!")
+      na.msg <- c(na.msg,"All metadata columns are discrete.")
     }else{
-      bad.meta<- paste(names(disc.inx)[!disc.inx], collapse="; ");
-      na.msg <- c(na.msg, paste0("<font style=\"color:red\">Detected presence of unique values, the following metadata columns are excluded: <b>", bad.meta, "</b></font>"));
+      cont.meta<- paste(names(disc.inx)[!disc.inx], collapse="; ");
+      na.msg <- c(na.msg, paste0("Continuous variable(s): <b>", cont.meta, "</b>"));
     }
     
     dataSet$meta_info$disc.inx <- disc.inx;

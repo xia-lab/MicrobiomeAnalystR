@@ -454,7 +454,14 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, shotgunid, taxrank, sta
   mbSetObj$analSet$id.type <- shotgunid;
   mbSetObj$analSet$univar$resTable <- mbSetObj$analSet$resTable <- resTable;
   mbSetObj$analSet$univar.taxalvl <- taxrank;
-  
+
+  # record parameters
+  mbSetObj$paramSet$univar <- list(
+        exp.factor = variable,
+        anal.type = "t-tests",
+        taxalvl = taxrank,
+        p.lvl = p.lvl
+    );
   return(.set.mbSetObj(mbSetObj));
 }
 
@@ -780,6 +787,16 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
   mbSetObj$analSet$id.type <- shotgunid;
   mbSetObj$analSet$meta <- variable;
   
+  # record parameters
+  
+  mbSetObj$paramSet$lefse <- list(
+        taxalvl = taxrank,
+        p.val = p.lvl,
+        p.type = pvalOpt,
+        lda.lvl = lda.lvl,
+        factor = variable
+   );
+
   return(.set.mbSetObj(mbSetObj));
 }
 
@@ -1805,6 +1822,7 @@ ProcessMaaslin <- function(
     ref = NULL,
     block = "NA",
     taxrank = "NA",
+    model="LM",
     imgNm = "NA",
     thresh = 0.05){
 
@@ -1814,9 +1832,12 @@ ProcessMaaslin <- function(
       .load.scripts.on.demand("utils_maaslin.Rc");    
     }
   }
-  .perform.my.maaslin(mbSetObj,analysis.var,is.norm,comp, ref, block, taxrank,imgNm, thresh);
+  .perform.my.maaslin(mbSetObj,analysis.var,is.norm,comp, ref, block, taxrank,model,imgNm, thresh);
 }
-
+setMaaslinModel <- function(model){
+print("model")
+model<<-model
+}
 ###################
 ## Transformation #
 ###################
@@ -1832,7 +1853,7 @@ transformFeatures = function(features, transformation) {
 ## Normalization #
 ##################
 
-normalizeFeatures = function(features, normalization) {
+normalizeFeatures = function(features, normalization) { 
   if (normalization == 'TSS')
   {
     features <- TSSnorm(features)
@@ -1842,7 +1863,7 @@ normalizeFeatures = function(features, normalization) {
   {
     features <- features
   }
-  
+ 
   return(features)
 }
 
