@@ -428,8 +428,6 @@ GetResColNamesMeta <- function(mbSetObj, type="alpha"){
     if(type == "alpha"){
         vec <- colnames(mbSetObj$analSet$alpha.summary)[-c(1,2)];
     }else if (type == "beta"){
-    print(mbSetObj$analSet$beta.summary);
-
         vec <- colnames(mbSetObj$analSet$beta.summary)[-c(4,5)];
     }
     return(vec)
