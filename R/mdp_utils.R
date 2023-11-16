@@ -2891,7 +2891,8 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pai
             rownames(res) <- res$pairs;
             res$pairs <- NULL;
       }
-      mbSetObj$analSet$beta.stat.pair <- mbSetObj$analSet$resTable <- signif(res[,2:5],5);
+
+      mbSetObj$analSet$beta.stat.pair <- mbSetObj$analSet$resTable <- signif(res,5);
       fast.write(mbSetObj$analSet$resTable, file="pairwise_permanova.csv");
    }
  

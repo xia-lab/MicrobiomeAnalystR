@@ -422,7 +422,7 @@ PlotSelectedFeature<-function(mbSetObj, imgName, feat.id, format="png", sel.meta
   return(.set.mbSetObj(mbSetObj));
 }
 
-GetResColNames <- function(mbSetObj, type="alpha"){
+GetResColNamesMeta <- function(mbSetObj, type="alpha"){
     mbSetObj <- .get.mbSetObj(mbSetObj);
 
     if(type == "alpha"){

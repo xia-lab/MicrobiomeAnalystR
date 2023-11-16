@@ -142,6 +142,7 @@ PerformMetaEffectSize <- function(mbSetObj=NA, imgName="", taxrank="OTU", selMet
   mbSetObj$analSet$effectsize$selMeta <- selMeta;
   mbSetObj$analSet$effectsize$ef.method <- ef.method;
   mbSetObj$analSet$effectsize$thresh <- BHth;
+  mbSetObj$analSet$meta.restbl <- res[[2]]$meta.restbl;
   .set.mbSetObj(mbSetObj);
   return(saveSet(res[[2]], "analSet", length(sig.inx)));
 }
@@ -218,7 +219,8 @@ SetupMetaStats <- function(BHth, paramSet,analSet){
   dat.mat <- cbind(fc.mat, pval.mat, meta.mat);
   dat.mat <- signif(dat.mat, 5);
   # save the result
-  res <- cbind(ID=metade.genes, dat.mat);
+  res <- cbind(ID=metade.genes, dat.mat); 
+  analSet$meta.restbl <- res;
   fast.write(res, file=paste("meta_sig_genes_", paramSet$inmex.method, ".csv", sep=""), row.names=F);
   
   return(list(paramSet, analSet))
@@ -407,7 +409,8 @@ for(i in unique(mod$Metric)){
       facet_grid(~Metric, scales="free_x") +
       scale_color_manual(values=c("green", "red", "black"))  +
       theme(panel.border = element_blank(), axis.line = element_line()) +
-      theme(axis.text.x=element_text(angle=45, hjust=1));
+      theme(axis.text.x=element_text(angle=45, hjust=1)) + 
+      theme(text = element_text(size = 16));
     
     Cairo::Cairo(file = imgName, unit="px", dpi=dpi, width=800, height=600, type=format, bg="white");
     print(fig);
@@ -429,7 +432,8 @@ for(i in unique(mod$Metric)){
                    color = "black",
                    position = position_dodge(0.2))+ 
       scale_fill_discrete(name = "Metadata") +
-      facet_grid( .~ Metric, scales = "free_x");
+      facet_grid( .~ Metric, scales = "free_x") + 
+      theme(text = element_text(size = 16));
     
     Cairo::Cairo(file = imgName, unit="px", dpi=dpi, width=800, height=600, type=format, bg="white");
     print(box1);

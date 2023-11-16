@@ -2883,7 +2883,10 @@ CreatM2MHeatmapList<-function(mbSetObj, plotNm,  format="png",
   
   
   as_list <- to_plotly_list(p)
-  
+
+  plotwidget <- paste0(plotNm, ".rda")
+  pwidget <- to_widget(p)
+  save(pwidget, file = plotwidget)
   
   if (viewOpt != "overview") {
     as_list[["layout"]][["width"]] <- max(map.width,1000)
@@ -2911,6 +2914,7 @@ CreatM2MHeatmapList<-function(mbSetObj, plotNm,  format="png",
   mbSetObj$analSet$integration$overlay <- "false"
   mbSetObj$analSet$integration$htMode <- "prediction"
   mbSetObj$analSet$integration$potential <- potential.thresh;
+  mbSetObj$imgSet$heatmap_predmmp <- plotwidget;
   message("heatmap done")
   return(.set.mbSetObj(mbSetObj))
 }
@@ -3270,7 +3274,8 @@ PlotDiagnostic <- function(imgName, dpi=72, format="png",alg){
     
     p = ggplot(error.df, aes(x = Samples, y = Procrustes_residual)) + geom_col() + geom_hline(yintercept = summary(error)[c(2,3,5)])+
       theme(axis.text.x=element_blank(),
-            axis.ticks.x=element_blank()) +
+            axis.ticks.x=element_blank(),
+            text = element_text(size = 16)) +
       geom_text_repel(
         data = subsetdf,
         aes(label = Samples),
