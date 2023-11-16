@@ -17,7 +17,7 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
     load_ppcor();
     load_igraph();
   }
-  
+ 
   if(cor.method == "sparcc"){
     if(.on.public.web){
       sparcc_results <- RunFastSpar_mem(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, "network")
@@ -36,7 +36,7 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
   if(!exists("my.secom.anal")){ # public web on same user dir
     .load.scripts.on.demand("utils_secom.Rc");    
   }
-
+ 
    secomp1_results <- my.secom.anal(mbSetObj,taxrank,permNum,corrCutoff, pvalCutoff,"secomp1")
     if(nrow(secomp1_results)==0){
       AddErrMsg("No correlations meet the p-value and correlation thresholds!")
@@ -74,7 +74,6 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
     }
 
 }else{
-    
     if(!exists("phyloseq_objs")){
       phyloseq_objs <- qs::qread("phyloseq_objs.qs")
     }
@@ -97,7 +96,7 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
       rk <- rank(-filter.val, ties.method='random');
       data <- as.data.frame(data[,rk <=1000],check.names=FALSE);
     }
-    
+ 
     mbSetObj$analSet$netcorr_data <- data;
     vars = data.frame(t(combn(colnames(data), 2)), stringsAsFactors = FALSE,check.names=FALSE)
     
@@ -110,8 +109,7 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
     }else{
       AddErrMsg("Invalid correlation method!")
       return(0)
-    }
-    
+    } 
     colnames(cor.results) <- c("Taxon1", "Taxon2", "Correlation", "P.value", "Statistic", "Method")
     qs::qsave(cor.results, "network_correlation.qs")
     
@@ -123,8 +121,9 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
    fast.write(mbSetObj$analSet$network_cor, "correlation_table.csv", row.names = FALSE)
   mbSetObj$dataSet$corr.pval.cutoff <- pvalCutoff
   mbSetObj$analSet$corr_color_opt <- colorOpt;
-
+ 
   #network building only needed for web
+
   if(.on.public.web || plotNet == TRUE){
     all.taxons = unique(c(mbSetObj$analSet$network_cor[,1] , mbSetObj$analSet$network_cor[,2]))
     taxColNms = vector();
@@ -140,18 +139,18 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
     }else{
       tax.tbl = data.frame(mbSetObj$dataSet$taxa_table[,1:which( colnames(mbSetObj$dataSet$taxa_table)== simpleCap(taxrank))],check.names=FALSE)
       taxColNms = colnames(mbSetObj$dataSet$taxa_table[,1:which( colnames(mbSetObj$dataSet$taxa_table)== simpleCap(taxrank))])
-      colnames(tax.tbl) = taxColNms
+        colnames(tax.tbl) = taxColNms
       tax.tbl = as.data.frame(tax.tbl[which(tax.tbl[,simpleCap(taxrank)] %in% all.taxons),],check.names=FALSE)
       colnames(tax.tbl) = taxColNms
+ 
     }
     
     inx = !duplicated(tax.tbl[,simpleCap(taxrank)])
     filt.taxa.table = data.frame(tax.tbl[inx,],check.names=FALSE)
-    colnames(filt.taxa.table) = taxColNms
+    colnames(filt.taxa.table) = taxColNms 
     mbSetObj$analSet$filt.taxa.table = filt.taxa.table 
     .set.mbSetObj(mbSetObj);
     res <- SparccToNet(mbSetObj, corr.net.name, netType, netLayout, netTextSize);
-    
     if(.on.public.web){
       if(res == 0){
         AddErrMsg(paste0("Errors during creating correlation network:", current.msg))
@@ -182,7 +181,7 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
   fc <- mbSetObj$analSet$diff_table
   clean_feats_used <- sub("^[^_]*__", "", unique(feats_used))
   match.inx <- which(fc$tax_name %in% clean_feats_used)
-  
+ 
   if(cor.method=="sparcc"){
     abund_data <- qs::qread("sparcc_data.qs")
   }else if(cor.method %in% c("secom_p1","secom_p2","secom_dist")){
@@ -190,11 +189,11 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
    }else{
     abund_data <- t(as.matrix(mbSetObj$analSet$netcorr_data))
   }
-
+ 
   abund.inx <- which(rownames(abund_data) %in% feats_used)
   abund_data.filt <- abund_data[abund.inx,]
   smpl <- data.frame(sample_data(mbSetObj$dataSet$proc.phyobj),check.names=FALSE);
-  
+ 
   if(length(match.inx)!=0){
     
     fc.filt <- fc[match.inx,]
