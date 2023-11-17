@@ -46,11 +46,15 @@ UpdateListInput <- function(mbSetObj, minL, maxL=Inf){
   hit.inx <- mbSetObj$analSet$ko.mapped >= minL & mbSetObj$analSet$ko.mapped <= maxL;
     
   if(sum(hit.inx) > 0){
-    current.msg <<- paste("A total of unqiue", sum(hit.inx), "KO genes were selected!");
+    current.msg <<- paste("A total of unqiue", sum(hit.inx), "KO genes were selected based on the cutoff", minL);
     mbSetObj$analSet$data <- mbSetObj$analSet$ko.mapped[hit.inx, , drop=FALSE];
+    mbSetObj$dataSet$filt.msg <- current.msg;
     return(.set.mbSetObj(mbSetObj));
   }else{
-    AddErrMsg("No genes were selected in this range!");
+    current.msg <<- "No genes were selected in this range!";
+    AddErrMsg(current.msg);
+    mbSetObj$dataSet$filt.msg <- current.msg;
+    .set.mbSetObj(mbSetObj);
     return(0);
   }
 }
@@ -495,7 +499,10 @@ PerformKOmapping <- function(mbSetObj, geneIDs, type){
   kos <-  doKOFiltering(rownames(gene.mat), type);
 
   if(sum(!is.na(kos)) < 2){
-    AddErrMsg("Less than two hits found in the database. ");
+    msg <- "Less than two hits found in the database.";
+    mbSetObj$dataSet$map.msg <- msg;
+    AddErrMsg(msg);
+    .set.mbSetObj(mbSetObj);
     return(0);
   }else{
     rownames(gene.mat) <- kos;
@@ -503,7 +510,7 @@ PerformKOmapping <- function(mbSetObj, geneIDs, type){
     gene.mat <- gene.mat[gd.inx, ,drop=F];
     mbSetObj$analSet$ko.mapped <- mbSetObj$analSet$data <- gene.mat; # data will be updated, ko.map will keep intact
     current.msg <<- paste("A total of unique", nrow(gene.mat), "KO genes were mapped to KEGG network!");
-    mbSetObj$dataSet$map.msg <- paste("A total of ```", nrow(gene.mat), "``` KO genes were mapped to our database!")
+    mbSetObj$dataSet$map.msg <- paste("A total of", nrow(gene.mat), "KO genes were mapped to our database!")
     return(.set.mbSetObj(mbSetObj));
   }
 }
