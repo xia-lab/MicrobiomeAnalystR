@@ -1017,58 +1017,115 @@ PlotRareCurve <- function(mbSetObj, graphName, variable){
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotLibSizeView <- function(mbSetObj, imgName,format="png", dpi=72, dataName=""){
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-
+PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataName=""){
+  mbSetObj <- .get.mbSetObj(mbSetObj)
+  library(ggplot2)
+  library(dplyr)
+  library(Cairo)
+  
   if(dataName != ""){
-    # plot single dataset or not, in metaanal
-    ind <- T; 
-  }else{
-    dataName <- mbSetObj$dataSet$name;
-    ind <- F;
+    ind <- TRUE
+  } else {
+    dataName <- mbSetObj$dataSet$name
+    ind <- FALSE
   }
-  module.type <- mbSetObj$module.type;
+  
+  module.type <- mbSetObj$module.type
   
   if(all(c(mbSetObj$module.type == "meta", !ind))){
-    sums.list <- list();
+    sums.list <- list()
     for(i in 1:length(mbSetObj$dataSets)){
-      dataName <- mbSetObj$dataSets[[i]]$name;
-      data.proc <- readDataQs("data.proc", module.type, dataName);
-      data_bef <- data.matrix(data.proc);
-      smpl.sums <- colSums(data_bef);
-      names(smpl.sums) <- colnames(data_bef);
-      smpl.sums <- sort(smpl.sums);
+      dataName <- mbSetObj$dataSets[[i]]$name
+      data.proc <- readDataQs("data.proc", module.type, dataName)
+      data_bef <- data.matrix(data.proc)
+      smpl.sums <- colSums(data_bef)
+      names(smpl.sums) <- colnames(data_bef)
+      smpl.sums <- sort(smpl.sums)
       sums.list[[i]] <- smpl.sums
     }
-    smpl.sums  <- unlist(sums.list)
-  }else{
-    data.proc <- readDataQs("data.proc", module.type, dataName);
-    data_bef <- data.matrix(data.proc);
-    smpl.sums <- colSums(data_bef);
-    names(smpl.sums) <- colnames(data_bef);
-    smpl.sums <- sort(smpl.sums);
+    smpl.sums <- unlist(sums.list)
+  } else {
+    data.proc <- readDataQs("data.proc", module.type, dataName)
+    data_bef <- data.matrix(data.proc)
+    smpl.sums <- colSums(data_bef)
+    names(smpl.sums) <- colnames(data_bef)
+    smpl.sums <- sort(smpl.sums)
   }
   
+  # Create a data frame for ggplot
+  library_size_data <- data.frame(Sample = names(smpl.sums), LibrarySize = smpl.sums)
+  library_size_data <- library_size_data %>% arrange(desc(LibrarySize))
+  library_size_data$Sample = factor(library_size_data$Sample, levels=library_size_data[order(library_size_data$LibrarySize), "Sample"])
   
-  # save the full lib size 
-  fast.write(cbind(Size=smpl.sums), file="norm_libsizes.csv");
+  # Plotting with ggplot2
+  imgName <- paste0(origImgName, ".", format)
+  g <- ggplot(library_size_data, aes(x = Sample, y = LibrarySize)) +
+    geom_point(color = "forestgreen") +
+    geom_hline(yintercept = mean(library_size_data$LibrarySize), color = "blue", linetype = "dashed") +
+    labs(x = "Sample", y = "Read Counts") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
   
-  smpl.sums <- rev(smpl.sums);
-  vip.nms <- names(smpl.sums);
-  names(smpl.sums) <- NULL;
-  vip.nms <- substr(vip.nms, 1, 16);
-  
-  myH <- ncol(data_bef)*25 + 50;
-  imgName = paste(imgName,".", format, sep="");
-  mbSetObj$imgSet$lib.size<-imgName;
-  Cairo::Cairo(file=imgName, width=580, height=myH, type=format, bg="white",dpi=dpi);
-  xlim.ext <- GetExtendRange(smpl.sums, 10);
-  par(mar=c(4,7,2,2));
-  dotchart(smpl.sums, col="forestgreen", xlim=xlim.ext, pch=19, xlab="Read Counts", main="Library Size Overview");
-  mtext(side=2, at=1:length(vip.nms), vip.nms, las=2, line=1);
-  text(x=smpl.sums,y=1:length(smpl.sums),labels= round(smpl.sums), col="blue", pos=4, xpd=T);
+  Cairo::Cairo(file=imgName, width=800, height=600, type=format, bg="white",dpi=dpi);
+  print(g);
   dev.off();
   
+  mean_line <- mean(library_size_data$LibrarySize)
+  annotation_offset <- 0.05 * (max(library_size_data$LibrarySize) - min(library_size_data$LibrarySize))
+
+  tooltips <- paste("Sample:", library_size_data$Sample, "<br>Library Size:", library_size_data$LibrarySize)
+
+  # Convert data to JSON for Plotly
+  plot_data <- list(
+    data = list(
+      list(
+        x = seq_along(library_size_data$Sample),
+        y = library_size_data$LibrarySize,
+        type = 'scatter',
+        mode = 'markers',
+        marker = list(size = 10),
+        text = tooltips, # Add tooltips
+        hoverinfo = 'text' # Display tooltip text on hover
+      )
+    ),
+    layout = list(
+      title = 'Library Size Overview',
+      xaxis = list(title = 'Sample'),
+      yaxis = list(title = 'Read Counts'),
+      shapes = list(
+        list(
+          type = 'line',
+          x0 = 0,  # Start at the left edge of the plot area
+          y0 = mean_line,  # The y-value at which the line is placed
+          x1 = 1,  # End at the right edge of the plot area
+          y1 = mean_line,  # Same y-value to keep the line horizontal
+          line = list(
+            color = 'blue',  # Line color
+            width = 3  # Line width
+          ),
+          xref = 'paper',  # Use the 'paper' reference for the x-axis
+          yref = 'y'  # Use the y-axis data reference for the y-axis
+        )
+      ),
+      annotations = list(
+        list(
+          x = 1,
+          y = mean_line + annotation_offset,
+          xref = 'paper',
+          yref = 'y',
+          text = paste('Mean:', signif(mean_line,2)),
+          showarrow = FALSE,
+          font = list(family = 'Arial', size = 12, color = 'black')
+        )
+      )
+    )
+  )
+  
+  jsonFileName <- paste0(origImgName, ".json")
+  json.obj <- rjson::toJSON(plot_data );
+  sink(jsonFileName);
+  cat(json.obj);
+  sink();
+
   return(.set.mbSetObj(mbSetObj))
 }
 
