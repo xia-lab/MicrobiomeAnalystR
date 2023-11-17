@@ -279,6 +279,13 @@ PlotFunctionStack<-function(mbSetObj, summaryplot, functionlvl, abundcal, geneid
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
+  # record parameters
+  mbSetObj$paramSet$stack <- list(
+        fun.nm = functionlvl,
+        abud.lvl = abundcal,
+        exp.fac = metadata
+    );
+
   if(geneidtype == "ec"){
     AddErrMsg("ECs are not supported for functional profiling!")
     return(0)
