@@ -10,22 +10,19 @@ my.sparcc.net <- function(mbSetObj=NULL, corr.net.name, networkType="static", ne
   E(g)$correlation <- mbSetObj$analSet$network_cor[, "Correlation"];
   colnames(edge.list) <- c("Source", "Target");
   nodes <- unique(c(edge.list[,1], edge.list[,2]));
-  node.list <- data.frame(Id=nodes, Name=nodes,check.names=FALSE);
-  
+  node.list <- data.frame(Id=nodes, Name=nodes,check.names=FALSE); 
   abundance_table <- mbSetObj$analSet$boxdatacor[,-length(colnames(mbSetObj$analSet$boxdatacor))]
   ab <- apply(abundance_table,2,function(x){sum(x)/length(x)})  
   taxa <- mbSetObj$analSet$filt.taxa.table;
   
   colorOpt <- mbSetObj$analSet$corr_color_opt;
-  
   # annotation
   nms <- V(g)$name;
   inx <- !nms %in% taxa[,length(colnames(taxa))]
   toDelete = nms[inx]
   g <- delete_vertices(g, toDelete);
   nms <- V(g)$name;
-  taxa <- taxa[match(nms, taxa[,length(colnames(taxa))]),]
-  
+  taxa <- taxa[match(nms, taxa[,length(colnames(taxa))]),] 
   if(all(c(!colorOpt %in% colnames(taxa), colorOpt != "expr"))){
     
     current.msg <<- "Invalid taxa is selected for coloring (must be same or higher taxonomy level of selected taxa used for correlation calculation)"
@@ -37,23 +34,23 @@ my.sparcc.net <- function(mbSetObj=NULL, corr.net.name, networkType="static", ne
   # setup shape (gene circle, other squares)
   shapes <- rep("circle", length(nms));
   itypes <- rep("circle", length(nms));
-  seeds <- rep("circle", length(nms));
-  
+  seeds <- rep("circle", length(nms)); 
   # get edge data
   edge.mat <- get.edgelist(g);
   edge.mat1 <- data.frame(edge.mat,check.names=FALSE);
   edge.mat1$color <- ComputeColorGradientCorr(E(g)$correlation);
   edge.mat1 <- as.matrix(edge.mat1)
-  
+
   edge.mat <- cbind(id=1:nrow(edge.mat), source=edge.mat[,1], target=edge.mat[,2], color = edge.mat1[,3], weight=E(g)$weight, correlation = E(g)$correlation);
   # now get coords
   pos.xy <- PerformLayOut(g);
+ 
   # get the note data
   node.btw <- as.numeric(betweenness(g));
   node.eig <- eigen_centrality(g);
   node.eig <- as.numeric(node.eig$vector);
   node.tra <- transitivity(g,type=c("local"))
-  node.dgr <- as.numeric(degree(g));
+  node.dgr <- as.numeric(igraph::degree(g)); 
   node.exp <- as.numeric(get.vertex.attribute(g, name="abundance", index = V(g)));
   # node size to abundance values
   if(vcount(g)>500){
@@ -62,8 +59,7 @@ my.sparcc.net <- function(mbSetObj=NULL, corr.net.name, networkType="static", ne
     min.size = 2;
   }else{
     min.size = 2;
-  }
-  
+  } 
   abundance <- unname(ab[nms])
   node.sizes <- as.numeric(rescale2NewRange((log(abundance+1))^2, min.size, 15));
 
@@ -73,7 +69,7 @@ my.sparcc.net <- function(mbSetObj=NULL, corr.net.name, networkType="static", ne
   exp_table <- mbSetObj$analSet$diff_table;
   colVecNms <- rep("NA", length(topo.val))
   nms2=nms
-  
+ 
   if(colorOpt == "expr"){
     nms1 = strsplit(nms, "__")
     if(length(nms1[[2]])>1){

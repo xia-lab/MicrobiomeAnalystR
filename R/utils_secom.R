@@ -5,9 +5,9 @@
 ###################################################
 
 my.secom.anal<-function(mbSetObj,taxrank,R,corr_cut, max_p,mode,method='pearson',n_cl=2) {
-  print(corr_cut)
-  print(max_p)
-  print(mode)
+  #print(corr_cut)
+  #print(max_p)
+  #print(mode)
   mbSetObj <- .get.mbSetObj(mbSetObj);
    if(!exists("phyloseq_prenorm_objs")){
      phyloseq_prenorm_objs <- qs::qread("phyloseq_prenorm_objs.qs")

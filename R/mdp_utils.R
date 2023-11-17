@@ -3260,7 +3260,7 @@ PlotRarefactionCurve <- function(mbSetObj, data.src, linecolor, linetype, facet,
                                  imgName, format="png", dpi=72, interactive = FALSE){
 
   load_phyloseq();
-  
+ current.msg<<-"";
   mbSetObj <- .get.mbSetObj(mbSetObj);
   # should use unfiltered data
   if(data.src == "orig"){
@@ -3278,10 +3278,11 @@ PlotRarefactionCurve <- function(mbSetObj, data.src, linecolor, linetype, facet,
   
   #get good's coverage index
   goods_coverage <- ComputeGoods(data_rare)
+ 
   fast.write(goods_coverage, "goods_coverage.csv", row.names = FALSE, quote = FALSE);
   
   feat_no <- nsamples(data_rare);
-  
+ 
   #adjust height according to number of legends
   w <- 600;
   
@@ -3301,7 +3302,7 @@ PlotRarefactionCurve <- function(mbSetObj, data.src, linecolor, linetype, facet,
   Cairo::Cairo(file=imgName, width = 1.5 * w, height = 540, type=format, bg="white", dpi=dpi);
   linecolor <- ifelse(linecolor == "none", "NULL", linecolor);
   linetype <- ifelse(linetype == "none", "NULL", linetype);
-  
+
   box <- ggrare2(data_rare,
                  data.src = data.src,
                  color = linecolor,
@@ -3309,7 +3310,7 @@ PlotRarefactionCurve <- function(mbSetObj, data.src, linecolor, linetype, facet,
                  linetype = linetype,
                  se = FALSE,  # this is not to meaningful
                  step = step);
-  
+ 
   if(!is.null(facet) & facet != "none"){
     box <- box + facet_wrap(as.formula(paste("~", facet)))
   } else {
@@ -4137,7 +4138,13 @@ ggrare2 <- function(physeq_object, data.src, label = NULL, color = NULL, plot = 
     if (n[length(n)] != tot[i]) {
       n <- c(n, tot[i])
     }
+
     y <- vegan::rarefy(x[i, ,drop = FALSE], n, se = se)
+    
+if(length(y)==1){
+ current.msg <<- paste0("All the feature counts in sample ",rownames(x)[i]," is less than 5 which is necessary for rarefy. Please check the data or change the method for filteration.")
+ return(0)
+}
     if (nrow(y) != 1) {
       rownames(y) <- c(".S", ".se")
       return(data.frame(t(y), Size = n, Sample = rownames(x)[i],check.names=FALSE));
@@ -4147,7 +4154,7 @@ ggrare2 <- function(physeq_object, data.src, label = NULL, color = NULL, plot = 
   }
   
   f_n <- paste(data.src, step, "rds", sep = ".");
-  
+  print(nr)
   out <- lapply(seq_len(nr), rarefun)
   df <- do.call(rbind, out);
   
