@@ -1017,7 +1017,7 @@ PlotRareCurve <- function(mbSetObj, graphName, variable){
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataName=""){
+PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataName="", interactive=F){
   mbSetObj <- .get.mbSetObj(mbSetObj)
   library(ggplot2)
   library(dplyr)
@@ -1069,6 +1069,8 @@ PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataN
   print(g);
   dev.off();
   
+  mbSetObj$imgSet$lib.size <- imgName;
+
   mean_line <- mean(library_size_data$LibrarySize)
   annotation_offset <- 0.05 * (max(library_size_data$LibrarySize) - min(library_size_data$LibrarySize))
 
@@ -1076,49 +1078,52 @@ PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataN
 
   # Convert data to JSON for Plotly
   plot_data <- list(
-    data = list(
+  data = list(
+    list(
+      x = seq_along(library_size_data$Sample),
+      y = library_size_data$LibrarySize,
+      type = 'scatter',
+      mode = 'markers',
+      marker = list(
+        size = 10,
+        line = list(color = 'white', width = 0.8)
+      ),
+      text = tooltips,
+      hoverinfo = 'text'
+    )
+  ),
+  layout = list(
+    title = 'Library Size Overview',
+    xaxis = list(title = 'Sample'),
+    yaxis = list(title = 'Read Counts'),
+    shapes = list(
       list(
-        x = seq_along(library_size_data$Sample),
-        y = library_size_data$LibrarySize,
-        type = 'scatter',
-        mode = 'markers',
-        marker = list(size = 10),
-        text = tooltips, # Add tooltips
-        hoverinfo = 'text' # Display tooltip text on hover
+        type = 'line',
+        x0 = 0,  # Start at the left edge of the plot area
+        y0 = mean_line,  # The y-value at which the line is placed
+        x1 = 1,  # End at the right edge of the plot area
+        y1 = mean_line,  # Same y-value to keep the line horizontal
+        line = list(
+          color = 'blue',  # Line color
+          width = 3  # Line width
+        ),
+        xref = 'paper',  # Use the 'paper' reference for the x-axis
+        yref = 'y'  # Use the y-axis data reference for the y-axis
       )
     ),
-    layout = list(
-      title = 'Library Size Overview',
-      xaxis = list(title = 'Sample'),
-      yaxis = list(title = 'Read Counts'),
-      shapes = list(
-        list(
-          type = 'line',
-          x0 = 0,  # Start at the left edge of the plot area
-          y0 = mean_line,  # The y-value at which the line is placed
-          x1 = 1,  # End at the right edge of the plot area
-          y1 = mean_line,  # Same y-value to keep the line horizontal
-          line = list(
-            color = 'blue',  # Line color
-            width = 3  # Line width
-          ),
-          xref = 'paper',  # Use the 'paper' reference for the x-axis
-          yref = 'y'  # Use the y-axis data reference for the y-axis
-        )
-      ),
-      annotations = list(
-        list(
-          x = 1,
-          y = mean_line + annotation_offset,
-          xref = 'paper',
-          yref = 'y',
-          text = paste('Mean:', signif(mean_line,2)),
-          showarrow = FALSE,
-          font = list(family = 'Arial', size = 12, color = 'black')
-        )
+    annotations = list(
+       list(
+        x = 1,
+        y = mean_line + annotation_offset,
+        xref = 'paper',
+        yref = 'y',
+        text = paste('Mean:', signif(mean_line, 4)),
+        showarrow = FALSE,
+        font = list(family = 'Arial', size = 12, color = 'black')
       )
     )
   )
+)
   
   jsonFileName <- paste0(origImgName, ".json")
   json.obj <- rjson::toJSON(plot_data );
@@ -1126,7 +1131,28 @@ PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataN
   cat(json.obj);
   sink();
 
-  return(.set.mbSetObj(mbSetObj))
+  if(interactive){
+    library(plotly);
+    tooltips <- paste("Sample: ", library_size_data$Sample, "\nSize:", library_size_data$LibrarySize)
+    annotation_offset <- 50 # Adjust as needed
+
+    fig <- plot_ly() %>%
+      add_trace(data = library_size_data, x = seq_along(library_size_data$Sample), y = ~LibrarySize, type = 'scatter', mode = 'markers', text = ~tooltips, hoverinfo = 'text', marker = list(size = 10, line = list(color = 'white', width = 0.8)))
+
+    fig <- fig %>% layout(
+     title = plot_data$data$layout$title,
+     xaxis = plot_data$layout$xaxis,
+     yaxis = plot_data$layout$yaxis,
+     shapes = plot_data$layout$shapes,
+     annotations = plot_data$annotations
+   )
+
+   fig <- fig %>% config(displayModeBar = FALSE)
+
+    return(fig);
+  }else{
+    return(.set.mbSetObj(mbSetObj))
+  }
 }
 
 #'Plot PCA plot for multi-omics samples
