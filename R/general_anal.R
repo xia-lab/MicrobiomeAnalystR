@@ -2246,4 +2246,5 @@ GenerateCompJson <- function(mbSetObj=NA, fileName, type){
   sink(fileName);
   cat(json.obj);
   sink();
+  return(1)
 }
