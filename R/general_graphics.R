@@ -927,7 +927,7 @@ GetColorSchemaFromFactor <- function(my.grps){
   my.grps <- as.factor(my.grps);
   grp.num <- length(levels(my.grps));
   
-  if(grp.num > 9){
+  #if(grp.num > 9){
     pal12 <- c("#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", "#FB9A99",
                "#E31A1C", "#FDBF6F", "#FF7F00", "#CAB2D6", "#6A3D9A",
                "#FFFF99", "#B15928");
@@ -937,9 +937,9 @@ GetColorSchemaFromFactor <- function(my.grps){
     for(i in 1:length(lvs)){
       colors[my.grps == lvs[i]] <- dist.cols[i];
     }
-  }else{
-    colors <- as.numeric(my.grps)+1;
-  }
+  #}else{
+  #  colors <- as.numeric(my.grps)+1;
+  #}
   return (colors);
 }
 

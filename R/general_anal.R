@@ -459,9 +459,12 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, shotgunid, taxrank, sta
   mbSetObj$paramSet$univar <- list(
         exp.factor = variable,
         anal.type = "t-tests",
+        method = statOpt,
         taxalvl = taxrank,
         p.lvl = p.lvl
     );
+
+
   return(.set.mbSetObj(mbSetObj));
 }
 
@@ -635,6 +638,15 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
   mbSetObj$analSet$var.type <- variable;
   mbSetObj$analSet$metageno.taxalvl <- taxrank;
   mbSetObj$analSet$id.type <- shotgunid;
+  # record parameters
+  mbSetObj$paramSet$metagenoseq <- list(
+        exp.factor = variable,
+        anal.type = "metagseq",
+        method = model,
+        taxalvl = taxrank,
+        p.lvl = p.lvl
+    );
+
   
   return(.set.mbSetObj(mbSetObj));
 }
@@ -1211,6 +1223,15 @@ return(1)
   mbSetObj$analSet$rnaseq.taxalvl <- taxrank;
   mbSetObj$analSet$rnaseq.meth <- opts;
   mbSetObj$analSet$rnaseq.plvl <- p.lvl
+
+  # record parameters
+  mbSetObj$paramSet$rnaseq <- list(
+        exp.factor = variable,
+        anal.type = "rnaseq",
+        method = opts,
+        taxalvl = taxrank,
+        p.lvl = p.lvl
+    );
   .set.mbSetObj(mbSetObj)
   return(data)
 }
@@ -2198,4 +2219,31 @@ GetMMPMetTable<-function(mbSetObj){
   load_xtable();
   print(xtable::xtable(mbSetObj$analSet$met.map, caption="Result from Metabolite Name Mapping"),
         tabular.environment = "longtable", caption.placement="top", size="\\scriptsize");
+}
+
+#Generate json file for plotly for comparison tests
+GenerateCompJson <- function(mbSetObj=NA, fileName, type){
+  mbSetObj <- .get.mbSetObj(mbSetObj);  
+  data <- "";
+  if(type %in% c("tt", "nonpar")){
+    resTable <- mbSetObj$analSet$univar$resTable;
+    resTable$id <- rownames(resTable);
+    data <- list(data=resTable, param=mbSetObj$paramSet$univar);
+  }else if(type %in% c("zigfit", "ffm")){
+    resTable <- mbSetObj$analSet$metagenoseq$resTable;
+    resTable$id <- rownames(resTable);
+    data <- list(data=resTable, param=mbSetObj$paramSet$metagenoseq);
+
+  }else if(type %in% c("EdgeR", "DESeq2")){
+    resTable <- mbSetObj$analSet$rnaseq$resTable;
+    resTable$id <- rownames(resTable);
+    data <- list(data=resTable, param=mbSetObj$paramSet$rnaseq);
+
+  }
+  print(head(resTable));
+
+  json.obj <- rjson::toJSON(data);
+  sink(fileName);
+  cat(json.obj);
+  sink();
 }
