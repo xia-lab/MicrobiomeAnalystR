@@ -1018,6 +1018,7 @@ PlotRareCurve <- function(mbSetObj, graphName, variable){
 #'License: GNU GPL (>= 2)
 #'@export
 PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataName="", interactive=F){
+  save.image("lib.RData");
   load_phyloseq();
   mbSetObj <- .get.mbSetObj(mbSetObj)
   library(ggplot2)
@@ -1056,17 +1057,18 @@ PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataN
     smpl.sums <- sort(smpl.sums)
     col.vec <- as.vector(mbSetObj$dataSet$sample_data[,1]);
   }
-  
+
   # Create a data frame for ggplot
   if(is.data.frame(col.vec)){
     library_size_data <- data.frame(Sample = names(smpl.sums), LibrarySize = smpl.sums, group = as.character(col.vec[[colnames(col.vec)]]))
   } else {
     library_size_data <- data.frame(Sample = names(smpl.sums), LibrarySize = smpl.sums, group = col.vec)
   }
-  
+
+  colnames(library_size_data)[3] <- "group";
   library_size_data <- library_size_data %>% arrange(desc(LibrarySize))
   library_size_data$Sample = factor(library_size_data$Sample, levels=library_size_data[order(library_size_data$LibrarySize), "Sample"])
-  
+
   # Plotting with ggplot2
   imgName <- paste0(origImgName, ".", format)
   g <- ggplot(library_size_data, aes(x = Sample, y = LibrarySize)) +

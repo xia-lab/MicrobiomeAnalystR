@@ -2224,25 +2224,92 @@ GetMMPMetTable<-function(mbSetObj){
 #Generate json file for plotly for comparison tests
 GenerateCompJson <- function(mbSetObj=NA, fileName, type){
   mbSetObj <- .get.mbSetObj(mbSetObj);  
-  data <- "";
+  save.image("comp.RData");
+  resList <- "";
   if(type %in% c("tt", "nonpar")){
     resTable <- mbSetObj$analSet$univar$resTable;
     resTable$id <- rownames(resTable);
-    data <- list(data=resTable, param=mbSetObj$paramSet$univar);
+    resList <- list(data=resTable, param=mbSetObj$paramSet$univar);
   }else if(type %in% c("zigfit", "ffm")){
     resTable <- mbSetObj$analSet$metagenoseq$resTable;
     resTable$id <- rownames(resTable);
-    data <- list(data=resTable, param=mbSetObj$paramSet$metagenoseq);
+    resList <- list(data=resTable, param=mbSetObj$paramSet$metagenoseq);
 
   }else if(type %in% c("EdgeR", "DESeq2")){
     resTable <- mbSetObj$analSet$rnaseq$resTable;
     resTable$id <- rownames(resTable);
-    data <- list(data=resTable, param=mbSetObj$paramSet$rnaseq);
+    resList <- list(data=resTable, param=mbSetObj$paramSet$rnaseq);
   }
 
-  json.obj <- rjson::toJSON(data);
+  json.obj <- rjson::toJSON(resList);
   sink(fileName);
   cat(json.obj);
   sink();
   return(1);
 }
+
+PlotlyCompRes <- function(mbSetObj=NA, fileName, type){
+  mbSetObj <- .get.mbSetObj(mbSetObj);  
+  if(type %in% c("tt", "nonpar")){
+    resTable <- mbSetObj$analSet$univar$resTable;
+    resTable$id <- rownames(resTable);
+  }else if(type %in% c("zigfit", "ffm")){
+    resTable <- mbSetObj$analSet$metagenoseq$resTable;
+    resTable$id <- rownames(resTable);
+  }else if(type %in% c("EdgeR", "DESeq2")){
+    resTable <- mbSetObj$analSet$rnaseq$resTable;
+    resTable$id <- rownames(resTable);
+  }
+
+raw_data <- resTable;
+# Check if 'log2FC' column exists
+if ("log2FC" %in% names(raw_data)) {
+  xval <- raw_data$log2FC
+  yval <- -log10(raw_data$Pvalues)
+  xlab <- "log2FC"
+  ylab <- '-log10(FDR)'
+  funcCol <- mapply(getColor, raw_data$FDR, raw_data$log2FC) # Assuming getColor function is adapted to R
+  textDisplay <- paste("Feature ID: ", raw_data$id, 
+                       "<br>P-value: ", format(raw_data$Pvalues, scientific = TRUE),
+                       "<br>FDR: ", format(raw_data$FDR, scientific = TRUE), sep = "")
+} else {
+  xval <- seq_along(raw_data$id)
+  yval <- -log10(raw_data$FDR)
+  xlab <- "Features"
+  ylab <- '-log10(FDR)'
+  funcCol <- sapply(raw_data$FDR, getColorForPValue) # Assuming getColorForPValue function is adapted to R
+  textDisplay <- paste("Feature ID: ", raw_data$id, 
+                       "<br>P-value: ", format(raw_data$Pvalues, scientific = TRUE),
+                       "<br>FDR: ", format(raw_data$FDR, scientific = TRUE), sep = "")
+}
+
+plotData <- list(
+  x = xval,
+  y = yval,
+  mode = 'markers',
+  type = 'scatter',
+  marker = list(
+    color = funcCol,
+    line = list(
+      color = 'white',
+      width = 0.8
+    )
+  ),
+  text = textDisplay,
+  hoverinfo = 'text'
+)
+
+layout <- list(
+  xaxis = list(title = xlab),
+  yaxis = list(title = ylab)
+)
+
+config <- list(displayModeBar = FALSE)
+
+p <- plotly::plot_ly() %>%
+  add_trace(data = plotData) %>%
+  layout(layout) %>%
+  config(config)
+
+return(p);
+} 
