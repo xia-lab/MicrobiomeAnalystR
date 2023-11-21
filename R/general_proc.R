@@ -1058,8 +1058,12 @@ PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataN
   }
   
   # Create a data frame for ggplot
-  library_size_data <- data.frame(Sample = names(smpl.sums), LibrarySize = smpl.sums, group=col.vec)
-  colnames(library_size_data)[3] <- "group";
+  if(is.data.frame(col.vec)){
+    library_size_data <- data.frame(Sample = names(smpl.sums), LibrarySize = smpl.sums, group = as.character(col.vec[[colnames(col.vec)]]))
+  } else {
+    library_size_data <- data.frame(Sample = names(smpl.sums), LibrarySize = smpl.sums, group = col.vec)
+  }
+  
   library_size_data <- library_size_data %>% arrange(desc(LibrarySize))
   library_size_data$Sample = factor(library_size_data$Sample, levels=library_size_data[order(library_size_data$LibrarySize), "Sample"])
   
