@@ -2248,7 +2248,7 @@ GenerateCompJson <- function(mbSetObj=NA, fileName, type){
 }
 
 PlotlyCompRes <- function(mbSetObj = NA, type="", fileName="") {
-  save.image("compplot.RData");
+  library(htmlwidgets)
   mbSetObj <- .get.mbSetObj(mbSetObj)
   fc.thresh <- 0;
   p.lvl <- 0.05;
@@ -2281,7 +2281,8 @@ PlotlyCompRes <- function(mbSetObj = NA, type="", fileName="") {
       text = ~paste("Feature ID: ", id, 
                     "<br>P-value: ", format(Pvalues, scientific = TRUE),
                     "<br>FDR: ", format(FDR, scientific = TRUE)),
-      hoverinfo = 'text'
+      hoverinfo = 'text',
+      label= ~id
     )
   layout <- list(
     xaxis = list(title = "log2FC"),
@@ -2303,7 +2304,8 @@ PlotlyCompRes <- function(mbSetObj = NA, type="", fileName="") {
       text = ~paste("Feature ID: ", id, 
                     "<br>P-value: ", format(Pvalues, scientific = TRUE),
                     "<br>FDR: ", format(FDR, scientific = TRUE)),
-      hoverinfo = 'text'
+      hoverinfo = 'text',
+      label= ~id
     )
   layout <- list(
     xaxis = list(title = "Features"),
@@ -2312,7 +2314,17 @@ PlotlyCompRes <- function(mbSetObj = NA, type="", fileName="") {
   
   }
   
-  p <- p %>% layout(layout)
+  p <- p %>% layout(layout);
+  p <- p %>% onRender("
+  function(el, x) {
+    el.on('plotly_click', function(data) {
+        var pointIndex = data.points[0].pointIndex;
+        console.log(data.points[0].data.label)
+        parent.window.document.getElementById('form1:selectedVarInput').value = data.points[0].data.label[pointIndex];
+        parent.window.plotFeature();
+    });
+  }
+");
   return(p)
 }
 
