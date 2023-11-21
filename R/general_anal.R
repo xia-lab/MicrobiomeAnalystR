@@ -2224,7 +2224,6 @@ GetMMPMetTable<-function(mbSetObj){
 #Generate json file for plotly for comparison tests
 GenerateCompJson <- function(mbSetObj=NA, fileName, type){
   mbSetObj <- .get.mbSetObj(mbSetObj);  
-  save.image("comp.RData");
   resList <- "";
   if(type %in% c("tt", "nonpar")){
     resTable <- mbSetObj$analSet$univar$resTable;
@@ -2248,68 +2247,102 @@ GenerateCompJson <- function(mbSetObj=NA, fileName, type){
   return(1);
 }
 
-PlotlyCompRes <- function(mbSetObj=NA, fileName, type){
-  mbSetObj <- .get.mbSetObj(mbSetObj);  
-  if(type %in% c("tt", "nonpar")){
-    resTable <- mbSetObj$analSet$univar$resTable;
-    resTable$id <- rownames(resTable);
-  }else if(type %in% c("zigfit", "ffm")){
-    resTable <- mbSetObj$analSet$metagenoseq$resTable;
-    resTable$id <- rownames(resTable);
-  }else if(type %in% c("EdgeR", "DESeq2")){
-    resTable <- mbSetObj$analSet$rnaseq$resTable;
-    resTable$id <- rownames(resTable);
+PlotlyCompRes <- function(mbSetObj = NA, type="", fileName="") {
+  save.image("compplot.RData");
+  mbSetObj <- .get.mbSetObj(mbSetObj)
+  fc.thresh <- 0;
+  p.lvl <- 0.05;
+  if (type %in% c("univ")) {
+    resTable <- mbSetObj$analSet$univar$resTable
+    params <- mbSetObj$paramSet$univar
+  } else if (type %in% c("metagenome")) {
+    resTable <- mbSetObj$analSet$metagenoseq$resTable
+    params <- mbSetObj$paramSet$metagenoseq
+  } else { #else if (type %in% c("rnaseq")) {
+    resTable <- mbSetObj$analSet$rnaseq$resTable
+    params <- mbSetObj$paramSet$rnaseq
   }
+  p.lvl <- params$p.lvl
+  resTable$id <- rownames(resTable)
+  raw_data <- resTable
+  
+  if ("log2FC" %in% names(raw_data)) {
+    p <- plot_ly(
+      data = raw_data, 
+      x = ~log2FC, 
+      y = -log10(raw_data$Pvalues), 
+      type = 'scatter',
+      mode = 'markers',
+      marker = list(
+        color = mapply(getColor, raw_data$FDR, raw_data$log2FC, p.lvl), # getColor function should be defined
+        size=mapply(getSizeForPValue, raw_data$FDR, p.lvl),
+        line = list(color = 'white', width = 0.8)
+      ),
+      text = ~paste("Feature ID: ", id, 
+                    "<br>P-value: ", format(Pvalues, scientific = TRUE),
+                    "<br>FDR: ", format(FDR, scientific = TRUE)),
+      hoverinfo = 'text'
+    )
+  layout <- list(
+    xaxis = list(title = "log2FC"),
+    yaxis = list(title = '-log10(FDR)')
+  )
 
-raw_data <- resTable;
-# Check if 'log2FC' column exists
-if ("log2FC" %in% names(raw_data)) {
-  xval <- raw_data$log2FC
-  yval <- -log10(raw_data$Pvalues)
-  xlab <- "log2FC"
-  ylab <- '-log10(FDR)'
-  funcCol <- mapply(getColor, raw_data$FDR, raw_data$log2FC) # Assuming getColor function is adapted to R
-  textDisplay <- paste("Feature ID: ", raw_data$id, 
-                       "<br>P-value: ", format(raw_data$Pvalues, scientific = TRUE),
-                       "<br>FDR: ", format(raw_data$FDR, scientific = TRUE), sep = "")
-} else {
-  xval <- seq_along(raw_data$id)
-  yval <- -log10(raw_data$FDR)
-  xlab <- "Features"
-  ylab <- '-log10(FDR)'
-  funcCol <- sapply(raw_data$FDR, getColorForPValue) # Assuming getColorForPValue function is adapted to R
-  textDisplay <- paste("Feature ID: ", raw_data$id, 
-                       "<br>P-value: ", format(raw_data$Pvalues, scientific = TRUE),
-                       "<br>FDR: ", format(raw_data$FDR, scientific = TRUE), sep = "")
+  } else {
+    p <- plot_ly(
+      data = raw_data, 
+      x = ~seq_along(id),
+      y = ~-log10(FDR),
+      type = 'scatter',
+      mode = 'markers',
+      marker = list(
+        color = mapply(getColorForPValue, raw_data$FDR, p.lvl), # getColorForPValue function should be defined
+        size=mapply(getSizeForPValue, raw_data$FDR, p.lvl),
+        line = list(color = 'white', width = 0.8)
+      ),
+      text = ~paste("Feature ID: ", id, 
+                    "<br>P-value: ", format(Pvalues, scientific = TRUE),
+                    "<br>FDR: ", format(FDR, scientific = TRUE)),
+      hoverinfo = 'text'
+    )
+  layout <- list(
+    xaxis = list(title = "Features"),
+    yaxis = list(title = '-log10(FDR)')
+  )
+  
+  }
+  
+  p <- p %>% layout(layout)
+  return(p)
 }
 
-plotData <- list(
-  x = xval,
-  y = yval,
-  mode = 'markers',
-  type = 'scatter',
-  marker = list(
-    color = funcCol,
-    line = list(
-      color = 'white',
-      width = 0.8
-    )
-  ),
-  text = textDisplay,
-  hoverinfo = 'text'
-)
+getColor <- function(pValue, log2fc, pval.thresh) {
+  pValueThreshold <- pval.thresh# Replace with the actual way to access this value in R
+  log2fcThreshold <- 0 # Example threshold for high log2fc
+  
+  if (pValue < pValueThreshold) {
+    if (log2fc > log2fcThreshold) {
+      return('red') # Interpolate red for positive log2fc
+    } else {
+      return('blue') # Interpolate blue for negative log2fc
+    }
+  } else {
+    return('grey') # Non-significant
+  }
+}
 
-layout <- list(
-  xaxis = list(title = xlab),
-  yaxis = list(title = ylab)
-)
+getColorForPValue <- function(val, pval.thresh) {
+  if (abs(val) >= pval.thresh) {
+    return('grey') # Non-significant
+  } else {
+    return('blue') # Significant (simplified example)
+  }
+}
 
-config <- list(displayModeBar = FALSE)
-
-p <- plotly::plot_ly() %>%
-  add_trace(data = plotData) %>%
-  layout(layout) %>%
-  config(config)
-
-return(p);
-} 
+getSizeForPValue <- function(val, pval.thresh) {
+  if (abs(val) >= pval.thresh) {
+    return(5) # Non-significant
+  } else {
+    return(10) # Significant (simplified example)
+  }
+}
