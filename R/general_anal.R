@@ -2238,12 +2238,11 @@ GenerateCompJson <- function(mbSetObj=NA, fileName, type){
     resTable <- mbSetObj$analSet$rnaseq$resTable;
     resTable$id <- rownames(resTable);
     data <- list(data=resTable, param=mbSetObj$paramSet$rnaseq);
-
   }
-  print(head(resTable));
 
   json.obj <- rjson::toJSON(data);
   sink(fileName);
   cat(json.obj);
   sink();
+  return(1);
 }
