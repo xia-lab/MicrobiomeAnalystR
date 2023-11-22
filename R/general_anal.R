@@ -2224,27 +2224,137 @@ GetMMPMetTable<-function(mbSetObj){
 #Generate json file for plotly for comparison tests
 GenerateCompJson <- function(mbSetObj=NA, fileName, type){
   mbSetObj <- .get.mbSetObj(mbSetObj);  
-  data <- "";
+  resList <- "";
   if(type %in% c("tt", "nonpar")){
     resTable <- mbSetObj$analSet$univar$resTable;
     resTable$id <- rownames(resTable);
-    data <- list(data=resTable, param=mbSetObj$paramSet$univar);
+    resList <- list(data=resTable, param=mbSetObj$paramSet$univar);
   }else if(type %in% c("zigfit", "ffm")){
     resTable <- mbSetObj$analSet$metagenoseq$resTable;
     resTable$id <- rownames(resTable);
-    data <- list(data=resTable, param=mbSetObj$paramSet$metagenoseq);
+    resList <- list(data=resTable, param=mbSetObj$paramSet$metagenoseq);
 
   }else if(type %in% c("EdgeR", "DESeq2")){
     resTable <- mbSetObj$analSet$rnaseq$resTable;
     resTable$id <- rownames(resTable);
-    data <- list(data=resTable, param=mbSetObj$paramSet$rnaseq);
-
+    resList <- list(data=resTable, param=mbSetObj$paramSet$rnaseq);
   }
-  print(head(resTable));
 
-  json.obj <- rjson::toJSON(data);
+  json.obj <- rjson::toJSON(resList);
   sink(fileName);
   cat(json.obj);
   sink();
-  return(1)
+  return(1);
+}
+
+PlotlyCompRes <- function(mbSetObj = NA, type="", fileName="") {
+  library(htmlwidgets)
+  mbSetObj <- .get.mbSetObj(mbSetObj)
+  fc.thresh <- 0;
+  p.lvl <- 0.05;
+  if (type %in% c("univ")) {
+    resTable <- mbSetObj$analSet$univar$resTable
+    params <- mbSetObj$paramSet$univar
+  } else if (type %in% c("metagenome")) {
+    resTable <- mbSetObj$analSet$metagenoseq$resTable
+    params <- mbSetObj$paramSet$metagenoseq
+  } else { #else if (type %in% c("rnaseq")) {
+    resTable <- mbSetObj$analSet$rnaseq$resTable
+    params <- mbSetObj$paramSet$rnaseq
+  }
+  p.lvl <- params$p.lvl
+  resTable$id <- rownames(resTable)
+  raw_data <- resTable
+  
+  if ("log2FC" %in% names(raw_data)) {
+    p <- plot_ly(
+      data = raw_data, 
+      x = ~log2FC, 
+      y = -log10(raw_data$Pvalues), 
+      type = 'scatter',
+      mode = 'markers',
+      marker = list(
+        color = mapply(getColor, raw_data$FDR, raw_data$log2FC, p.lvl), # getColor function should be defined
+        size=mapply(getSizeForPValue, raw_data$FDR, p.lvl),
+        line = list(color = 'white', width = 0.8)
+      ),
+      text = ~paste("Feature ID: ", id, 
+                    "<br>P-value: ", format(Pvalues, scientific = TRUE),
+                    "<br>FDR: ", format(FDR, scientific = TRUE)),
+      hoverinfo = 'text',
+      label= ~id
+    )
+  layout <- list(
+    xaxis = list(title = "log2FC"),
+    yaxis = list(title = '-log10(FDR)')
+  )
+
+  } else {
+    p <- plot_ly(
+      data = raw_data, 
+      x = ~seq_along(id),
+      y = ~-log10(FDR),
+      type = 'scatter',
+      mode = 'markers',
+      marker = list(
+        color = mapply(getColorForPValue, raw_data$FDR, p.lvl), # getColorForPValue function should be defined
+        size=mapply(getSizeForPValue, raw_data$FDR, p.lvl),
+        line = list(color = 'white', width = 0.8)
+      ),
+      text = ~paste("Feature ID: ", id, 
+                    "<br>P-value: ", format(Pvalues, scientific = TRUE),
+                    "<br>FDR: ", format(FDR, scientific = TRUE)),
+      hoverinfo = 'text',
+      label= ~id
+    )
+  layout <- list(
+    xaxis = list(title = "Features"),
+    yaxis = list(title = '-log10(FDR)')
+  )
+  
+  }
+  
+  p <- p %>% layout(layout);
+  p <- p %>% onRender("
+  function(el, x) {
+    el.on('plotly_click', function(data) {
+        var pointIndex = data.points[0].pointIndex;
+        console.log(data.points[0].data.label)
+        parent.window.document.getElementById('form1:selectedVarInput').value = data.points[0].data.label[pointIndex];
+        parent.window.plotFeature();
+    });
+  }
+");
+  return(p)
+}
+
+getColor <- function(pValue, log2fc, pval.thresh) {
+  pValueThreshold <- pval.thresh# Replace with the actual way to access this value in R
+  log2fcThreshold <- 0 # Example threshold for high log2fc
+  
+  if (pValue < pValueThreshold) {
+    if (log2fc > log2fcThreshold) {
+      return('red') # Interpolate red for positive log2fc
+    } else {
+      return('blue') # Interpolate blue for negative log2fc
+    }
+  } else {
+    return('grey') # Non-significant
+  }
+}
+
+getColorForPValue <- function(val, pval.thresh) {
+  if (abs(val) >= pval.thresh) {
+    return('grey') # Non-significant
+  } else {
+    return('blue') # Significant (simplified example)
+  }
+}
+
+getSizeForPValue <- function(val, pval.thresh) {
+  if (abs(val) >= pval.thresh) {
+    return(5) # Non-significant
+  } else {
+    return(10) # Significant (simplified example)
+  }
 }

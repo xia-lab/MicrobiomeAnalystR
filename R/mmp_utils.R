@@ -930,6 +930,14 @@ doKeggNameMatch <- function(qvec,taxalvl){
 
 
 CreatPathwayLib <- function(contain){
+  #for LTS
+  mbSetObj <- .get.mbSetObj(mbSet);
+  if(!is.null(mbSetObj$paramSet$includeInfoFileNm)){
+    includeInfoNm <- mbSetObj$paramSet$includeInfoFileNm;
+  }else{
+    includeInfoNm <- "includeInfo";
+  }
+
   if(contain=="usrbac"){
     mtcls = mtcls
   }else if(contain=="sigbac"){
@@ -958,7 +966,7 @@ CreatPathwayLib <- function(contain){
   qs::qsave(current.lib,paste0(taxalvl,".current.lib.qs"))
   
   json.mat <- rjson::toJSON(includeInfo);
-  sink("includeInfo.json");
+  sink(paste0(includeInfoNm, ".json"));
   cat(json.mat);
   sink();
   
@@ -1625,7 +1633,7 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
   mbSetObj <- .get.mbSetObj(mbSetObj);
   if(enrich.type == "hyper"){
     if(dataType=="metabolite"){
-      PerformMetListEnrichment(mbSetObj, contain,file.nm);
+      PerformMetListEnrichment(mbSetObj, contain, file.nm);
       
     }else{
       MicrobiomeAnalystR:::LoadKEGGKO_lib(category);
@@ -3302,7 +3310,7 @@ PlotDiagnostic <- function(imgName, dpi=72, format="png",alg){
       plot(r)
     }
     abline(h = 0.0975)
-    
+
   }else if(alg == "diablo"){
     require(mixOmics)
     diablo.res <- qs::qread("diablo.res.qs")

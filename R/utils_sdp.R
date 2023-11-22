@@ -533,6 +533,14 @@ PerformKOmapping <- function(mbSetObj, geneIDs, type){
 PrepareQueryJson <- function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
+  #for LTS
+  if(!is.null(mbSetObj$paramSet$netQuery)){
+    netQueryNm <- mbSetObj$paramSet$netQueryFileNm;
+    includeInfoNm <- mbSetObj$paramSet$includeInfoFileNm;
+  }else{
+    netQueryNm <- "network_query";
+    includeInfoNm <- "includeInfo";
+  }
   if(enrich.type == "hyper"){
     exp.vec <- mbSetObj$analSet$data[,1]; # drop dim for json
   }else{
@@ -549,13 +557,13 @@ PrepareQueryJson <- function(mbSetObj){
   net.orig <- edge.mat[,2];
   query.res <- edge.mat[,3];# abundance
   names(query.res) <- eids; # named by edge
-  filtKOmap(query.ko)
+  filtKOmap(query.ko, includeInfoNm)
   
  labels <- qs::qread("../../lib/ko/ko_lbs.qs")
  labels <-labels[labels$info %in% query.ko,c(2,4)]
  labels <- aggregate(labels$info,list(labels$id),function(x) paste(x,collapse = ","))
   json.mat <- rjson::toJSON(list(query.res=query.res,id=labels[,1],label=labels[,2]));
-  sink("network_query.json");
+  sink(paste0(netQueryNm, ".json"));
   cat(json.mat);
   sink();
 
@@ -563,7 +571,7 @@ PrepareQueryJson <- function(mbSetObj){
   
 }
 
-filtKOmap <- function(include){
+filtKOmap <- function(include, fileName){
   edges.ko = qs::qread("../../lib/mmp/ko.info.qs")
   edges.ko = edges.ko[which(edges.ko$ko %in% include),]
   includeInfo = list(edges=edges.ko)
@@ -571,7 +579,7 @@ filtKOmap <- function(include){
   includeInfo$nodes =includeInfo$nodes[!(grepl("unddef",includeInfo$nodes))]
   
   json.mat <- rjson::toJSON(includeInfo);
-  sink("includeInfo.json");
+  sink(paste0(fileName, ".json"));
   cat(json.mat);
   sink();
   
@@ -590,11 +598,11 @@ PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",fi
   #print(enrich.type)
   if(enrich.type == "hyper"){
   LoadKEGGKO_lib(category,contain);
-    PerformKOEnrichAnalysis_List(mbSetObj, file.nm);
+    mbSetObj<-PerformKOEnrichAnalysis_List(mbSetObj, file.nm);
   }else{
     .prepare.global(mbSetObj, category,contain ,file.nm);
     .perform.computing();
-    .save.global.res();
+    mbSetObj <- .save.global.res();
   }
   return(.set.mbSetObj(mbSetObj))
 }
@@ -654,77 +662,18 @@ PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",fi
     nms <- rownames(my.res);
     hits <- hits[nms];
 
+        vis.type <- "global";
+        if(is.null(mbSetObj$imgSet$enrTables)){
+            mbSetObj$imgSet$enrTables <- list();
+        }
+        mbSetObj$imgSet$enrTables[[vis.type]] <- list();
+        mbSetObj$imgSet$enrTables[[vis.type]]$table <- my.res;
+        mbSetObj$imgSet$enrTables[[vis.type]]$library <- "KEGG";
+        mbSetObj$imgSet$enrTables[[vis.type]]$algo <- "Global Test";
+
     mbSetObj <- Save2KEGGJSON(mbSetObj, hits, my.res, file.nm);
     .set.mbSetObj(mbSetObj);
-    return(1);
-}
-
-#'Perform KO Enrichment Analysis 
-#'@description This functions performs KO enrichment analysis
-#'on a tabled input.
-#'@param mbSetObj Input the name of the mbSetObj.
-#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
-#'McGill University, Canada
-#'License: GNU GPL (>= 2)
-#'@export
-PerformKOEnrichAnalysis_Table <- function(mbSetObj, file.nm){
-  
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-
-  phenotype <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[selected.meta.data]]);
-  genemat <- as.data.frame(t(otu_table(mbSetObj$dataSet$norm.phyobj)),check.names=FALSE);
-  # first, get the matched entries from current.mset
-  hits <- lapply(current.mset, function(x){x[x %in% colnames(genemat)]});
-  set.num <- unlist(lapply(current.mset, length), use.names = FALSE);
-
-   # now, perform the enrichment analysis
-   library(RSclient);
-    rsc <- RS.connect();
-    RS.assign(rsc, "my.dir", getwd()); 
-    RS.eval(rsc, setwd(my.dir));
-
-    gt.out <- list(cls=phenotype, data=genemat, subsets=hits, set.num=set.num);
-    RS.assign(rsc, "gt.in", gt.out); 
-
-    # there are more steps, better drop a function to compute in the remote env.
-    my.fun <- function(){
-        gt.obj <- globaltest::gt(gt.in$cls, gt.in$data, subsets=gt.in$subsets);
-        gt.res <- globaltest::result(gt.obj);
-
-        match.num <- gt.res[,5];
-        if(sum(match.num>0)==0){
-            return(NA);
-        }
-        raw.p <- gt.res[,1];
-
-        # add adjust p values
-        bonf.p <- p.adjust(raw.p, "holm");
-        fdr.p <- p.adjust(raw.p, "fdr");
-
-        res.mat <- cbind(set.num, match.num, gt.res[,2], gt.res[,3], raw.p, bonf.p, fdr.p);
-        rownames(res.mat) <- names(hits);
-        colnames(res.mat) <- c("Size", "Hits", "Statistic Q", "Expected Q", "Pval", "Holm p", "FDR");
-        hit.inx <- res.mat[,2]>0;
-        res.mat <- res.mat[hit.inx, ];
-        ord.inx <- order(res.mat[,5]);
-        res.mat <- res.mat[ord.inx,];
-        return(res.mat);
-    }
-    RS.assign(rsc, my.fun);
-    my.res <- RS.eval(rsc, my.fun());
-    RS.close(rsc);
-
-    if(all(c(length(my.res)==1, is.na(my.res)))){
-        AddErrMsg("No match was found to the selected metabolite set library!");
-        return(0);
-    }
-
-    # in R, sort list is by its name!, using pos order has issues!
-    nms <- rownames(my.res);
-    hits <- hits[nms];
-
-    mbSetObj <- Save2KEGGJSON(mbSetObj, hits, my.res, file.nm);
-    return(.set.mbSetObj(mbSetObj));
+    return(mbSetObj);
 }
 
 # Utility function
@@ -957,8 +906,21 @@ PerformKOEnrichAnalysis_List <- function(mbSetObj, file.nm){
       }
     }
   }
+
+ #report related object
+    if(!is.null(mbSetObj$paramSet$koProj.type)){
+        vis.type <- mbSetObj$paramSet$koProj.type;
+        if(is.null(mbSetObj$imgSet$enrTables)){
+            mbSetObj$imgSet$enrTables <- list();
+        }
+        mbSetObj$imgSet$enrTables[[vis.type]] <- list();
+        mbSetObj$imgSet$enrTables[[vis.type]]$table <- res.mat;
+        mbSetObj$imgSet$enrTables[[vis.type]]$library <- "KEGG";
+        mbSetObj$imgSet$enrTables[[vis.type]]$algo <- "Overrepresentation Analysis";
+    }
+ 
   mbSetObj <- Save2KEGGJSON(mbSetObj, hits.query, res.mat, file.nm);
-  return(.set.mbSetObj(mbSetObj));
+  return(mbSetObj);
 }
 
 # Utility function
@@ -1004,7 +966,6 @@ Save2KEGGJSON <- function(mbSetObj, hits.query, res.mat, file.nm){
   sink(json.nm)
   cat(json.mat);
   sink();
-  mbSetObj$analSet$associationResTable <- resTable;
   
   # write csv
   fast.write(resTable, file=paste(file.nm, ".csv", sep=""), row.names=F);
@@ -1132,4 +1093,11 @@ doKOFiltering <- function(ko.vec, type){
     }
     return(match.values);
   }
+}
+
+#univ/metagenome/rnaseq/lefse/maaslin/list/global
+SetKeggProjectionType <- function(mbSetObj=NA, type){
+    mbSetObj <- .get.mbSetObj(mbSetObj);
+    mbSetObj$paramSet$koProj.type <- type;
+    return(.set.mbSetObj(mbSetObj));
 }
