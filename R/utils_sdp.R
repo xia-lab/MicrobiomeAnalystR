@@ -595,7 +595,7 @@ filtKOmap <- function(include, fileName){
 #'@export
 PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",file.nm){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  #print(enrich.type)
+  print(enrich.type)
   if(enrich.type == "hyper"){
   LoadKEGGKO_lib(category,contain);
     mbSetObj<-PerformKOEnrichAnalysis_List(mbSetObj, file.nm);
@@ -604,7 +604,8 @@ PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",fi
     .perform.computing();
     mbSetObj <- .save.global.res();
   }
-  return(.set.mbSetObj(mbSetObj))
+  .set.mbSetObj(mbSetObj)
+  return(1);
 }
 
 .prepare.global<-function(mbSetObj, category,contain ,file.nm){
@@ -662,15 +663,7 @@ PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",fi
     nms <- rownames(my.res);
     hits <- hits[nms];
 
-        vis.type <- "global";
-        if(is.null(mbSetObj$imgSet$enrTables)){
-            mbSetObj$imgSet$enrTables <- list();
-        }
-        mbSetObj$imgSet$enrTables[[vis.type]] <- list();
-        mbSetObj$imgSet$enrTables[[vis.type]]$table <- my.res;
-        mbSetObj$imgSet$enrTables[[vis.type]]$library <- "KEGG";
-        mbSetObj$imgSet$enrTables[[vis.type]]$algo <- "Global Test";
-
+    mbSetObj <- recordEnrTable(mbSetObj, "global", my.res, "KEGG", "Global Test");
     mbSetObj <- Save2KEGGJSON(mbSetObj, hits, my.res, file.nm);
     .set.mbSetObj(mbSetObj);
     return(mbSetObj);

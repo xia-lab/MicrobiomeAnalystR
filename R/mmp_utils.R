@@ -1631,14 +1631,16 @@ PrepareOTUQueryJson <- function(mbSetObj,taxalvl,contain="bac"){
 
 PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,contain="hsabac",enrich.type){
   mbSetObj <- .get.mbSetObj(mbSetObj);
+  print(paste("enrich.type=", enrich.type));
+  print(paste("dataType=", dataType));
+
   if(enrich.type == "hyper"){
     if(dataType=="metabolite"){
-      PerformMetListEnrichment(mbSetObj, contain, file.nm);
-      
+      mbSetObj <- PerformMetListEnrichment(mbSetObj, contain, file.nm);
     }else{
       MicrobiomeAnalystR:::LoadKEGGKO_lib(category);
       PerformKOEnrichAnalysis_List(mbSetObj, file.nm);
-      
+      mbSetObj <- .get.mbSetObj(mbSet);
     }
     
   }else if(enrich.type =="global"){
@@ -1650,11 +1652,11 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
     .perform.computing();
     
     if(dataType=="ko"){
-      res= .save.global.res();
+      mbSetObj = .save.global.res();
       taxalvl = "ko"
     }else if(dataType=="metabolite"){
       
-      res=enrich2json()
+      mbSetObj=enrich2json()
     }
     
   }else if(enrich.type =="mummichog"){
@@ -1662,12 +1664,13 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
     if(!exists("performPeakEnrich")){ # public web on same user dir
       .load.scripts.on.demand("utils_peak2fun.Rc");    
     }
-    performPeakEnrich(lib=contain)
-    
+    mbSetObj=performPeakEnrich(lib=contain);
+    mbSetObj <- .get.mbSetObj(mbSet);
   }
   if(!exists("taxalvl")){taxalvl = "ko"}
   mbSetObj$analSet$keggnet$background <- contain
   mbSetObj$analSet$keggnet$taxalvl <- taxalvl
+  print(mbSetObj$imgSet$enrTables);
   return(.set.mbSetObj(mbSetObj))
 }
 
@@ -1826,10 +1829,13 @@ enrich2json <- function(){
   sink(json.nm)
   cat(json.mat);
   sink();
-  
+
+  mbSetObj <- .get.mbSetObj(NA);
+  mbSetObj <- recordEnrTable(mbSetObj, mbSetObj$paramSet$koProj.type, resTable, "KEGG", "Global Test");
+
   # write csv
   fast.write(resTable, file=paste(file.nm, ".csv", sep=""), row.names=F);
-  return(1)
+  return(mbSetObj)
 }
 
 
@@ -2719,6 +2725,7 @@ PerformMetListEnrichment <- function(mbSetObj, contain,file.nm){
     return(x)
   })
   
+  mbSetObj <- recordEnrTable(mbSetObj, mbSetObj$paramSet$koProj.type, resTable, "KEGG", "Overrepresentation Analysis");
   json.res <- list(hits.query =convert2JsonList(hits.query),
                    path.nms = path.nms,
                    path.pval = path.pval,
@@ -2733,8 +2740,9 @@ PerformMetListEnrichment <- function(mbSetObj, contain,file.nm){
   sink(json.nm)
   cat(json.mat);
   sink();
-  
-  return(.set.mbSetObj(mbSetObj));
+
+  .set.mbSetObj(mbSetObj)
+  return(mbSetObj);
 }
 
 
