@@ -458,6 +458,8 @@ GetSampleGrpNo <- function(mbSetObj, clsLbl){
 }
 
 GetTaxaNames<- function(mbSetObj, taxlvl){
+
+    require("phyloseq")
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -465,7 +467,7 @@ GetTaxaNames<- function(mbSetObj, taxlvl){
  phyloseq_objs <- readDataQs("phyloseq_objs.qs",mbSetObj$module.type,mbSetObj$dataSet$name)
   }
   
-  nm = taxa_names(phyloseq_objs$merged_obj[[taxlvl]])
+  nm <- taxa_names(phyloseq_objs$merged_obj[[taxlvl]])
   
   if(sum(is.na(nm))/length(nm) > 0.7){
       AddErrMsg("More than 70% values are missing at this level!");
