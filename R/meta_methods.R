@@ -526,8 +526,8 @@ PlotBetaSummary <- function(mbSetObj, plotNm,taxalvl, sel.meta, alg, format="png
   
   
   p <- ggplot(df, aes(x=R_squared, y=dataset, color=dist)) +
-    geom_point(shape=16, alpha=0.8, size=3) +
-    theme(panel.border = element_blank(), axis.line = element_line()) +
+    geom_point(shape=16, alpha=0.8, size=4) +
+    theme(panel.border = element_blank(), axis.line = element_line(), text = element_text(size = 14)) +
     theme(axis.text.x=element_text(angle=45, hjust=1)) +
     scale_alpha_manual(values=c(0.5,0));
   
@@ -536,6 +536,7 @@ PlotBetaSummary <- function(mbSetObj, plotNm,taxalvl, sel.meta, alg, format="png
   print(p);
   dev.off();
   
+  mbSetObj$imgSet$beta_summary <- imgName;
   mbSetObj$analSet$beta.summary <- df;
   fast.write(df, "beta_summary.csv", row.names = TRUE);
   
