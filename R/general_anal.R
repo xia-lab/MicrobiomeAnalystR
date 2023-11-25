@@ -2292,13 +2292,13 @@ PlotlyCompRes <- function(mbSetObj = NA, type="", fileName="") {
   } else {
     p <- plot_ly(
       data = raw_data, 
-      x = ~seq_along(id),
+      x = seq_along(raw_data$id),
       y = ~-log10(FDR),
       type = 'scatter',
       mode = 'markers',
       marker = list(
         color = mapply(getColorForPValue, raw_data$FDR, p.lvl), # getColorForPValue function should be defined
-        size=mapply(getSizeForPValue, raw_data$FDR, p.lvl),
+        size = mapply(getSizeForPValue, raw_data$FDR, p.lvl),
         line = list(color = 'white', width = 0.8)
       ),
       text = ~paste("Feature ID: ", id, 
