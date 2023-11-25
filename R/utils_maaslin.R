@@ -12,7 +12,7 @@
     thresh = 0.05){ 
   require(dplyr);
   require(R.utils); 
-print(model)
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if (!exists('adj.vec')) {
@@ -25,6 +25,9 @@ print(model)
     }
   }
 
+  if(length(adj.vec) == 1){
+    if(adj.vec == "") {adj.bool <- F}
+  }
 
   thresh <- as.numeric(thresh);
   adj.vars <- adj.vec;
