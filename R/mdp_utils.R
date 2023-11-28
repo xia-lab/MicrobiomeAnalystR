@@ -1308,12 +1308,12 @@ UpdatePieData<-function(mbSetObj, lowtaxa){
 #'format of the plot. By default it is set to "png".
 #'@param dpi Numeric, input the dots per inch. By default
 #'it is set to 72.
+#'@param interactive boolean, if true, return plotly else save png using Cairo
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-SavePiechartImg <- function(mbSetObj, taxalvl, pieName, format="png", dpi=72) {
-  
+SavePiechartImg <- function(mbSetObj, taxalvl, pieName="", format="png", dpi=72, interactive=F) {
   mbSetObj <- .get.mbSetObj(mbSetObj);
   set.seed(280);
   
@@ -1328,22 +1328,35 @@ SavePiechartImg <- function(mbSetObj, taxalvl, pieName, format="png", dpi=72) {
   x.cols <- pie.cols;
   
   # java color code to R color code
-  x.cols <- paste("#",x.cols, sep="");
-  Cairo::Cairo(file=pieName, width=630, height=500, type=format, bg="white", dpi=dpi);
+  x.cols <- paste("#",x.cols, sep="");  
+
   
-  box <- ggplot(piedataimg, aes(x="", y = value, fill=reorder(variable,-value))) +
-    geom_bar(width = 1, stat = "identity") + theme_bw() +
-    coord_polar(theta = "y",direction=-1,start = 4.71239) + scale_fill_manual(values=c(x.cols))+
-    geom_text(aes(x=1.6,label = scales::percent(round(value,2))), check_overlap = T,size=3,position = position_stack(vjust = 0.5),color="grey48") +
-    theme(legend.position="right",axis.text = element_blank(),axis.ticks = element_blank(),panel.grid  = element_blank(), plot.title = element_text(hjust=0.5, face="bold"),legend.text=element_text(color="grey48")) +
-    labs(x="", y="",fill="");
-  
-  print(box);
   mbSetObj$analSet$pie<-piedataimg;
   mbSetObj$analSet$pie.taxalvl<-taxalvl;
-  dev.off();
   
-  return(.set.mbSetObj(mbSetObj))
+  if(interactive){
+    fig <- plot_ly(piedataimg, labels = ~variable, values = ~value, type = 'pie', 
+                   textinfo = 'label+percent', insidetextorientation = 'radial', width=1000,
+                   height=800) %>%
+      layout(title = '',
+             xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+             yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+    
+    .set.mbSetObj(mbSetObj)
+    return(fig);
+  }else{
+    box <- ggplot(piedataimg, aes(x="", y = value, fill=reorder(variable,-value))) +
+      geom_bar(width = 1, stat = "identity") + theme_bw() +
+      coord_polar(theta = "y",direction=-1,start = 4.71239) + scale_fill_manual(values=c(x.cols))+
+      geom_text(aes(x=1.6,label = scales::percent(round(value,2))), check_overlap = T,size=3,position = position_stack(vjust = 0.5),color="grey48") +
+      theme(legend.position="right",axis.text = element_blank(),axis.ticks = element_blank(),panel.grid  = element_blank(), plot.title = element_text(hjust=0.5, face="bold"),legend.text=element_text(color="grey48")) +
+      labs(x="", y="",fill="");
+    Cairo::Cairo(file=pieName, width=630, height=500, type=format, bg="white", dpi=dpi);
+    print(box);
+    dev.off();
+    return(.set.mbSetObj(mbSetObj))
+  }
+  
 }
 
 #'Function to create pie-chart plot.
