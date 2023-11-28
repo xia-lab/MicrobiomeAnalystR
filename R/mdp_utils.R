@@ -1539,7 +1539,7 @@ PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName, metadata,
 PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
                                     imgOpt, feat_cnt, toptaxa, abunTopTaxaOpt, 
                                     appendnm, format="png", dpi=72){
-  
+  save.image("taxsample.RData")
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
@@ -1707,10 +1707,12 @@ PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
   }
   
   #sorting by descending
+  rdaName = paste(barplotName, ".rda", sep="");
   jsonName = paste(barplotName, ".json", sep="")
   barplotName = paste(barplotName, ".",format, sep="");
   mbSetObj$imgSet$stack<-barplotName;
-  
+  mbSetObj$imgSet$stackRda <-rdaName;
+  mbSetObj$imgSet$stackType <- "sample";
   
   Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
   box <- ggplot(data, aes(x=reorder(variable,value),y=value))+geom_bar(stat="identity",width=0.6,fill="steelblue")+theme_bw()+
@@ -1721,7 +1723,7 @@ PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
   print(box);
   dev.off();
 
-  save(box,file="plotly.rda");
+  save(box,file=rdaName);
 
   mbSetObj$analSet$stack<-data;
   mbSetObj$analSet$stack.taxalvl<-taxalvl;
@@ -2435,9 +2437,12 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
   }
   
   jsonName = paste(barplotName, ".json", sep="");
+  rdaName = paste(barplotName, ".rda", sep="");
   barplotName = paste(barplotName, ".",format, sep="");
   mbSetObj$imgSet$stack <- barplotName;
-  
+  mbSetObj$imgSet$stackRda <-rdaName;
+  mbSetObj$imgSet$stackType <- "area";
+
   Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
   
   box <- ggplot(data,aes(x=step,y=value)) + theme_bw() +
@@ -2479,7 +2484,7 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
   print(box);
   dev.off();
   # for plotly
-  save(box,file="plotly.rda");
+  save(box,file=rdaName);
   
   mbSetObj$analSet$stack<-data;
   mbSetObj$analSet$stack.taxalvl<-taxalvl;
@@ -2530,7 +2535,7 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
 PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, imgOpt, 
                               feat_cnt, colpalopt, calcmeth, toptaxa, abunTopTaxaOpt, 
                               appendnm, format="png", dpi=72, interactive = FALSE){
-
+  save.image("tax.RData");
   load_reshape();
   load_ggplot();
   load_viridis();
@@ -2718,12 +2723,14 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
     x.colors <- rep(custom_col42,length.out=x);
   }
   
-  jsonName = paste(barplotName,".json", sep="")
+  jsonName = paste(barplotName,".json", sep="");
+  rdaName = paste(barplotName,".rda", sep="");
   barplotName = paste(barplotName, ".",format, sep="");
   
   mbSetObj$imgSet$stack <- barplotName;
-  
-  Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
+  mbSetObj$imgSet$stackRda <-rdaName;
+  mbSetObj$imgSet$stackType <- "default";
+
   
   if(length(unique(data$sample)) <= 10){
     guide_num = 3
@@ -2787,17 +2794,14 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
     box <- box + theme(strip.text.x = element_blank())
   }
   
-  print(box);
-  dev.off();
-
-  save(box,file="plotly.rda");
+  save(box,file=rdaName);
 
   mbSetObj$analSet$stack <- data;
   mbSetObj$analSet$stack.taxalvl <- taxalvl;
   mbSetObj$analSet$plot <- "Stacked Bar";
   
-  return(.set.mbSetObj(mbSetObj));
-}
+    return(.set.mbSetObj(mbSetObj));
+  }
 
 
 #'Function to perform categorical comparison.
@@ -2947,6 +2951,7 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pai
 PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, facet2, imgOpt,
                                      feat_cnt, colpalopt, calcmeth, toptaxa,abunTopTaxaOpt, 
                                      appendnm, format="png", dpi=80, interactive = FALSE){
+  save.image("taxgrp.RData")
   load_phyloseq();
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -3165,10 +3170,13 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
     guide_num = 5
   }
 
+  rdaName = paste(barplotName, ".rda", sep="");
   jsonName = paste(barplotName, ".json", sep="");
   barplotName = paste(barplotName, ".",format, sep="");
   mbSetObj$imgSet$stack<-barplotName;
-  
+  mbSetObj$imgSet$stackRda <-rdaName;
+  mbSetObj$imgSet$stackType <- "group";
+
   stackdata <<- data
   Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
   box <- ggplot(data,aes(x = step, y = value, fill = variable))+
@@ -3221,7 +3229,8 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
   if(mbSetObj$module.type == "meta"){
       box <- box + facet_grid(variable2 ~ . , scales = "free", space = "free");
   }
-  save(box,file="plotly.rda");
+
+  save(box,file=rdaName);
   print(box+guides(fill=guide_legend(ncol=3)));
   dev.off();
   
@@ -4229,4 +4238,19 @@ generateColorArr <- function(grp.num, filenm=NULL) {
     sink();
     return(filenm);
   }
+}
+
+PlotlyTaxaAbundance <- function(rdaName, type){
+load(rdaName);
+p <- plotly::ggplotly(box, width=1000, height=800);
+
+if(type=="area"){
+   narm <- p[["x"]][["data"]]
+   for(i in 1:length(narm)){
+      narm[[i]]$y[is.na(narm[[i]]$y)]=0;
+   }
+   p[["x"]][["data"]] <- narm
+}
+
+return(p);
 }
