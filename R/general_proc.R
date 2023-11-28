@@ -1018,7 +1018,6 @@ PlotRareCurve <- function(mbSetObj, graphName, variable){
 #'License: GNU GPL (>= 2)
 #'@export
 PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataName="", interactive=F){
-  save.image("lib.RData");
   load_phyloseq();
   mbSetObj <- .get.mbSetObj(mbSetObj)
   library(ggplot2)
@@ -1033,7 +1032,7 @@ PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataN
   }
   
   module.type <- mbSetObj$module.type
-  
+  colLegendNm="";
   if(all(c(mbSetObj$module.type == "meta", !ind))){
     sums.list <- list()
     datanm.list <- list()
@@ -1049,6 +1048,8 @@ PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataN
     }
     smpl.sums <- unlist(sums.list);
     col.vec <- unlist(datanm.list);
+    colLegendNm = "Dataset";
+
   } else {
     data.proc <- readDataQs("data.proc", module.type, dataName)
     data_bef <- data.matrix(data.proc)
@@ -1056,6 +1057,8 @@ PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataN
     names(smpl.sums) <- colnames(data_bef)
     smpl.sums <- sort(smpl.sums)
     col.vec <- as.vector(mbSetObj$dataSet$sample_data[,1]);
+    colLegendNm = "Group";
+
   }
 
   # Create a data frame for ggplot
@@ -1072,10 +1075,11 @@ PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataN
   # Plotting with ggplot2
   imgName <- paste0(origImgName, ".", format)
   g <- ggplot(library_size_data, aes(x = Sample, y = LibrarySize)) +
-    geom_point(color = "forestgreen") +
+    geom_point(aes(color = library_size_data$group)) +
     geom_hline(yintercept = mean(library_size_data$LibrarySize), color = "blue", linetype = "dashed") +
-    labs(x = "Sample", y = "Read Counts") +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+    labs(x = "Sample", y = "Read Counts", color="") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1),
+          legend.text = element_text(size = 14), legend.title = element_text(size = 14))
   
   if(imgName != ""){
   Cairo::Cairo(file=imgName, width=800, height=600, type=format, bg="white",dpi=dpi);

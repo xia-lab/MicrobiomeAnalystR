@@ -1552,7 +1552,6 @@ PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName, metadata,
 PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
                                     imgOpt, feat_cnt, toptaxa, abunTopTaxaOpt, 
                                     appendnm, format="png", dpi=72){
-  save.image("taxsample.RData")
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
@@ -2548,7 +2547,6 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
 PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, imgOpt, 
                               feat_cnt, colpalopt, calcmeth, toptaxa, abunTopTaxaOpt, 
                               appendnm, format="png", dpi=72, interactive = FALSE){
-  save.image("tax.RData");
   load_reshape();
   load_ggplot();
   load_viridis();
@@ -2964,7 +2962,6 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pai
 PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, facet2, imgOpt,
                                      feat_cnt, colpalopt, calcmeth, toptaxa,abunTopTaxaOpt, 
                                      appendnm, format="png", dpi=80, interactive = FALSE){
-  save.image("taxgrp.RData")
   load_phyloseq();
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
