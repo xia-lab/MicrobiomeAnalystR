@@ -1318,6 +1318,7 @@ SavePiechartImg <- function(mbSetObj, taxalvl, pieName="", format="png", dpi=72,
   set.seed(280);
   
   pieName = paste(pieName,".", format, sep="");
+  orig.piedata <- piedata;
   piedata <- transform(transform(piedata, value=value/sum(value)));
   
   #rownames are still arranged by decending order
@@ -1333,9 +1334,9 @@ SavePiechartImg <- function(mbSetObj, taxalvl, pieName="", format="png", dpi=72,
   
   mbSetObj$analSet$pie<-piedataimg;
   mbSetObj$analSet$pie.taxalvl<-taxalvl;
-  
+  piedataimg$rawValue <- orig.piedata$value
   if(interactive){
-    fig <- plot_ly(piedataimg, labels = ~variable, values = ~value, type = 'pie', 
+    fig <- plot_ly(piedataimg, labels = ~variable, values = ~rawValue, type = 'pie', 
                    textinfo = 'label+percent', insidetextorientation = 'radial', width=1000,
                    height=800) %>%
       layout(title = '',
