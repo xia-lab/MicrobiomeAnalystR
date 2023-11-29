@@ -1308,16 +1308,17 @@ UpdatePieData<-function(mbSetObj, lowtaxa){
 #'format of the plot. By default it is set to "png".
 #'@param dpi Numeric, input the dots per inch. By default
 #'it is set to 72.
+#'@param interactive boolean, if true, return plotly else save png using Cairo
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-SavePiechartImg <- function(mbSetObj, taxalvl, pieName, format="png", dpi=72) {
-  
+SavePiechartImg <- function(mbSetObj, taxalvl, pieName="", format="png", dpi=72, interactive=F) {
   mbSetObj <- .get.mbSetObj(mbSetObj);
   set.seed(280);
   
   pieName = paste(pieName,".", format, sep="");
+  orig.piedata <- piedata;
   piedata <- transform(transform(piedata, value=value/sum(value)));
   
   #rownames are still arranged by decending order
@@ -1328,22 +1329,35 @@ SavePiechartImg <- function(mbSetObj, taxalvl, pieName, format="png", dpi=72) {
   x.cols <- pie.cols;
   
   # java color code to R color code
-  x.cols <- paste("#",x.cols, sep="");
-  Cairo::Cairo(file=pieName, width=630, height=500, type=format, bg="white", dpi=dpi);
+  x.cols <- paste("#",x.cols, sep="");  
+
   
-  box <- ggplot(piedataimg, aes(x="", y = value, fill=reorder(variable,-value))) +
-    geom_bar(width = 1, stat = "identity") + theme_bw() +
-    coord_polar(theta = "y",direction=-1,start = 4.71239) + scale_fill_manual(values=c(x.cols))+
-    geom_text(aes(x=1.6,label = scales::percent(round(value,2))), check_overlap = T,size=3,position = position_stack(vjust = 0.5),color="grey48") +
-    theme(legend.position="right",axis.text = element_blank(),axis.ticks = element_blank(),panel.grid  = element_blank(), plot.title = element_text(hjust=0.5, face="bold"),legend.text=element_text(color="grey48")) +
-    labs(x="", y="",fill="");
-  
-  print(box);
   mbSetObj$analSet$pie<-piedataimg;
   mbSetObj$analSet$pie.taxalvl<-taxalvl;
-  dev.off();
+  piedataimg$rawValue <- orig.piedata$value
+  if(interactive){
+    fig <- plot_ly(piedataimg, labels = ~variable, values = ~rawValue, type = 'pie', 
+                   textinfo = 'label+percent', insidetextorientation = 'radial', width=1000,
+                   height=800) %>%
+      layout(title = '',
+             xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+             yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+    
+    .set.mbSetObj(mbSetObj)
+    return(fig);
+  }else{
+    box <- ggplot(piedataimg, aes(x="", y = value, fill=reorder(variable,-value))) +
+      geom_bar(width = 1, stat = "identity") + theme_bw() +
+      coord_polar(theta = "y",direction=-1,start = 4.71239) + scale_fill_manual(values=c(x.cols))+
+      geom_text(aes(x=1.6,label = scales::percent(round(value,2))), check_overlap = T,size=3,position = position_stack(vjust = 0.5),color="grey48") +
+      theme(legend.position="right",axis.text = element_blank(),axis.ticks = element_blank(),panel.grid  = element_blank(), plot.title = element_text(hjust=0.5, face="bold"),legend.text=element_text(color="grey48")) +
+      labs(x="", y="",fill="");
+    Cairo::Cairo(file=pieName, width=630, height=500, type=format, bg="white", dpi=dpi);
+    print(box);
+    dev.off();
+    return(.set.mbSetObj(mbSetObj))
+  }
   
-  return(.set.mbSetObj(mbSetObj))
 }
 
 #'Function to create pie-chart plot.
@@ -1539,7 +1553,6 @@ PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName, metadata,
 PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
                                     imgOpt, feat_cnt, toptaxa, abunTopTaxaOpt, 
                                     appendnm, format="png", dpi=72){
-  
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(.on.public.web){
@@ -1707,10 +1720,12 @@ PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
   }
   
   #sorting by descending
+  rdaName = paste(barplotName, ".rda", sep="");
   jsonName = paste(barplotName, ".json", sep="")
   barplotName = paste(barplotName, ".",format, sep="");
   mbSetObj$imgSet$stack<-barplotName;
-  
+  mbSetObj$imgSet$stackRda <-rdaName;
+  mbSetObj$imgSet$stackType <- "sample";
   
   Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
   box <- ggplot(data, aes(x=reorder(variable,value),y=value))+geom_bar(stat="identity",width=0.6,fill="steelblue")+theme_bw()+
@@ -1721,7 +1736,7 @@ PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
   print(box);
   dev.off();
 
-  save(box,file="plotly.rda");
+  save(box,file=rdaName);
 
   mbSetObj$analSet$stack<-data;
   mbSetObj$analSet$stack.taxalvl<-taxalvl;
@@ -2435,9 +2450,12 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
   }
   
   jsonName = paste(barplotName, ".json", sep="");
+  rdaName = paste(barplotName, ".rda", sep="");
   barplotName = paste(barplotName, ".",format, sep="");
   mbSetObj$imgSet$stack <- barplotName;
-  
+  mbSetObj$imgSet$stackRda <-rdaName;
+  mbSetObj$imgSet$stackType <- "area";
+
   Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
   
   box <- ggplot(data,aes(x=step,y=value)) + theme_bw() +
@@ -2479,7 +2497,7 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
   print(box);
   dev.off();
   # for plotly
-  save(box,file="plotly.rda");
+  save(box,file=rdaName);
   
   mbSetObj$analSet$stack<-data;
   mbSetObj$analSet$stack.taxalvl<-taxalvl;
@@ -2530,7 +2548,6 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
 PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, imgOpt, 
                               feat_cnt, colpalopt, calcmeth, toptaxa, abunTopTaxaOpt, 
                               appendnm, format="png", dpi=72, interactive = FALSE){
-
   load_reshape();
   load_ggplot();
   load_viridis();
@@ -2718,12 +2735,14 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
     x.colors <- rep(custom_col42,length.out=x);
   }
   
-  jsonName = paste(barplotName,".json", sep="")
+  jsonName = paste(barplotName,".json", sep="");
+  rdaName = paste(barplotName,".rda", sep="");
   barplotName = paste(barplotName, ".",format, sep="");
   
   mbSetObj$imgSet$stack <- barplotName;
-  
-  Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
+  mbSetObj$imgSet$stackRda <-rdaName;
+  mbSetObj$imgSet$stackType <- "default";
+
   
   if(length(unique(data$sample)) <= 10){
     guide_num = 3
@@ -2787,17 +2806,14 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
     box <- box + theme(strip.text.x = element_blank())
   }
   
-  print(box);
-  dev.off();
-
-  save(box,file="plotly.rda");
+  save(box,file=rdaName);
 
   mbSetObj$analSet$stack <- data;
   mbSetObj$analSet$stack.taxalvl <- taxalvl;
   mbSetObj$analSet$plot <- "Stacked Bar";
   
-  return(.set.mbSetObj(mbSetObj));
-}
+    return(.set.mbSetObj(mbSetObj));
+  }
 
 
 #'Function to perform categorical comparison.
@@ -3165,10 +3181,13 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
     guide_num = 5
   }
 
+  rdaName = paste(barplotName, ".rda", sep="");
   jsonName = paste(barplotName, ".json", sep="");
   barplotName = paste(barplotName, ".",format, sep="");
   mbSetObj$imgSet$stack<-barplotName;
-  
+  mbSetObj$imgSet$stackRda <-rdaName;
+  mbSetObj$imgSet$stackType <- "group";
+
   stackdata <<- data
   Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
   box <- ggplot(data,aes(x = step, y = value, fill = variable))+
@@ -3221,7 +3240,8 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
   if(mbSetObj$module.type == "meta"){
       box <- box + facet_grid(variable2 ~ . , scales = "free", space = "free");
   }
-  save(box,file="plotly.rda");
+
+  save(box,file=rdaName);
   print(box+guides(fill=guide_legend(ncol=3)));
   dev.off();
   
@@ -4229,4 +4249,19 @@ generateColorArr <- function(grp.num, filenm=NULL) {
     sink();
     return(filenm);
   }
+}
+
+PlotlyTaxaAbundance <- function(rdaName, type){
+load(rdaName);
+p <- plotly::ggplotly(box, width=1000, height=800);
+
+if(type=="area"){
+   narm <- p[["x"]][["data"]]
+   for(i in 1:length(narm)){
+      narm[[i]]$y[is.na(narm[[i]]$y)]=0;
+   }
+   p[["x"]][["data"]] <- narm
+}
+
+return(p);
 }
