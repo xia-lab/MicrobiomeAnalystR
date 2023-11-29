@@ -311,7 +311,15 @@ CompareMic <- function(mbSetObj, taxalvl,initDE=1,
     adj.bool = F;
   } else {
     if (length(adj.vec) > 0) {
-      adj.bool = T;
+        if(length(adj.vec)==1){
+            if(adj.vec == ""){
+                adj.bool = F;
+            } else {
+                adj.bool = T;
+            }
+        } else {
+           adj.bool = T;
+        }      
     } else {
       adj.bool = F;
     }
@@ -464,6 +472,11 @@ performLimma <-function(data,sample_data,sample_type,analysisVar){
     if(length(adj.vec) > 0){
       adj.bool = T;
       adj.vars <- adj.vec;
+      if(length(adj.vec) == 1){
+        if(adj.vec == ""){
+            adj.bool = F;
+        }
+      }
     }else{
       adj.bool = F;
     }
