@@ -1094,3 +1094,9 @@ SetKeggProjectionType <- function(mbSetObj=NA, type){
     mbSetObj$paramSet$koProj.type <- type;
     return(.set.mbSetObj(mbSetObj));
 }
+
+SetKEGGNetVisOpt <- function(mbSetObj, nm){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  mbSetObj$analSet$keggnet$background <- nm;
+  return(.set.mbSetObj(mbSetObj));
+}
