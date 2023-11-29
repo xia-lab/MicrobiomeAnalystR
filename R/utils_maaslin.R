@@ -32,6 +32,10 @@
   thresh <- as.numeric(thresh);
   adj.vars <- adj.vec;
   
+  if(!adj.bool){
+    adj.vec <- "NA"; #for report purposes
+  }
+
   if (mbSetObj$module.type=="sdp"){
     taxrank<-"OTU";
     if (is.norm == "false"){
@@ -117,6 +121,18 @@ if(model =="CPLM"){
     norm.method = "NONE"
     trans.method = "NONE"
 }
+
+  #record params for report
+  mbSetObj$paramSet$cov <- list(
+    primaryMeta = analysis.var,
+    covariates = adj.vec,
+    block = block,
+    taxrank = taxrank,
+    model = model,
+    comparison = comp,
+    reference = ref,
+    p.lvl = thresh
+  )
  
 ###set adjust paprameter
    if((!adj.bool) & (block == "NA")){
@@ -950,9 +966,65 @@ PostProcessMaaslin <- function(mbSetObj,analysis.var,comp=NULL, thresh = 0.05,ta
     mbSetObj$analSet$cov.mat <- both.mat; 
     mbSetObj$analSet$multiboxdata <- box_data;
     mbSetObj$analSet$sig.count <- sig.count;
-    mbSetObj$analSet$resTable <- res;
+    mbSetObj$analSet$cov <- list();
+    mbSetObj$analSet$cov$resTable <- mbSetObj$analSet$resTable <- res;
     mbSetObj$analSet$maas.resnoadj <- res.noadj;
 
     return(.set.mbSetObj(mbSetObj))
 }
 
+
+PlotCovariateMap <- function(mbSetObj, theme="default", imgName="NA", format="png", dpi=72, interactive=F){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  both.mat <- mbSetObj$analSet$cov.mat
+  both.mat <- both.mat[order(-both.mat[,"pval.adj"]),]
+  logp_val <- -log10(mbSetObj$paramSet$cov$p.lvl)
+  topFeature <- 5;
+  if(nrow(both.mat) < topFeature){
+    topFeature <- nrow(both.mat);
+  }
+  
+  mbSetObj$imgSet$covAdj <- imgName;
+  
+  width <- 8;
+  height <- 8.18;
+  
+  library(plotly)
+  threshold <- logp_val               
+  
+  both.mat$category <- with(both.mat, case_when(
+    pval.no > threshold & pval.adj > threshold ~ "Significant in both",
+    pval.no > threshold & pval.adj <= threshold ~ "Significant in pval.no only",
+    pval.adj > threshold & pval.no <= threshold ~ "Significant in pval.adj only",
+    TRUE ~ "Non-significant"
+  ))
+  
+  # Define a list or data frame mapping categories to properties
+  category_properties <- data.frame(
+    category = c("Significant in both", "Significant in pval.no only", 
+                 "Significant in pval.adj only", "Non-significant"),
+    color = c('#6699CC', '#94C973', '#E2808A', 'grey'),
+    name = c("Significant", "Non-Sig. after adjustment", 
+             "Sig. after adjustment", "Non-Significant")
+  )
+  
+  p <- ggplot(both.mat, aes(x = pval.no, y = pval.adj, color = category, text = paste("Feature:", Row.names, 
+                                                                                               "<br>Adjusted Pval:", signif(10^(-pval.adj), 4), 
+                                                                                               "<br>Non-adjusted Pval:", signif(10^(-pval.no), 4)))) +
+    geom_point(alpha = 0.5) +
+    scale_color_manual(values = setNames(category_properties$color, category_properties$category), name="") +
+    labs(x = "-log10(P-value): no covariate adjustment", y = "-log10(P-value): adjusted") +
+    theme_minimal() +
+    theme(legend.title = element_blank())
+  
+  if(interactive){
+    library(plotly);
+    ggp_build <- layout(ggplotly(p,width = 800, height = 600, tooltip = c("text")), autosize = FALSE, margin = mbSetObj$imgSet$margin.config)
+    return(ggp_build);
+  }else{
+    Cairo::Cairo(file = imgName, unit="in", dpi=dpi, width=width, height=height, type=format);    
+    print(p)
+    dev.off()
+    return(.set.mbSetObj(mbSetObj));
+  }
+}

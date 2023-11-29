@@ -1105,7 +1105,6 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, f
       # create formula based on user selection
       variable <- dat.in$variable;
       my.formula <- as.formula(paste("~", variable));
-      
       #converting from phyloslim object to deseq
       library(phyloseq);
       library(DESeq2);
