@@ -1080,20 +1080,20 @@ PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="defaul
 #'@export
 #'@import DESeq2
 
-PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, fc.thresh=0){
+PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, fc.thresh=0, comp1=1, comp2=2){
   if(opts=="DESeq2"){
-    .prepare.deseq(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, fc.thresh);
+    .prepare.deseq(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, fc.thresh, comp1, comp2);
     .perform.computing();
     res = .save.deseq.res();
   }else{
-    data <- .prepare_rnaseq(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, fc.thresh)
-    res <- .perform_edger(variable, data, p.lvl, fc.thresh)
+    data <- .prepare_rnaseq(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, fc.thresh, comp1, comp2)
+    res <- .perform_edger(variable, data, p.lvl, fc.thresh, comp1, comp2)
   }
   return(1)
 }
 
-.prepare.deseq<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank,fc.thresh =0){
-  data <- .prepare_rnaseq(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank,fc.thresh)
+.prepare.deseq<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank,fc.thresh=0, comp1=1, comp2=2){
+  data <- .prepare_rnaseq(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank,fc.thresh, comp1, comp2)
   mbSetObj = .get.mbSetObj(mbSetObj);
   claslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   if(length(claslbl) > 120){
@@ -1114,7 +1114,12 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, f
       );
       diagdds <- estimateSizeFactors(diagdds, geoMeans = geoMeans);
       diagdds <- DESeq(diagdds, test="Wald", fitType="parametric");
+
+      if(comp1 %in% claslbl && comp2 %in% claslbl ){
+      res <- results(diagdds, independentFiltering = FALSE, cooksCutoff = Inf, contrast=c(variable, comp1,comp2));
+      }else{
       res <- results(diagdds, independentFiltering = FALSE, cooksCutoff = Inf);
+      }
       # make sure it is basic R, not DESeq2 obj
       resTable <- data.frame(res[,c("log2FoldChange" ,"lfcSE","pvalue","padj")],check.names=FALSE); 
       return(resTable);
@@ -1177,7 +1182,7 @@ return(1)
   return(1)
 }
 
-.prepare_rnaseq<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, fc.thresh=0){
+.prepare_rnaseq<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, fc.thresh=0, comp1=1, comp2=2){
 
   load_phyloseq();
 
@@ -1246,20 +1251,27 @@ return(1)
         method = opts,
         taxalvl = taxrank,
         p.lvl = p.lvl,
-        fc.thresh = fc.thresh
+        fc.thresh = fc.thresh,
+        comp1 = comp1,
+        comp2 = comp2
     );
   .set.mbSetObj(mbSetObj)
   return(data)
 }
 
-.perform_edger <- function(variable, data, p.lvl=0.05, fc.thresh=0) {
+.perform_edger <- function(variable, data, p.lvl=0.05, fc.thresh=0, comp1="", comp2="") {
+  save.image("edger.RData");
   mbSetObj <- .get.mbSetObj(mbSetObj)
   dat3t <- mbSetObj$analSet$rnaseq$data.rnaseq
   claslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]])
 
   # Using filtered data, RLE normalization within it
   dge <- phyloseq_to_edgeR(data, variable)
+  if(comp1 %in% claslbl && comp2 %in% claslbl ){
+  et <- edgeR::exactTest(dge, c(comp1,comp2))
+  }else{
   et <- edgeR::exactTest(dge)
+  }
   tt <- edgeR::topTags(et, n=nrow(dge$table), adjust.method="BH", sort.by="PValue")
   res <- tt@.Data[[1]]
   sigHits <-res$FDR < p.lvl & abs(res$logFC) > fc.thresh;
