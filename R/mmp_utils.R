@@ -3290,7 +3290,7 @@ PlotDiagnostic <- function(imgName, dpi=72, format="png",alg, taxrank="Feature")
   if(alg == "procrustes"){
     procrustes.res <- qs::qread("procrustes.res.qs")
     if(length(diablo.res$dim.res) == 1){
-    res <- procrustes.res$dim.res[[1)]]
+    res <- procrustes.res$dim.res[[1]]
     }else{
     res <- procrustes.res$dim.res[[taxrank)]]
     }
