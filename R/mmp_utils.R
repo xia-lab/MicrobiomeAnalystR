@@ -3289,7 +3289,7 @@ PlotDiagnostic <- function(imgName, dpi=72, format="png",alg, taxrank="Feature")
   Cairo(file=imgNm, width=10, height=h, type=format,unit="in", bg="white", dpi=dpi);
   if(alg == "procrustes"){
     procrustes.res <- qs::qread("procrustes.res.qs")
-    if(length(diablo.res$dim.res) == 1){
+    if(length(procrustes.res$dim.res) == 1){
     res <- procrustes.res$dim.res[[1]]
     }else{
     res <- procrustes.res$dim.res[[taxrank]]
@@ -3337,7 +3337,7 @@ PlotDiagnostic <- function(imgName, dpi=72, format="png",alg, taxrank="Feature")
 
 
 PlotDiagnosticPca <- function(imgNm, dpi=72, format="png",type="diablo", taxrank="Feature"){
-  
+  save.image("diag.RData");
   mbSetObj <- .get.mbSetObj(mbSetObj);
   require("Cairo");
   library(ggplot2);
@@ -3380,8 +3380,8 @@ PlotDiagnosticPca <- function(imgNm, dpi=72, format="png",type="diablo", taxrank
     library(ggplot2)
     library(grid)
     procrustes.res <- qs::qread("procrustes.res.qs")
-    if(length(diablo.res$dim.res) == 1){
-    pro.test <- procrustes.res$dim.res[[length(procrustes.res$dim.res)]][[1]]
+    if(length(procrustes.res$dim.res) == 1){
+    pro.test <- procrustes.res$dim.res[[1]][[1]]
     }else{
     pro.test <- procrustes.res$dim.res[[taxrank]][[1]]
     }
