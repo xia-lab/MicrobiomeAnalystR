@@ -3292,7 +3292,7 @@ PlotDiagnostic <- function(imgName, dpi=72, format="png",alg, taxrank="Feature")
     if(length(diablo.res$dim.res) == 1){
     res <- procrustes.res$dim.res[[1]]
     }else{
-    res <- procrustes.res$dim.res[[taxrank)]]
+    res <- procrustes.res$dim.res[[taxrank]]
     }
     error = residuals(res[[1]])
     require("ggrepel")
