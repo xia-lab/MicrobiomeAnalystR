@@ -2379,12 +2379,12 @@ DoDimensionReductionIntegrative <- function(mbSetObj, reductionOpt, method="glob
   return(my.reduce.dimension(mbSetObj, reductionOpt, method,dimn, analysisVar,diabloPar));
 }
 
-doScatterJson <- function(filenm,analysisVar){
-  if(!exists("my.json.scatter")){ # public web on same user dir
+doScatterJsonPair <- function(filenm,analysisVar,taxrank){
+  if(!exists("my.json.scatter.pair")){ # public web on same user dir
     .load.scripts.on.demand("utils_scatter_json.Rc");    
   }
   
-  return(my.json.scatter(filenm,current.proc$meta_para$analysis.var));
+  return(my.json.scatter.pair(filenm,current.proc$meta_para$analysis.var, taxrank));
 }
 
 DoStatComparisonVis <- function(filenm, alg, meta, selected, meta.vec, omicstype, taxalvl,nonpar=FALSE){
