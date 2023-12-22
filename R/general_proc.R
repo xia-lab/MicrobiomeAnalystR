@@ -28,7 +28,6 @@ SanityCheckData <- function(mbSetObj, filetype, disableFilter = FALSE){
   dataName <- mbSetObj$dataSet$name;
   module.type <- mbSetObj$module.type;
   feat.sums <- apply(mbSetObj$dataSet$data.orig, 1, function(x){sum(x>0, na.rm=T)});
-  
   if(disableFilter){
     data.proc <- mbSetObj$dataSet$data.orig
   }else{
@@ -52,6 +51,19 @@ SanityCheckData <- function(mbSetObj, filetype, disableFilter = FALSE){
     AddErrMsg("All features are found to be constant and have been removed from data. No data left after such processing.");
     return(0);
   }
+
+  ##### Excluding samples that contain only zero values
+  
+  smp.sums <- apply(mbSetObj$dataSet$data.orig, 2, function(x){sum(x>0, na.rm=T)});
+
+if(!all(smp.sums)>0 ){
+  kp.inx <- smp.sums > 0;  
+  if(length(which(kp.inx=="TRUE"))==0){
+    AddErrMsg("Every sample exclusively comprises zero values!");
+    return(0);
+  }
+  data.proc <- mbSetObj$dataSet$data.orig[, kp.inx]; 
+}
   
   saveDataQs(data.proc, "data.proc.orig", module.type, dataName);
   saveDataQs(data.proc, "data.prefilt", module.type, dataName);
@@ -1134,7 +1146,7 @@ PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataN
   
   # Map each group to a color
   unique_groups <- unique(library_size_data$group)
-  colors <- RColorBrewer::brewer.pal(length(unique_groups), "Set1")
+  colors <- RColorBrewer::brewer.pal(length(unique_groups), "Paired")
   color_mapping <- setNames(colors, unique_groups)
   x_values <- seq_along(library_size_data$Sample);
   library_size_data$x_values <- x_values 
