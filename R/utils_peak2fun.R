@@ -31,8 +31,8 @@ performPeakEnrich <- function(lib){
   } else {
      .init.Permutations(permNum)
   }
-  
-  return(1);
+  mbSetObj <- .get.mbSetObj(mbSet);
+  return(mbSetObj);
 }
 
 
@@ -815,8 +815,14 @@ ComputeMummichogRTPermPvals <- function(input_ecpdlist, total_matched_ecpds, pat
   sink("network_enrichment_peak_0.json");
   cat(json.mat);
   sink();
+
+  mbSetObj <- .get.mbSetObj(mbSet);
+  mbSetObj <- recordEnrTable(mbSetObj, mbSetObj$paramSet$koProj.type, res.mat, "KEGG", "Mummichog");
+  mbSetObj <- .set.mbSetObj(mbSetObj);
+
   return(current.proc);
 }
+
 # Internal function for significant p value 
 .compute.mummichogSigPvals <- function(current.proc){
   
@@ -957,6 +963,11 @@ ComputeMummichogRTPermPvals <- function(input_ecpdlist, total_matched_ecpds, pat
   sink("network_enrichment_peak_0.json");
   cat(json.mat);
   sink();
+
+  mbSetObj <- .get.mbSetObj(mbSet);
+  mbSetObj <- recordEnrTable(mbSetObj, mbSetObj$paramSet$koProj.type, res.mat, "KEGG", "Mummichog");
+  mbSetObj <- .set.mbSetObj(mbSetObj);
+
   return(current.proc);
 }
 

@@ -330,8 +330,7 @@ PlotImpVar <- function(mbSetObj, imp.vec, xlbl, feature, color.BW=FALSE){
 #'@export
 #'@import MASS
 
-PerformUnivarTest <- function(mbSetObj, variable, p.lvl, shotgunid, taxrank, statOpt){
-
+PerformUnivarTest <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, taxrank, statOpt, fc.thresh=0){
   load_phyloseq();
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -375,7 +374,15 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, shotgunid, taxrank, sta
   resTable <- resTable[,c(2,3,1)];
   fast.write(resTable, file="univar_test_output.csv");
   
-  sigHits <- resTable$FDR < p.lvl;
+  #getting log2fc from edgeR
+  if(!is.null(mbSetObj$analSet$rnaseq$resTable.edger.all)){
+  edger_df <- mbSetObj$analSet$rnaseq$resTable.edger.all
+  resTable_logFC <- edger_df[match(rownames(resTable), rownames(edger_df)), 'log2FC']
+  resTable <- data.frame(log2FC = resTable_logFC, resTable)
+  }
+
+  sigHits <- (resTable$FDR < p.lvl & abs(resTable$log2FC) > fc.thresh);
+  resTable <- resTable[order(-sigHits, resTable$Pvalues), ]
   de.Num <- sum(sigHits);
   
   if(de.Num == 0){
@@ -447,7 +454,7 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, shotgunid, taxrank, sta
   box_data$class <- claslbl_boxplot;
   mbSetObj$analSet$boxdata <- box_data;
   fast.write(t(box_data), "uni_abund_data.csv")
-  
+
   mbSetObj$analSet$anal.type <- "tt";
   mbSetObj$analSet$var.type <- variable;
   mbSetObj$analSet$sig.count <- de.Num;
@@ -459,9 +466,13 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, shotgunid, taxrank, sta
   mbSetObj$paramSet$univar <- list(
         exp.factor = variable,
         anal.type = "t-tests",
+        method = statOpt,
         taxalvl = taxrank,
-        p.lvl = p.lvl
+        p.lvl = p.lvl,
+        fc.thresh= fc.thresh
     );
+
+
   return(.set.mbSetObj(mbSetObj));
 }
 
@@ -488,7 +499,7 @@ PerformUnivarTest <- function(mbSetObj, variable, p.lvl, shotgunid, taxrank, sta
 #'@export
 #'@import metagenomeSeq
 
-PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank, model){
+PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank, model, fc.thresh=0){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   load_metagenomeseq();
@@ -581,16 +592,6 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
   } else {
     res = x;
   }
-
-  # Sort and return #sighits return TRUE or FALSE
-  sigHits <-res$adjPvalues<=p.lvl;
-  de.Num <- length(which(sigHits));
-  
-  if(de.Num == 0){
-    current.msg <<- paste( "No significant features were identified using the given p value cutoff. Please change the cutoff limit.");
-  }else{
-    current.msg <<- paste("A total of", de.Num, "significant features were identified!")
-  }
   
   if(model=="ffm"){
     resTable <- res[,c("pvalues","adjPvalues","logFC")];
@@ -602,8 +603,23 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
     colnames(resTable) <- c("Pvalues","FDR");
   }
 
-  ord.inx <- order(resTable$Pvalues);
-  resTable <- resTable[ord.inx, , drop=FALSE];
+  #getting log2fc from edgeR
+  if(!is.null(mbSetObj$analSet$rnaseq$resTable.edger.all)){
+  edger_df <- mbSetObj$analSet$rnaseq$resTable.edger.all
+  resTable_logFC <- edger_df[match(rownames(resTable), rownames(edger_df)), 'log2FC']
+  resTable <- data.frame(log2FC = resTable_logFC, resTable)
+  }
+
+  sigHits <- (resTable$FDR < p.lvl & abs(resTable$log2FC) > fc.thresh);
+  resTable <- resTable[order(-sigHits, resTable$Pvalues), , drop=FALSE]
+  de.Num <- length(which(sigHits));
+
+  if(de.Num == 0){
+    current.msg <<- paste( "No significant features were identified using the given p value cutoff. Please change the cutoff limit.");
+  }else{
+    current.msg <<- paste("A total of", de.Num, "significant features were identified!")
+  }
+
   fast.write(resTable, file="metageno_de_output.csv");
   
   if(nrow(resTable) > 500){
@@ -635,6 +651,16 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
   mbSetObj$analSet$var.type <- variable;
   mbSetObj$analSet$metageno.taxalvl <- taxrank;
   mbSetObj$analSet$id.type <- shotgunid;
+  # record parameters
+  mbSetObj$paramSet$metagenoseq <- list(
+        exp.factor = variable,
+        anal.type = "metagseq",
+        method = model,
+        taxalvl = taxrank,
+        p.lvl = p.lvl,
+        fc.thresh = fc.thresh
+    );
+
   
   return(.set.mbSetObj(mbSetObj));
 }
@@ -1054,20 +1080,20 @@ PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="defaul
 #'@export
 #'@import DESeq2
 
-PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank){
+PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, fc.thresh=0, comp1=1, comp2=2){
   if(opts=="DESeq2"){
-    .prepare.deseq(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank);
+    .prepare.deseq(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, fc.thresh, comp1, comp2);
     .perform.computing();
     res = .save.deseq.res();
   }else{
-    data <- .prepare_rnaseq(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank)
-    res <- .perform_edger(variable, data, p.lvl)
+    data <- .prepare_rnaseq(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, fc.thresh, comp1, comp2)
+    res <- .perform_edger(variable, data, p.lvl, fc.thresh, comp1, comp2)
   }
   return(1)
 }
 
-.prepare.deseq<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank){
-  data <- .prepare_rnaseq(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank)
+.prepare.deseq<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank,fc.thresh=0, comp1=1, comp2=2){
+  data <- .prepare_rnaseq(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank,fc.thresh, comp1, comp2)
   mbSetObj = .get.mbSetObj(mbSetObj);
   claslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   if(length(claslbl) > 120){
@@ -1079,7 +1105,6 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank){
       # create formula based on user selection
       variable <- dat.in$variable;
       my.formula <- as.formula(paste("~", variable));
-      
       #converting from phyloslim object to deseq
       library(phyloseq);
       library(DESeq2);
@@ -1089,7 +1114,12 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank){
       );
       diagdds <- estimateSizeFactors(diagdds, geoMeans = geoMeans);
       diagdds <- DESeq(diagdds, test="Wald", fitType="parametric");
+
+      if(comp1 %in% claslbl && comp2 %in% claslbl ){
+      res <- results(diagdds, independentFiltering = FALSE, cooksCutoff = Inf, contrast=c(variable, comp1,comp2));
+      }else{
       res <- results(diagdds, independentFiltering = FALSE, cooksCutoff = Inf);
+      }
       # make sure it is basic R, not DESeq2 obj
       resTable <- data.frame(res[,c("log2FoldChange" ,"lfcSE","pvalue","padj")],check.names=FALSE); 
       return(resTable);
@@ -1109,9 +1139,16 @@ return(1)
   variable = dat.in$variable
   claslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]])
   p.lvl <- mbSetObj$analSet$rnaseq.plvl
+  fc.thresh <- mbSetObj$analSet$rnaseq.fcthresh
+  
   resTable <- dat.in$my.res;
-  sigHits <- which(resTable$padj < p.lvl);
-  de.Num <- length(sigHits);
+  resTable <- signif(data.matrix(resTable), digits=5);
+  colnames(resTable) <- c("log2FC","lfcSE","Pvalues","FDR");
+  mbSetObj$analSet$anal.type <- "deseq";
+  
+  resTable <- as.data.frame(resTable,check.names=FALSE);
+  sigHits <- resTable$FDR < p.lvl & abs(resTable$log2FC) > fc.thresh;
+  de.Num <- length(which(sigHits));
   if(de.Num == 0){
     current.msg <<- "No significant features were identified using the given p value cutoff.";
   }else{
@@ -1119,12 +1156,7 @@ return(1)
   }
   print(current.msg);
   
-  resTable <- signif(data.matrix(resTable), digits=5);
-  colnames(resTable) <- c("log2FC","lfcSE","Pvalues","FDR");
-  mbSetObj$analSet$anal.type <- "deseq";
-  
-  resTable <- as.data.frame(resTable,check.names=FALSE);
-  ord.inx <- order(resTable$Pvalues);
+  ord.inx <- order(-sigHits, resTable$Pvalues);
   resTable <- resTable[ord.inx, , drop=FALSE];
   fast.write(resTable, file="rnaseq_de.csv");
   
@@ -1135,7 +1167,7 @@ return(1)
   mbSetObj$analSet$rnaseq$resTable <- mbSetObj$analSet$resTable <- as.data.frame(resTable,check.names=FALSE);
   
   #only getting the names of DE features
-  diff_ft <<- rownames(resTable)[1:de.Num];
+  diff_ft <<- rownames(resTable)[sigHits]
   
   #individual boxplot for features
   sigfeat <- rownames(resTable);
@@ -1150,8 +1182,7 @@ return(1)
   return(1)
 }
 
-
-.prepare_rnaseq<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank){
+.prepare_rnaseq<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, fc.thresh=0, comp1=1, comp2=2){
 
   load_phyloseq();
 
@@ -1211,60 +1242,82 @@ return(1)
   mbSetObj$analSet$rnaseq.taxalvl <- taxrank;
   mbSetObj$analSet$rnaseq.meth <- opts;
   mbSetObj$analSet$rnaseq.plvl <- p.lvl
+  mbSetObj$analSet$rnaseq.fcthresh <- fc.thresh
+
+  # record parameters
+  mbSetObj$paramSet$rnaseq <- list(
+        exp.factor = variable,
+        anal.type = "rnaseq",
+        method = opts,
+        taxalvl = taxrank,
+        p.lvl = p.lvl,
+        fc.thresh = fc.thresh,
+        comp1 = comp1,
+        comp2 = comp2
+    );
   .set.mbSetObj(mbSetObj)
   return(data)
 }
 
-.perform_edger<-function(variable,data, p.lvl){
+.perform_edger <- function(variable, data, p.lvl=0.05, fc.thresh=0, comp1="", comp2="") {
+  save.image("edger.RData");
   mbSetObj <- .get.mbSetObj(mbSetObj)
-  dat3t<- mbSetObj$analSet$rnaseq$data.rnaseq
-  claslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
-  
-  #using by filtered data ,RLE normalization within it.
-  dge <- phyloseq_to_edgeR(data, variable);
-  et = edgeR::exactTest(dge);
-  tt = edgeR::topTags(et, n=nrow(dge$table), adjust.method="BH", sort.by="PValue");
-  res = tt@.Data[[1]];
-  de.Num <- sum(res$FDR < p.lvl);
-  
-  if(de.Num == 0){
-    current.msg <<- "No significant features were identified using the given p value cutoff.";
+  dat3t <- mbSetObj$analSet$rnaseq$data.rnaseq
+  claslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]])
+
+  # Using filtered data, RLE normalization within it
+  dge <- phyloseq_to_edgeR(data, variable)
+  if(comp1 %in% claslbl && comp2 %in% claslbl ){
+  et <- edgeR::exactTest(dge, c(comp1,comp2))
   }else{
-    current.msg <<- paste("A total of", de.Num, "significant features were identified!");
+  et <- edgeR::exactTest(dge)
   }
-  
-  resTable <- res[,c("logFC","logCPM","PValue","FDR")];
-  resTable <- signif(data.matrix(resTable), digits = 5);
-  colnames(resTable) <- c("log2FC","logCPM","Pvalues","FDR");
-  mbSetObj$analSet$anal.type <- "edgr";
-  
-  resTable <- as.data.frame(resTable,check.names=FALSE);
-  ord.inx <- order(resTable$Pvalues);
-  resTable <- resTable[ord.inx, , drop=FALSE];
-  fast.write(resTable, file="rnaseq_de.csv");
-  
-  if(nrow(resTable) > 500){
-    resTable<-resTable[1:500, ];
+  tt <- edgeR::topTags(et, n=nrow(dge$table), adjust.method="BH", sort.by="PValue")
+  res <- tt@.Data[[1]]
+  sigHits <-res$FDR < p.lvl & abs(res$logFC) > fc.thresh;
+  de.Num <- sum(sigHits);
+
+  if (de.Num == 0) {
+    current.msg <<- "No significant features were identified using the given p value cutoff."
+  } else {
+    current.msg <<- paste("A total of", de.Num, "significant features were identified!")
   }
-  
-  mbSetObj$analSet$rnaseq$resTable <- mbSetObj$analSet$resTable <- as.data.frame(resTable,check.names=FALSE);
-  
-  #only getting the names of DE features
-  diff_ft <<- rownames(resTable)[1:de.Num];
-  taxrank <<- taxrank;
-  
-  #individual boxplot for features
-  sigfeat <- rownames(resTable);
-  box_data <- as.data.frame(dat3t[ ,sigfeat],check.names=FALSE);
-  colnames(box_data) <- sigfeat;
-  box_data$class <- claslbl;
-  
-  mbSetObj$analSet$boxdata <- box_data;
-  mbSetObj$analSet$sig.count <- de.Num;
-  
-  tree_data <<- data;
+
+  resTable <- res[, c("logFC", "logCPM", "PValue", "FDR")]
+  resTable <- signif(data.matrix(resTable), digits = 5)
+  colnames(resTable) <- c("log2FC", "logCPM", "Pvalues", "FDR")
+  mbSetObj$analSet$anal.type <- "edgr"
+
+  resTable <- as.data.frame(resTable, check.names=FALSE)
+  ord.inx <- order(-sigHits, resTable$Pvalues);
+  resTable <- resTable[ord.inx, , drop=FALSE]
+  mbSetObj$analSet$rnaseq$resTable.edger.all <- resTable
+
+  fast.write(resTable, file="rnaseq_de.csv")
+
+  if (nrow(resTable) > 500) {
+    resTable <- resTable[1:500, ]
+  }
+
+  mbSetObj$analSet$rnaseq$resTable <- mbSetObj$analSet$resTable <- as.data.frame(resTable, check.names=FALSE)
+
+  # Only getting the names of DE features
+  diff_ft <<- rownames(resTable)[which(resTable$FDR < p.lvl & abs(resTable$log2FC) > fc.thresh)]
+  taxrank <<- taxrank  
+
+  # Individual boxplot for features
+  sigfeat <- diff_ft  # Use the DE features identified
+  box_data <- as.data.frame(dat3t[, sigfeat], check.names=FALSE)
+  colnames(box_data) <- sigfeat
+  box_data$class <- claslbl
+
+  mbSetObj$analSet$boxdata <- box_data
+  mbSetObj$analSet$sig.count <- de.Num
+
+  tree_data <<- data
   .set.mbSetObj(mbSetObj)
-  return(1);
+
+  return(1)
 }
 
 
@@ -2198,4 +2251,142 @@ GetMMPMetTable<-function(mbSetObj){
   load_xtable();
   print(xtable::xtable(mbSetObj$analSet$met.map, caption="Result from Metabolite Name Mapping"),
         tabular.environment = "longtable", caption.placement="top", size="\\scriptsize");
+}
+
+#Generate json file for plotly for comparison tests
+GenerateCompJson <- function(mbSetObj=NA, fileName, type){
+  mbSetObj <- .get.mbSetObj(mbSetObj);  
+  resList <- "";
+  if(type %in% c("tt", "nonpar")){
+    resTable <- mbSetObj$analSet$univar$resTable;
+    resTable$id <- rownames(resTable);
+    resList <- list(data=resTable, param=mbSetObj$paramSet$univar);
+  }else if(type %in% c("zigfit", "ffm")){
+    resTable <- mbSetObj$analSet$metagenoseq$resTable;
+    resTable$id <- rownames(resTable);
+    resList <- list(data=resTable, param=mbSetObj$paramSet$metagenoseq);
+
+  }else if(type %in% c("EdgeR", "DESeq2")){
+    resTable <- mbSetObj$analSet$rnaseq$resTable;
+    resTable$id <- rownames(resTable);
+    resList <- list(data=resTable, param=mbSetObj$paramSet$rnaseq);
+  }
+
+  json.obj <- rjson::toJSON(resList);
+  sink(fileName);
+  cat(json.obj);
+  sink();
+  return(1);
+}
+
+PlotlyCompRes <- function(mbSetObj = NA, type="", fileName="") {
+  library(htmlwidgets)
+  mbSetObj <- .get.mbSetObj(mbSetObj)
+  if (type %in% c("univ")) {
+    resTable <- mbSetObj$analSet$univar$resTable
+    params <- mbSetObj$paramSet$univar
+  } else if (type %in% c("metagenome")) {
+    resTable <- mbSetObj$analSet$metagenoseq$resTable
+    params <- mbSetObj$paramSet$metagenoseq
+  } else { #else if (type %in% c("rnaseq")) {
+    resTable <- mbSetObj$analSet$rnaseq$resTable
+    params <- mbSetObj$paramSet$rnaseq
+  }
+  p.lvl <- params$p.lvl
+  fc.thresh <- params$fc.thresh
+
+  resTable$id <- rownames(resTable)
+  raw_data <- resTable
+  
+  if ("log2FC" %in% names(raw_data)) {
+    p <- plot_ly(
+      data = raw_data, 
+      x = ~log2FC, 
+      y = -log10(raw_data$Pvalues), 
+      type = 'scatter',
+      mode = 'markers',
+      marker = list(
+        color = mapply(getColor, raw_data$FDR, raw_data$log2FC, p.lvl), # getColor function should be defined
+        size=mapply(getSizeForPValue, raw_data$FDR, p.lvl),
+        line = list(color = 'white', width = 0.8)
+      ),
+      text = ~paste("Feature ID: ", id, 
+                    "<br>P-value: ", format(Pvalues, scientific = TRUE),
+                    "<br>FDR: ", format(FDR, scientific = TRUE)),
+      hoverinfo = 'text',
+      label= ~id
+    )
+  layout <- list(
+    xaxis = list(title = "log2FC"),
+    yaxis = list(title = '-log10(FDR)')
+  )
+
+  } else {
+    p <- plot_ly(
+      data = raw_data, 
+      x = seq_along(raw_data$id),
+      y = ~-log10(FDR),
+      type = 'scatter',
+      mode = 'markers',
+      marker = list(
+        color = mapply(getColorForPValue, raw_data$FDR, p.lvl), # getColorForPValue function should be defined
+        size = mapply(getSizeForPValue, raw_data$FDR, p.lvl),
+        line = list(color = 'white', width = 0.8)
+      ),
+      text = ~paste("Feature ID: ", id, 
+                    "<br>P-value: ", format(Pvalues, scientific = TRUE),
+                    "<br>FDR: ", format(FDR, scientific = TRUE)),
+      hoverinfo = 'text',
+      label= ~id
+    )
+  layout <- list(
+    xaxis = list(title = "Features"),
+    yaxis = list(title = '-log10(FDR)')
+  )
+  
+  }
+  
+  p <- p %>% layout(layout);
+  p <- p %>% onRender("
+  function(el, x) {
+    el.on('plotly_click', function(data) {
+        var pointIndex = data.points[0].pointIndex;
+        console.log(data.points[0].data.label)
+        parent.window.document.getElementById('form1:selectedVarInput').value = data.points[0].data.label[pointIndex];
+        parent.window.plotFeature();
+    });
+  }
+");
+  return(p)
+}
+
+getColor <- function(pValue, log2fc, pval.thresh) {
+  pValueThreshold <- pval.thresh# Replace with the actual way to access this value in R
+  log2fcThreshold <- 0 # Example threshold for high log2fc
+  
+  if (pValue < pValueThreshold) {
+    if (log2fc > log2fcThreshold) {
+      return('red') # Interpolate red for positive log2fc
+    } else {
+      return('blue') # Interpolate blue for negative log2fc
+    }
+  } else {
+    return('grey') # Non-significant
+  }
+}
+
+getColorForPValue <- function(val, pval.thresh) {
+  if (abs(val) >= pval.thresh) {
+    return('grey') # Non-significant
+  } else {
+    return('blue') # Significant (simplified example)
+  }
+}
+
+getSizeForPValue <- function(val, pval.thresh) {
+  if (abs(val) >= pval.thresh) {
+    return(5) # Non-significant
+  } else {
+    return(10) # Significant (simplified example)
+  }
 }

@@ -258,6 +258,7 @@ mydata <- sapply(mydata[,-1,drop=F], format, trim = TRUE)
     mbSetObj$dataSet$sample_data <- my.meta
     mbSetObj$dataSet$meta_info$disc.inx <- 0;
     mbSetObj$dataSet$meta_info$cont.inx <- 0;
+    qs::qsave(mbSetObj$dataSet$sample_data, file = "meta_info.qs")
     return(0);
   }else{
     
@@ -280,7 +281,7 @@ mydata <- sapply(mydata[,-1,drop=F], format, trim = TRUE)
       # make sure the discrete data is on the left side
       mbSetObj$dataSet$sample_data <- cbind(mbSetObj$dataSet$sample_data, my.meta[,cont.inx, drop=FALSE]);
     }
-    
+    qs::qsave(mbSetObj$dataSet$sample_data, file = "meta_info.qs")
   }
   mbSetObj$dataSet$smpl.msg <- c(na.msg,na.msg1);
   return(.set.mbSetObj(mbSetObj));
@@ -457,6 +458,8 @@ GetSampleGrpNo <- function(mbSetObj, clsLbl){
 }
 
 GetTaxaNames<- function(mbSetObj, taxlvl){
+
+    require("phyloseq")
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -464,7 +467,7 @@ GetTaxaNames<- function(mbSetObj, taxlvl){
  phyloseq_objs <- readDataQs("phyloseq_objs.qs",mbSetObj$module.type,mbSetObj$dataSet$name)
   }
   
-  nm = taxa_names(phyloseq_objs$merged_obj[[taxlvl]])
+  nm <- taxa_names(phyloseq_objs$merged_obj[[taxlvl]])
   
   if(sum(is.na(nm))/length(nm) > 0.7){
       AddErrMsg("More than 70% values are missing at this level!");

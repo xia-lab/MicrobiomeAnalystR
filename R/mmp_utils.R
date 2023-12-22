@@ -311,7 +311,15 @@ CompareMic <- function(mbSetObj, taxalvl,initDE=1,
     adj.bool = F;
   } else {
     if (length(adj.vec) > 0) {
-      adj.bool = T;
+        if(length(adj.vec)==1){
+            if(adj.vec == ""){
+                adj.bool = F;
+            } else {
+                adj.bool = T;
+            }
+        } else {
+           adj.bool = T;
+        }      
     } else {
       adj.bool = F;
     }
@@ -464,6 +472,11 @@ performLimma <-function(data,sample_data,sample_type,analysisVar){
     if(length(adj.vec) > 0){
       adj.bool = T;
       adj.vars <- adj.vec;
+      if(length(adj.vec) == 1){
+        if(adj.vec == ""){
+            adj.bool = F;
+        }
+      }
     }else{
       adj.bool = F;
     }
@@ -930,6 +943,14 @@ doKeggNameMatch <- function(qvec,taxalvl){
 
 
 CreatPathwayLib <- function(contain){
+  #for LTS
+  mbSetObj <- .get.mbSetObj(mbSet);
+  if(!is.null(mbSetObj$paramSet$includeInfoFileNm)){
+    includeInfoNm <- mbSetObj$paramSet$includeInfoFileNm;
+  }else{
+    includeInfoNm <- "includeInfo";
+  }
+
   if(contain=="usrbac"){
     mtcls = mtcls
   }else if(contain=="sigbac"){
@@ -958,7 +979,7 @@ CreatPathwayLib <- function(contain){
   qs::qsave(current.lib,paste0(taxalvl,".current.lib.qs"))
   
   json.mat <- rjson::toJSON(includeInfo);
-  sink("includeInfo.json");
+  sink(paste0(includeInfoNm, ".json"));
   cat(json.mat);
   sink();
   
@@ -1623,14 +1644,16 @@ PrepareOTUQueryJson <- function(mbSetObj,taxalvl,contain="bac"){
 
 PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,contain="hsabac",enrich.type){
   mbSetObj <- .get.mbSetObj(mbSetObj);
+  print(paste("enrich.type=", enrich.type));
+  print(paste("dataType=", dataType));
+
   if(enrich.type == "hyper"){
     if(dataType=="metabolite"){
-      PerformMetListEnrichment(mbSetObj, contain,file.nm);
-      
+      mbSetObj <- PerformMetListEnrichment(mbSetObj, contain, file.nm);
     }else{
       MicrobiomeAnalystR:::LoadKEGGKO_lib(category);
       PerformKOEnrichAnalysis_List(mbSetObj, file.nm);
-      
+      mbSetObj <- .get.mbSetObj(mbSet);
     }
     
   }else if(enrich.type =="global"){
@@ -1642,11 +1665,11 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
     .perform.computing();
     
     if(dataType=="ko"){
-      res= .save.global.res();
+      mbSetObj = .save.global.res();
       taxalvl = "ko"
     }else if(dataType=="metabolite"){
       
-      res=enrich2json()
+      mbSetObj=enrich2json()
     }
     
   }else if(enrich.type =="mummichog"){
@@ -1654,12 +1677,13 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
     if(!exists("performPeakEnrich")){ # public web on same user dir
       .load.scripts.on.demand("utils_peak2fun.Rc");    
     }
-    performPeakEnrich(lib=contain)
-    
+    mbSetObj=performPeakEnrich(lib=contain);
+    mbSetObj <- .get.mbSetObj(mbSet);
   }
   if(!exists("taxalvl")){taxalvl = "ko"}
   mbSetObj$analSet$keggnet$background <- contain
   mbSetObj$analSet$keggnet$taxalvl <- taxalvl
+  print(mbSetObj$imgSet$enrTables);
   return(.set.mbSetObj(mbSetObj))
 }
 
@@ -1818,10 +1842,13 @@ enrich2json <- function(){
   sink(json.nm)
   cat(json.mat);
   sink();
-  
+
+  mbSetObj <- .get.mbSetObj(NA);
+  mbSetObj <- recordEnrTable(mbSetObj, mbSetObj$paramSet$koProj.type, resTable, "KEGG", "Global Test");
+
   # write csv
   fast.write(resTable, file=paste(file.nm, ".csv", sep=""), row.names=F);
-  return(1)
+  return(mbSetObj)
 }
 
 
@@ -2352,12 +2379,12 @@ DoDimensionReductionIntegrative <- function(mbSetObj, reductionOpt, method="glob
   return(my.reduce.dimension(mbSetObj, reductionOpt, method,dimn, analysisVar,diabloPar));
 }
 
-doScatterJson <- function(filenm,analysisVar){
-  if(!exists("my.json.scatter")){ # public web on same user dir
+doScatterJsonPair <- function(filenm,analysisVar,taxrank){
+  if(!exists("my.json.scatter.pair")){ # public web on same user dir
     .load.scripts.on.demand("utils_scatter_json.Rc");    
   }
   
-  return(my.json.scatter(filenm,current.proc$meta_para$analysis.var));
+  return(my.json.scatter.pair(filenm,current.proc$meta_para$analysis.var, taxrank));
 }
 
 DoStatComparisonVis <- function(filenm, alg, meta, selected, meta.vec, omicstype, taxalvl,nonpar=FALSE){
@@ -2711,6 +2738,7 @@ PerformMetListEnrichment <- function(mbSetObj, contain,file.nm){
     return(x)
   })
   
+  mbSetObj <- recordEnrTable(mbSetObj, mbSetObj$paramSet$koProj.type, resTable, "KEGG", "Overrepresentation Analysis");
   json.res <- list(hits.query =convert2JsonList(hits.query),
                    path.nms = path.nms,
                    path.pval = path.pval,
@@ -2725,8 +2753,9 @@ PerformMetListEnrichment <- function(mbSetObj, contain,file.nm){
   sink(json.nm)
   cat(json.mat);
   sink();
-  
-  return(.set.mbSetObj(mbSetObj));
+
+  .set.mbSetObj(mbSetObj)
+  return(mbSetObj);
 }
 
 
@@ -3244,7 +3273,7 @@ PlotCorrHistogram <- function(imgNm, dpi=72, format="png"){
 }
 
 
-PlotDiagnostic <- function(imgName, dpi=72, format="png",alg){
+PlotDiagnostic <- function(imgName, dpi=72, format="png",alg, taxrank="Feature"){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   dpi <- as.numeric(dpi);
   imgNm <- paste(imgName,  ".", format, sep="");
@@ -3260,7 +3289,11 @@ PlotDiagnostic <- function(imgName, dpi=72, format="png",alg){
   Cairo(file=imgNm, width=10, height=h, type=format,unit="in", bg="white", dpi=dpi);
   if(alg == "procrustes"){
     procrustes.res <- qs::qread("procrustes.res.qs")
-    res <- procrustes.res$dim.res[[length(procrustes.res$dim.res)]]
+    if(length(procrustes.res$dim.res) == 1){
+    res <- procrustes.res$dim.res[[1]]
+    }else{
+    res <- procrustes.res$dim.res[[taxrank]]
+    }
     error = residuals(res[[1]])
     require("ggrepel")
     
@@ -3286,23 +3319,6 @@ PlotDiagnostic <- function(imgName, dpi=72, format="png",alg){
       theme_bw()
     print(p)
     mbSetObj$imgSet$procrustes$diagnostic <- imgNm
-  }else if(alg == "rcca"){
-    require(mixOmics)
-    plot(reductionSet$dim.res, scree.type = "barplot")
-    
-  }else if(alg == "spls"){
-    #save.image("diag.RData");
-    require(mixOmics)
-    tune.spls <- mixOmics:::perf(reductionSet$dim.res, validation = "Mfold", folds = 10, progressBar = FALSE, nrepeat = 1)
-    if("Q2.total" %in% names(tune.spls)){
-      plot(tune.spls$Q2.total)
-    }else{
-      r = data.frame(Comp=seq.int(nrow(tune.spls$measures$Q2.total$values)), Q2.total=tune.spls$measures$Q2.total$values$value)
-      rownames(r) = paste("comp", seq.int(nrow(r)))
-      plot(r)
-    }
-    abline(h = 0.0975)
-    
   }else if(alg == "diablo"){
     require(mixOmics)
     diablo.res <- qs::qread("diablo.res.qs")
@@ -3313,46 +3329,6 @@ PlotDiagnostic <- function(imgName, dpi=72, format="png",alg){
     diablo.comp <<- median(perf.res$choice.ncomp$WeightedVote)
     plot(perf.res) 
     mbSetObj$imgSet$diablo$diagnostic <- imgNm
-  }else if(alg == "mcia"){
-    res = reductionSet$dim.res 
-    p1<-plot.mcoin(type=3, res, phenovec=reductionSet$cls, sample.lab=FALSE, df.color=length(names(mdata.all)))   
-    print(p1)
-  }else if(alg == "mbpca"){
-    res = reductionSet$dim.res 
-    plotEig(3, res@eig)
-    #mogsa::plot(res, value="eig", type=2, xlab="Component", ylab="Eigenvalue")    
-  }else if(alg == "spectrum"){
-    if(!is.null(reductionSet$clustRes$eigenvector_analysis)){
-      plotEig(length(unique(reductionSet$clustVec)), reductionSet$clustRes$eigenvector_analysis[,2]);
-    }else{
-      plotEig(length(unique(reductionSet$clustVec)), reductionSet$clustRes$eigensystem$values[1:10]);
-    }
-  }else if(alg == "perturbation"){
-    
-    res <- reductionSet$clustRes
-    library(ggpubr)
-    library(ggplot2)
-    xlabel="Number of clusters"
-    ylabel="AUC"
-    auc1 <- res$dataTypeResult[[1]]$Discrepancy$AUC[-1]
-    auc.df1 <- data.frame(K=seq.int(length(auc1))+1, evals=auc1)
-    auc2 <- res$dataTypeResult[[2]]$Discrepancy$AUC[-1]
-    auc.df2 <- data.frame(K=seq.int(length(auc2))+1, evals=auc2)
-    auc.df1$evals2 = auc.df2$evals
-    colnames(auc.df1) = c("K", sel.nms[[1]], sel.nms[[2]])
-    library("tidyverse")
-    df <- auc.df1 %>%
-      select(K,  sel.nms[[1]], sel.nms[[2]]) %>%
-      gather(key = "variable", value = "value", -K)
-    p1 <- ggplot(df, aes(x = K, y = value)) + 
-      geom_point(aes(color = variable), size=2) + 
-      geom_line(aes(color = variable)) + 
-      geom_vline(xintercept = length(unique(res$cluster1)),linetype="dashed")+ xlab(xlabel) + 
-      ylab(ylabel) +
-      theme_bw()
-    print(p1)
-  }else if(alg == "snf"){
-    plotEig(length(unique(reductionSet$clustVec)), reductionSet$clustRes[[5]])
   }
   dev.off();
   .set.mbSetObj(mbSetObj)
@@ -3360,8 +3336,8 @@ PlotDiagnostic <- function(imgName, dpi=72, format="png",alg){
 }
 
 
-PlotDiagnosticPca <- function(imgNm, dpi=72, format="png",type="diablo"){
-  
+PlotDiagnosticPca <- function(imgNm, dpi=72, format="png",type="diablo", taxrank="Feature"){
+  save.image("diag.RData");
   mbSetObj <- .get.mbSetObj(mbSetObj);
   require("Cairo");
   library(ggplot2);
@@ -3377,8 +3353,11 @@ PlotDiagnosticPca <- function(imgNm, dpi=72, format="png",type="diablo"){
     library(gridGraphics);
     library(cowplot)
     diablo.res <- qs::qread("diablo.res.qs")
-    dim.res <- diablo.res$dim.res[[length(diablo.res$dim.res)]]
-    
+    if(length(diablo.res$dim.res) == 1){
+        dim.res <- diablo.res$dim.res[[length(diablo.res$dim.res)]]
+    }else{
+        dim.res <- diablo.res$dim.res[[taxrank]]
+    }
     fig.list[[1]] <- as_grob(function(){
       plotDiablo(dim.res, ncomp = 1)
     })
@@ -3397,100 +3376,15 @@ PlotDiagnosticPca <- function(imgNm, dpi=72, format="png",type="diablo"){
     grid.arrange(grobs =fig.list, nrow=length(fig.list))
     dev.off(); 
     mbSetObj$imgSet$diablo$pca <- imgNm;
-  }else if(any(c(type == "rcca", type == "spls"))){
-    res = reductionSet$dim.res 
-    Factor <- as.factor(reductionSet$meta$newcolumn)
-    library(ggplot2)
-    library("ggpubr")
-    scrs <- list()
-    for(i in 1:length(res$variates)){
-      
-      pca.rest <- as.data.frame(res$variates[[i]][,c(1:3)])
-      colnames(pca.rest) <- c("PC1", "PC2", "PC3")
-      pca.rest$Conditions <- Factor
-      pca.rest$names <- rownames(res$variates[[i]])
-      
-      xlim <- GetExtendRange(pca.rest[,1]);
-      ylim <- GetExtendRange(pca.rest[,2]);
-      if("prop_expl_var" %in% names(res)){
-        var.vec <- res$prop_expl_var[[i]] 
-      }else{
-        var.vec <- res$explained_variance[[i]] 
-      }
-      # proe <- signif(as.numeric(var.vec), 4)
-      proe <- signif(var.vec/sum(var.vec), 4)
-      
-      xlabel <- paste0("Variate 1 (", proe[1]*100,"%)")
-      ylabel <- paste0("Variate 2 (", proe[2]*100,"%)")
-      
-      if(i == 1){
-        fig <- ggplot(pca.rest, aes(x=PC1, y=PC2,  color=Conditions)) +
-          geom_point(size=3, alpha=0.5) + 
-          xlim(xlim) + 
-          ylim(ylim) + 
-          xlab(xlabel) + 
-          ylab(ylabel) + 
-          theme_bw() +
-          theme(legend.position = "none") + 
-          ggtitle(reductionSet$omicstype[[1]])
-        fig.list[[i]] <- fig
-      } else {
-        fig <- ggplot(pca.rest, aes(x=PC1, y=PC2,  color=Conditions)) +
-          geom_point(size=3, alpha=0.5) + 
-          xlim(xlim) + 
-          ylim(ylim) + 
-          xlab(xlabel) + 
-          ylab(ylabel) + 
-          theme(axis.text.x=element_blank(),
-                axis.ticks.x=element_blank(),
-                axis.text.y=element_blank(),
-                axis.ticks.y=element_blank()) + 
-          ggtitle(reductionSet$omicstype[[2]]) +
-          theme_bw()
-        fig.list[[i]] <- fig
-      }
-    }
-    
-    h<-8
-    Cairo(file=imgNm, width=14, height=h, type=format, bg="white", unit="in", dpi=dpi);
-    p1 <- ggarrange(plotlist=fig.list, ncol = 2, nrow = 1, widths=c(7,8));
-    print(p1)
-    dev.off();
-  }else if(type == "mcia"){
-    library(omicade4)
-    mcoin <- reductionSet$dim.res
-    h<-8
-    Cairo(file=imgNm, width=10, height=h, type=format, bg="white", unit="in", dpi=dpi);
-    plot.mcoin(type=1, mcoin, phenovec=reductionSet$meta$newcolumn, sample.lab=FALSE, df.color=length(names(mdata.all)))
-    dev.off();
-  } else if(type == "mbpca"){
-    res = reductionSet$dim.res 
-    scrs <- moaScore(res);
-    scr <- as.data.frame(scrs[,c(1:3)])
-    Factor <- as.factor(reductionSet$meta$newcolumn)
-    pca.rest <- scr
-    pca.rest$Conditions <- Factor
-    pca.rest$names <- rownames(scr)
-    
-    xlim <- GetExtendRange(pca.rest$PC1);
-    ylim <- GetExtendRange(pca.rest$PC2);
-    
-    xlabel <- paste0("PC1")
-    ylabel <- paste0("PC2")
-    
-    library(ggplot2)
-    pcafig <- ggplot(pca.rest, aes(x=PC1, y=PC2,  color=Conditions)) +
-      geom_point(size=3, alpha=0.5) + xlim(xlim) + ylim(ylim)+ xlab(xlabel) + ylab(ylabel) +
-      theme_bw()
-    
-    Cairo(file=imgNm, width=10, height = 8, type=format, bg="white", unit="in", dpi=dpi);
-    print(pcafig)
-    dev.off();
-  } else if(type == "procrustes"){
+  }else if(type == "procrustes"){
     library(ggplot2)
     library(grid)
     procrustes.res <- qs::qread("procrustes.res.qs")
-    pro.test <- procrustes.res$dim.res[[length(procrustes.res$dim.res)]][[1]]
+    if(length(procrustes.res$dim.res) == 1){
+    pro.test <- procrustes.res$dim.res[[1]][[1]]
+    }else{
+    pro.test <- procrustes.res$dim.res[[taxrank]][[1]]
+    }
     pct <- pro.test$svd$d
     ctest <- data.frame(rda1=pro.test$Yrot[,1], rda2=pro.test$Yrot[,2], xrda1=pro.test$X[,1],
                         xrda2=pro.test$X[,2],Type=procrustes.res$newmeta[,"omics"], Conditions = procrustes.res$newmeta[,1])
@@ -3512,7 +3406,7 @@ PlotDiagnosticPca <- function(imgNm, dpi=72, format="png",type="diablo"){
 }
 
 
-PlotDiagnosticLoading <- function(imgNm, dpi=72, format="png",type="diablo"){
+PlotDiagnosticLoading <- function(imgNm, dpi=72, format="png",type="diablo",taxrank="Feature"){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   require("Cairo");
   library(ggplot2)
@@ -3525,7 +3419,11 @@ PlotDiagnosticLoading <- function(imgNm, dpi=72, format="png",type="diablo"){
     library(cowplot)
     fig.list <- list()
     diablo.res <- qs::qread("diablo.res.qs")
-    dim.res <- diablo.res$dim.res[[length(diablo.res$dim.res)]]
+    if(length(diablo.res$dim.res) == 1){
+    dim.res <- diablo.res$dim.res[[1]]
+    }else{
+    dim.res <- diablo.res$dim.res[[taxrank]]
+    }
     fig.list[[1]] <- as_grob(function(){
       plotLoadings(dim.res, ndisplay=10, comp = 1, contrib="max", method="median", size.name=1.1, legend=T)
     })
@@ -3538,45 +3436,6 @@ PlotDiagnosticLoading <- function(imgNm, dpi=72, format="png",type="diablo"){
     h <- 8*round(length(fig.list))
     Cairo(file=imgNm, width=13, height=h, type=format, bg="white", unit="in", dpi=dpi);
     grid.arrange(grobs =fig.list, nrow=length(fig.list))
-    dev.off();
-  }else if(any(c(type == "rcca", type == "spls"))){
-    Cairo(file=imgNm, width=12, height=10, type=format, bg="white", unit="in", dpi=dpi);
-    plotVar(reductionSet$dim.res, comp = 1:2, cutoff = 0.5, var.names = c(TRUE, TRUE),
-            cex = c(4, 4), title = 'rCCA comp 1 - 2')
-    dev.off();
-  }else if(type == "mcia"){
-    library(omicade4)
-    mcoin <- reductionSet$dim.res
-    
-    Cairo(file=imgNm, width=10, height=10, type=format, bg="white", unit="in", dpi=dpi);
-    plot.mcoin(type=2, mcoin, phenovec=reductionSet$cls, sample.lab=FALSE, df.color=1:length(names(mdata.all)))
-    dev.off();
-  }else if(type == "mbpca"){
-    library(ggplot2)
-    moa <- reductionSet$dim.res 
-    loading <- moa@loading[,c(1:3)]
-    loading <- as.data.frame(loading)
-    colnames(loading) = c("PC1", "PC2", "PC3")
-    d.types <- rownames(moa@RV)
-    loading$Type <- gsub(".*_", "", rownames(loading))
-    for(i in 1:length(d.types)){
-      rownames(loading) = gsub(paste0("_", d.types[i]), "",rownames(loading))
-    }
-    loading$Type <- as.factor(loading$Type)
-    
-    xlim <- GetExtendRange(loading[,1]);
-    ylim <- GetExtendRange(loading[,2]);
-    
-    xlabel <- paste0("PC1")
-    ylabel <- paste0("PC2")
-    
-    pcafig <- ggplot(loading, aes(x=PC1, y=PC2,  color=Type)) +
-      geom_point(size=3, alpha=0.5) + 
-      xlim(xlim) + ylim(ylim) + xlab(xlabel) + ylab(ylabel) +
-      theme_bw()
-    
-    Cairo(file=imgNm, width=10, height=10, type=format, bg="white", unit="in", dpi=dpi);
-    print(pcafig)
     dev.off();
   }
   .set.mbSetObj(mbSetObj)

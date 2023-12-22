@@ -47,7 +47,7 @@ SanityCheckData <- function(mbSetObj, filetype, disableFilter = FALSE){
   
   # making copy of data.proc and proc.phyobj(phyloseq)
   data.proc <- data.proc[!constCol, ];
-
+  
   if(length(data.proc)==0){
     AddErrMsg("All features are found to be constant and have been removed from data. No data left after such processing.");
     return(0);
@@ -55,14 +55,14 @@ SanityCheckData <- function(mbSetObj, filetype, disableFilter = FALSE){
   
   saveDataQs(data.proc, "data.proc.orig", module.type, dataName);
   saveDataQs(data.proc, "data.prefilt", module.type, dataName);
-
+  
   if(module.type == "meta"){
     sanCheck <- .checkSampleConsistencyMeta(mbSetObj,dataName);
     if(sanCheck == 0){
-        return(0);
+      return(0);
     }
   }
-
+  
   # now get stats
   taxa_no <- nrow(mbSetObj$dataSet$data.orig);
   
@@ -121,16 +121,16 @@ SanityCheckData <- function(mbSetObj, filetype, disableFilter = FALSE){
   
   sample_no_in_outfile <- ncol(data.proc);
   samname_same_number <- sum(row.names(mbSetObj$dataSet$sample_data) %in% colnames(data.proc));
-   if(samname_same_number){
-      mis.num <- length(which(!row.names(mbSetObj$dataSet$sample_data) %in% colnames(data.proc)))
-     if(mis.num==1){
-     current.msg <<- paste0("One sample name was not included in the OTU/ASV abundance table.");
-
-   }else{
-   current.msg <<- paste0("A total of ",mis.num," sample names were not included in the OTU/ASV abundance table.");
-
-   }
-
+  if(samname_same_number){
+    mis.num <- length(which(!row.names(mbSetObj$dataSet$sample_data) %in% colnames(data.proc)))
+    if(mis.num==1){
+      current.msg <<- paste0("One sample name was not included in the OTU/ASV abundance table.");
+      
+    }else{
+      current.msg <<- paste0("A total of ",mis.num," sample names were not included in the OTU/ASV abundance table.");
+      
+    }
+    
   }
   
   # now store data.orig to RDS
@@ -153,9 +153,9 @@ SanityCheckData <- function(mbSetObj, filetype, disableFilter = FALSE){
   gd_feat <- nrow(data.proc);
   
   if(exists("current.proc")){
-  current.proc$mic$data.proc<<-data.proc
-}
-
+    current.proc$mic$data.proc<<-data.proc
+  }
+  
   if(.on.public.web){
     .set.mbSetObj(mbSetObj)
     return(c(1,taxa_no,sample_no,vari_no, smin,smean,smax,gd_feat,samplemeta_no,tot_size, tree_exist, samname_same, samname_same_number, sample_no_in_outfile, disc_no, cont_no,vari_dup_no,tree_tip));
@@ -237,7 +237,7 @@ SanityCheckMetData <- function(mbSetObj,isNormMetInput, disableFilter = FALSE){
   qs::qsave(mbSetObj$dataSet$metabolomics$data.orig, file="metabo.data.orig.qs");
   qs::qsave(int.mat, file="metabo.data.init.qs");
   current.proc$met$data.proc<<-int.mat
-
+  
   if(.on.public.web){
     .set.mbSetObj(mbSetObj)
     return(c(1,length(feat.sums),nrow(data.proc),naPercent,samname_same_number));
@@ -304,7 +304,7 @@ ApplyAbundanceFilter <- function(mbSetObj, filt.opt, count, smpl.perc){
   if(exists("current.proc")){
     
     current.proc$mic$data.proc<<-mbSetObj$dataSet$filt.data
-
+    
   }
   
   
@@ -473,7 +473,7 @@ ApplyMetaboFilter <- function(mbSetObj=NA, filter,  rsd){
   current.proc$met$data.proc<<-t(filt.res)
   qs::qsave(mbSetObj$dataSet$metabolomics$filt.data, file="metabo.filt.data"); # save an copy
   current.msg <<- msg
- mbSetObj$dataSet$metabolomics$filt.msg <- current.msg;
+  mbSetObj$dataSet$metabolomics$filt.msg <- current.msg;
   return(.set.mbSetObj(mbSetObj));
   
 }
@@ -534,7 +534,7 @@ UpdateSampleItems <- function(mbSetObj){
   }
   
   mbSetObj$dataSet$sample_data <- my.meta
-   
+  
   return(.set.mbSetObj(mbSetObj));
   
 }
@@ -559,7 +559,7 @@ UpdateSampleItems <- function(mbSetObj){
 #'@import edgeR
 #'@import metagenomeSeq
 PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,isAutoScale=F){
-
+  
   mbSetObj <- .get.mbSetObj(mbSetObj);
   dataName <- mbSetObj$dataSet$name;
   module.type <- mbSetObj$module.type;
@@ -584,12 +584,12 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
   }else{
     msg <- c(msg, paste("No data rarefaction was performed."));
   }
-
+  
   # create phyloseq obj
   mbSetObj$dataSet$sample_data$sample_id <- rownames(mbSetObj$dataSet$sample_data);
   sample_table <- sample_data(mbSetObj$dataSet$sample_data, errorIfNULL=TRUE);
   mbSetObj$dataSet$proc.phyobj<- merge_phyloseq(otu_table(data,taxa_are_rows =TRUE), sample_table, mbSetObj$dataSet$taxa_table);
- 
+  
   
   #make hierarchies
   if(mbSetObj$module.type=="sdp" | mbSetObj$micDataType=="ko"){
@@ -604,7 +604,7 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
   data.list$merged_obj <- vector(length = length(ranks), "list")
   data.list$count_tables <- vector(length = length(ranks), "list")
   names(data.list$count_tables) <- names(data.list$merged_obj) <- ranks
-
+  
   for(i in 1:length(ranks)){
     phyloseq.obj <- UtilMakePhyloseqObjs(mbSetObj, ranks[i])
     data.list$merged_obj[[i]] <- phyloseq.obj
@@ -613,14 +613,14 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
   }
   
   ##### The prenorm object is the filter result of the raw counts and also affected by the rarefy option 
-### Note the counts table have different row numbers with the merged_obj as the otus without taxonomy assignment at a certain level will be merged in the count table.
+  ### Note the counts table have different row numbers with the merged_obj as the otus without taxonomy assignment at a certain level will be merged in the count table.
   saveDataQs(data.list, "phyloseq_prenorm_objs.qs", module.type, dataName);  
- 
+  
   
   for(i in 1:length(ranks)){
     
     data <- data.list$count_tables[[i]]
-     if(scale.opt != "none"){
+    if(scale.opt != "none"){
       if(scale.opt=="colsum"){
         data <- sweep(data, 2, colSums(data), FUN="/")
         data <- data*10000000;
@@ -685,8 +685,8 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
         msg <- c(msg, paste("No data transformation was performed."));
       }
     }
-   data.list$count_tables[[i]] <- data
-
+    data.list$count_tables[[i]] <- data
+    
     if(ranks[i]=="OTU"){
       otu.tab <- otu_table(data,taxa_are_rows =TRUE);
       data.list$merged_obj[[i]] <- merge_phyloseq(otu.tab, sample_data(data.list$merged_obj[[i]]), mbSetObj$dataSet$taxa_table);
@@ -701,7 +701,7 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
       data.list$merged_obj[[i]] <- merge_phyloseq(otu.tab, sample_data(data.list$merged_obj[[i]]), tax.tab);
     }
   }
-
+  
   #using the OTU level for plotting when first initialize
   mbSetObj$dataSet$norm.phyobj <- data.list$merged_obj[["OTU"]];
   mbSetObj$dataSet$norm.msg <- msg;
@@ -718,7 +718,7 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
   
   ### Normalized object for each taxonomy level
   saveDataQs(data.list, "phyloseq_objs.qs", module.type, dataName); 
-
+  
   return(.set.mbSetObj(mbSetObj));
 }
 
@@ -747,7 +747,7 @@ PerformMetaboNormalization <- function(mbSetObj, rowNorm, transNorm, scaleNorm,i
   mbSetObj <- .get.mbSetObj(mbSetObj);
   data <-t(mbSetObj$dataSet$metabolomics$filt.data);
   # now proc.phyobj is now filtered data
-
+  
   msg <- "";
   
   colNames <- colnames(data);
@@ -854,7 +854,7 @@ PerformMetaboNormalization <- function(mbSetObj, rowNorm, transNorm, scaleNorm,i
   # note after using "apply" function, all the attribute lost, need to add back
   rownames(data)<-rowNames;
   colnames(data)<-colNames;
-
+  
   # need to do some sanity check, for log there may be Inf values introduced
   data <- CleanData(data, T, F);
   
@@ -1053,59 +1053,199 @@ PlotRareCurve <- function(mbSetObj, graphName, variable){
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotLibSizeView <- function(mbSetObj, imgName,format="png", dpi=72, dataName=""){
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-
+PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataName="", interactive=F){
+  load_phyloseq();
+  mbSetObj <- .get.mbSetObj(mbSetObj)
+  library(ggplot2)
+  library(dplyr)
+  library(Cairo)
+  
   if(dataName != ""){
-    # plot single dataset or not, in metaanal
-    ind <- T; 
-  }else{
-    dataName <- mbSetObj$dataSet$name;
-    ind <- F;
+    ind <- TRUE
+  } else {
+    dataName <- mbSetObj$dataSet$name
+    ind <- FALSE
   }
-  module.type <- mbSetObj$module.type;
   
+  module.type <- mbSetObj$module.type
+  colLegendNm="";
   if(all(c(mbSetObj$module.type == "meta", !ind))){
-    sums.list <- list();
+    sums.list <- list()
+    datanm.list <- list()
     for(i in 1:length(mbSetObj$dataSets)){
-      dataName <- mbSetObj$dataSets[[i]]$name;
-      data.proc <- readDataQs("data.proc", module.type, dataName);
-      data_bef <- data.matrix(data.proc);
-      smpl.sums <- colSums(data_bef);
-      names(smpl.sums) <- colnames(data_bef);
-      smpl.sums <- sort(smpl.sums);
+      dataName <- mbSetObj$dataSets[[i]]$name
+      data.proc <- readDataQs("data.proc", module.type, dataName)
+      data_bef <- data.matrix(data.proc)
+      smpl.sums <- colSums(data_bef)
+      names(smpl.sums) <- colnames(data_bef)
+      smpl.sums <- sort(smpl.sums)
       sums.list[[i]] <- smpl.sums
+      datanm.list[[i]] <- rep(dataName,length(smpl.sums)) 
     }
-    smpl.sums  <- unlist(sums.list)
-  }else{
-    data.proc <- readDataQs("data.proc", module.type, dataName);
-    data_bef <- data.matrix(data.proc);
-    smpl.sums <- colSums(data_bef);
-    names(smpl.sums) <- colnames(data_bef);
-    smpl.sums <- sort(smpl.sums);
+    smpl.sums <- unlist(sums.list);
+    col.vec <- unlist(datanm.list);
+    colLegendNm = "Dataset";
+
+  } else {
+    data.proc <- readDataQs("data.proc", module.type, dataName)
+    data_bef <- data.matrix(data.proc)
+    smpl.sums <- colSums(data_bef)
+    names(smpl.sums) <- colnames(data_bef)
+    smpl.sums <- sort(smpl.sums)
+    col.vec <- as.vector(mbSetObj$dataSet$sample_data[,1]);
+    colLegendNm = "Group";
+
+  }
+
+  # Create a data frame for ggplot
+  if(is.data.frame(col.vec)){
+    library_size_data <- data.frame(Sample = names(smpl.sums), LibrarySize = smpl.sums, group = as.character(col.vec[[colnames(col.vec)]]))
+  } else {
+    library_size_data <- data.frame(Sample = names(smpl.sums), LibrarySize = smpl.sums, group = col.vec)
+  }
+
+  colnames(library_size_data)[3] <- "group";
+  library_size_data <- library_size_data %>% arrange(desc(LibrarySize))
+  library_size_data$Sample = factor(library_size_data$Sample, levels=library_size_data[order(library_size_data$LibrarySize), "Sample"])
+
+  # Plotting with ggplot2
+  imgName <- paste0(origImgName, ".", format)
+  g <- ggplot(library_size_data, aes(x = Sample, y = LibrarySize)) +
+    geom_point(aes(color = library_size_data$group)) +
+    geom_hline(yintercept = mean(library_size_data$LibrarySize), color = "blue", linetype = "dashed") +
+    labs(x = "Sample", y = "Read Counts", color="") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1),
+          legend.text = element_text(size = 14), legend.title = element_text(size = 14))
+  
+  if(imgName != ""){
+  Cairo::Cairo(file=imgName, width=800, height=600, type=format, bg="white",dpi=dpi);
+  print(g);
+  dev.off();
   }
   
+  mbSetObj$imgSet$lib.size <- imgName;
   
-  # save the full lib size 
-  fast.write(cbind(Size=smpl.sums), file="norm_libsizes.csv");
+  mean_line <- mean(library_size_data$LibrarySize)
+  annotation_offset <- 0.05 * (max(library_size_data$LibrarySize) - min(library_size_data$LibrarySize))
   
-  smpl.sums <- rev(smpl.sums);
-  vip.nms <- names(smpl.sums);
-  names(smpl.sums) <- NULL;
-  vip.nms <- substr(vip.nms, 1, 16);
   
-  myH <- ncol(data_bef)*25 + 50;
-  imgName = paste(imgName,".", format, sep="");
-  mbSetObj$imgSet$lib.size<-imgName;
-  Cairo::Cairo(file=imgName, width=580, height=myH, type=format, bg="white",dpi=dpi);
-  xlim.ext <- GetExtendRange(smpl.sums, 10);
-  par(mar=c(4,7,2,2));
-  dotchart(smpl.sums, col="forestgreen", xlim=xlim.ext, pch=19, xlab="Read Counts", main="Library Size Overview");
-  mtext(side=2, at=1:length(vip.nms), vip.nms, las=2, line=1);
-  text(x=smpl.sums,y=1:length(smpl.sums),labels= round(smpl.sums), col="blue", pos=4, xpd=T);
-  dev.off();
+  # Split the data by group
+  grouped_data <- split(library_size_data, library_size_data$group)
   
-  return(.set.mbSetObj(mbSetObj))
+  # Map each group to a color
+  unique_groups <- unique(library_size_data$group)
+  colors <- RColorBrewer::brewer.pal(length(unique_groups), "Set1")
+  color_mapping <- setNames(colors, unique_groups)
+  x_values <- seq_along(library_size_data$Sample);
+  library_size_data$x_values <- x_values 
+  
+  # Create a trace for each group
+  traces <- lapply(names(grouped_data), function(group) {
+    data_group <- library_size_data[library_size_data$group == group, ]
+    tooltips <- paste("Sample:", data_group$Sample, "<br>Library Size:", data_group$LibrarySize)
+    
+    list(
+      x = data_group$x_values,
+      y = data_group$LibrarySize,
+      type = 'scatter',
+      mode = 'markers',
+      name = group, # This will be the legend entry
+      marker = list(
+        size = 10,
+        line = list(color = 'white', width = 0.8),
+        color = color_mapping[group]
+      ),
+      text = tooltips,
+      hoverinfo = 'text'
+    )
+  })
+  
+  # Convert data to JSON for Plotly
+  plot_data <- list(
+    data=traces,
+    layout = list(
+      title = 'Library Size Overview',
+      xaxis = list(title = 'Sample'),
+      yaxis = list(title = 'Read Counts'),
+      shapes = list(
+        list(
+          type = 'line',
+          x0 = 0,  # Start at the left edge of the plot area
+          y0 = mean_line,  # The y-value at which the line is placed
+          x1 = 1,  # End at the right edge of the plot area
+          y1 = mean_line,  # Same y-value to keep the line horizontal
+          line = list(
+            color = 'blue',  # Line color
+            width = 3  # Line width
+          ),
+          xref = 'paper',  # Use the 'paper' reference for the x-axis
+          yref = 'y'  # Use the y-axis data reference for the y-axis
+        )
+      ),
+      annotations = list(
+        list(
+          x = 1,
+          y = mean_line + annotation_offset,
+          xref = 'paper',
+          yref = 'y',
+          text = paste('Mean:', signif(mean_line, 4)),
+          showarrow = FALSE,
+          font = list(family = 'Arial', size = 12, color = 'black')
+        )
+      )
+    )
+  )
+  
+  jsonFileName <- paste0(origImgName, ".json")
+  json.obj <- rjson::toJSON(plot_data );
+  sink(jsonFileName);
+  cat(json.obj);
+  sink();
+  
+  if(interactive){
+    library(plotly);
+    tooltips <- paste("Sample: ", library_size_data$Sample, "\nSize:", library_size_data$LibrarySize)
+    annotation_offset <- 50 # Adjust as needed
+    
+    fig <- plot_ly() %>%
+      add_trace(data = plot_data$data[[1]], 
+                x = ~x, 
+                y = ~y, 
+                type = 'scatter', 
+                mode = 'markers', 
+                marker = list(size = 10, line = list(color = 'white', width = 0.8)),
+                text = ~text, 
+                hoverinfo = 'text', 
+                name = ~name)
+    
+    # Iteratively add the other traces
+    if (length(plot_data$data) > 1) {
+      for (i in 2:length(plot_data$data)) {
+        fig <- fig %>%
+          add_trace(data = plot_data$data[[i]], 
+                    x = ~x, 
+                    y = ~y, 
+                    type = 'scatter', 
+                    mode = 'markers', 
+                    marker = list(size = 10, line = list(color = 'white', width = 0.8)),
+                    text = ~text, 
+                    hoverinfo = 'text', 
+                    name = ~name)
+      }
+    }
+    
+    fig <- fig %>% layout(
+      title = plot_data$data$layout$title,
+      xaxis = plot_data$layout$xaxis,
+      yaxis = plot_data$layout$yaxis,
+      shapes = plot_data$layout$shapes,
+      annotations = plot_data$annotations
+    )
+    
+    return(fig);
+  }else{
+    return(.set.mbSetObj(mbSetObj))
+  }
 }
 
 #'Plot PCA plot for multi-omics samples
@@ -1197,12 +1337,12 @@ PlotPCAView <- function(imgName, format="png", dpi=72,init){
 
 
 PlotDensityView <- function(imgName, format="png",  init=0, autoScale=T,dpi=72){
-
- # dpi <- as.numeric(dpi)
+  
+  # dpi <- as.numeric(dpi)
   imgName = paste(imgName,".", format, sep="");
   fig.list <- list()
   merged.df <- data.frame
-   
+  
   df.list <- list()
   for(i in 1:2){
     
@@ -1224,16 +1364,16 @@ PlotDensityView <- function(imgName, format="png",  init=0, autoScale=T,dpi=72){
     
   }
   
-
- 
+  
+  
   type<-merged.df$type
-   merged.df$ind <- paste0(merged.df$ind, "_", merged.df$type)
+  merged.df$ind <- paste0(merged.df$ind, "_", merged.df$type)
   #if(init==0){
   # merged.df$values[which(merged.df$values==0)] <- 10^-3
   # merged.df$values <- log((merged.df$values),base=2)
-
-# }
-
+  
+  # }
+  
   Cairo::Cairo(file=imgName, width=10, height=6, type=format, bg="white", dpi=dpi, unit="in");
   g <- ggplot(merged.df, aes(x=values)) + 
     geom_line(aes(color=type, group=ind), stat="density", alpha=0.1) + 
@@ -1243,7 +1383,7 @@ PlotDensityView <- function(imgName, format="png",  init=0, autoScale=T,dpi=72){
   print(g)
   dev.off();
   
-
+  
   return(1)
 }
 
@@ -1341,7 +1481,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
           
         }else{
           
-       
+          
           if(taxa_type=="SILVA"){
             
             load_splitstackshape();
@@ -1399,7 +1539,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
           
           
         }
-    
+        
         # making unique id for each OTU consist of lowest taxonomy level present followed by row number
         tmat <- as(tax_table(taxa_table), "matrix")
         rowLn <- nrow(tmat);
@@ -1476,7 +1616,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
       }
       # creating phyloseq object
       if(isNormInput=="false"){
-       data.proc<-apply(data.proc,2,as.integer);
+        data.proc<-apply(data.proc,2,as.integer);
       }   
       data.proc<-otu_table(data.proc,taxa_are_rows =TRUE);
       taxa_names(data.proc)<-taxa_names(mbSetObj$dataSet$taxa_table);
@@ -1512,42 +1652,42 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
       mbSetObj$dataSet$taxa_table<- gsub("[[:space:]./_-]", "_",mbSetObj$dataSet$taxa_table);
       mbSetObj$dataSet$taxa_table<- gsub("\\[|\\]","",mbSetObj$dataSet$taxa_table);
       mbSetObj$dataSet$taxa_table[which(mbSetObj$dataSet$taxa_table==''|grepl("_$",mbSetObj$dataSet$taxa_table))]=NA;
-       
-if(taxalabel=="T"){# for mapping to the database in mmp module
-  if("Species" %in% colnames( mbSetObj$dataSet$taxa_table)){
-    sps = data.frame(mbSetObj$dataSet$taxa_table@.Data[,c('Genus','Species')])
-    if(grepl("^g__",sps[1,"Genus"])){
-      sps$Species = gsub("^s__","",sps$Species)
-      if(all(!grepl(" ",sps$Species)) & all(!grepl("_",sps$Species))){
-        sps$Genus =gsub("^g__","",sps$Genus)
-        idxsp = which(!is.na(sps$Genus) & !is.na(sps$Species) & sps$Genus!="" & sps$Species!="")
-        sps$Species[idxsp] = paste0("s__",sps$Genus[idxsp],"_",sps$Species[idxsp])
+      
+      if(taxalabel=="T"){# for mapping to the database in mmp module
+        if("Species" %in% colnames( mbSetObj$dataSet$taxa_table)){
+          sps = data.frame(mbSetObj$dataSet$taxa_table@.Data[,c('Genus','Species')])
+          if(grepl("^g__",sps[1,"Genus"])){
+            sps$Species = gsub("^s__","",sps$Species)
+            if(all(!grepl(" ",sps$Species)) & all(!grepl("_",sps$Species))){
+              sps$Genus =gsub("^g__","",sps$Genus)
+              idxsp = which(!is.na(sps$Genus) & !is.na(sps$Species) & sps$Genus!="" & sps$Species!="")
+              sps$Species[idxsp] = paste0("s__",sps$Genus[idxsp],"_",sps$Species[idxsp])
+            }
+          }else if(grepl("^g_",sps[1,"Genus"])){
+            sps$Species = gsub("^s_","",sps$Species)
+            if(all(!grepl(" ",sps$Species)) & all(!grepl("_",sps$Species))){
+              sps$Genus =gsub("^g_","",sps$Genus)
+              idxsp = which(!is.na(sps$Genus) & !is.na(sps$Species) & sps$Genus!="" & sps$Species!="")
+              sps$Species[idxsp] = paste0("s__",sps$Genus[idxsp],"_",sps$Species[idxsp])
+            }
+          }else if(grepl("^g_0__",sps[1,"Genus"])){
+            sps$Species = gsub("^s_0__","",sps$Species)
+            if(all(!grepl(" ",sps$Species)) & all(!grepl("_",sps$Species))){
+              sps$Genus =gsub("^g_0__","",sps$Genus)
+              idxsp = which(!is.na(sps$Genus) & !is.na(sps$Species) & sps$Genus!="" & sps$Species!="")
+              sps$Species[idxsp] = paste0("s_0__",sps$Genus[idxsp],"_",sps$Species[idxsp])
+            }
+          }else{
+            if(all(!grepl(" ",sps$Species)) & all(!grepl("_",sps$Species))){
+              idxsp = which(!is.na(sps$Genus) & !is.na(sps$Species) & sps$Genus!="" & sps$Species!="")
+              sps$Species[idxsp] = paste0(sps$Genus[idxsp],"_",sps$Species[idxsp])
+            }
+          }
+          mbSetObj$dataSet$taxa_table@.Data[,'Species']  <- sps$Species
+        }
+        
       }
-    }else if(grepl("^g_",sps[1,"Genus"])){
-      sps$Species = gsub("^s_","",sps$Species)
-      if(all(!grepl(" ",sps$Species)) & all(!grepl("_",sps$Species))){
-        sps$Genus =gsub("^g_","",sps$Genus)
-        idxsp = which(!is.na(sps$Genus) & !is.na(sps$Species) & sps$Genus!="" & sps$Species!="")
-        sps$Species[idxsp] = paste0("s__",sps$Genus[idxsp],"_",sps$Species[idxsp])
-      }
-    }else if(grepl("^g_0__",sps[1,"Genus"])){
-      sps$Species = gsub("^s_0__","",sps$Species)
-      if(all(!grepl(" ",sps$Species)) & all(!grepl("_",sps$Species))){
-        sps$Genus =gsub("^g_0__","",sps$Genus)
-        idxsp = which(!is.na(sps$Genus) & !is.na(sps$Species) & sps$Genus!="" & sps$Species!="")
-        sps$Species[idxsp] = paste0("s_0__",sps$Genus[idxsp],"_",sps$Species[idxsp])
-      }
-  }else{
-    if(all(!grepl(" ",sps$Species)) & all(!grepl("_",sps$Species))){
-      idxsp = which(!is.na(sps$Genus) & !is.na(sps$Species) & sps$Genus!="" & sps$Species!="")
-      sps$Species[idxsp] = paste0(sps$Genus[idxsp],"_",sps$Species[idxsp])
-    }
-  }
-  mbSetObj$dataSet$taxa_table@.Data[,'Species']  <- sps$Species
-}
-
-}
-#sometimes after removal of such special characters rownames beacame non unique; so make it unique
+      #sometimes after removal of such special characters rownames beacame non unique; so make it unique
       mynames1<- gsub("[[:space:]./_-]", "_",taxa_names(mbSetObj$dataSet$taxa_table));
       mynames1<- gsub("\\[|\\]","",mynames1);
       
@@ -1563,8 +1703,8 @@ if(taxalabel=="T"){# for mapping to the database in mmp module
     } else if(any(c(type == "biom", type == "mothur"))){
       # creating phyloseq object
       feat_nm<-rownames(data.proc);
-       if(isNormInput=="false"){
-       data.proc<-apply(data.proc,2,as.integer);
+      if(isNormInput=="false"){
+        data.proc<-apply(data.proc,2,as.integer);
       }
       data.proc<-otu_table(data.proc,taxa_are_rows =TRUE);
       taxa_names(data.proc)<-feat_nm;
@@ -1641,7 +1781,7 @@ if(taxalabel=="T"){# for mapping to the database in mmp module
     #also using unique names for our further data
     prefilt.data <- readDataQs("data.prefilt", module.type, dataName);
     rownames(prefilt.data)<-taxa_names(mbSetObj$dataSet$taxa_table);
-   
+    
     saveDataQs(prefilt.data, "data.prefilt", module.type, dataName);
     
   }else if(mbSetObj$module.type == "sdp"| mbSetObj$micDataType =="ko"){
@@ -1670,7 +1810,7 @@ if(taxalabel=="T"){# for mapping to the database in mmp module
     mbSetObj$dataSet$proc.phyobj <- mbSetObj$dataSet$proc.phyobj;
     mbSetObj$dataSet$norm.phyobj <-mbSetObj$dataSet$proc.phyobj;
   }
-
+  
   return(.set.mbSetObj(mbSetObj));
 }
 
@@ -1682,22 +1822,22 @@ if(taxalabel=="T"){# for mapping to the database in mmp module
 ### normalized input to make sure all the function can work properly
 
 CreateFakeFile <- function(mbSetObj,isNormalized="true",isNormalizedMet,module.type){
-
-mbSetObj <- .get.mbSetObj(mbSetObj);
-
-if(isNormalized=="false" & isNormalizedMet=="false"){
-
- AddErrMsg("Please make sure your data has been normalized properly!");
-return(0)
-
-}
-mbSetObj$dataSet$filt.data <- mbSetObj$dataSet$data.orig
-mbSetObj$dataSet$filt.msg <- "No data filtering has been performed since the input data has been transformed."
-
-mbSetObj$dataSet$norm.phyobj <- mbSetObj$dataSet$proc.phyobj
-mbSetObj$dataSet$norm.msg <- "No normalization has been performed since the input data has been transformed."
-
-    #make hierarchies
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  
+  if(isNormalized=="false" & isNormalizedMet=="false"){
+    
+    AddErrMsg("Please make sure your data has been normalized properly!");
+    return(0)
+    
+  }
+  mbSetObj$dataSet$filt.data <- mbSetObj$dataSet$data.orig
+  mbSetObj$dataSet$filt.msg <- "No data filtering has been performed since the input data has been transformed."
+  
+  mbSetObj$dataSet$norm.phyobj <- mbSetObj$dataSet$proc.phyobj
+  mbSetObj$dataSet$norm.msg <- "No normalization has been performed since the input data has been transformed."
+  
+  #make hierarchies
   if(mbSetObj$module.type=="sdp" | mbSetObj$micDataType=="ko"){
     ranks <- "OTU"
   }else if(mbSetObj$module.type=="meta"){ #temporary
@@ -1706,31 +1846,31 @@ mbSetObj$dataSet$norm.msg <- "No normalization has been performed since the inpu
     ranks <- c(GetMetaTaxaInfo(mbSetObj), "OTU")
     ranks <- unique(ranks)
   } 
-
-
- data.list <- list()
+  
+  
+  data.list <- list()
   data.list$merged_obj <- vector(length = length(ranks), "list")
   data.list$count_tables <- vector(length = length(ranks), "list")
   names(data.list$count_tables) <- names(data.list$merged_obj) <- ranks
-
-for(i in 1:length(ranks)){
+  
+  for(i in 1:length(ranks)){
     phyloseq.obj <- UtilMakePhyloseqObjs(mbSetObj, ranks[i])
     data.list$merged_obj[[i]] <- phyloseq.obj
     count.table <- UtilMakeCountTables(phyloseq.obj, ranks[i])
     data.list$count_tables[[i]] <- count.table
   }
-
-if(exists("current.proc")){
-  qs::qsave(data.list,"prescale.phyobj.qs")
-
-current.proc$mic$data.proc<<- data.list$count_tables[["OTU"]]
-
-}
- mbSetObj$dataSet$sample_data$sample_id <- rownames(mbSetObj$dataSet$sample_data);
-
-saveDataQs(data.list, "phyloseq_prenorm_objs.qs",module.type, mbSetObj$dataSet$name);  
+  
+  if(exists("current.proc")){
+    qs::qsave(data.list,"prescale.phyobj.qs")
+    
+    current.proc$mic$data.proc<<- data.list$count_tables[["OTU"]]
+    
+  }
+  mbSetObj$dataSet$sample_data$sample_id <- rownames(mbSetObj$dataSet$sample_data);
+  
+  saveDataQs(data.list, "phyloseq_prenorm_objs.qs",module.type, mbSetObj$dataSet$name);  
   saveDataQs(data.list, "phyloseq_objs.qs",module.type, mbSetObj$dataSet$name);  
-
+  
   return(.set.mbSetObj(mbSetObj));
 }
 

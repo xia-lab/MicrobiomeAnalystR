@@ -6,7 +6,7 @@
 ## J. Xia, jeff.xia@mcgill.ca
 ###################################################
 
-my.json.scatter <- function(filenm,analysisVar){
+my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
   omicstype.vec <- c("microbiome","metabolomics");
   
   library(RJSONIO)
@@ -136,7 +136,7 @@ my.json.scatter <- function(filenm,analysisVar){
       netData[[tax]][["misc"]] <- procrustes.res$misc[[tax]]
       
       qs::qsave(procrustes.res,"procrustes.res.qs")
-      
+
     }else if(reductionOptGlobal == "diablo"){
       
       pos.xyz2 <-   diablo.res$pos.xyz2[[tax]]
@@ -234,7 +234,24 @@ my.json.scatter <- function(filenm,analysisVar){
       
       type <- omicstype.vec[2]
       netData[[tax]][[ type]] <- nodes_samples2;
-      
+
+      if(tax == taxrank){
+        library(dplyr)
+        loading.data <- as.data.frame( signif(loading.data),4)
+        loading.data$omicstype <- type.vec
+        head(loading.data);
+        loading.data.met <- loading.data[loading.data$omicstype == "metabolomics",]
+        loading.data.mic <- loading.data[loading.data$omicstype == "microbiome",]
+        loading.data.met$omicstype <- NULL;
+        loading.data.mic$omicstype <- NULL;
+
+        fast.write(loading.data.met, file=paste0("loading_diablo_metabolome_",taxrank,".csv"));
+        fast.write(loading.data.mic, file=paste0("loading_diablo_microbiome_",taxrank,".csv"));     
+        sig.mats[[tax]][["microbiome"]]$ids <- NULL;
+        sig.mats[[tax]][["metabolomics"]]$ids <- NULL;
+        fast.write(sig.mats[[tax]][["microbiome"]], file=paste0("sig_diablo_microbiome_",taxrank,".csv"));
+        fast.write(sig.mats[[tax]][["metabolomics"]], file=paste0("sig_diablo_metabolome_",taxrank,".csv"));
+      }
       
       pca.scatter <- generatePCAscatter(phyloseq_objs$count_tables[[tax]],
                                         metdat,tax)
@@ -290,6 +307,7 @@ my.json.scatter <- function(filenm,analysisVar){
       
       netData[[tax]][["misc"]] <- diablo.res$misc[[tax]]
       
+
       
       qs::qsave(diablo.res,"diablo.res.qs")
     }

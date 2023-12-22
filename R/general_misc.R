@@ -988,3 +988,35 @@ AutoScale <- function(data){apply(data, 2, function(x){
     (x - mean(x))/sd(x, na.rm=T);
   });
 }
+
+#univ/metagenome/rnaseq/lefse/maaslin/list/global
+GetKeggProjectionType <- function(mbSetObj=NA){
+    mbSetObj <- .get.mbSetObj(mbSetObj);
+    if(is.null(mbSetObj$paramSet$koProj.type)){
+        res <- "";
+    }else{
+        res <- mbSetObj$paramSet$koProj.type;
+    }
+    print("projtype=====")
+    print(res);
+    return(res);
+}
+
+SetParam<- function(mbSetObj=NA, paramName, value){
+    mbSetObj <- .get.mbSetObj(mbSetObj);
+    mbSetObj$paramSet[[paramName]] <- value;
+    .set.mbSetObj(mbSetObj);
+}
+
+#either mmp or sdp;
+recordEnrTable <- function(mbSetObj, vis.type, dataTable, library, algo){
+        vis.type <- mbSetObj$paramSet$koProj.type;
+        if(is.null(mbSetObj$imgSet$enrTables)){
+            mbSetObj$imgSet$enrTables <- list();
+        }
+        mbSetObj$imgSet$enrTables[[vis.type]] <- list();
+        mbSetObj$imgSet$enrTables[[vis.type]]$table <- dataTable;
+        mbSetObj$imgSet$enrTables[[vis.type]]$library <- library;
+        mbSetObj$imgSet$enrTables[[vis.type]]$algo <- algo;
+        return(mbSetObj);
+}

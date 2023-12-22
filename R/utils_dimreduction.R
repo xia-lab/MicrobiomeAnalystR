@@ -93,7 +93,7 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
         design = matrix(diabloPar, ncol = length(dats[[l]]), nrow = length(dats[[l]]), 
                         dimnames = list(names(dats[[l]]), names(dats[[l]])));
         diag(design) = 0;
-        res[[l]] = block.splsda(X = data.list, Y = Y, ncomp = ncomps, design = design, mode = "regression")
+        res[[l]] = block.splsda(X = data.list, Y = Y, ncomp = ncomps, design = design, mode = "regression", near.zero.var = T)
       }
       pos.xyz[[l]] <- res[[l]]$variates[[1]]
       pos.xyz2[[l]] <- res[[l]]$variates[[2]]
