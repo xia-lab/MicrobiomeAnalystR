@@ -811,8 +811,8 @@ PlotHeatmap<-function(mbSetObj, plotNm, dataOpt="norm",
       p <- p %>% add_col_dendro(dend_col)
     }
 
-    pwidget <- to_widget(p);
-    save(pwidget, file = plotwidget);
+   # pwidget <- to_widget(p);
+   # save(pwidget, file = plotwidget);
 
     #f <- basename(tempfile('iheatmapr', '.', '.html'))
     #on.exit(unlink(f), add = TRUE)

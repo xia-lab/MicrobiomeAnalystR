@@ -500,10 +500,11 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
     data1 <- as.matrix(t(sapply(by(data1, rownames(data1), colSums), identity)));
     data <- otu_table(data1, taxa_are_rows=T);
   }
-  
+
   #transform data to relative abundances, then obtain full phyloseq obj of just core microbiota
   data.compositional <- transform_sample_counts(data,function(x) x / sum(x));
   data.core <- core(data.compositional, detection = detection, prevalence = preval);
+ 
   core.nm <- data.frame(prevalence(data.compositional, detection = detection, sort = TRUE),check.names=FALSE);
   colnames(core.nm)[1] <- "Prevelance";
   fileName <- "core_microbiome.csv";
@@ -613,6 +614,7 @@ core_members<-function(x, detection=detection, prevalence=prevalence,
                        include.lowest=FALSE) {
   # Pick taxa x samples matrix
   x <- abundances(x)
+
   if (include.lowest) {
     taxa <- names(which(prevalence(x, detection,
                                    include.lowest=include.lowest) >= prevalence))
@@ -1871,7 +1873,7 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
   load_datatable();
   load_viridis();
   load_phyloseq();
-
+  err.vec <<- ""
   set.seed(13134);
   if(all(c(module.type == "meta", !combined))){
     mdata.all <- mbSetObj$mdata.all;
@@ -1896,6 +1898,7 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
       proc.phyobj <- mbSetObj$dataSet$proc.phyobj;
       norm.phyobj <- mbSetObj$dataSet$norm.phyobj;
     }    
+
     #using normalized data
     
     phyloseq_objs <- readDataQs("phyloseq_objs.qs",mbSetObj$module.type,dataName)
@@ -1947,8 +1950,9 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
     }else if(colopt=="continuous") {
       require("MMUPHin");
       require("vegan");
-      
+
       data <- proc.phyobj;
+
       #sub_sam_data <- sam_data[which(sam_data[,metadata] == meta.grp), ]
       #sub_data <- data@otu_table[, rownames(sub_sam_data)];
       sub_sam_data <- sample_data(data); 

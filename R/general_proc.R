@@ -573,6 +573,9 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
   
   if(rare.opt != "none"){
     data <- PerformRarefaction(mbSetObj, data, rare.opt);
+    if(is.null(data)){
+       return(0)
+     }
     tax_nm <- rownames(data);
     msg <- c(msg, paste("Performed data rarefaction."));
     
@@ -897,7 +900,8 @@ PerformRarefaction <- function(mbSetObj, data, rare.opt){
   
   data <- data.matrix(data);
   tax_nm<-rownames(data);
-  
+
+  print(err.vec)
   # data must be count data (not contain fractions)
   data <- round(data);
   
@@ -912,12 +916,44 @@ PerformRarefaction <- function(mbSetObj, data, rare.opt){
   
   # first doing rarefaction, this is on integer or count data
   if(rare.opt=="rarewi"){
-    phy.obj <- rarefy_even_depth(phy.obj, replace=TRUE,rngseed = T)
+  
+  phy.obj <- tryCatch({
+    # Your function call
+    rarefied_data <- rarefy_even_depth(phy.obj, replace=TRUE,rngseed = T)
+    return(rarefied_data)
+  }, error = function(e) {
+    # Custom error handling
+    err.vec <<- e$message
+    # Return NULL or some other value indicating failure
+    return(NULL)
+  }
+  )
+  if(is.NULL(phy.obj)){
+    return(NULL)
+  }else{
     msg <- c(msg, paste("Rarefy with replacement to minimum library depth."));
-  }else if(rare.opt=="rarewo"){ # this is not shown on web due to computational issue
+  }
+ 
+}else if(rare.opt=="rarewo"){ # this is not shown on web due to computational issue
+
+  phy.obj <- tryCatch({
+    # Your function call
     phy.obj <- rarefy_even_depth(phy.obj, replace=FALSE,rngseed = T);
+    return(rarefied_data)
+  }, error = function(e) {
+    # Custom error handling
+    err.vec <<- e$message
+    # Return NULL or some other value indicating failure
+    return(NULL)
+  }
+  )
+  if(is.NULL(phy.obj)){
+    return(NULL)
+  }else{
     msg <- c(msg, paste("Rarefaction without replacement to minimum library depth."));
   }
+  
+}
   msg <- paste(msg, collapse=" ");
   #print(msg);
   cleanMem();

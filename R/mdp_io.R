@@ -91,7 +91,7 @@ Read16STabData <- function(mbSetObj, dataName) {
     AddErrMsg("Failed to read in the OTU abundance data! Please make sure the data is in the right format and do not have empty cells or NA.");
     return(0);
   }
-  
+ 
   # note dateSet$sample_data already set
   # getting NAME label
   if(mbSetObj$module.type=="mmp" |mbSetObj$module.type=="meta" ){
@@ -127,7 +127,7 @@ Read16STabData <- function(mbSetObj, dataName) {
   smpl_nm <- colnames(mydata[-1]);
 
   mydata <- .to.numeric.mat(mydata);
-  
+
   # empty cell or NA cannot be tolerated in metadata
   na.inx  <- is.na(mydata);
   
@@ -500,8 +500,7 @@ ReadMetabolicTable <- function(mbSetObj, dataName, metType, idType) {
   mbSetObj$dataSet$metabolomics <- list()
 
   current.msg <<- NULL;
-  mydata <- .readDataTable(dataName);
-   
+  mydata <- .readDataTable(dataName); 
 
   if( class(mydata) == "try-error"){
     AddErrMsg("Failed to read in the metabolomics abundance table! Please make sure the data is in the right format.");
@@ -521,8 +520,7 @@ ReadMetabolicTable <- function(mbSetObj, dataName, metType, idType) {
   
   #smpl_nm <- colnames(mydata[-1]);
   
-  mydata <- .to.numeric.mat(mydata);
-
+  mydata <- .to.numeric.mat(mydata); 
   row.nas <- apply(is.na(mydata)|is.null(mydata), 1, sum);
   good.inx<- row.nas/ncol(mydata) < 0.5;
   if(sum(!good.inx) > 0){
