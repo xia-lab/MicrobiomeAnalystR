@@ -2755,7 +2755,7 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
   }else{
     guide_num = 5
   }
-  
+    Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
   box <- ggplot(data = data,
                 aes(x = sample,
                     y = value,
@@ -2811,6 +2811,8 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
   }
   
   save(box,file=rdaName);
+  print(box)
+  dev.off();
 
   mbSetObj$analSet$stack <- data;
   mbSetObj$analSet$stack.taxalvl <- taxalvl;
