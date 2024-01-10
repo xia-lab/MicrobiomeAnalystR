@@ -2379,7 +2379,8 @@ DoDimensionReductionIntegrative <- function(mbSetObj, reductionOpt, method="glob
   return(my.reduce.dimension(mbSetObj, reductionOpt, method,dimn, analysisVar,diabloPar));
 }
 
-doScatterJsonPair <- function(filenm,analysisVar,taxrank){
+doScatterJsonPair <- function(filenm,analysisVar,taxrank="genus"){
+   
   if(!exists("my.json.scatter.pair")){ # public web on same user dir
     .load.scripts.on.demand("utils_scatter_json.Rc");    
   }
@@ -3273,7 +3274,7 @@ PlotCorrHistogram <- function(imgNm, dpi=72, format="png"){
 }
 
 
-PlotDiagnostic <- function(imgName, dpi=72, format="png",alg, taxrank="Feature"){
+PlotDiagnostic <- function(imgName, dpi=72, format="png",alg, taxrank="OTU"){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   dpi <- as.numeric(dpi);
   imgNm <- paste(imgName,  ".", format, sep="");
@@ -3325,7 +3326,7 @@ PlotDiagnostic <- function(imgName, dpi=72, format="png",alg, taxrank="Feature")
     res <- diablo.res$dim.res[[length(diablo.res$dim.res)]]
     set.seed(123) # for reproducibility, only when the `cpus' argument is not used
     # this code takes a couple of min to run
-    perf.res <- mixOmics:::perf(res, validation = 'Mfold', folds = 10, nrepeat = 1, dist="max.dist")
+    perf.res <- mixOmics:::perf(res, validation = 'Mfold', folds = 10, nrepeat = 1, dist="max.dist",near.zero.var=T)
     diablo.comp <<- median(perf.res$choice.ncomp$WeightedVote)
     plot(perf.res) 
     mbSetObj$imgSet$diablo$diagnostic <- imgNm
@@ -3336,7 +3337,7 @@ PlotDiagnostic <- function(imgName, dpi=72, format="png",alg, taxrank="Feature")
 }
 
 
-PlotDiagnosticPca <- function(imgNm, dpi=72, format="png",type="diablo", taxrank="Feature"){
+PlotDiagnosticPca <- function(imgNm, dpi=72, format="png",type="diablo", taxrank="OTU"){
   save.image("diag.RData");
   mbSetObj <- .get.mbSetObj(mbSetObj);
   require("Cairo");
@@ -3345,9 +3346,8 @@ PlotDiagnosticPca <- function(imgNm, dpi=72, format="png",type="diablo", taxrank
   imgNm<- paste(imgNm, ".", format, sep="");
   #print(imgNm)
   fig.list <- list()
-  
+  print(taxrank)
   if(type == "diablo"){ 
-    
     library(grid)
     library(gridExtra)
     library(gridGraphics);
@@ -3406,7 +3406,7 @@ PlotDiagnosticPca <- function(imgNm, dpi=72, format="png",type="diablo", taxrank
 }
 
 
-PlotDiagnosticLoading <- function(imgNm, dpi=72, format="png",type="diablo",taxrank="Feature"){
+PlotDiagnosticLoading <- function(imgNm, dpi=72, format="png",type="diablo",taxrank="OTU"){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   require("Cairo");
   library(ggplot2)

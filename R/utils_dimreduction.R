@@ -72,6 +72,7 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
       names(loading.pos.xyz) <- names(loadingNames) <- names(d.list$mic$data.proc)
     
     for(l in 1:length(dats)){
+
       dats[[l]][["mic"]] <- d.list$mic$data.proc[[l]]
       dats[[l]][["met"]] <- d.list$met$data.proc
       dats[[l]]= lapply(dats[[l]], function(x){
@@ -85,7 +86,7 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
                         dimnames = list(names(dats[[l]]), names(dats[[l]])));
         
         diag(design) = 0;
-        res[[l]] = block.splsda(X = dats[[l]], Y = Y, ncomp = ncomp, design = design)
+          res[[l]] = block.splsda(X = dats[[l]], Y = Y, ncomp = ncomp, design = design,near.zero.var = T)
       } else {
         meta.var <- current.proc$meta_para$sample_data[,analysisVar];
         Y <- matrix(as.numeric(as.character(meta.var)));
@@ -95,6 +96,7 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
         diag(design) = 0;
         res[[l]] = block.splsda(X = data.list, Y = Y, ncomp = ncomps, design = design, mode = "regression", near.zero.var = T)
       }
+
       pos.xyz[[l]] <- res[[l]]$variates[[1]]
       pos.xyz2[[l]] <- res[[l]]$variates[[2]]
       
@@ -105,14 +107,13 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
         res[[l]]$loadings[[i]] <- pos
         rownames(res[[l]]$loadings[[i]]) <- rn
       }
-      
+
       loading.pos.xyz[[l]] <- rbind(res[[l]]$loadings[[1]], res[[l]]$loadings[[2]])
-      rownames(loading.pos.xyz[[l]]) = c(rownames(d.list$mic$data.proc[[l]]), rownames(d.list$met$data.proc))
+      #rownames(loading.pos.xyz[[l]]) = c(rownames(d.list$mic$data.proc[[l]]), rownames(d.list$met$data.proc))
       loadingNames[[l]]=rownames(loading.pos.xyz[[l]])
-      
       names = lapply(pos.xyz, function(x) rownames(x))
       newmeta = current.proc$meta_para$sample_data
-      
+
       if("prop_expl_var" %in% names(res[[l]])){
         var.vec <- res[[l]]$prop_expl_var
       }else if("explained_variance" %in% names(res[[l]])){
@@ -120,6 +121,7 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
       }else{
         var.vec <- 0;
       }
+
       misc[[l]]$pct2[["microbiome"]] = unname(signif(as.numeric(var.vec[['mic']],4)))*100
       misc[[l]]$pct2[["metabolomics"]] = unname(signif(as.numeric(var.vec[['met']],4)))*100
       
