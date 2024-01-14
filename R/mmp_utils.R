@@ -296,6 +296,8 @@ PerformPairDEAnalyse <- function(mbSetObj, taxalvl, analysisVar,alg="limma",plvl
   
 }
 
+resMsg <<- "";
+
 CompareMic <- function(mbSetObj, taxalvl,initDE=1,
                        analysis.var,comp = NULL,ref = NULL,block = "NA",
                        alg="maaslin",plvl=0.05, 
@@ -306,7 +308,7 @@ CompareMic <- function(mbSetObj, taxalvl,initDE=1,
   sample_data <-  data.frame(mbSetObj$dataSet$sample_data)
   sample_type <- mbSetObj$dataSet$meta_info
   meta_type <- mbSetObj$dataSet$meta.types
-  
+
   if (!exists('adj.vec')) {
     adj.bool = F;
   } else {
@@ -427,12 +429,12 @@ CompareMet <- function(mbSetObj, analysisVar,
   sigfeat <- rownames(metdat.de)[metdat.de$FDR < plvl];
   sig.count <- length(sigfeat);
   if(sig.count == 0){
-    current.msg <<- "No significant features were identified using the given p value cutoff.";
+    current.msg <<- "No significant metabolomic features were identified using the given p value cutoff.";
   }else{
     if(metDataType=="peak"){
-      current.msg <<- c(current.msg,paste("A total of", sig.count, "significant ", " peaks were identified!"));
+      current.msg <<-  paste(sig.count, "significant peaks were identified!");
     }else{
-      current.msg <<- c(current.msg,paste("A total of", sig.count, "significant ", " metabolites were identified!"));
+      current.msg <<- paste(sig.count, "significant metabolites were identified!");
     }
     
   }
@@ -440,8 +442,7 @@ CompareMet <- function(mbSetObj, analysisVar,
   mbSetObj$dataSet$metabolomics$sigfeat <- sigfeat
   mbSetObj$dataSet$metabolomics$sig.count <- sig.count
   current.proc$met$sigfeat <<- sigfeat 
-  
-  print("CompareMet done")
+  resMsg<<- paste(resMsg,current.msg)
   return(.set.mbSetObj(mbSetObj))
   
 }
@@ -661,9 +662,9 @@ PrepareResTable <- function(mbSetObj,micDataType,taxalvl,is.norm=F){
   
   sig.count <- length(sigfeat);
   if(sig.count == 0){
-    current.msg <<- "No significant features were identified using the given p value cutoff.";
+    resMsg <<- "No significant microbiome features were identified using the given p value cutoff.";
   }else{
-    current.msg <<- paste("A total of", sig.count,"significant ", tolower(taxalvl), " were identified!");
+    resMsg <<- paste("A total of", sig.count,"significant", ifelse(taxalvl=="OTU",taxalvl,tolower(taxalvl)) , "were identified, ");
   }
   
   if(is.norm){
@@ -696,19 +697,18 @@ PrepareResTable <- function(mbSetObj,micDataType,taxalvl,is.norm=F){
   mbSetObj$analSet$multiboxdata <- box_data;
   mbSetObj$analSet$sig.count <- sig.count;
   mbSetObj$analSet$resTable <- resTab;
-  
+  resMsg<<- paste0(resMsg,current.msg)
   return(.set.mbSetObj(mbSetObj))
 }
 
 
 
 
-ProcessMaaslinRes <- function(mbSetObj,taxalvl,analysis.var){
+ProcessMaaslinRes <- function(mbSetObj,taxalvl,analysis.var,thresh){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   input.data<-maaslin.para$input_data
   res <- mbSetObj$analSet$maaslin$results
-  
   inds <- !(res$feature %in% rownames(input.data)); 
   # filter results to get only ones related to analysis var
   res <- res[res$metadata == analysis.var, ];
@@ -745,8 +745,7 @@ ProcessMaaslinRes <- function(mbSetObj,taxalvl,analysis.var){
     qs::qsave(phyloseq_objs,"phyloseq_objs.qs")
     
   }
-  print(paste0("CompareMic ", taxalvl," done!"))
-  mbSetObj$analSet$maaslin$taxalvl <- "OTU"
+   mbSetObj$analSet$maaslin$taxalvl <- "OTU"
   return(.set.mbSetObj(mbSetObj))
   
 }
@@ -1644,8 +1643,6 @@ PrepareOTUQueryJson <- function(mbSetObj,taxalvl,contain="bac"){
 
 PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,contain="hsabac",enrich.type){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  print(paste("enrich.type=", enrich.type));
-  print(paste("dataType=", dataType));
 
   if(enrich.type == "hyper"){
     if(dataType=="metabolite"){
@@ -1683,7 +1680,6 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
   if(!exists("taxalvl")){taxalvl = "ko"}
   mbSetObj$analSet$keggnet$background <- contain
   mbSetObj$analSet$keggnet$taxalvl <- taxalvl
-  print(mbSetObj$imgSet$enrTables);
   return(.set.mbSetObj(mbSetObj))
 }
 
