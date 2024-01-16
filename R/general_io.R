@@ -541,16 +541,18 @@ ValidateFeatureName <- function(mbSetObj, taxlvl, nm){
 # save the processed data with class names
 PrepareDownloadData <- function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-    
   if(mbSetObj$module.type %in% c("mdp","sdp")){
     if(!is.null(mbSetObj$dataSet$data.orig)){
       fast.write(mbSetObj$dataSet$data.orig, file="data_original.csv");
     }
     if(!is.null(mbSetObj$dataSet$filt.data)){
-      fast.write(otu_table(mbSetObj$dataSet$filt.data,as.matrix()), file="data_filtered.csv");
+      if(class(mbSetObj$dataSet$filt.data)[1]=="matrix"){
+        fast.write(mbSetObj$dataSet$filt.data, file="data_filtered.csv");
+       }else{
+         fast.write(otu_table(mbSetObj$dataSet$filt.data,as.matrix()), file="data_filtered.csv");
+      }
     }
-    if(!is.null(otu_table(mbSetObj$dataSet$norm.phyobj,as.matrix()))){
-
+    if(!is.null(mbSetObj$dataSet$norm.phyobj)){
       fast.write(otu_table(mbSetObj$dataSet$norm.phyobj,as.matrix()), file="data_normalized.csv");
     }
   }else if(mbSetObj$module.type == "ppd"){
