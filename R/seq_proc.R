@@ -685,10 +685,10 @@ generateResFigures <- function(mbSetObj = NA){
   seqtab.nochim <- cbind(rownames(dataObj[["res"]][["seqtab.nochim"]]), dataObj[["res"]][["seqtab.nochim"]]);
   colnames(seqtab.nochim)[1] <- "#NAME"
   write.table(seqtab.nochim, file = "seq_abundance.txt", sep = "\t", row.names = FALSE, quote = FALSE)
-  samples.out <- colnames(seqtab.nochim)
+  samples.out <- colnames(dataObj[["res"]][["seqtab.nochim"]])
   
   Samples <- sapply(strsplit(samples.out, "_F_filt.fastq.gz"), `[`, 1)
-  colnames(seqtab.nochim) <- Samples
+  colnames(dataObj[["res"]][["seqtab.nochim"]]) <- Samples
   samdf <- data.frame(Samples=Samples)
   meta_dt <- dataObj[["meta_info"]]
   grps <- sapply(Samples, function(x){
@@ -696,17 +696,18 @@ generateResFigures <- function(mbSetObj = NA){
   });
   samdf$Groups <- grps;
   rownames(samdf) <- Samples;
-  
+ 
   taxa <- cbind(rownames(dataObj[["res"]][["taxa"]]),dataObj[["res"]][["taxa"]]) 
   colnames(taxa)[1] <- "#TAXONOMY"
   write.table(taxa, file = "taxonomy_annotation.txt", sep = "\t", row.names = FALSE, quote = FALSE)
   ## merge seqtab.nochim and taxa into OTU abundance table
-  taxa_nms <- apply(taxa, 1, FUN = function(x){
+  taxa_nms <- apply(dataObj[["res"]][["taxa"]], 1, FUN = function(x){
     if(is.na(x[6])){x[6] <- "uncultured"}
     if(is.na(x[7])){x[7] <- "uncultured bacterium"}
     paste(x, collapse = "; ")
   })
-  otu_table <- cbind(NAME = taxa_nms, seqtab.nochim)
+ 
+  otu_table <- cbind(NAME = taxa_nms, dataObj[["res"]][["seqtab.nochim"]])
   colnames(otu_table)[1] <- "#NAME"
   dataObj[["res"]][["otu_table"]] <- otu_table
   write.table(otu_table, file = "microbiomeAnalyst_16s_otu.txt", sep = "\t", row.names = FALSE, quote = FALSE)
@@ -719,9 +720,9 @@ generateResFigures <- function(mbSetObj = NA){
   colnames(meta_dtx)[1] <- "#NAME"
   write.table(meta_dtx, file = "microbiomeAnalyst_16s_meta.txt", sep = "\t", row.names = FALSE, quote = FALSE)
   
-  ps <- phyloseq(otu_table(seqtab.nochim, taxa_are_rows=TRUE), 
+  ps <- phyloseq(otu_table(dataObj[["res"]][["seqtab.nochim"]], taxa_are_rows=TRUE), 
                  sample_data(samdf), 
-                 tax_table(taxa))
+                 tax_table(dataObj[["res"]][["taxa"]]))
   mbSetObj$dataObj <- dataObj;
   mbSetObj$dataObj$ps_obj <- ps;
   # plot quick library size view
