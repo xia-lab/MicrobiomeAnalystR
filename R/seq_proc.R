@@ -682,7 +682,8 @@ generateResFigures <- function(mbSetObj = NA){
   }
   require(phyloseq);
   require(ggplot2);
-  seqtab.nochim <- dataObj[["res"]][["seqtab.nochim"]];
+  seqtab.nochim <- cbind(rownames(dataObj[["res"]][["seqtab.nochim"]]), dataObj[["res"]][["seqtab.nochim"]]);
+  colnames(seqtab.nochim)[1] <- "#NAME"
   write.table(seqtab.nochim, file = "seq_abundance.txt", sep = "\t", row.names = FALSE, quote = FALSE)
   samples.out <- colnames(seqtab.nochim)
   
@@ -696,7 +697,8 @@ generateResFigures <- function(mbSetObj = NA){
   samdf$Groups <- grps;
   rownames(samdf) <- Samples;
   
-  taxa <- dataObj[["res"]][["taxa"]]
+  taxa <- cbind(rownames(dataObj[["res"]][["taxa"]]),dataObj[["res"]][["taxa"]]) 
+  colnames(taxa)[1] <- "#TAXONOMY"
   write.table(taxa, file = "taxonomy_annotation.txt", sep = "\t", row.names = FALSE, quote = FALSE)
   ## merge seqtab.nochim and taxa into OTU abundance table
   taxa_nms <- apply(taxa, 1, FUN = function(x){
