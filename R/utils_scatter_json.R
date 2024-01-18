@@ -30,10 +30,10 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
   names(sig.mats)<-names(sig.mic)
   for(s in 1:length(sig.mats)){
     sig.mic[[s]]$ids<-rownames(sig.mic[[s]])
-    sig.mats[[s]][["microbiome"]] <- sig.mic[[s]]      
+    sig.mats[[s]][["microbiome"]] <- sig.mic[[s]]
     sig.mats[[s]][["metabolomics"]] <- sig.met
   }
-  
+
   seeds <- lapply(sig.mic,function(x) c(rownames(x),rownames(sig.met)))
   #meta <- meta ### for other methods not import here
   
@@ -116,7 +116,6 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
         )
       );
     }
-    
     if(reductionOptGlobal == "procrustes"){
       pos.xyz.length = nrow(pos.xyz)
       edge.mat <- cbind(id=c(1:(pos.xyz.length)), source=names[c(1:(pos.xyz.length/2))], target=names[c(((pos.xyz.length/2)+1):pos.xyz.length) ], opacity = 0);
@@ -138,7 +137,7 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
       qs::qsave(procrustes.res,"procrustes.res.qs")
 
     }else if(reductionOptGlobal == "diablo"){
-      
+
       pos.xyz2 <-   diablo.res$pos.xyz2[[tax]]
       names <- rownames(pos.xyz2)
       nodes_samples2 <- vector(mode="list");
@@ -252,7 +251,7 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
         fast.write(sig.mats[[tax]][["microbiome"]], file=paste0("sig_diablo_microbiome_",taxrank,".csv"));
         fast.write(sig.mats[[tax]][["metabolomics"]], file=paste0("sig_diablo_metabolome_",taxrank,".csv"));
       }
-      
+
       pca.scatter <- generatePCAscatter(phyloseq_objs$count_tables[[tax]],
                                         metdat,tax)
       
@@ -313,12 +312,15 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
     }
     
   }
-  
+
   jsonNms_scatter <<- filenm;
   
   sink(filenm);
-  cat(toJSON(netData));
+  cat(rjson::toJSON(netData));
   sink();
+
+
+
   return(1)
   
 }

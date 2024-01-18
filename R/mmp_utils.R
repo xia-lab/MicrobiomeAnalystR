@@ -532,7 +532,8 @@ performLimma <-function(data,sample_data,sample_type,analysisVar){
                         FDR=signif(topFeatures[,"adj.P.Val"], digits = 3),
                         T.Stats=signif(topFeatures[,"t"], digits = 3),
                         Log2FC=signif(topFeatures[,"logFC"], digits = 3))
-      
+      rownames(res) <- rownames(topFeatures);
+
     }else{
       
       res <- data.frame(P_value=signif(fit$p.value[,1],digits = 3),
@@ -540,7 +541,7 @@ performLimma <-function(data,sample_data,sample_type,analysisVar){
                         T.Stats=signif(fit$t[,1],digits = 3),
                         F.Stats=signif(fit$F,digits = 3),
                         F.Pval=signif(fit$F.p.value,digits = 3))
-      
+      rownames(res) <- rownames(fit$p.values);
       
     }
     
@@ -560,12 +561,13 @@ performLimma <-function(data,sample_data,sample_type,analysisVar){
     current.msg<<-"Duplicate features names are not allowed! Please double check your input!"
     return()
   }else{
-    rownames(res) <- rownames(fit$p.value)
+    rownames(fit$p.value[order(fit$p.value),,drop=F])
   } 
+
   res <- na.omit(res)
   res <- res[order(res[,2], decreasing=FALSE),]
   res[res == "NaN"] = 1
-  
+  print(head(res))
   return(res)
   
 }
