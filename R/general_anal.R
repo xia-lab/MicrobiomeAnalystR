@@ -1357,6 +1357,7 @@ return(1)
   }
   #cat('\n')
   out$p.adj <- p.adjust(out$pval, method=padj)
+  out$SumOfSqs <-NULL
   #attr(out, 'p.adjust.method') <- padj
   #cat('\np-adjust method:', padj, '\n\n');
   return(out)
