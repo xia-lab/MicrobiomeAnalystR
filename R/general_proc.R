@@ -196,7 +196,12 @@ SanityCheckMetData <- function(mbSetObj,isNormMetInput, disableFilter = FALSE){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   feat.sums <- apply(mbSetObj$dataSet$metabolomics$data.orig, 1, function(x){sum(x>0, na.rm=T)});
-  
+ 
+  if(mbSetObj$dataSet$metabolomics$feature.type=="peak" &  any(grepl("[a-z]|[A-Z]|@",mbSetObj$dataSet$metabolomics$comp_metnm))){
+   AddErrMsg("The peak format is not correct! Please use Generic Format if the data is a peak table. Note that if retention times are included, they must
+                                be formatted with two underscores between the m/z and retention time. ");
+      return(0);
+  }
   if(disableFilter){
     data.proc <-mbSetObj$dataSet$metabolomics$data.orig
   }else{
