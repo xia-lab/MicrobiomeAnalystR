@@ -1661,6 +1661,10 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
       }
       mbSetObj$dataSet$sample_data<-sample_data(mbSetObj$dataSet$sample_data, errorIfNULL=TRUE);
       #cleaning up the names#deleting [] if present; and substituting (space,.,/ with underscore(_))
+      if(!all(validUTF8(mbSetObj$dataSet$taxa_table))){
+         AddErrMsg("Unexpected symbol was detected in your taxonomy table, please make sure you have upload the table in correct format!");
+        return(0);
+       }
       mbSetObj$dataSet$taxa_table<- gsub("[[:space:]./_-]", "_",mbSetObj$dataSet$taxa_table);
       mbSetObj$dataSet$taxa_table<- gsub("\\[|\\]","",mbSetObj$dataSet$taxa_table);
       mbSetObj$dataSet$taxa_table[which(mbSetObj$dataSet$taxa_table==''|grepl("_$",mbSetObj$dataSet$taxa_table))]=NA;
