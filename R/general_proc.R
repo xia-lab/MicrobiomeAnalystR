@@ -230,9 +230,7 @@ SanityCheckMetData <- function(mbSetObj,isNormMetInput, disableFilter = FALSE){
   totalCount <- nrow(data.proc)*ncol(data.proc);
   naCount <- sum(is.na(data.proc));
   naPercent <- round(100*naCount/totalCount,1)
-  #  print(naCount)
-  mbSetObj$dataSet$metabolomics$missingCount <- naCount;
-  
+  mbSetObj$dataSet$metabolomics$missingCount <- naCount; 
   msg<-paste("A total of ", naCount, " (", naPercent, "%) missing values were detected.", sep="");
   
   
