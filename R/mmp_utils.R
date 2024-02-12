@@ -405,12 +405,11 @@ CompareMic <- function(mbSetObj, taxalvl,initDE=1,
 
 
 CompareMet <- function(mbSetObj, analysisVar,
-                       alg="limma",plvl=0.05, selected="NA",nonpar=FALSE){
+                       alg="limma",plvl=0.05,ref,compr, selected="NA",nonpar=FALSE){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   # current.proc$sample<<-data.frame(mbSetObj$dataSet$sample_data)
   require(dplyr)
-  
 
   if(analysisVar=="null" | is.null(analysisVar)){
     analysisVar = names(current.proc$meta_para$sample_data)[1]
@@ -418,9 +417,11 @@ CompareMet <- function(mbSetObj, analysisVar,
   current.proc$met$plvl<<-plvl
   current.proc$met$alg<<-alg
  
-  metdat <-current.proc$met$data.proc
   sample_data <-  mbSetObj$dataSet$sample_data
+  sample_data <- sample_data[sample_data[[analysisVar]] %in% c(ref,compr),]
   sample_type <- mbSetObj$dataSet$meta_info
+  metdat <-current.proc$met$data.proc %>% 
+         .[,colnames(.)%in%sample_data$sample_id]
   metdat.de <- performLimma(metdat,sample_data,sample_type,analysisVar)
   fast.write(metdat.de, file="limma_output.csv");
   current.proc$met$res_deAnal <<- metdat.de
@@ -438,7 +439,7 @@ CompareMet <- function(mbSetObj, analysisVar,
     }
     
   }
-  
+
   mbSetObj$dataSet$metabolomics$sigfeat <- sigfeat
   mbSetObj$dataSet$metabolomics$sig.count <- sig.count
   current.proc$met$sigfeat <<- sigfeat 
@@ -541,7 +542,7 @@ performLimma <-function(data,sample_data,sample_type,analysisVar){
                         T.Stats=signif(fit$t[,1],digits = 3),
                         F.Stats=signif(fit$F,digits = 3),
                         F.Pval=signif(fit$F.p.value,digits = 3))
-      rownames(res) <- rownames(fit$p.values);
+      rownames(res) <- rownames(fit$p.value);
       
     }
     
