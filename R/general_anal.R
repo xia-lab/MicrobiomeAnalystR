@@ -2281,6 +2281,7 @@ GenerateCompJson <- function(mbSetObj=NA, fileName, type){
 }
 
 PlotlyCompRes <- function(mbSetObj = NA, type="", fileName="") {
+  save.image("comp.res");
   library(htmlwidgets)
   mbSetObj <- .get.mbSetObj(mbSetObj)
   if (type %in% c("univ")) {
@@ -2307,7 +2308,7 @@ PlotlyCompRes <- function(mbSetObj = NA, type="", fileName="") {
       type = 'scatter',
       mode = 'markers',
       marker = list(
-        color = mapply(getColor, raw_data$FDR, raw_data$log2FC, p.lvl), # getColor function should be defined
+        color = mapply(getColor, raw_data$FDR, raw_data$log2FC, p.lvl, fc.thresh), # getColor function should be defined
         size=mapply(getSizeForPValue, raw_data$FDR, p.lvl),
         line = list(color = 'white', width = 0.8)
       ),
@@ -2361,12 +2362,11 @@ PlotlyCompRes <- function(mbSetObj = NA, type="", fileName="") {
   return(p)
 }
 
-getColor <- function(pValue, log2fc, pval.thresh) {
+getColor <- function(pValue, log2fc, pval.thresh, log2fcThreshold) {
   pValueThreshold <- pval.thresh# Replace with the actual way to access this value in R
-  log2fcThreshold <- 0 # Example threshold for high log2fc
   
-  if (pValue < pValueThreshold) {
-    if (log2fc > log2fcThreshold) {
+  if (pValue < pValueThreshold && abs(log2fc) > log2fcThreshold) {
+    if (log2fc > 0) {
       return('red') # Interpolate red for positive log2fc
     } else {
       return('blue') # Interpolate blue for negative log2fc
