@@ -1105,7 +1105,7 @@ doGemPrediction <- function(predDB,taxalvl,psc=0.5,metType,matchonly=T,sigonly=T
 ###########################################################
 
 DoM2Mcorr <- function(mic.sig,met.sig,cor.method="univariate",cor.stat="pearson",taxalvl){
-  
+  print(cor.method)
   labels <- c(rownames(mic.sig),rownames(met.sig))
   nan.msg<<-"null"
   if(cor.method == "univariate"){
@@ -1197,8 +1197,7 @@ performeCorrelation <- function(mbSetObj,taxalvl,initDE,cor.method="univariate",
   if(length(lbl.met) >100){lbl.met= lbl.met[1:100]}
   
   mic.sig <- micdat[which(rownames(micdat) %in% lbl.mic),]
-  met.sig <- metdat[which(rownames(metdat) %in% lbl.met),match(colnames(mic.sig),colnames(metdat))]
-  
+  met.sig <- metdat[which(rownames(metdat) %in% lbl.met),match(colnames(mic.sig),colnames(metdat)), drop = FALSE]
   res.corr <- DoM2Mcorr(mic.sig,met.sig,cor.method,cor.stat,taxalvl)
   corr.mat <- res.corr$corr.mat
   if(is.null(dim(res.corr$corr.mat))){

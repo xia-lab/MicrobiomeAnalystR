@@ -16,7 +16,6 @@ my.secom.anal<-function(mbSetObj,taxrank,R,corr_cut, max_p,mode,method='pearson'
   feature_table <- phyloseq_prenorm_objs$count_tables[[taxrank]]
   meta_data <- mbSetObj$dataSet$sample_data
   abn_list = abn_est(feature_table,meta_data, taxrank, pseudo=0,tax_keep=NULL)
- 
 
   s_diff_hat = abn_list$s_diff_hat
   y_hat = abn_list$y_hat
@@ -83,11 +82,15 @@ my.secom.anal<-function(mbSetObj,taxrank,R,corr_cut, max_p,mode,method='pearson'
     
   }
    names(res) <- c("Taxon1", "Taxon2", "Correlation", "P.value", "Method")
-  res<- res[which(res$Correlation !=0 & res$Taxon1 !=res$Taxon2),]
-  secom_data <- exp(1)^y_hat
-    secom_data[is.na(secom_data)] <- 0
-     qs::qsave(secom_data,"secom_data.qs")
-  return(res);
+   res<- res[which(res$Correlation !=0 & res$Taxon1 !=res$Taxon2),]
+   res <- res[(abs(res[,3]) > corr_cut & res[,4] < max_p),]
+ 
+   res[,3] <- round(res[,3], digits=4)
+   res[,4] <- round(res[,4], digits=4)
+   secom_data <- exp(1)^y_hat
+   secom_data[is.na(secom_data)] <- 0
+   qs::qsave(secom_data,"secom_data.qs")
+   return(res);
   
 }
 
