@@ -1010,7 +1010,7 @@ SetParam<- function(mbSetObj=NA, paramName, value){
 
 #either mmp or sdp;
 recordEnrTable <- function(mbSetObj, vis.type, dataTable, library, algo){
-        vis.type <- mbSetObj$paramSet$koProj.type;
+       # vis.type <- mbSetObj$paramSet$koProj.type;
         if(is.null(mbSetObj$imgSet$enrTables)){
             mbSetObj$imgSet$enrTables <- list();
         }
@@ -1018,5 +1018,6 @@ recordEnrTable <- function(mbSetObj, vis.type, dataTable, library, algo){
         mbSetObj$imgSet$enrTables[[vis.type]]$table <- dataTable;
         mbSetObj$imgSet$enrTables[[vis.type]]$library <- library;
         mbSetObj$imgSet$enrTables[[vis.type]]$algo <- algo;
+        .set.mbSetObj(mbSetObj);
         return(mbSetObj);
 }

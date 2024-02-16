@@ -568,7 +568,6 @@ performLimma <-function(data,sample_data,sample_type,analysisVar){
   res <- na.omit(res)
   res <- res[order(res[,2], decreasing=FALSE),]
   res[res == "NaN"] = 1
-  print(head(res))
   return(res)
   
 }
@@ -1105,7 +1104,6 @@ doGemPrediction <- function(predDB,taxalvl,psc=0.5,metType,matchonly=T,sigonly=T
 ###########################################################
 
 DoM2Mcorr <- function(mic.sig,met.sig,cor.method="univariate",cor.stat="pearson",taxalvl){
-  print(cor.method)
   labels <- c(rownames(mic.sig),rownames(met.sig))
   nan.msg<<-"null"
   if(cor.method == "univariate"){
@@ -1842,7 +1840,8 @@ enrich2json <- function(){
   sink();
 
   mbSetObj <- .get.mbSetObj(NA);
-  mbSetObj <- recordEnrTable(mbSetObj, mbSetObj$paramSet$koProj.type, resTable, "KEGG", "Global Test");
+  
+  mbSetObj <- recordEnrTable(mbSetObj, "mmp", resTable, "KEGG", "Global Test");
 
   # write csv
   fast.write(resTable, file=paste(file.nm, ".csv", sep=""), row.names=F);
@@ -2737,7 +2736,8 @@ PerformMetListEnrichment <- function(mbSetObj, contain,file.nm){
     return(x)
   })
   
-  mbSetObj <- recordEnrTable(mbSetObj, mbSetObj$paramSet$koProj.type, resTable, "KEGG", "Overrepresentation Analysis");
+  mbSetObj <- recordEnrTable(mbSetObj, "mmp", resTable, "KEGG", "Overrepresentation Analysis");
+
   json.res <- list(hits.query =convert2JsonList(hits.query),
                    path.nms = path.nms,
                    path.pval = path.pval,
@@ -3342,9 +3342,7 @@ PlotDiagnosticPca <- function(imgNm, dpi=72, format="png",type="diablo", taxrank
   library(ggplot2);
   dpi<-as.numeric(dpi)
   imgNm<- paste(imgNm, ".", format, sep="");
-  #print(imgNm)
   fig.list <- list()
-  print(taxrank)
   if(type == "diablo"){ 
     library(grid)
     library(gridExtra)
@@ -3513,6 +3511,7 @@ InitCurrentProc <-function(){
   mbSetObj$micDataType <-micDataType;
   mbSetObj$metDataType <-metDataType;
   mbSetObj$metIDType <-metIDType;
+  
   current.proc<<-current.proc
   .set.mbSetObj(mbSetObj)
   return(1)
