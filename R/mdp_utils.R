@@ -4253,17 +4253,3 @@ generateColorArr <- function(grp.num, filenm=NULL) {
   }
 }
 
-PlotlyTaxaAbundance <- function(rdaName, type){
-load(rdaName);
-p <- plotly::ggplotly(box, width=1000, height=800);
-
-if(type=="area"){
-   narm <- p[["x"]][["data"]]
-   for(i in 1:length(narm)){
-      narm[[i]]$y[is.na(narm[[i]]$y)]=0;
-   }
-   p[["x"]][["data"]] <- narm
-}
-
-return(p);
-}
