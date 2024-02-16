@@ -3336,7 +3336,7 @@ PlotDiagnostic <- function(imgName, dpi=72, format="png",alg, taxrank="OTU"){
 
 
 PlotDiagnosticPca <- function(imgNm, dpi=72, format="png",type="diablo", taxrank="OTU"){
-  save.image("diag.RData");
+  #save.image("diag.RData");
   mbSetObj <- .get.mbSetObj(mbSetObj);
   require("Cairo");
   library(ggplot2);

@@ -1260,7 +1260,7 @@ return(1)
 }
 
 .perform_edger <- function(variable, data, p.lvl=0.05, fc.thresh=0, comp1="", comp2="") {
-  save.image("edger.RData");
+  #save.image("edger.RData");
   mbSetObj <- .get.mbSetObj(mbSetObj)
   dat3t <- mbSetObj$analSet$rnaseq$data.rnaseq
   claslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]])
@@ -2281,7 +2281,7 @@ GenerateCompJson <- function(mbSetObj=NA, fileName, type){
 }
 
 PlotlyCompRes <- function(mbSetObj = NA, type="", fileName="") {
-  save.image("comp.res");
+  #save.image("comp.res");
   library(htmlwidgets)
   mbSetObj <- .get.mbSetObj(mbSetObj)
   if (type %in% c("univ")) {
