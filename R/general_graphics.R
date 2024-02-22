@@ -462,15 +462,16 @@ PlotBoxMultiMetabo <- function(mbSetObj, boxplotName, analysis.var, feat, format
 
 PlotHeatmap<-function(mbSetObj, plotNm, dataOpt="norm", 
                       scaleOpt="row", smplDist, clstDist, palette, metadata,
-                      taxrank, viewOpt, doclust, format="png", colname,rowname, 
-                      fontsize_col, fontsize_row, annoPer, fzAnno,
+                      taxrank, viewOpt, doclust, format="png", showColnm,showRownm, 
+                      unitCol,unitRow,fzCol,fzRow, annoPer, fzAnno,
                       appendnm="F", rowV=F, colV=T, var.inx=NA, border=T, width=NA, dpi=72){
 
     mbSetObj <- .get.mbSetObj(mbSetObj);
     load_iheatmapr();
     load_rcolorbrewer();
     load_viridis();
-
+  print(c(unitCol,unitRow,fzCol,fzRow, annoPer, fzAnno))
+  print(c(showColnm,showRownm))
     set.seed(2805614);
     #used for color pallete
     variable <<- metadata;
@@ -540,7 +541,7 @@ PlotHeatmap<-function(mbSetObj, plotNm, dataOpt="norm",
        data1 <- (t(sapply(by(data1,rownames(data1),colSums),identity)));
        nm <- rownames(data1);
     }
-  
+
     # arrange samples on the basis of selected experimental factor and using the same for annotation also
     annotation <- data.frame(sample_data(data));
 
@@ -552,7 +553,7 @@ PlotHeatmap<-function(mbSetObj, plotNm, dataOpt="norm",
     }else{
       annotation <- annotation[order(annotation[,metadata]),];
     }
-  
+
     # remove those columns that all values are unique (continuous or non-factors)
     #uniq.inx <- apply(annotation, 2, function(x){length(unique(x)) == length(x)});
     #there is an additional column sample_id which need to be removed first
@@ -603,7 +604,7 @@ PlotHeatmap<-function(mbSetObj, plotNm, dataOpt="norm",
 
     if (!(is.null(mbSetObj$analSet$heat.taxalvl))) {
       if (mbSetObj$analSet$heat.taxalvl != taxrank) {
-        annoPer <- fontsize_col <- fontsize_row <- fzAnno <- "0.0"
+       # annoPer <- fontsize_col <- fontsize_row <- fzAnno <- "0.0"
         mbSetObj$analSet$heatVar <- 1
       } else {
         mbSetObj$analSet$heatVar <- 0
@@ -615,224 +616,92 @@ PlotHeatmap<-function(mbSetObj, plotNm, dataOpt="norm",
     data1sc <- as.matrix(apply(data1, 2, as.numeric))
     rownames(data1sc) <- rownames(data1)
     data1sc <- scale_mat(data1sc, scaleOpt)
-    dend_row <- hclust(dist(data1sc, method = smplDist), method = clstDist)
+   
+     
+     data1sc = round(data1sc,5)
+  w = min(1500,ncol(data1sc)*unitCol+50)
+  h = min(1800,nrow(data1sc)*unitRow+50)
+    
+  if(ncol(data1sc)<100){
+     w=w+(100-ncol(data1sc))*6
+  }
+    
+  if(nrow(data1sc)<100){
+    h=h+(100-nrow(data1sc))*5      
+  }
 
-    if (annoPer != "0.0") {
-      sz <- max(as.numeric(annoPer) / 100, 0.015)
+    print(c(w,h))
+  idx = which(mbSetObj$dataSet$meta.types[names(annotation)]=="disc")
+  if(any(apply(annotation[,names(idx),drop=F],2, function(x) length(unique(x)))>10)){
+    if(h<750){
+      nr = 2  
+      ys = 0.85
+    } else if(h<1500){
+      nr = 4.5
+      ys = 0.9  
+    }else{
+      nr = 9
+      ys = 0.95 
+    }
+  }else{
+   if(h<750){
+      nr = 3  
+      ys = 0.85
+    } else if(h<1500){
+      nr = 6
+      ys = 0.95  
+    }else{
+      nr = 11
+     ys = 0.95
+   }
+ }
+  sz <- max(as.numeric(annoPer) / 100, 0.015)
       bf <- min(0.01, (sz / 3))
 
-      if (nrow(data1sc) > 120) {
-        if (viewOpt != "overview") {
-          map.height <- nrow(data1sc) * 13
-          map.width <- 1450
-        } else if (viewOpt == "overview") {
-          map.height <- max(1000, nrow(data1sc) * 9)
-          map.height <- min(2000, map.height)
-          map.width <- 1200
-        }
-      } else {
-        if (viewOpt != "overview") {
-          map.height <- max(nrow(data1sc) * 30, 700)
-          map.width <- 1450
-        } else if (viewOpt == "overview") {
-          map.height <- max(nrow(data1sc) * 25, 700)
-          map.width <- 1200
-        }
-      }
-      if (fontsize_col == "0.0") {
-        fzCol <- max(12, map.height / nrow(data1sc) / 7)
-      } else {
-        fzCol <- as.numeric(fontsize_col)
-      }
+  
+ dend_row <- hclust(dist(data1sc, method = smplDist), method = clstDist)
 
-      if (viewOpt != "overview") {
-        if (fontsize_row == "0.0") {
-          fzRow <- 8 + map.height / nrow(data1sc) / 9
-        } else {
-          fzRow <- as.numeric(fontsize_row)
-        }
-      } else {
-        if (fontsize_row == "0.0") {
-          fzRow <- 6 + map.height / nrow(data1sc) / 9
-        } else {
-          fzRow <- as.numeric(fontsize_row)
-        }
-      }
-    } else {
-      if (nrow(data1sc) > 120) {
-        if (mbSetObj[["module.type"]] == "mdp") {
-          if (viewOpt != "overview") {
-            map.height <- nrow(data1sc) * 12
-            map.width <- 1450
-            if (ncol(annotation) == 1) {
-              sz <- max(0.013, 20 / map.height)
-            } else {
-              sz <- max(0.015, 3 * ncol(annotation) / map.height)
-            }
-          } else if (viewOpt == "overview") {
-            map.height <- max(1000, nrow(data1sc) * 9)
-            map.width <- 1200
-            if (ncol(annotation) == 1) {
-              sz <- max(0.013, 20 / map.height)
-            } else {
-              sz <- 4 * ncol(annotation) / map.height
-            }
-          }
-        } else {
-          if (viewOpt != "overview") {
-            map.height <- nrow(data1sc) * 8
-            map.width <- 1200
-          } else if (viewOpt == "overview") {
-            map.height <- nrow(data1sc) * 7
-            map.width <- 1450
-          }
-          sz <- 0.013
-        }
-      } else {
-        if (viewOpt != "overview") {
-          map.height <- max(nrow(data1sc) * 30, 700)
-          map.width <- 1450
-          if (ncol(annotation) == 1) {
-            sz <- 0.03 + 20 / map.height
-          } else {
-            sz <- max(0.03, 5 * ncol(annotation) / map.height)
-          }
-        } else if (viewOpt == "overview") {
-          map.height <- max(nrow(data1sc) * 25, 700)
-          map.width <- 1200
+      p <- iheatmap(data1sc,  name = "Abundance", x_categorical = TRUE,
+                  layout = list(font = list(size = fzAnno)),
+                  colors = colors,
+                  colorbar_grid = setup_colorbar_grid(nrows =nr, x_start = 1.1, y_start = ys, x_spacing = 0.15)
+    )%>%
+      add_col_annotation(annotation,
+                         side = "top", size = sz , buffer = bf , inner_buffer = bf / 3
+      )%>% add_row_dendro(dend_row, side = "right")
 
-          if (ncol(annotation) == 1) {
-            sz <- 0.03 + 5 / map.height
-          } else {
-            sz <- max(0.03, 3 * ncol(annotation) / map.height)
-          }
-        }
-      }
-
-      if (fontsize_col == "0.0") {
-        fzCol <- max(13, map.height / nrow(data1sc) / 7)
-      } else {
-        fzCol <- as.numeric(fontsize_col)
-      }
-
-      if (viewOpt != "overview") {
-        if (fontsize_row == "0.0") {
-          fzRow <- 8 + map.height / nrow(data1sc) / 9
-        } else {
-          fzRow <- as.numeric(fontsize_row)
-        }
-      } else {
-        if (fontsize_row == "0.0") {
-          fzRow <- 6 + map.height / nrow(data1sc) / 9
-        } else {
-          fzRow <- as.numeric(fontsize_row)
-        }
-      }
-    }
-
-    if (ncol(annotation) == 1) {
-      bf <- 0.0009
-    } else {
-      bf <- min(0.009, (sz / 4))
-    }
-
-    if (fzAnno != "0.0") {
-      fzAnno <- as.numeric(fzAnno)
-    } else {
-      fzAnno <- 10 + sz * 60 # max(12,map.height * sz)
-    }
-
-    fzCol <- round(fzCol, 1)
-    fzRow <- round(fzRow, 1)
-    fzAnno <- round(fzAnno, 1)
+        
+    if (showColnm) {
+      p <- p%>%
+      add_col_labels(size = 0.2, font = list(size = fzCol))
+    } 
  
-    if(sz<0.01){sz=0.015}
-    cb_grid <- setup_colorbar_grid(nrow = min(20, round(map.height / 140)), x_start = 1.1, y_start = 0.95, x_spacing = 0.15)
-      
-    if (all(c(colname == "T", rowname == "T"))) {
-      p <- iheatmap(data1sc,
-        colorbar_grid = cb_grid, name = "Abundance", x_categorical = TRUE,
-        layout = list(font = list(size = fzAnno)),
-        colors = colors
-      ) %>%
-        add_row_dendro(dend_row, side = "right") %>%
-        add_col_labels(size = 0.2, font = list(size = fzCol)) %>%
-        add_row_labels(size = 0.2, font = list(size = fzRow), side = "left") %>%
-        add_col_annotation(annotation,
-          side = "top",
-          size = sz,
-          buffer = bf,
-          inner_buffer = bf / 3
-        )
-    } else if (all(c(colname == "T", rowname == "F"))) {
-      p <- iheatmap(data1sc,
-        colorbar_grid = cb_grid, name = "Abundance", x_categorical = TRUE,
-        layout = list(font = list(size = fzAnno)),
-        colors = colors
-      ) %>%
-        add_row_dendro(dend_row, side = "right") %>%
-        add_col_labels(size = 0.2, font = list(size = fzCol)) %>%
-        add_col_annotation(annotation,
-          side = "top",
-          size = sz,
-          buffer = bf,
-          inner_buffer = bf / 3
-        )
-    } else if (all(c(colname == "F", rowname == "T"))) {
-      p <- iheatmap(data1sc,
-        colorbar_grid = cb_grid, name = "Abundance", x_categorical = TRUE,
-        layout = list(font = list(size = fzAnno)),
-        colors = colors
-      ) %>%
-        add_row_dendro(dend_row, side = "right") %>%
-        add_row_labels(size = 0.2, font = list(size = fzRow), side = "left") %>%
-        add_col_annotation(annotation,
-          side = "top",
-          size = sz,
-          buffer = bf,
-          inner_buffer = bf / 3
-        )
-    } else if (all(c(colname == "F", rowname == "F"))) {
-      p <- iheatmap(data1sc,
-        colorbar_grid = cb_grid, name = "Abundance", x_categorical = TRUE,
-        layout = list(font = list(size = fzAnno)),
-        colors = colors
-      ) %>%
-        add_row_dendro(dend_row, side = "right") %>%
-        add_col_annotation(annotation,
-          side = "top",
-          size = sz,
-          buffer = bf,
-          inner_buffer = bf / 3
-        )
-    }
-    if (doclust == "T") {
+    if (showRownm) {
+      p <- p%>%
+        add_row_labels(size = 0.2, font = list(size = fzRow), side = "left") 
+    } 
+
+   if (doclust == "T") {
       dend_col <- hclust(dist(t(data1), method = smplDist), method = clstDist)
       p <- p %>% add_col_dendro(dend_col)
     }
 
-   # pwidget <- to_widget(p);
-   # save(pwidget, file = plotwidget);
+     as_list <- to_plotly_list(p)
 
-    #f <- basename(tempfile('iheatmapr', '.', '.html'))
-    #on.exit(unlink(f), add = TRUE)
-    #pdfplot <- list(p=p,plotNm=plotNm,f=f,to_widget=to_widget)
-    #save(pdfplot,file="pdfplot.rda");
+  
+ 
 
-    #rmfile <- gsub(".html","_files",f)
-    #unlink(rmfile, recursive = TRUE)
+   
+    as_list[["layout"]][["width"]] <- w
+    as_list[["layout"]][["height"]] <- h
 
-    as_list <- to_plotly_list(p)
-    if (viewOpt != "overview") {
-      as_list[["layout"]][["width"]] <- map.width
-      as_list[["layout"]][["height"]] <- map.height
-    } else {
-      as_list[["layout"]][["width"]] <- 1200
-      as_list[["layout"]][["height"]] <- min(map.height,2000)
-    }
-    as_list[["layout"]][["annoHeight"]] <- round(sz * 100, 1)
+
     as_json <- attr(as_list, "TOJSON_FUNC")(as_list)
     as_json <- paste0("{ \"x\":", as_json, ",\"evals\": [],\"jsHooks\": []}")
+ 
+    print(plotjs)
+    write(as_json, plotjs)
+    
 
     write(as_json, plotjs)
  
