@@ -595,7 +595,7 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
     msg <- c(msg, paste("Performed data rarefaction."));
     
     ###### note, rarefying (should?) affect filt.data in addition to norm
-    mbSetObj$dataSet$filt.data <- data;
+    mbSetObj$dataSet$filt.data <- data@otu_table;
   }else{
     msg <- c(msg, paste("No data rarefaction was performed."));
   }
@@ -730,7 +730,6 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
     current.proc$mic$data.proc<<- data.list$count_tables[["OTU"]]
     
   }
-  
   ### Normalized object for each taxonomy level
   saveDataQs(data.list, "phyloseq_objs.qs", module.type, dataName); 
   

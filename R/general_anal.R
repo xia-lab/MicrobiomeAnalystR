@@ -1190,6 +1190,7 @@ return(1)
 
   taxrank <<- taxrank;
   # build phyloslim obj in fly
+
   filt.dataphy <- mbSetObj$dataSet$filt.data;
   filt.dataphy <- apply(filt.dataphy, 2, as.integer);
   filt.dataphy <- otu_table(filt.dataphy, taxa_are_rows =TRUE);
@@ -2017,7 +2018,7 @@ KendallCorrFunc <- function(var1, var2, data){
 GenerateTemplates <- function(mbSetObj, variable){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
+  print(variable)
   clslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   level.len <- length(levels(clslbl));
   # only specify 4: increasing, decreasing, mid high, mid low, constant
