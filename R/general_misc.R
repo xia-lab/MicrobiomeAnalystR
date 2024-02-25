@@ -23,6 +23,12 @@ GetErrMsg<-function(){
   return(err.vec);
 }
 
+GetCurrentMsg <- function(){
+    msg <-paste(current.msg, collapse="; ");
+    current.msg <<- "";
+    return(msg);
+}
+
 GetRandomNumbers <- function(){
   rm(.Random.seed);
   runif(1);
