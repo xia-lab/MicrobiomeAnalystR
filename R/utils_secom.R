@@ -15,11 +15,15 @@ my.secom.anal<-function(mbSetObj,taxrank,R,corr_cut, max_p,mode,method='pearson'
   
   feature_table <- phyloseq_prenorm_objs$count_tables[[taxrank]]
   meta_data <- mbSetObj$dataSet$sample_data
+  if(!is.null(mbSetObj$dataSet$selected.grps)){
+  feature_table <- feature_table[,which(colnames(feature_table) %in% mbSetObj$dataSet$selected.grps)]
+  meta_data <- meta_data[rownames(meta_data) %in% mbSetObj$dataSet$selected.grps,]
+}
+
   abn_list = abn_est(feature_table,meta_data, taxrank, pseudo=0,tax_keep=NULL)
 
   s_diff_hat = abn_list$s_diff_hat
   y_hat = abn_list$y_hat
-  
   
   cl = parallel::makeCluster(n_cl)
   doParallel::registerDoParallel(cl)
