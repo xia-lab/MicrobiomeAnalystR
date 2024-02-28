@@ -269,58 +269,33 @@ PlotBoxData <- function(mbSetObj, boxplotName, feat, plotType, format = "png", d
 
   Cairo::Cairo(file = boxplotName, width = 720, height = 360, type = format, bg = "white", dpi = dpi)
 
+    box <- ggplot2::ggplot(data, aes(x = data$class, y = data[, feat], fill = data$class))  
+    box1 <- ggplot2::ggplot(data, aes(x = data$class, data$log_feat, fill = data$class)) 
+    
+    if(plotType == "violin"){
+          box <- box + geom_violin(trim=FALSE) 
+         box1 <- box1 + geom_violin(trim=FALSE) 
+        } else {
+          box <- box + geom_boxplot(notch=FALSE, outlier.shape = NA, outlier.colour=NA)
+          box1 <- box1 + geom_boxplot(notch=FALSE, outlier.shape = NA, outlier.colour=NA)
+        }
 
-  if (plotType == "violin") {
-    means <- aggregate(data[[feat]], by = list(data$class), FUN = mean, na.rm = TRUE)
-    se <- aggregate(data[[feat]], by = list(data$class), FUN = function(x) sd(x, na.rm = TRUE) / sqrt(length(x)))
-    names(means) <- c("class", "mean")
-    names(se) <- c("class", "se")
-    summary_df <- merge(means, se, by = "class")
+     box <- box+theme_bw() + geom_jitter(size=1) + 
+            stat_summary(fun=mean, colour="yellow", geom="point", shape=18, size=3, show.legend = FALSE)+
+             labs(y = "", x = variable, fill = variable) + theme(axis.text.x = element_text(angle=90, hjust=1))+
+              ggtitle("Filtered Count") +
+            theme(plot.title = element_text(hjust = 0.5), legend.position = "none")+
+             theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank())
 
-    box <- ggplot(summary_df, aes(x = class, y = mean)) +
-      geom_violin(data = data, aes(x = data$class, y = data[, feat], fill = data$class, color = data$class), trim = FALSE) +
-      geom_errorbar(aes(ymin = mean - se, ymax = mean + se), width = 0.2) +
-      geom_point(size = 2, color = "black", position = position_jitter(w = 0)) +
-      theme_bw() +
-      labs(y = "Abundance", x = variable) +
-      ggtitle("Filtered Count") +
-      theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
+    
+     box1 <- box1 +theme_bw() + geom_jitter(size=1) + 
+            stat_summary(fun=mean, colour="yellow", geom="point", shape=18, size=3, show.legend = FALSE)+
+             labs(y = "", x = variable, fill = variable) + theme(axis.text.x = element_text(angle=90, hjust=1))+
+             ggtitle("Log-transformed Count") +
+            theme(plot.title = element_text(hjust = 0.5), legend.position = "none")+
+             theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank())
 
-
-    means <- aggregate(data[["log_feat"]], by = list(data$class), FUN = mean, na.rm = TRUE)
-    se <- aggregate(data[["log_feat"]], by = list(data$class), FUN = function(x) sd(x, na.rm = TRUE) / sqrt(length(x)))
-    names(means) <- c("class", "mean")
-    names(se) <- c("class", "se")
-    summary_df1 <- merge(means, se, by = "class")
-
-    box1 <- ggplot(summary_df1, aes(x = class, y = mean)) +
-      geom_violin(data = data, aes(x = data$class, y = data$log_feat, fill = data$class, color = data$class), trim = FALSE) +
-      geom_errorbar(aes(ymin = mean - se, ymax = mean + se), width = 0.2) +
-      geom_point(size = 2, color = "black", position = position_jitter(w = 0)) +
-      theme_bw() +
-      labs(y = "Abundance", x = variable) +
-      ggtitle("Filtered Count") +
-      theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
-  } else {
-    box <- ggplot(data, aes(x = data$class, y = data[, feat])) +
-      stat_boxplot(geom = "errorbar") +
-      geom_boxplot(aes(fill = class), outlier.shape = NA) +
-      geom_jitter() +
-      theme_bw() +
-      labs(y = "Abundance", x = variable) +
-      ggtitle("Filtered Count") +
-      theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
-
-    box1 <- ggplot(data, aes(x = data$class, y = data$log_feat)) +
-      stat_boxplot(geom = "errorbar") +
-      geom_boxplot(aes(fill = class), outlier.shape = NA) +
-      geom_jitter() +
-      theme_bw() +
-      labs(y = "", x = variable, fill = variable) +
-      ggtitle("Log-transformed Count") +
-      theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
-  }
-
+ 
   grid.arrange(ggplotGrob(box), ggplotGrob(box1), ncol = 2, nrow = 1, top = feat)
   dev.off()
   return(.set.mbSetObj(mbSetObj))
@@ -354,57 +329,35 @@ PlotBoxMultiData <- function(mbSetObj, boxplotName, analysis.var, feat, plotType
     plot.title <- paste0(feat, ": Normalized Counts")
   }
 
+  
+   
+
   if (var.type == "disc") {
-    if (plotType == "violin") {
-      means <- aggregate(data[[feat]], by = list(data$class), FUN = mean, na.rm = TRUE)
-      se <- aggregate(data[[feat]], by = list(data$class), FUN = function(x) sd(x, na.rm = TRUE) / sqrt(length(x)))
-      names(means) <- c("class", "mean")
-      names(se) <- c("class", "se")
-      summary_df <- merge(means, se, by = "class")
+     plot1 <- ggplot2::ggplot(data, aes(x = data$class, y = data[, feat], fill = data$class))  
+     plot2 <- ggplot2::ggplot(data, aes(x = data$class, data$log_feat, fill = data$class)) 
+    
+    if(plotType == "violin"){
+        plot1 <- plot1 + geom_violin(trim=FALSE) 
+         plot2 <- plot2 + geom_violin(trim=FALSE) 
+        } else {
+          plot1 <- plot1 + geom_boxplot(notch=FALSE, outlier.shape = NA, outlier.colour=NA)
+          plot2 <- plot2 + geom_boxplot(notch=FALSE, outlier.shape = NA, outlier.colour=NA)
+        }
 
-      plot1 <- ggplot(summary_df, aes(x = class, y = mean)) +
-        geom_violin(data = data, aes(x = data$class, y = data[, feat], fill = data$class, color = data$class), trim = FALSE) +
-        geom_errorbar(aes(ymin = mean - se, ymax = mean + se), width = 0.2) +
-        geom_point(size = 2, color = "black", position = position_jitter(w = 0)) +
-        theme_bw() +
-        labs(y = "Abundance", x = variable) +
-        ggtitle("Filtered Count") +
-        theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
+     plot1 <- plot1+theme_bw() + geom_jitter(size=1) + 
+            stat_summary(fun=mean, colour="yellow", geom="point", shape=18, size=3, show.legend = FALSE)+
+             labs(y = "", x = variable, fill = variable) + theme(axis.text.x = element_text(angle=90, hjust=1))+
+              ggtitle("Filtered Count") +
+            theme(plot.title = element_text(hjust = 0.5), legend.position = "none")+
+             theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank())
+    
+     plot2 <- plot2 +theme_bw() + geom_jitter(size=1) + 
+            stat_summary(fun=mean, colour="yellow", geom="point", shape=18, size=3, show.legend = FALSE)+
+             labs(y = "", x = variable, fill = variable) + theme(axis.text.x = element_text(angle=90, hjust=1))+
+             ggtitle("Log-transformed Count") +
+            theme(plot.title = element_text(hjust = 0.5), legend.position = "none")+
+             theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank())
 
-
-      means <- aggregate(data[["log_feat"]], by = list(data$class), FUN = mean, na.rm = TRUE)
-      se <- aggregate(data[["log_feat"]], by = list(data$class), FUN = function(x) sd(x, na.rm = TRUE) / sqrt(length(x)))
-      names(means) <- c("class", "mean")
-      names(se) <- c("class", "se")
-      summary_df1 <- merge(means, se, by = "class")
-
-      plot2 <- ggplot(summary_df1, aes(x = class, y = mean)) +
-        geom_violin(data = data, aes(x = data$class, y = data$log_feat, fill = data$class, color = data$class), trim = FALSE) +
-        geom_errorbar(aes(ymin = mean - se, ymax = mean + se), width = 0.2) +
-        geom_point(size = 2, color = "black", position = position_jitter(w = 0)) +
-        theme_bw() +
-        labs(y = "Abundance", x = variable) +
-        ggtitle("Filtered Count") +
-        theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
-    } else {
-      plot1 <- ggplot(data, aes(x = data$class, y = .data[[feat]])) +
-        stat_boxplot(geom = "errorbar") +
-        geom_boxplot(aes(fill = class), outlier.shape = NA) +
-        geom_jitter() +
-        theme_bw() +
-        labs(y = "Abundance", x = variable) +
-        ggtitle("Raw Counts") +
-        theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
-
-      plot2 <- ggplot(data, aes(x = data$class, y = .data[[feat2]])) +
-        stat_boxplot(geom = "errorbar") +
-        geom_boxplot(aes(fill = class), outlier.shape = NA) +
-        geom_jitter() +
-        theme_bw() +
-        labs(y = "", x = variable, fill = variable) +
-        ggtitle(plot.title) +
-        theme(plot.title = element_text(hjust = 0.5))
-    }
   } else {
     plot1 <- ggplot(data, aes(x = as.numeric(data$class), y = .data[[feat]])) +
       geom_point() +
@@ -462,56 +415,31 @@ PlotBoxMultiMetabo <- function(mbSetObj, boxplotName, analysis.var, feat,plotTyp
   if (var.type == "disc") {
     df.orig <- data.frame(value = as.numeric(dt.orig[, feat]), name = claslbl)
    df.norm <- data.frame(value = as.numeric(dt.norm[, feat]), name = claslbl)
-     if (plotType == "violin") {
-      means <- aggregate(df.orig$value, by = list(df.orig$name), FUN = mean, na.rm = TRUE)
-      se <- aggregate(df.orig$value, by =  list(df.orig$name), FUN = function(x) sd(x, na.rm = TRUE) / sqrt(length(x)))
-      names(means) <- c("class", "mean")
-      names(se) <- c("class", "se")
-      summary_df <- merge(means, se, by = "class")
 
-      plot1 <- ggplot(summary_df, aes(x = class, y = mean)) +
-        geom_violin(data = df.orig, aes(x =name, y = value, fill = name, color = name), trim = FALSE) +
-        geom_errorbar(aes(ymin = mean - se, ymax = mean + se), width = 0.2) +
-        geom_point(size = 2, color = "black", position = position_jitter(w = 0)) +
-        theme_bw() +
-        labs(y = "Abundance", x = variable) +
-          ggtitle("Original Data") +
-        theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
+    plot1 <- ggplot2::ggplot(data = df.orig, aes(x =name, y = value, fill = name))  
+     plot2 <- ggplot2::ggplot(data = df.norm, aes(x =name, y = value, fill = name)) 
+    
+    if(plotType == "violin"){
+        plot1 <- plot1 + geom_violin(trim=FALSE) 
+         plot2 <- plot2 + geom_violin(trim=FALSE) 
+        } else {
+          plot1 <- plot1 + geom_boxplot(notch=FALSE, outlier.shape = NA, outlier.colour=NA)
+          plot2 <- plot2 + geom_boxplot(notch=FALSE, outlier.shape = NA, outlier.colour=NA)
+        }
 
-      means <- aggregate(df.norm$value, by =  list(df.norm$name), FUN = mean, na.rm = TRUE)
-      se <- aggregate(df.norm$value, by =  list(df.norm$name), FUN = function(x) sd(x, na.rm = TRUE) / sqrt(length(x)))
-      names(means) <- c("class", "mean")
-      names(se) <- c("class", "se")
-      summary_df1 <- merge(means, se, by = "class")
-
-      plot2 <- ggplot(summary_df1, aes(x = class, y = mean)) +
-        geom_violin(data = df.norm, aes(x =name, y = value, fill = name, color =name), trim = FALSE) +
-        geom_errorbar(aes(ymin = mean - se, ymax = mean + se), width = 0.2) +
-        geom_point(size = 2, color = "black", position = position_jitter(w = 0)) +
-        theme_bw() +
-        labs(y = "Abundance", x = variable) +
-        ggtitle("Normalized Data") +
-        theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
-    } else {
-      
-    plot1 <- ggplot(df.orig, aes(x = name, y = value, fill = name)) +
-      stat_boxplot(geom = "errorbar") +
-      geom_boxplot(aes(fill = name), outlier.shape = NA) +
-      geom_jitter() +
-      theme_bw() +
-      labs(y = "Abundance", x = variable) +
-      ggtitle("Original Data") +
-      theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
-
-    plot2 <- ggplot(df.norm, aes(x = name, y = value, fill = name)) +
-      stat_boxplot(geom = "errorbar") +
-      geom_boxplot(aes(fill = name), outlier.shape = NA) +
-      geom_jitter() +
-      theme_bw() +
-      labs(y = "", x = variable, fill = variable) +
-      ggtitle("Normalized Data") +
-      theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
-    }
+     plot1 <- plot1+theme_bw() + geom_jitter(size=1) + 
+            stat_summary(fun=mean, colour="yellow", geom="point", shape=18, size=3, show.legend = FALSE)+
+             labs(y = "", x = variable, fill = variable) + theme(axis.text.x = element_text(angle=90, hjust=1))+
+                  ggtitle("Original Data") +
+            theme(plot.title = element_text(hjust = 0.5), legend.position = "none")+
+             theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank())
+    
+     plot2 <- plot2 +theme_bw() + geom_jitter(size=1) + 
+            stat_summary(fun=mean, colour="yellow", geom="point", shape=18, size=3, show.legend = FALSE)+
+             labs(y = "", x = variable, fill = variable) + theme(axis.text.x = element_text(angle=90, hjust=1))+
+                  ggtitle("Normalized Data") +
+            theme(plot.title = element_text(hjust = 0.5), legend.position = "none")+
+             theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank())
 
 
   } else {
