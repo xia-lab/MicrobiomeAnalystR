@@ -2318,7 +2318,7 @@ GenerateCompJson <- function(mbSetObj = NA, fileName, type, mode = 1, taxlvl, pa
 
   colors <- setNames(colorRampPalette(brewer.pal(8, "Set1"))(length(unique(resTable$parent))), unique(resTable$parent))
   don$color <- unname(colors[match(don$parent, names(colors))])
-  don$color[don$FDR > 0.05] <- "#808080"
+  don$color[don$FDR >sigLevel & abs(don$log2FC) > fcLevel] <- "#808080"
   don$size <- 7 + (don$logCPM - min(don$logCPM)) * 7 / (max(don$logCPM) - min(don$logCPM))
 
   axisdf <- don %>%
