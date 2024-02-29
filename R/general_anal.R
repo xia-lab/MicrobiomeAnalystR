@@ -609,7 +609,7 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
   edger_df <- mbSetObj$analSet$rnaseq$resTable.edger.all
   resTable_logFC <- edger_df[match(rownames(resTable), rownames(edger_df)), 'log2FC']
   resTable_logCPM <- edger_df[match(rownames(resTable), rownames(edger_df)), 'logCPM']
-  resTable <- data.frame(log2FC = resTable_logFC, resTable,resTable_logCPM=logCPM)
+  resTable <- data.frame(log2FC = resTable_logFC, resTable,logCPM=resTable_logCPM)
   }
 
   sigHits <- (resTable$FDR < p.lvl & abs(resTable$log2FC) > fc.thresh);
@@ -2261,7 +2261,9 @@ GetMMPMetTable<-function(mbSetObj){
 GenerateCompJson <- function(mbSetObj = NA, fileName, type, mode = 1, taxlvl, parent = "Phylum", sigLevel = 0.05, fcLevel = 0) {
   library(RColorBrewer)
   library("dplyr")
-  print(c(taxlvl, parent, type))
+  print(c(taxlvl, parent, type,sigLevel,fcLevel))
+  sigLevel <- as.numeric(sigLevel)
+    fcLevel <- as.numeric(fcLevel)
   mbSetObj <- .get.mbSetObj(mbSetObj)
   resList <- ""
   if (type %in% c("tt", "nonpar")) {
@@ -2278,7 +2280,8 @@ GenerateCompJson <- function(mbSetObj = NA, fileName, type, mode = 1, taxlvl, pa
     resList <- list(data = resTable, param = mbSetObj$paramSet$rnaseq)
   }
 
-  tax_table <- data.frame(mbSetObj[["dataSet"]][["proc.phyobj"]]@tax_table)
+ if(mbSetObj[["module.type"]]=="mdp"){
+tax_table <- data.frame(mbSetObj[["dataSet"]][["proc.phyobj"]]@tax_table)
   
   if (taxlvl == "OTU") {
     resTable[["parent"]] <- tax_table[[parent]][match(resTable$id, rownames(tax_table))]
@@ -2309,7 +2312,7 @@ GenerateCompJson <- function(mbSetObj = NA, fileName, type, mode = 1, taxlvl, pa
 
   if (type %in% c("EdgeR", "DESeq2")) {
     don$shape <- ifelse(don$log2FC > 0, "triangle-up", "triangle-down")
-    don$shape[don$FDR > sigLevel & abs(don$log2FC) > fcLevel] <- "circle"
+    don$shape[don$FDR > sigLevel | abs(don$log2FC) < fcLevel] <- "circle"
     resList$param$multigroup <- FALSE
   } else {
     resList$param$multigroup <- TRUE
@@ -2318,7 +2321,7 @@ GenerateCompJson <- function(mbSetObj = NA, fileName, type, mode = 1, taxlvl, pa
 
   colors <- setNames(colorRampPalette(brewer.pal(8, "Set1"))(length(unique(resTable$parent))), unique(resTable$parent))
   don$color <- unname(colors[match(don$parent, names(colors))])
-  don$color[don$FDR > 0.05] <- "#808080"
+  don$color[don$FDR > sigLevel | abs(don$log2FC ) <fcLevel] <- "#808080"
   don$size <- 7 + (don$logCPM - min(don$logCPM)) * 7 / (max(don$logCPM) - min(don$logCPM))
 
   axisdf <- don %>%
@@ -2356,6 +2359,8 @@ GenerateCompJson <- function(mbSetObj = NA, fileName, type, mode = 1, taxlvl, pa
 
     resList$areadf <- areadf
   }
+
+ }
 
   json.obj <- rjson::toJSON(resList)
   sink(fileName)
