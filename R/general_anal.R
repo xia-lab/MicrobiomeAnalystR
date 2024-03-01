@@ -2332,8 +2332,13 @@ tax_table <- data.frame(mbSetObj[["dataSet"]][["proc.phyobj"]]@tax_table)
   resList$data <- don
   resList$axisdf <- axisdf
   resList$param$parent <- parent
+ Cairo::Cairo(file = gsub("json","png",fileName), width = 1000, height = 800, type = "png", bg = "white", dpi = 200)
 
-  if (mode == 2) {
+p <- ggplot(don, aes(x=BPcum, y=-log10(Pvalues),size=logCPM,color=I(color))) +
+  geom_point(aes(shape=shape), fill = "black", alpha=1) +
+  scale_size_continuous(range = c(0.5, 3))
+
+if (mode == 2) {
     axisdf$color <- scales::alpha(unname(colors[match(axisdf$parent, names(colors))]), 0.1)
 
     areadf <- lapply(1:nrow(axisdf), function(x) {
@@ -2355,12 +2360,25 @@ tax_table <- data.frame(mbSetObj[["dataSet"]][["proc.phyobj"]]@tax_table)
       )
       return(info)
     })
-
     resList$areadf <- areadf
+  p <- p+geom_rect(data=axisdf, aes(NULL,NULL,xmin=start,xmax=end,fill=as.factor(parent)),
+            ymin=0,ymax=Inf, colour="white", size=0, alpha=0.1)
   }
+    p<- p+scale_x_continuous( label = axisdf$parent, breaks= axisdf$center ) +
+     scale_y_continuous(expand = c(0, 0) ) +  
+    theme_bw() +
+  theme(axis.text.x = element_text(angle=90,hjust =0.5,vjust = 0.5,size=6))+
+  labs(x = "") +
+  theme( 
+   legend.position="none",
+    panel.border = element_blank(),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank()
+  ) 
 
+  plot(p)
+  dev.off()
  }
-
   json.obj <- rjson::toJSON(resList)
   sink(fileName)
   cat(json.obj)
