@@ -2269,14 +2269,20 @@ GenerateCompJson <- function(mbSetObj = NA, fileName, format,type, mode = 1, tax
     resTable <- mbSetObj$analSet$univar$resTable
     resTable$id <- rownames(resTable)
     resList <- list(data = resTable, param = mbSetObj$paramSet$univar)
+    mbSetObj$imgSet$uni.manhattan <- gsub("json",format,fileName);
+   mbSetObj$imgSet$uni.manhattan.json <- fileName;
   } else if (type %in% c("zigfit", "ffm")) {
     resTable <- mbSetObj$analSet$metagenoseq$resTable
     resTable$id <- rownames(resTable)
     resList <- list(data = resTable, param = mbSetObj$paramSet$metagenoseq)
+    mbSetObj$imgSet$metagenome.manhattan <- gsub("json",format,fileName);
+   mbSetObj$imgSet$metagenome.manhattan.json <- fileName;
   } else if (type %in% c("EdgeR", "DESeq2")) {
     resTable <- mbSetObj$analSet$rnaseq$resTable
     resTable$id <- rownames(resTable)
     resList <- list(data = resTable, param = mbSetObj$paramSet$rnaseq)
+   mbSetObj$imgSet$rnaseq.manhattan <- gsub("json",format,fileName);
+   mbSetObj$imgSet$rnaseq.manhattan.json <- fileName;
   }
 
  if(mbSetObj[["module.type"]]=="mdp"){
@@ -2395,8 +2401,7 @@ if (mode == 2) {
 
   plot(p)
   dev.off()
-    mbSetObj$imgSet$univar.manhattan <- gsub("json",format,fileName);
-   mbSetObj$imgSet$univar.manhattan.json <- fileName;
+ 
  }
 
 
