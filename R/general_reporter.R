@@ -1958,7 +1958,7 @@ InitMMPAnalListMode<-function(){
 
 
 
-CreateLMRdoc <- function(mSetObj=NA){ ## need to figure out the image still
+CreateLMRdoc <- function(mbSetObj=NA){ ## need to figure out the image still
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   if(is.null(mbSetObj$analSet$resTable)|is.null(mbSetObj$dataSet$metabolomics$resTable)){

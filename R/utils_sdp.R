@@ -278,6 +278,7 @@ PlotFunctionStack<-function(mbSetObj, summaryplot, functionlvl, abundcal, geneid
                             colpalopt, format="png", dpi=72){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
+  load_phyloseq();
 
   # record parameters
   mbSetObj$paramSet$stack <- list(
@@ -1086,17 +1087,4 @@ doKOFiltering <- function(ko.vec, type){
     }
     return(match.values);
   }
-}
-
-#univ/metagenome/rnaseq/lefse/maaslin/list/global
-SetKeggProjectionType <- function(mbSetObj=NA, type){
-    mbSetObj <- .get.mbSetObj(mbSetObj);
-    mbSetObj$paramSet$koProj.type <- type;
-    return(.set.mbSetObj(mbSetObj));
-}
-
-SetKEGGNetVisOpt <- function(mbSetObj, nm){
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  mbSetObj$analSet$keggnet$background <- nm;
-  return(.set.mbSetObj(mbSetObj));
 }

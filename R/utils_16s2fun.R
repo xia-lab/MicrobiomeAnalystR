@@ -887,4 +887,16 @@ get.fun.lib.path <- function(type){
     }
   }
 
+  if(file.exists("/home/zgy/MicrobiomeAnalystDB/")){
+    if(type == "tax4fun"){
+        return("/home/zgy/MicrobiomeAnalystDB/tax4fun/SILVA123");
+    }else if(type == "tax4fun2"){
+        return("/home/zgy/MicrobiomeAnalystDB/tax4fun2");
+    }else if(type == "picrust12"){
+        return("/home/zgy/MicrobiomeAnalystDB/picrust12");
+    }else{
+        return("/home/zgy/MicrobiomeAnalystDB/picrust13");
+    }
+  }
+
 }

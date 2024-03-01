@@ -974,7 +974,8 @@ PostProcessMaaslin <- function(mbSetObj,analysis.var,comp=NULL, thresh = 0.05,ta
 }
 
 
-PlotCovariateMap <- function(mbSetObj, theme="default", imgName="NA", format="png", dpi=72, interactive=F){
+PlotCovariateMapMas <- function(mbSetObj, theme="default", imgName="NA", format="png", dpi=72, interactive=F){
+  save.image("cov.RData");
   mbSetObj <- .get.mbSetObj(mbSetObj);
   both.mat <- mbSetObj$analSet$cov.mat
   both.mat <- both.mat[order(-both.mat[,"pval.adj"]),]
@@ -984,7 +985,8 @@ PlotCovariateMap <- function(mbSetObj, theme="default", imgName="NA", format="pn
     topFeature <- nrow(both.mat);
   }
   
-  mbSetObj$imgSet$covAdj <- imgName;
+  fileName <- paste0(imgName, ".", format);
+  mbSetObj$imgSet$covAdj <- fileName;
   
   width <- 8;
   height <- 8.18;
@@ -1017,14 +1019,18 @@ PlotCovariateMap <- function(mbSetObj, theme="default", imgName="NA", format="pn
     theme_minimal() +
     theme(legend.title = element_blank())
   
+
+    Cairo::Cairo(file = fileName, unit="in", dpi=dpi, width=width, height=height, type=format);    
+    print(p)
+    dev.off()
+  
+
   if(interactive){
     library(plotly);
     ggp_build <- layout(ggplotly(p,width = 800, height = 600, tooltip = c("text")), autosize = FALSE, margin = mbSetObj$imgSet$margin.config)
+    .set.mbSetObj(mbSetObj)
     return(ggp_build);
   }else{
-    Cairo::Cairo(file = imgName, unit="in", dpi=dpi, width=width, height=height, type=format);    
-    print(p)
-    dev.off()
     return(.set.mbSetObj(mbSetObj));
   }
 }

@@ -1316,15 +1316,13 @@ UpdatePieData<-function(mbSetObj, lowtaxa){
 SavePiechartImg <- function(mbSetObj, taxalvl, pieName="", format="png", dpi=72, interactive=F) {
   mbSetObj <- .get.mbSetObj(mbSetObj);
   set.seed(280);
-  
   pieName = paste(pieName,".", format, sep="");
   orig.piedata <- piedata;
   piedata <- transform(transform(piedata, value=value/sum(value)));
   
   #rownames are still arranged by decending order
   piedataimg <- piedata;
-  mbSetObj$imgSet$pie <- pieName;
-  
+
   row.names(piedataimg) <- NULL;
   x.cols <- pie.cols;
   
@@ -1346,6 +1344,7 @@ SavePiechartImg <- function(mbSetObj, taxalvl, pieName="", format="png", dpi=72,
     .set.mbSetObj(mbSetObj)
     return(fig);
   }else{
+    mbSetObj$imgSet$pie <- pieName;
     box <- ggplot(piedataimg, aes(x="", y = value, fill=reorder(variable,-value))) +
       geom_bar(width = 1, stat = "identity") + theme_bw() +
       coord_polar(theta = "y",direction=-1,start = 4.71239) + scale_fill_manual(values=c(x.cols))+
@@ -4253,3 +4252,17 @@ generateColorArr <- function(grp.num, filenm=NULL) {
   }
 }
 
+PlotlyTaxaAbundance <- function(rdaName, type){
+load(rdaName);
+p <- plotly::ggplotly(box, width=1000, height=800);
+
+if(type=="area"){
+   narm <- p[["x"]][["data"]]
+   for(i in 1:length(narm)){
+      narm[[i]]$y[is.na(narm[[i]]$y)]=0;
+   }
+   p[["x"]][["data"]] <- narm
+}
+
+return(p);
+}

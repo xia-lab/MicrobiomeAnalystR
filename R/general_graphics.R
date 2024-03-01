@@ -881,15 +881,16 @@ GetColorSchemaFromFactor <- function(my.grps) {
 }
 
 
-PlotCovariateMap <- function(mbSetObj, thresh = "0.05", theme = "default", imgName = "NA", format = "png", dpi = 72) {
-  thresh <- as.numeric(thresh)
-  mbSetObj <- .get.mbSetObj(mbSetObj)
-  both.mat <- mbSetObj$analSet$cov.mat
-  both.mat <- both.mat[order(-both.mat[, "pval.adj"]), ]
-  logp_val <- -log10(thresh)
-  load_ggplot()
-  library(ggrepel)
-  topFeature <- 5
+PlotCovariateMap<- function(mbSetObj, thresh = "0.05", theme="default", imgName="NA", format="png", dpi=72, interactive=T){
+
+  thresh <- as.numeric(thresh);
+  mbSetObj <- .get.mbSetObj(mbSetObj); 
+  both.mat <- mbSetObj$analSet$cov.mat;
+  both.mat <- both.mat[order(-both.mat[,"pval.adj"]),];
+  logp_val <- -log10(thresh);
+  load_ggplot();
+  library(ggrepel);
+  topFeature <- 5;
 
   if (nrow(both.mat) < topFeature) {
     topFeature <- nrow(both.mat)
@@ -948,14 +949,54 @@ PlotCovariateMap <- function(mbSetObj, thresh = "0.05", theme = "default", imgNa
         aes(x = pval.no, y = pval.adj, label = Row.names)
       )
   }
+  fileName <- paste0(imgName, ".", format);
+  mbSetObj$imgSet$covAdj <- fileName;
 
-  mbSetObj$imgSet$covAdj <- imgName
+  width <- 8;
+  height <- 8.18;
 
-  width <- 8
-  height <- 8.18
-  Cairo::Cairo(file = imgName, unit = "in", dpi = dpi, width = width, height = height, type = format, bg = "white")
-  print(p)
-  dev.off()
+    Cairo::Cairo(file = fileName, unit="in", dpi=dpi, width=width, height=height, type=format);    
+    print(p)
+    dev.off()
 
-  return(.set.mbSetObj(mbSetObj))
+  if(interactive){
+    library(plotly);
+    ggp_build <- layout(ggplotly(p,width = 800, height = 600, tooltip = c("text")), autosize = FALSE, margin = mbSetObj$imgSet$margin.config)
+    .set.mbSetObj(mbSetObj)
+    return(ggp_build);
+  }else{
+    return(.set.mbSetObj(mbSetObj));
+  }
+}
+
+CreateStaticHeatmap <- function(data1sc, fzAnno, colors, nrows, x_start, y_start, x_spacing, annotation, sz, bf, showColnm, showRownm, doclust, smplDist, clstDist, fzCol, fzRow) {
+  # Prepare annotations if needed
+  # Note: In pheatmap, annotations are usually a data frame where each column is a different annotation
+  # You might need to adjust this part based on your actual data structure for annotations
+  
+  # Prepare the color mapping
+  color_breaks <- seq(min(data1sc), max(data1sc), length.out = length(colors) + 1)
+  color_mapping <- colorRampPalette(colors)(length(colors))
+
+  # Prepare clustering if needed
+  clustering_distance_rows <- if(doclust == "T") smplDist else "none"
+  clustering_distance_cols <- if(doclust == "T") clstDist else "none"
+  
+  # Create the heatmap
+  p <- pheatmap(data1sc,
+           color = color_mapping,
+           breaks = color_breaks,
+           cluster_rows = doclust == "T",
+           cluster_cols = doclust == "T",
+           clustering_distance_rows = clustering_distance_rows,
+           clustering_distance_cols = clustering_distance_cols,
+           fontsize = fzAnno, # Set the font size for annotations
+           fontsize_row = fzRow,
+           fontsize_col = fzCol,
+           show_rownames = showRownm,
+           show_colnames = showColnm,
+           annotation = annotation
+  )
+
+  return(p)
 }
