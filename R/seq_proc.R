@@ -108,8 +108,8 @@ PerformSeqProcessing <- function(){
   trimRight <- params$trimRight;
   write.table(8.0, file = "log_progress.txt", quote = F, row.names = F, col.names = F, append = F)
   dataObj$sample.names -> sample.names;
-  
-  MessageOutput("Start Sequencing data filtering and triming ... ")
+   MessageOutput("Start Sequencing data filtering and triming2 ... ")
+
   if(params$is_paired){
     out <- filterAndTrim(fnFs, filtFs, fnRs, filtRs, truncLen=truncLen, 
                  trimLeft = trimLeft, trimRight = trimRight,

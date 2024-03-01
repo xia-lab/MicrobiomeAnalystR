@@ -2261,7 +2261,6 @@ GetMMPMetTable<-function(mbSetObj){
 GenerateCompJson <- function(mbSetObj = NA, fileName, type, mode = 1, taxlvl, parent = "Phylum", sigLevel = 0.05, fcLevel = 0) {
   library(RColorBrewer)
   library("dplyr")
-  print(c(taxlvl, parent, type,sigLevel,fcLevel))
   sigLevel <- as.numeric(sigLevel)
     fcLevel <- as.numeric(fcLevel)
   mbSetObj <- .get.mbSetObj(mbSetObj)
