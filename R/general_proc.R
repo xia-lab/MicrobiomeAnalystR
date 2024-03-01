@@ -1076,7 +1076,7 @@ PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataN
   library(ggplot2)
   library(dplyr)
   library(Cairo)
-  
+
   if(dataName != ""){
     ind <- TRUE
   } else {
@@ -1109,11 +1109,10 @@ PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataN
     smpl.sums <- colSums(data_bef)
     names(smpl.sums) <- colnames(data_bef)
     smpl.sums <- sort(smpl.sums)
-    col.vec <- as.vector(mbSetObj$dataSet$sample_data[,1]);
+    col.vec <- as.vector(mbSetObj$dataSet$sample_data[match(names(smpl.sums),rownames(mbSetObj$dataSet$sample_data)),1]);
     colLegendNm = "Group";
 
   }
-
   # Create a data frame for ggplot
   if(is.data.frame(col.vec)){
     library_size_data <- data.frame(Sample = names(smpl.sums), LibrarySize = smpl.sums, group = as.character(col.vec[[colnames(col.vec)]]))

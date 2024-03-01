@@ -505,10 +505,11 @@ GetLowerTaxaLvlNm<- function(mbSetObj, taxrank){
 GetHighTaxaLvlNm<- function(mbSetObj, taxrank){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   if(taxrank=="OTU"){
-    return(colnames(tax_table(mbSetObj$dataSet$proc.phyobj))[1:length(colnames(tax_table(mbSetObj$dataSet$proc.phyobj)))]);
+    nms = colnames(tax_table(mbSetObj$dataSet$proc.phyobj))[!is.na(colnames(tax_table(mbSetObj$dataSet$proc.phyobj)))]
+    return(nms[1:length(nms)]);
   }else{
     indx <- which(colnames(tax_table(mbSetObj$dataSet$proc.phyobj))==taxrank);
-    rem <- (indx):1;
+    rem <- (indx-1):1;
     return(colnames(tax_table(mbSetObj$dataSet$proc.phyobj))[rev(rem)]);
   }
 }

@@ -378,7 +378,8 @@ PerformUnivarTest <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, t
   if(!is.null(mbSetObj$analSet$rnaseq$resTable.edger.all)){
   edger_df <- mbSetObj$analSet$rnaseq$resTable.edger.all
   resTable_logFC <- edger_df[match(rownames(resTable), rownames(edger_df)), 'log2FC']
-  resTable <- data.frame(log2FC = resTable_logFC, resTable)
+  resTable_logCPM <- edger_df[match(rownames(resTable), rownames(edger_df)), 'logCPM']
+  resTable <- data.frame(log2FC = resTable_logFC, resTable,logCPM=resTable_logCPM)
   }
 
   sigHits <- (resTable$FDR < p.lvl & abs(resTable$log2FC) > fc.thresh);
@@ -607,13 +608,14 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
   if(!is.null(mbSetObj$analSet$rnaseq$resTable.edger.all)){
   edger_df <- mbSetObj$analSet$rnaseq$resTable.edger.all
   resTable_logFC <- edger_df[match(rownames(resTable), rownames(edger_df)), 'log2FC']
-  resTable <- data.frame(log2FC = resTable_logFC, resTable)
+  resTable_logCPM <- edger_df[match(rownames(resTable), rownames(edger_df)), 'logCPM']
+  resTable <- data.frame(log2FC = resTable_logFC, resTable,logCPM=resTable_logCPM)
   }
 
   sigHits <- (resTable$FDR < p.lvl & abs(resTable$log2FC) > fc.thresh);
   resTable <- resTable[order(-sigHits, resTable$Pvalues), , drop=FALSE]
   de.Num <- length(which(sigHits));
-
+  print(de.Num)
   if(de.Num == 0){
     current.msg <<- paste( "No significant features were identified using the given p value cutoff. Please change the cutoff limit.");
   }else{
@@ -1277,7 +1279,7 @@ return(1)
   res <- tt@.Data[[1]]
   sigHits <-res$FDR < p.lvl & abs(res$logFC) > fc.thresh;
   de.Num <- sum(sigHits);
-
+ 
   if (de.Num == 0) {
     current.msg <<- "No significant features were identified using the given p value cutoff."
   } else {
@@ -2256,30 +2258,117 @@ GetMMPMetTable<-function(mbSetObj){
 }
 
 #Generate json file for plotly for comparison tests
-GenerateCompJson <- function(mbSetObj=NA, fileName, type){
-  mbSetObj <- .get.mbSetObj(mbSetObj);  
-  resList <- "";
-  if(type %in% c("tt", "nonpar")){
-    resTable <- mbSetObj$analSet$univar$resTable;
-    resTable$id <- rownames(resTable);
-    resList <- list(data=resTable, param=mbSetObj$paramSet$univar);
-  }else if(type %in% c("zigfit", "ffm")){
-    resTable <- mbSetObj$analSet$metagenoseq$resTable;
-    resTable$id <- rownames(resTable);
-    resList <- list(data=resTable, param=mbSetObj$paramSet$metagenoseq);
-
-  }else if(type %in% c("EdgeR", "DESeq2")){
-    resTable <- mbSetObj$analSet$rnaseq$resTable;
-    resTable$id <- rownames(resTable);
-    resList <- list(data=resTable, param=mbSetObj$paramSet$rnaseq);
+GenerateCompJson <- function(mbSetObj = NA, fileName, type, mode = 1, taxlvl, parent = "Phylum", sigLevel = 0.05, fcLevel = 0) {
+  library(RColorBrewer)
+  library("dplyr")
+  print(c(taxlvl, parent, type,sigLevel,fcLevel))
+  sigLevel <- as.numeric(sigLevel)
+    fcLevel <- as.numeric(fcLevel)
+  mbSetObj <- .get.mbSetObj(mbSetObj)
+  resList <- ""
+  if (type %in% c("tt", "nonpar")) {
+    resTable <- mbSetObj$analSet$univar$resTable
+    resTable$id <- rownames(resTable)
+    resList <- list(data = resTable, param = mbSetObj$paramSet$univar)
+  } else if (type %in% c("zigfit", "ffm")) {
+    resTable <- mbSetObj$analSet$metagenoseq$resTable
+    resTable$id <- rownames(resTable)
+    resList <- list(data = resTable, param = mbSetObj$paramSet$metagenoseq)
+  } else if (type %in% c("EdgeR", "DESeq2")) {
+    resTable <- mbSetObj$analSet$rnaseq$resTable
+    resTable$id <- rownames(resTable)
+    resList <- list(data = resTable, param = mbSetObj$paramSet$rnaseq)
   }
 
-  json.obj <- rjson::toJSON(resList);
-  sink(fileName);
-  cat(json.obj);
-  sink();
-  return(1);
+ if(mbSetObj[["module.type"]]=="mdp"){
+tax_table <- data.frame(mbSetObj[["dataSet"]][["proc.phyobj"]]@tax_table)
+  
+  if (taxlvl == "OTU") {
+    resTable[["parent"]] <- tax_table[[parent]][match(resTable$id, rownames(tax_table))]
+  } else {
+    resTable[["parent"]] <- tax_table[[parent]][match(resTable$id, tax_table[[taxlvl]])]
+  }
+  resTable[["parent"]][is.na(resTable[["parent"]])] <- "Not_Assigned"
+
+
+  resTable <- resTable %>%
+    group_by(parent) %>%
+    group_modify(~ .x %>%
+      mutate(len = if (n() > 3) {
+        sample(1:(n() %/% 3), size = n(), replace = TRUE)
+      } else {
+        seq_len(n())
+      }))
+
+
+  don <- data.frame(resTable %>%
+    group_by(parent) %>%
+    summarise(chr_len = max(len)) %>%
+    mutate(tot = cumsum(chr_len) - chr_len) %>%
+    select(-chr_len) %>%
+    left_join(resTable, ., by = c("parent" = "parent")) %>%
+    arrange(parent, len) %>%
+    mutate(BPcum = len + tot))
+
+  if (type %in% c("EdgeR", "DESeq2")) {
+    don$shape <- ifelse(don$log2FC > 0, "triangle-up", "triangle-down")
+    don$shape[don$FDR > sigLevel | abs(don$log2FC) < fcLevel] <- "circle"
+    resList$param$multigroup <- FALSE
+  } else {
+    resList$param$multigroup <- TRUE
+    don$shape <- "circle"
+  }
+
+  colors <- setNames(colorRampPalette(brewer.pal(8, "Set1"))(length(unique(resTable$parent))), unique(resTable$parent))
+  don$color <- unname(colors[match(don$parent, names(colors))])
+  don$color[don$FDR > sigLevel | abs(don$log2FC ) <fcLevel] <- "#808080"
+  don$size <- 7 + (don$logCPM - min(don$logCPM)) * 7 / (max(don$logCPM) - min(don$logCPM))
+
+  axisdf <- don %>%
+    group_by(parent) %>%
+    summarize(
+      center = (max(BPcum) + min(BPcum)) / 2,
+      start = min(BPcum) - 0.5, end = max(BPcum) + 0.5
+    )
+  resList$data <- don
+  resList$axisdf <- axisdf
+  resList$param$parent <- parent
+
+  if (mode == 2) {
+    axisdf$color <- scales::alpha(unname(colors[match(axisdf$parent, names(colors))]), 0.1)
+
+    areadf <- lapply(1:nrow(axisdf), function(x) {
+      info <- list(
+        x = c(axisdf$start[x], axisdf$start[x], axisdf$end[x], axisdf$end[x], axisdf$start[x]),
+        y = c(0, ceiling(max(-log10(resTable$Pvalues))), ceiling(max(-log10(resTable$Pvalues))), 0, 0),
+        mode = "line",
+        fill = "toself",
+        fillcolor = axisdf$color[x],
+        line = list(
+          color = "rgba(255,255,255,0.1)",
+          width = 0,
+          dash = "solid"
+        ),
+        showlegend = F,
+        name = axisdf$parent[x],
+        legendgroup = axisdf$parent[x],
+        hoverinfo = ""
+      )
+      return(info)
+    })
+
+    resList$areadf <- areadf
+  }
+
+ }
+
+  json.obj <- rjson::toJSON(resList)
+  sink(fileName)
+  cat(json.obj)
+  sink()
+  return(1)
 }
+
 
 PlotlyCompRes <- function(mbSetObj = NA, type="", fileName="") {
   #save.image("comp.res");
