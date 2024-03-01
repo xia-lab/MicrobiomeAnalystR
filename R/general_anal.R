@@ -2258,7 +2258,7 @@ GetMMPMetTable<-function(mbSetObj){
 }
 
 #Generate json file for plotly for comparison tests
-GenerateCompJson <- function(mbSetObj = NA, fileName, type, mode = 1, taxlvl, parent = "Phylum", sigLevel = 0.05, fcLevel = 0) {
+GenerateCompJson <- function(mbSetObj = NA, fileName, format,type, mode = 1, taxlvl, parent = "Phylum", sigLevel = 0.05, fcLevel = 0) {
   library(RColorBrewer)
   library("dplyr")
   sigLevel <- as.numeric(sigLevel)
@@ -2332,7 +2332,24 @@ tax_table <- data.frame(mbSetObj[["dataSet"]][["proc.phyobj"]]@tax_table)
   resList$data <- don
   resList$axisdf <- axisdf
   resList$param$parent <- parent
- Cairo::Cairo(file = gsub("json","png",fileName), width = 1000, height = 800, type = "png", bg = "white", dpi = 200)
+
+ feat_no <- length(unique(don$parent));
+  h <- 630;
+  if(feat_no < 10){
+    h <- 6;
+  } else if (feat_no < 20){
+    h <- h+1;
+  } else if (feat_no < 50){
+    h <- h+2;
+  } else if (feat_no < 100){
+    h <- h+2;
+  } else {
+    h <- 10;
+  }
+  w <- h + 4;
+
+
+ Cairo::Cairo(file = gsub("json",format,fileName), width = w, height = h,unit="in", type = format, bg = "white", dpi = 200)
 
 p <- ggplot(don, aes(x=BPcum, y=-log10(Pvalues),size=logCPM,color=I(color))) +
   geom_point(aes(shape=shape), fill = "black", alpha=1) +
@@ -2378,7 +2395,11 @@ if (mode == 2) {
 
   plot(p)
   dev.off()
+    mbSetObj$imgSet$univar.manhattan <- gsub("json",format,fileName);
+   mbSetObj$imgSet$univar.manhattan.json <- fileName;
  }
+
+
   json.obj <- rjson::toJSON(resList)
   sink(fileName)
   cat(json.obj)
