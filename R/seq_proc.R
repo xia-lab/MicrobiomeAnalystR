@@ -684,7 +684,8 @@ generateResFigures <- function(mbSetObj = NA){
   require(ggplot2);
   seqtab.nochim <- cbind(rownames(dataObj[["res"]][["seqtab.nochim"]]), dataObj[["res"]][["seqtab.nochim"]]);
   colnames(seqtab.nochim)[1] <- "#NAME"
-  write.table(seqtab.nochim, file = "seq_abundance.txt", sep = "\t", row.names = FALSE, quote = FALSE)
+  colnames(seqtab.nochim)<-gsub("_F_filt.fastq.gz","", colnames(seqtab.nochim))
+  write.table(seqtab.nochim, file = "microbiomeAnalyst_asv_seq.txt", sep = "\t", row.names = FALSE, quote = FALSE)
   samples.out <- colnames(dataObj[["res"]][["seqtab.nochim"]])
   
   Samples <- sapply(strsplit(samples.out, "_F_filt.fastq.gz"), `[`, 1)
@@ -699,7 +700,7 @@ generateResFigures <- function(mbSetObj = NA){
  
   taxa <- cbind(rownames(dataObj[["res"]][["taxa"]]),dataObj[["res"]][["taxa"]]) 
   colnames(taxa)[1] <- "#TAXONOMY"
-  write.table(taxa, file = "taxonomy_annotation.txt", sep = "\t", row.names = FALSE, quote = FALSE)
+  write.table(taxa, file = "microbiomeAnalyst_taxonomy_annotation.txt", sep = "\t", row.names = FALSE, quote = FALSE)
   ## merge seqtab.nochim and taxa into OTU abundance table
   taxa_nms <- apply(dataObj[["res"]][["taxa"]], 1, FUN = function(x){
     if(is.na(x[6])){x[6] <- "uncultured"}
@@ -710,7 +711,7 @@ generateResFigures <- function(mbSetObj = NA){
   otu_table <- cbind(NAME = taxa_nms, dataObj[["res"]][["seqtab.nochim"]])
   colnames(otu_table)[1] <- "#NAME"
   dataObj[["res"]][["otu_table"]] <- otu_table
-  write.table(otu_table, file = "microbiomeAnalyst_16s_otu.txt", sep = "\t", row.names = FALSE, quote = FALSE)
+  write.table(otu_table, file = "microbiomeAnalyst_16s_asv.txt", sep = "\t", row.names = FALSE, quote = FALSE)
   ## save well-formatted meta data file
   meta_idx <- sapply(Samples, function(x){
     grep(x, meta_dt[,1])[1]
