@@ -84,13 +84,13 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
       taxrank.inx <- which(names(phyloseq_objs$count_tables) %in% taxrank)
       data1 <- phyloseq_objs$count_tables[[taxrank.inx]]
     }
-    
+  
     data <- t(data1);
     qs::qsave(data, "network_cor_data.qs")
  
     data <- data[which(rownames(data) %in% mbSetObj$dataSet$selected.grps),]
-    data[data==0|is.na(data)] <- .00001
-    
+   # data[data==0|is.na(data)] <- .00001
+
     if(ncol(data) > 1000){
       filter.val <- apply(data.matrix(data), 2, IQR, na.rm=T);
       rk <- rank(-filter.val, ties.method='random');

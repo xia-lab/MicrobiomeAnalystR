@@ -817,7 +817,7 @@ ComputeMummichogRTPermPvals <- function(input_ecpdlist, total_matched_ecpds, pat
   sink();
 
   mbSetObj <- .get.mbSetObj(mbSet);
-  mbSetObj <- recordEnrTable(mbSetObj, mbSetObj$paramSet$koProj.type, res.mat, "KEGG", "Mummichog");
+  mbSetObj <- recordEnrTable(mbSetObj, "mmp", res.mat, "KEGG", "Mummichog");
   mbSetObj <- .set.mbSetObj(mbSetObj);
 
   return(current.proc);
@@ -965,7 +965,7 @@ ComputeMummichogRTPermPvals <- function(input_ecpdlist, total_matched_ecpds, pat
   sink();
 
   mbSetObj <- .get.mbSetObj(mbSet);
-  mbSetObj <- recordEnrTable(mbSetObj, mbSetObj$paramSet$koProj.type, res.mat, "KEGG", "Mummichog");
+  mbSetObj <- recordEnrTable(mbSetObj, "mmp", res.mat, "KEGG", "Mummichog");
   mbSetObj <- .set.mbSetObj(mbSetObj);
 
   return(current.proc);

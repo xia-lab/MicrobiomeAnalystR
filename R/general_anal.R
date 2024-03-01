@@ -1190,6 +1190,7 @@ return(1)
 
   taxrank <<- taxrank;
   # build phyloslim obj in fly
+
   filt.dataphy <- mbSetObj$dataSet$filt.data;
   filt.dataphy <- apply(filt.dataphy, 2, as.integer);
   filt.dataphy <- otu_table(filt.dataphy, taxa_are_rows =TRUE);
@@ -1260,6 +1261,7 @@ return(1)
 }
 
 .perform_edger <- function(variable, data, p.lvl=0.05, fc.thresh=0, comp1="", comp2="") {
+  #save.image("edger.RData");
   mbSetObj <- .get.mbSetObj(mbSetObj)
   dat3t <- mbSetObj$analSet$rnaseq$data.rnaseq
   claslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]])
@@ -2016,7 +2018,7 @@ KendallCorrFunc <- function(var1, var2, data){
 GenerateTemplates <- function(mbSetObj, variable){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
+  print(variable)
   clslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   level.len <- length(levels(clslbl));
   # only specify 4: increasing, decreasing, mid high, mid low, constant
@@ -2280,7 +2282,10 @@ GenerateCompJson <- function(mbSetObj=NA, fileName, type){
 }
 
 PlotlyCompRes <- function(mbSetObj = NA, type="", fileName="") {
+  #save.image("comp.res");
   library(htmlwidgets)
+  library(plotly)
+
   mbSetObj <- .get.mbSetObj(mbSetObj)
   if (type %in% c("univ")) {
     resTable <- mbSetObj$analSet$univar$resTable
@@ -2288,7 +2293,7 @@ PlotlyCompRes <- function(mbSetObj = NA, type="", fileName="") {
   } else if (type %in% c("metagenome")) {
     resTable <- mbSetObj$analSet$metagenoseq$resTable
     params <- mbSetObj$paramSet$metagenoseq
-  } else { #else if (type %in% c("rnaseq")) {
+  } else { 
     resTable <- mbSetObj$analSet$rnaseq$resTable
     params <- mbSetObj$paramSet$rnaseq
   }
@@ -2299,6 +2304,7 @@ PlotlyCompRes <- function(mbSetObj = NA, type="", fileName="") {
   raw_data <- resTable
   
   if ("log2FC" %in% names(raw_data)) {
+
     p <- plot_ly(
       data = raw_data, 
       x = ~log2FC, 
@@ -2388,4 +2394,78 @@ getSizeForPValue <- function(val, pval.thresh) {
   } else {
     return(10) # Significant (simplified example)
   }
+}
+
+PlotCompRes <- function(mbSetObj = NA, type = "", imgName = "") {
+  library(ggplot2)
+  library(Cairo)  # For high-quality image output
+  
+  # Process the data similar to the original function
+  mbSetObj <- .get.mbSetObj(mbSetObj)  # Assuming this is a function defined elsewhere
+  fileName <- paste0(imgName, ".png");
+  if (type %in% c("univ")) {
+    resTable <- mbSetObj$analSet$univar$resTable
+    params <- mbSetObj$paramSet$univar
+    mbSetObj$imgSet$univar.plot <- fileName;
+  } else if (type %in% c("metagenome")) {
+    resTable <- mbSetObj$analSet$metagenoseq$resTable
+    params <- mbSetObj$paramSet$metagenoseq
+    mbSetObj$imgSet$metagenoseq.plot <- fileName;
+  } else { 
+    resTable <- mbSetObj$analSet$rnaseq$resTable
+    params <- mbSetObj$paramSet$rnaseq
+    mbSetObj$imgSet$rnaseq.plot <- fileName;
+  }
+  
+  p.lvl <- params$p.lvl
+  fc.thresh <- params$fc.thresh
+  
+  resTable$id <- rownames(resTable)
+  raw_data <- resTable
+  
+  # Define color and size mapping based on your getColor and getSizeForPValue functions
+  raw_data$color <- mapply(getColor, raw_data$FDR, raw_data$log2FC, MoreArgs = list(p.lvl, fc.thresh))
+  raw_data$size <- mapply(getSizeForPValue, raw_data$FDR, MoreArgs = list(p.lvl))
+  
+  # Create the ggplot object based on the type of data
+  if ("log2FC" %in% names(raw_data)) {
+    p <- ggplot(raw_data, aes(x = log2FC, y = -log10(Pvalues), color = color, size = size)) +
+      geom_point(alpha = 0.6) +
+      scale_size_continuous(range = c(1, 10)) +
+      scale_color_identity() +
+      labs(x = "log2FC", y = "-log10(P-value)", title = "Volcano Plot") +
+      theme_minimal()
+  } else {
+    p <- ggplot(raw_data, aes(x = seq_along(id), y = -log10(FDR), color = color, size = size)) +
+      geom_point(alpha = 0.6) +
+      scale_size_continuous(range = c(1, 10)) +
+      scale_color_identity() +
+      labs(x = "Feature Index", y = "-log10(FDR)", title = "Feature Plot") +
+      theme_minimal()
+  }
+  
+  # Save the plot using Cairo for high quality output
+  if (fileName != "") {
+    Cairo::Cairo(file = fileName, width = 1000, height = 800, dpi=72)
+    print(p)
+    dev.off()
+  } else {
+    print(p)
+  }
+  .set.mbSetObj(mbSetObj)
+  return(mbSetObj)
+}
+
+
+#univ/metagenome/rnaseq/lefse/maaslin/list/global
+SetKeggProjectionType <- function(mbSetObj=NA, type){
+    mbSetObj <- .get.mbSetObj(mbSetObj);
+    mbSetObj$paramSet$koProj.type <- type;
+    return(.set.mbSetObj(mbSetObj));
+}
+
+SetKEGGNetVisOpt <- function(mbSetObj, nm){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  mbSetObj$analSet$keggnet$background <- nm;
+  return(.set.mbSetObj(mbSetObj));
 }

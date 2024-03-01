@@ -392,10 +392,13 @@ ApplyVarianceFilter <- function(mbSetObj, filtopt, filtPerct){
   #qs::qsave(mbSetObj$dataSet$filt.data, file="filt.data.orig"); # save an copy
   saveDataQs(mbSetObj$dataSet$filt.data, "filt.data.orig", module.type, dataName);
 
-  rm.msg1 <- paste("A total of ```", sum(!remain), "``` low variance features were removed based on ```", filtopt, "```.", sep="");
-  rm.msg2 <- paste("The number of features remains after the data filtering step: ```", nrow(data), "```.");
+  rm.msg1 <- paste0("A total of ", sum(!remain), " low variance features were removed based on ", filtopt);
+  rm.msg2 <- paste0("The number of features remains after the data filtering step: ", nrow(data));
   current.msg <<- c(current.msg, rm.msg1, rm.msg2);
-  mbSetObj$dataSet$filt.msg <- current.msg;
+
+  rm.msg1 <- paste0("A total of ```", sum(!remain), "``` low variance features were removed based on ```", filtopt, "```.");
+  rm.msg2 <- paste0("The number of features remains after the data filtering step: ```", nrow(data), "```.");
+  mbSetObj$dataSet$filt.msg <- c(current.msg, rm.msg1, rm.msg2);
   return(.set.mbSetObj(mbSetObj));
   
 }
@@ -595,7 +598,7 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
     msg <- c(msg, paste("Performed data rarefaction."));
     
     ###### note, rarefying (should?) affect filt.data in addition to norm
-    mbSetObj$dataSet$filt.data <- data;
+    mbSetObj$dataSet$filt.data <- data@otu_table;
   }else{
     msg <- c(msg, paste("No data rarefaction was performed."));
   }
@@ -730,7 +733,6 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
     current.proc$mic$data.proc<<- data.list$count_tables[["OTU"]]
     
   }
-  
   ### Normalized object for each taxonomy level
   saveDataQs(data.list, "phyloseq_objs.qs", module.type, dataName); 
   

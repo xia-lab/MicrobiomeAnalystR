@@ -280,7 +280,7 @@ PrepareCorrExpValues <- function(mbSetObj, meta, taxalvl, color, layoutOpt, comp
   dm_samples <- cbind.data.frame("sample_id" = row.names(dm_samples), dm_samples); # add sample_id to sample table
   row.names(dm_samples) <- c();
   dm_samples[] <- lapply(dm_samples, as.character);
-  
+
   if(comparison != "all"){
     grp.nms <- mbSetObj$corr.net$comparison;
     if(is.null(grp.nms)){
@@ -292,11 +292,11 @@ PrepareCorrExpValues <- function(mbSetObj, meta, taxalvl, color, layoutOpt, comp
     grp.nms <- unique(dm_samples[[meta]]) # all 
     dm_samples_cmf <- dm_samples
   }
-  
+
   otu_dm <- as.data.frame(as(otu_table(dm), "matrix"),check.names=FALSE);
   tax_dm <- as.data.frame(as(tax_table(dm), "matrix"),check.names=FALSE);
   tax_dm[] <- lapply(tax_dm, as.character);#make sure characters in tax_dm;
-  
+
   depth <- ncol(tax_dm)
   rank_dm <- c("r", "p", "c", "o", "f", "g", "s");
   names(tax_dm) <- rank_dm[1:depth];
@@ -326,7 +326,6 @@ PrepareCorrExpValues <- function(mbSetObj, meta, taxalvl, color, layoutOpt, comp
   } else {
     tax <- "s";
   }; # get tax rank for heat tree
-  
   tax_dm <- tax_dm[, 1:which(names(tax_dm) == tax)]; #subset tax table
   rank_dm_new <- rank_dm[1:which(rank_dm == tax)];
   tax_dm$lineage <- apply(tax_dm[, rank_dm_new], 1, paste, collapse = ";"); #collapse all tax ranks
@@ -337,7 +336,6 @@ PrepareCorrExpValues <- function(mbSetObj, meta, taxalvl, color, layoutOpt, comp
   dm_otu$lineage <- gsub(";+$", "", dm_otu$lineage); #remove empty tax names
   
   dm_otu_cmf <- dm_otu[, c("otu_id", "lineage", dm_samples_cmf$sample_id)]; #make otu table ready for heat tree  
-  
   PrepareHeatTreePlotDataParse_cmf_res <- PrepareHeatTreePlotDataParse_cmf(dm_otu_cmf, dm_samples_cmf, meta);
   dm_obj_cmf = PrepareHeatTreePlotDataParse_cmf_res;
   mbSetObj$dataSet$selected.grps = dm_samples_cmf$sample_id
@@ -1318,15 +1316,13 @@ UpdatePieData<-function(mbSetObj, lowtaxa){
 SavePiechartImg <- function(mbSetObj, taxalvl, pieName="", format="png", dpi=72, interactive=F) {
   mbSetObj <- .get.mbSetObj(mbSetObj);
   set.seed(280);
-  
   pieName = paste(pieName,".", format, sep="");
   orig.piedata <- piedata;
   piedata <- transform(transform(piedata, value=value/sum(value)));
   
   #rownames are still arranged by decending order
   piedataimg <- piedata;
-  mbSetObj$imgSet$pie <- pieName;
-  
+
   row.names(piedataimg) <- NULL;
   x.cols <- pie.cols;
   
@@ -1348,6 +1344,7 @@ SavePiechartImg <- function(mbSetObj, taxalvl, pieName="", format="png", dpi=72,
     .set.mbSetObj(mbSetObj)
     return(fig);
   }else{
+    mbSetObj$imgSet$pie <- pieName;
     box <- ggplot(piedataimg, aes(x="", y = value, fill=reorder(variable,-value))) +
       geom_bar(width = 1, stat = "identity") + theme_bw() +
       coord_polar(theta = "y",direction=-1,start = 4.71239) + scale_fill_manual(values=c(x.cols))+
@@ -1469,7 +1466,6 @@ PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName, metadata,
       data <- mbSetObj$dataSet$proc.phyobj;
     }
   }
-  
   if(taxrank!="OTU"){
     #merging at taxonomy levels
     data <- fast_tax_glom_mem(data, taxrank);
@@ -1478,7 +1474,6 @@ PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName, metadata,
       return(0);
     }
   } 
-  
   #reordering the sample (getting reordered rownames)
   sam <- sample_data(data);
   sam <- sam[order(sam[[metadata]])];
@@ -1492,7 +1487,7 @@ PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName, metadata,
   }else{
     width <- 900
   }
-  
+
   bargraphName = paste(bargraphName, ".", format, sep="");
   mbSetObj$imgSet$alpha <- bargraphName;  
   
