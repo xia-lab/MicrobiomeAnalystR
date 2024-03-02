@@ -2260,7 +2260,7 @@ GetMMPMetTable<-function(mbSetObj){
 
 #Generate json file for plotly for comparison tests
 GenerateCompJson <- function(mbSetObj = NA, fileName, format,type, mode = 1, taxlvl, parent = "Phylum", sigLevel = 0.05, fcLevel = 0) {
-  save.image("comp.RData");
+
   library(RColorBrewer)
   library("dplyr");
   sigLevel <- as.numeric(sigLevel)
@@ -2359,7 +2359,7 @@ tax_table <- data.frame(mbSetObj[["dataSet"]][["proc.phyobj"]]@tax_table)
   }
   w <- h + 4;
 
-
+print(fileName)
  Cairo::Cairo(file = gsub("json",format,fileName), width = w, height = h,unit="in", type = format, bg = "white", dpi = 200)
 
 p <- ggplot(don, aes(x=BPcum, y=-log10(Pvalues),size=logCPM,color=I(color))) +
