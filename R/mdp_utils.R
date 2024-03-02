@@ -1734,6 +1734,13 @@ PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
   dev.off();
 
   save(box,file=rdaName);
+  
+    p <- ggplotly_modified(box, tempfile_path = paste0(getwd(), "/temp_file4plotly"));
+
+jsonlist <- RJSONIO::toJSON(p, pretty = T,force = TRUE,.na = "null");
+sink(jsonName);
+cat(jsonlist);
+sink();
 
   mbSetObj$analSet$stack<-data;
   mbSetObj$analSet$stack.taxalvl<-taxalvl;
@@ -2825,7 +2832,6 @@ jsonlist <- RJSONIO::toJSON(p, pretty = T,force = TRUE,.na = "null");
 sink(jsonName);
 cat(jsonlist);
 sink();
-
 
   mbSetObj$analSet$stack <- data;
   mbSetObj$analSet$stack.taxalvl <- taxalvl;
