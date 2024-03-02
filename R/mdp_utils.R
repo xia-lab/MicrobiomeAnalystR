@@ -2497,7 +2497,18 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
   dev.off();
   # for plotly
   save(box,file=rdaName);
-  
+    p <- ggplotly_modified(box, tempfile_path = paste0(getwd(), "/temp_file4plotly"));
+
+ narm <- p[["x"]][["data"]]
+   for(i in 1:length(narm)){
+      narm[[i]]$y[is.na(narm[[i]]$y)]=0;
+   }
+   p[["x"]][["data"]] <- narm
+
+jsonlist <- RJSONIO::toJSON(p, pretty = T,force = TRUE,.na = "null");
+sink(jsonName);
+cat(jsonlist);
+sink();
   mbSetObj$analSet$stack<-data;
   mbSetObj$analSet$stack.taxalvl<-taxalvl;
   mbSetObj$analSet$plot<-"Stacked Area";
@@ -2808,6 +2819,13 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
   save(box,file=rdaName);
   print(box)
   dev.off();
+  p <- ggplotly_modified(box, tempfile_path = paste0(getwd(), "/temp_file4plotly"));
+
+jsonlist <- RJSONIO::toJSON(p, pretty = T,force = TRUE,.na = "null");
+sink(jsonName);
+cat(jsonlist);
+sink();
+
 
   mbSetObj$analSet$stack <- data;
   mbSetObj$analSet$stack.taxalvl <- taxalvl;
@@ -3245,8 +3263,13 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
   save(box,file=rdaName);
   print(box+guides(fill=guide_legend(ncol=3)));
   dev.off();
-  
- 
+
+    p <- ggplotly_modified(box, tempfile_path = paste0(getwd(), "/temp_file4plotly"));
+
+jsonlist <- RJSONIO::toJSON(p, pretty = T,force = TRUE,.na = "null");
+sink(jsonName);
+cat(jsonlist);
+sink();
 
   mbSetObj$analSet$stack<-data;
   mbSetObj$analSet$stack.taxalvl<-taxalvl;

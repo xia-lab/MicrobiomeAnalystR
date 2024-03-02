@@ -39,6 +39,13 @@ gg2list_new <- function(p, width = NULL, height = NULL,
   is_blank <- plotly:::is_blank;
   unitConvert <- plotly:::unitConvert;
   has_facet <- plotly:::has_facet;
+  make_label<- plotly:::make_label;
+  bbox<-plotly:::bbox;
+  scales_train_df <- plotly:::scales_train_df;
+ scales_map_df <- plotly:::scales_map_df;
+make_strip_rect <-plotly:::make_strip_rect
+gdef2trace <- plotly:::gdef2trace
+  br <- plotly:::br;
   linewidth_or_size <- plotly:::linewidth_or_size;
   compact <- plotly:::compact
     options(bitmapType='cairo')
@@ -263,10 +270,10 @@ gg2list_new <- function(p, width = NULL, height = NULL,
     layout$train_position(data, scale_x(), scale_y())
     layout$setup_panel_params()
     data <- layout$map_position(data)
-#     saveRDS(data,"/Users/lzy/Documents/MicrobiomeAnalystUser/USER/data.rds")
+
     # Train and map non-position scales
     npscales <- scales$non_position_scales()
-      #  saveRDS(npscales,"/Users/lzy/Documents/MicrobiomeAnalystUser/USER/npscales.rds")
+
     if (npscales$n() > 0) {
       lapply(data, scales_train_df, scales = npscales)
      
@@ -281,7 +288,7 @@ gg2list_new <- function(p, width = NULL, height = NULL,
           d
         })
       }
-      data <- lapply(data, scales_map_df, scales = npscales)
+      data <-       lapply(data, scales_map_df, scales = npscales)
     }
     
     # Fill in defaults etc.
@@ -830,20 +837,7 @@ gg2list_new <- function(p, width = NULL, height = NULL,
     }
   } # end of panel loop
   
-    # ------------------------------------------------------------------
-# Handle compatibility for changes in ggplot2 >v3.4.2 (specifically #5144),
-# which moved away from scales_transform_df(), scales_train_df(), etc  
-# towards ggproto methods attached to `scales`
-# ------------------------------------------------------------------
-scales_train_df <- function(scales, df) {
-  if (is.function(scales$train_df)) {
-    scales$train_df(df)
-  } else {
-    ggfun("scales_train_df")(df, scales = scales)
-  }
-}
-
-
+ 
 
   # ------------------------------------------------------------------------
   # guide conversion
