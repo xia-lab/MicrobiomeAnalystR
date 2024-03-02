@@ -503,6 +503,7 @@ GetLowerTaxaLvlNm<- function(mbSetObj, taxrank){
 }
 
 GetHighTaxaLvlNm<- function(mbSetObj, taxrank){
+  load_phyloseq();
   mbSetObj <- .get.mbSetObj(mbSetObj);
   if(taxrank=="OTU"){
     nms = colnames(tax_table(mbSetObj$dataSet$proc.phyobj))[!is.na(colnames(tax_table(mbSetObj$dataSet$proc.phyobj)))]

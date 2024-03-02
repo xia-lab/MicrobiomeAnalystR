@@ -501,6 +501,7 @@ PerformUnivarTest <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, t
 #'@import metagenomeSeq
 
 PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank, model, fc.thresh=0){
+  load_phyloseq();
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   load_metagenomeseq();
@@ -2259,35 +2260,40 @@ GetMMPMetTable<-function(mbSetObj){
 
 #Generate json file for plotly for comparison tests
 GenerateCompJson <- function(mbSetObj = NA, fileName, format,type, mode = 1, taxlvl, parent = "Phylum", sigLevel = 0.05, fcLevel = 0) {
+  save.image("comp.RData");
   library(RColorBrewer)
-  library("dplyr")
+  library("dplyr");
   sigLevel <- as.numeric(sigLevel)
-    fcLevel <- as.numeric(fcLevel)
+  fcLevel <- as.numeric(fcLevel)
   mbSetObj <- .get.mbSetObj(mbSetObj)
-  resList <- ""
+  resList <- "";
   if (type %in% c("tt", "nonpar")) {
     resTable <- mbSetObj$analSet$univar$resTable
     resTable$id <- rownames(resTable)
     resList <- list(data = resTable, param = mbSetObj$paramSet$univar)
     mbSetObj$imgSet$uni.manhattan <- gsub("json",format,fileName);
+    mbSetObj$imgSet$uni.manhattan.plotly <- gsub("json","rda",fileName);
    mbSetObj$imgSet$uni.manhattan.json <- fileName;
   } else if (type %in% c("zigfit", "ffm")) {
     resTable <- mbSetObj$analSet$metagenoseq$resTable
     resTable$id <- rownames(resTable)
     resList <- list(data = resTable, param = mbSetObj$paramSet$metagenoseq)
     mbSetObj$imgSet$metagenome.manhattan <- gsub("json",format,fileName);
+    mbSetObj$imgSet$metagenome.manhattan.plotly <- gsub("json","rda",fileName);
    mbSetObj$imgSet$metagenome.manhattan.json <- fileName;
   } else if (type %in% c("EdgeR", "DESeq2")) {
     resTable <- mbSetObj$analSet$rnaseq$resTable
     resTable$id <- rownames(resTable)
     resList <- list(data = resTable, param = mbSetObj$paramSet$rnaseq)
    mbSetObj$imgSet$rnaseq.manhattan <- gsub("json",format,fileName);
+   mbSetObj$imgSet$rnaseq.manhattan.plotly <- gsub("json","rda",fileName);
    mbSetObj$imgSet$rnaseq.manhattan.json <- fileName;
   }
 
  if(mbSetObj[["module.type"]]=="mdp"){
+
 tax_table <- data.frame(mbSetObj[["dataSet"]][["proc.phyobj"]]@tax_table)
-  
+
   if (taxlvl == "OTU") {
     resTable[["parent"]] <- tax_table[[parent]][match(resTable$id, rownames(tax_table))]
   } else {
@@ -2304,7 +2310,6 @@ tax_table <- data.frame(mbSetObj[["dataSet"]][["proc.phyobj"]]@tax_table)
       } else {
         seq_len(n())
       }))
-
 
   don <- data.frame(resTable %>%
     group_by(parent) %>%
@@ -2409,7 +2414,10 @@ if (mode == 2) {
   sink(fileName)
   cat(json.obj)
   sink()
-  return(1)
+
+  save(p,file=gsub("json","rda",fileName));
+
+  return(.set.mbSetObj(mbSetObj))
 }
 
 
