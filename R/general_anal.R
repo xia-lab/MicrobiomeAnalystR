@@ -2263,6 +2263,7 @@ GenerateCompJson <- function(mbSetObj = NA, fileName, format,type, mode = 1, tax
 
   library(RColorBrewer)
   library("dplyr");
+
   sigLevel <- as.numeric(sigLevel)
   fcLevel <- as.numeric(fcLevel)
   mbSetObj <- .get.mbSetObj(mbSetObj)
@@ -2345,7 +2346,8 @@ tax_table <- data.frame(mbSetObj[["dataSet"]][["proc.phyobj"]]@tax_table)
   resList$param$parent <- parent
 
  feat_no <- length(unique(don$parent));
-  h <- 630;
+
+  h<-6
   if(feat_no < 10){
     h <- 6;
   } else if (feat_no < 20){
@@ -2359,8 +2361,7 @@ tax_table <- data.frame(mbSetObj[["dataSet"]][["proc.phyobj"]]@tax_table)
   }
   w <- h + 4;
 
-print(fileName)
- Cairo::Cairo(file = gsub("json",format,fileName), width = w, height = h,unit="in", type = format, bg = "white", dpi = 200)
+ fileName2 = gsub("json",format,fileName)
 
 p <- ggplot(don, aes(x=BPcum, y=-log10(Pvalues),size=logCPM,color=I(color))) +
   geom_point(aes(shape=shape), fill = "black", alpha=1) +
@@ -2403,6 +2404,8 @@ if (mode == 2) {
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank()
   ) 
+ Cairo::Cairo(file = fileName2, width = w, height = h,unit="in", type = format, bg = "white", dpi = 200)
+
 
   plot(p)
   dev.off()

@@ -711,7 +711,7 @@ generateResFigures <- function(mbSetObj = NA){
   otu_table <- cbind(NAME = taxa_nms, dataObj[["res"]][["seqtab.nochim"]])
   colnames(otu_table)[1] <- "#NAME"
   dataObj[["res"]][["otu_table"]] <- otu_table
-  write.table(otu_table, file = "microbiomeAnalyst_16s_asv.txt", sep = "\t", row.names = FALSE, quote = FALSE)
+  write.table(otu_table, file = "microbiomeAnalyst_16s_abund.txt", sep = "\t", row.names = FALSE, quote = FALSE)
   ## save well-formatted meta data file
   meta_idx <- sapply(Samples, function(x){
     grep(x, meta_dt[,1])[1]
