@@ -119,8 +119,8 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
     if(reductionOptGlobal == "procrustes"){
       pos.xyz.length = nrow(pos.xyz)
       edge.mat <- cbind(id=c(1:(pos.xyz.length)), source=names[c(1:(pos.xyz.length/2))], target=names[c(((pos.xyz.length/2)+1):pos.xyz.length) ], opacity = 0);
-      procrustes.res$pos.xyz[[tax]] = pos.xyz
-      modules = "NA"
+      procrustes.res$pos.xyz[[tax]] = pos.xyz;
+      modules = "NA";
       # save node table
       ellipse ="NA"
       netData[[tax]] <- list(nodes=nodes, edges=edge.mat, modules=modules, objects=a$objects,
@@ -313,10 +313,12 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
     
   }
 
+  print(netData$edges)
+
   jsonNms_scatter <<- filenm;
   
   sink(filenm);
-  cat(rjson::toJSON(netData));
+  cat(RJSONIO::toJSON(netData));
   sink();
 
 

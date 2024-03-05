@@ -1779,7 +1779,7 @@ CreateMMPIOdoc <- function(mbSetObj){
 
   }else if(mbSetObj$inputType=="list"){
      descr<-c("\\subsubsection{Reading paired list data}\n",
-           "For micorbiome data, user can upload a taxa list and specify the taxonomy level.",
+           "For microbiome data, user can upload a taxa list and specify the taxonomy level.",
            "Both metabolite list and peak list are supported. KEGG IDs, HMDB IDs and names are support for metabolite identification.",
            'The peak list should be ranked by p.value, t-score or fold change and uploaded in .txt or .csv format. Users need to specify the positive/negative mode of the peak generation.');
 
@@ -1828,7 +1828,7 @@ CreateMMPNORMdoc <- function(mbSetObj){
  cat(descr, file=rnwFile, append=TRUE);
 
  descr1<-c("\\subsubsection{Microbiome Data}\n",
-              "For micorbiome data,the normalization procedures implemented below are grouped into three categories.",
+              "For microbiome data,the normalization procedures implemented below are grouped into three categories.",
               "Data rarefaction and scaling based methods deal with uneven sequencing depths by bringing",
               "samples to the same scale for comparison. While transformation based",
               "methods account for sparsity, compositionality, and large variations within the data.",
