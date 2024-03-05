@@ -313,12 +313,15 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
     
   }
 
-  print(netData$edges)
 
   jsonNms_scatter <<- filenm;
   
   sink(filenm);
-  cat(RJSONIO::toJSON(netData));
+  if(reductionOptGlobal == "diablo"){
+    cat(rjson::toJSON(netData));
+  }else{
+    cat(RJSONIO::toJSON(netData));
+  }
   sink();
 
 
