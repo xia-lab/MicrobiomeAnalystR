@@ -330,7 +330,7 @@ PlotImpVar <- function(mbSetObj, imp.vec, xlbl, feature, color.BW=FALSE){
 #'@export
 #'@import MASS
 
-PerformUnivarTest <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, taxrank, statOpt, fc.thresh=0){
+PerformUnivarTest <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, taxrank, statOpt,comp1,comp2, fc.thresh=0){
   load_phyloseq();
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -347,7 +347,7 @@ PerformUnivarTest <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, t
     if(!exists("phyloseq_objs")){
       phyloseq_objs <- qs::qread("phyloseq_objs.qs")
     }
-    
+    data = phyloseq_objs[["merged_obj"]][[taxrank]]
     if(taxrank=="OTU"){
       data1 <- t(phyloseq_objs$count_tables$OTU)
     }else{
@@ -373,13 +373,27 @@ PerformUnivarTest <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, t
   resTable <- resTable[complete.cases(resTable), ];
   resTable <- resTable[,c(2,3,1)];
   fast.write(resTable, file="univar_test_output.csv");
-  
+
   #getting log2fc from edgeR
-  if(!is.null(mbSetObj$analSet$rnaseq$resTable.edger.all)){
+  if(!is.null(mbSetObj$analSet$rnaseq$resTable.edger.all)& mbSetObj[["analSet"]][["var.type"]]== variable & mbSetObj[["analSet"]][["rnaseq.taxalvl"]]==taxrank){
   edger_df <- mbSetObj$analSet$rnaseq$resTable.edger.all
   resTable_logFC <- edger_df[match(rownames(resTable), rownames(edger_df)), 'log2FC']
   resTable_logCPM <- edger_df[match(rownames(resTable), rownames(edger_df)), 'logCPM']
   resTable <- data.frame(log2FC = resTable_logFC, resTable,logCPM=resTable_logCPM)
+  }else{
+  claslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]])
+  dge <- phyloseq_to_edgeR(data, variable)
+  if(comp1 %in% claslbl && comp2 %in% claslbl ){
+    et <- edgeR::exactTest(dge, c(comp1,comp2))
+   }else{
+    et <- edgeR::exactTest(dge)
+  }
+  tt <- edgeR::topTags(et, n=nrow(dge$table), adjust.method="BH", sort.by="PValue")
+   res <- tt@.Data[[1]]
+   resTable_logFC <- res[match(rownames(resTable), rownames(res)), 'logFC']
+  resTable_logCPM <- res[match(rownames(resTable), rownames(res)), 'logCPM']
+  resTable <- data.frame(log2FC = resTable_logFC, resTable,logCPM=resTable_logCPM)
+
   }
 
   sigHits <- (resTable$FDR < p.lvl & abs(resTable$log2FC) > fc.thresh);
@@ -413,12 +427,12 @@ PerformUnivarTest <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, t
   filt.dataphy <- merge_phyloseq(filt.dataphy, sample_table_boxplot);
   taxa_names(filt.dataphy) <- rownames(mbSetObj$dataSet$filt.data);
   data_boxplot <- filt.dataphy;
-  
+
   if(mbSetObj$module.type=="mdp"){
     mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
     data_boxplot <- merge_phyloseq(data_boxplot, mbSetObj$dataSet$taxa_table);
   }
-  
+
   #using by default names for shotgun data
   if(mbSetObj$module.type=="sdp"){
     taxrank_boxplot<-"OTU";
@@ -500,7 +514,7 @@ PerformUnivarTest <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, t
 #'@export
 #'@import metagenomeSeq
 
-PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank, model, fc.thresh=0){
+PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank, model,comp1,comp2, fc.thresh=0){
   load_phyloseq();
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -523,6 +537,7 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
     data <- merge_phyloseq(data, mbSetObj$dataSet$taxa_table);
   }else{ #using by default names for shotgun data
     taxrank <- "OTU";
+    data0 <- mbSetObj$dataSet$norm.phyobj;
   }
   if(taxrank!="OTU"){
     #merging at taxonomy levels
@@ -543,6 +558,7 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
     nm <- taxa_names(data);
   }
   tree_data <<- data;
+
   data <- phyloseq_to_metagenomeSeq(data);
   data <- cumNorm(data, p=cumNormStat(data));
   mod <- model.matrix(~phenoData(data)@data[,variable]);
@@ -606,12 +622,27 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
   }
 
   #getting log2fc from edgeR
-  if(!is.null(mbSetObj$analSet$rnaseq$resTable.edger.all)){
+  if(!is.null(mbSetObj$analSet$rnaseq$resTable.edger.all)& mbSetObj[["analSet"]][["var.type"]]== variable & mbSetObj[["analSet"]][["rnaseq.taxalvl"]]==taxrank){
   edger_df <- mbSetObj$analSet$rnaseq$resTable.edger.all
   resTable_logFC <- edger_df[match(rownames(resTable), rownames(edger_df)), 'log2FC']
   resTable_logCPM <- edger_df[match(rownames(resTable), rownames(edger_df)), 'logCPM']
   resTable <- data.frame(log2FC = resTable_logFC, resTable,logCPM=resTable_logCPM)
+  }else{
+  claslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]])
+  dge <- phyloseq_to_edgeR(tree_data, variable)
+  if(comp1 %in% claslbl && comp2 %in% claslbl ){
+    et <- edgeR::exactTest(dge, c(comp1,comp2))
+   }else{
+    et <- edgeR::exactTest(dge)
   }
+  tt <- edgeR::topTags(et, n=nrow(dge$table), adjust.method="BH", sort.by="PValue")
+   res <- tt@.Data[[1]]
+   resTable_logFC <- res[match(rownames(resTable), rownames(res)), 'logFC']
+  resTable_logCPM <- res[match(rownames(resTable), rownames(res)), 'logCPM']
+  resTable <- data.frame(log2FC = resTable_logFC, resTable,logCPM=resTable_logCPM)
+
+
+ }
 
   sigHits <- (resTable$FDR < p.lvl & abs(resTable$log2FC) > fc.thresh);
   resTable <- resTable[order(-sigHits, resTable$Pvalues), , drop=FALSE]
@@ -2404,6 +2435,7 @@ if (mode == 2) {
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank()
   ) 
+ save(p,file=gsub("json","rda",fileName));
  Cairo::Cairo(file = fileName2, width = w, height = h,unit="in", type = format, bg = "white", dpi = 200)
 
 
@@ -2418,7 +2450,7 @@ if (mode == 2) {
   cat(json.obj)
   sink()
 
-  save(p,file=gsub("json","rda",fileName));
+ 
 
   return(.set.mbSetObj(mbSetObj))
 }
