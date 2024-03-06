@@ -2068,11 +2068,10 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
     }else{
       colNum=1;
     }
-    require(plyr);
     merged.data <- qs::qread("merged.data.qs");
     merged.data <- subsetPhyloseqByDataset(mbSetObj, merged.data);
     sam_data <- sample_data(merged.data);
-    pdataframe = ldply(ord.list, function(x){
+    pdataframe = plyr::ldply(ord.list, function(x){
       df = sam_data;
       return(x$vectors)
     })
@@ -2921,7 +2920,7 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pai
     stat.info <- paste("[PERMANOVA] F-value: ", signif(resTab$F, 5),  "; R-squared: ", signif(resTab$R2, 5), "; p-value: ", signif(resTab$Pr, 5), sep="");   
     stat.info.vec <- c(signif(resTab$F, 5), signif(resTab$R2, 5), signif(resTab$Pr, 5));
     names(stat.info.vec) <- c("F-value", "R-squared", "p-value");
- 
+
     if(pairwise != "false"){
         grp <- sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]
        if(length(levels(grp)) == 2){ # same as before  
@@ -2932,7 +2931,6 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pai
             rownames(res) <- res$pairs;
             res$pairs <- NULL;
       }
-
       mbSetObj$analSet$beta.stat.pair <- mbSetObj$analSet$resTable <- signif(res,5);
       fast.write(mbSetObj$analSet$resTable, file="pairwise_permanova.csv");
    }

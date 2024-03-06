@@ -46,9 +46,12 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
   
   meta.vec <- metadf
   meta.vec.num = as.integer(metadf)
-  
-  
-  if(all(sapply(meta.vec, function(x) !is.na(as.numeric(x))))){
+
+  # Convert factor levels to numeric
+  numeric_levels <- as.numeric(levels(meta.vec))
+
+ if(any(!is.na(numeric_levels))) {
+    print("numeric");
     sorted_unique_meta_vec <- sort(unique(as.numeric(levels(meta.vec))))
     col.s <- generateColorGradient(sorted_unique_meta_vec)
     # Create a named vector where names are sorted unique meta.vec values and values are corresponding colors
@@ -57,6 +60,8 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
     legendData <- list(label = sorted_unique_meta_vec, color = col.s)
     
   }else{
+    print("not_numeric");
+
     col.s <- gg_color_hue(length(levels(metadf)))
     for(i in 1:length(meta.vec.num)){
       col[i] = col.s[meta.vec.num[i]];
