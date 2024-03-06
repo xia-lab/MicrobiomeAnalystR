@@ -192,7 +192,7 @@ PerformDEAnalyse<- function(mbSetObj, taxalvl="Genus",netType="gem",overlay,init
 }
 
 
-PerformPairDEAnalyse <- function(mbSetObj, taxalvl, analysisVar,alg="limma",plvl=0.05, selected="NA",nonpar=FALSE){
+PerformPairDEAnalyse <- function(mbSetObj, taxalvl, analysisVar,alg="limma",plvl=1, selected="NA",nonpar=FALSE){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   require(dplyr)
@@ -268,6 +268,7 @@ PerformPairDEAnalyse <- function(mbSetObj, taxalvl, analysisVar,alg="limma",plvl
         }else{
           m2m_pred <- current.proc$predres$fun_prediction_met
         }
+      
         m2m_pred <- lapply(m2m_pred,function(x) reshape2::melt(x) )
         m2m_for_de <- mapply(`[<-`, m2m_pred, 'sample', value = names(m2m_pred), SIMPLIFY = FALSE)
         m2m_for_de <- do.call(rbind,m2m_for_de)
@@ -1046,6 +1047,7 @@ doGemPrediction <- function(predDB,taxalvl,psc=0.5,metType,matchonly=T,sigonly=T
   m2m_db <- dcast(m2m_ls,taxa~metabolite,value.var="potential")
   
   m2m_db[is.na(m2m_db)] <- 0
+
   dbnorm <- as.matrix(m2m_db[,-1])
   ##filter otu table
   OTUtab <- OTUtab[which(rownames(OTUtab) %in% tax_map$Query),]
@@ -1053,7 +1055,7 @@ doGemPrediction <- function(predDB,taxalvl,psc=0.5,metType,matchonly=T,sigonly=T
     AddErrMsg("Names not match!");
     return(0);
   }
-  
+  OTUtab <- apply(OTUtab, 2, function(x) ReScale(rank(x),0,1) )
   fun_prediction = NULL
   fun_m2m_pair <- list()
   message('Generating metabolic profile..')
@@ -1061,7 +1063,7 @@ doGemPrediction <- function(predDB,taxalvl,psc=0.5,metType,matchonly=T,sigonly=T
   rownames(dbnorm) <- m2m_db$taxa
   for(sample in 1:ncol(OTUtab)){
     fun_prediction_sample = dbnorm * as.numeric(OTUtab[,sample])
-    fun_prediction_sample <- t(preprocessCore::normalize.quantiles(t(fun_prediction_sample), copy=FALSE))
+    #fun_prediction_sample <- t(preprocessCore::normalize.quantiles(t(fun_prediction_sample), copy=FALSE))
     #??zero should be back transfer??
     fun_m2m_pair[[sample]] <- fun_prediction_sample
     fun_prediction_sample = colMeans(fun_prediction_sample)
@@ -1309,7 +1311,8 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
     
     data.abd <- data.frame(mic=as.character(predDE$mic[match(pred.dat$pair,rownames(predDE))]),
                            met=as.character(predDE$met[match(pred.dat$pair,rownames(predDE))]),
-                           var = ReScale(rowMeans(pred.dat[,-1]),0,1),
+                           var = rowMeans(pred.dat[,-1]),
+                           #var = ReScale(rowMeans(pred.dat[,-1]),0,1),
                            value = predDE$P_value)
     
     data.abd <- data.abd[order(data.abd$value,-(data.abd$var)),]
