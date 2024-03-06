@@ -48,7 +48,7 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
   meta.vec.num = as.integer(metadf)
   
   
-  if(all(sapply(meta.vec, function(x) !is.na(as.numeric(x))))){
+ if(all(!is.na(as.numeric(meta.vec))) && all(!is.na(unique(as.numeric(meta.vec))))) {
     sorted_unique_meta_vec <- sort(unique(as.numeric(levels(meta.vec))))
     col.s <- generateColorGradient(sorted_unique_meta_vec)
     # Create a named vector where names are sorted unique meta.vec values and values are corresponding colors
