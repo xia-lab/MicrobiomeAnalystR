@@ -268,7 +268,6 @@ PerformPairDEAnalyse <- function(mbSetObj, taxalvl, analysisVar,alg="limma",plvl
         }else{
           m2m_pred <- current.proc$predres$fun_prediction_met
         }
-      
         m2m_pred <- lapply(m2m_pred,function(x) reshape2::melt(x) )
         m2m_for_de <- mapply(`[<-`, m2m_pred, 'sample', value = names(m2m_pred), SIMPLIFY = FALSE)
         m2m_for_de <- do.call(rbind,m2m_for_de)
@@ -1047,7 +1046,6 @@ doGemPrediction <- function(predDB,taxalvl,psc=0.5,metType,matchonly=T,sigonly=T
   m2m_db <- dcast(m2m_ls,taxa~metabolite,value.var="potential")
   
   m2m_db[is.na(m2m_db)] <- 0
-
   dbnorm <- as.matrix(m2m_db[,-1])
   ##filter otu table
   OTUtab <- OTUtab[which(rownames(OTUtab) %in% tax_map$Query),]
@@ -1311,8 +1309,7 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
     
     data.abd <- data.frame(mic=as.character(predDE$mic[match(pred.dat$pair,rownames(predDE))]),
                            met=as.character(predDE$met[match(pred.dat$pair,rownames(predDE))]),
-                           var = rowMeans(pred.dat[,-1]),
-                           #var = ReScale(rowMeans(pred.dat[,-1]),0,1),
+                           var = rowMeans(pred.dat[,-1]),                        
                            value = predDE$P_value)
     
     data.abd <- data.abd[order(data.abd$value,-(data.abd$var)),]
