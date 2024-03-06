@@ -536,6 +536,8 @@ PlotHeatmap <- function(mbSetObj, plotNm, dataOpt = "norm",
   load_iheatmapr()
   load_rcolorbrewer()
   load_viridis()
+  load_phyloseq()
+
   print(c(unitCol, unitRow, fzCol, fzRow, annoPer, fzAnno))
   print(c(showColnm, showRownm))
   set.seed(2805614)
@@ -658,9 +660,9 @@ PlotHeatmap <- function(mbSetObj, plotNm, dataOpt = "norm",
 
   plotjs <- paste0(plotNm, ".json")
   plotwidget <- paste0(plotNm, ".rda")
-  plotNm <- paste(plotNm, ".", "pdf", sep = "")
+  plotNmPdf <- paste(plotNm, ".", "pdf", sep = "")
   # print(plotNm)
-  mbSetObj$imgSet$heatmap <- plotNm
+  mbSetObj$imgSet$heatmap <- plotNmPdf
 
   if (doclust == "T") {
     rowV <- TRUE
@@ -756,8 +758,6 @@ PlotHeatmap <- function(mbSetObj, plotNm, dataOpt = "norm",
 
 
 
-
-
   as_list[["layout"]][["width"]] <- w
   as_list[["layout"]][["height"]] <- h
 
@@ -777,6 +777,14 @@ PlotHeatmap <- function(mbSetObj, plotNm, dataOpt = "norm",
   mbSetObj$analSet$heatmap.clust <- clstDist
   mbSetObj$analSet$heat.taxalvl <- taxrank
   mbSetObj$imgSet$heatmap_int <- plotwidget
+  save(p, file=plotwidget);
+
+  #pstatic <- CreateStaticHeatmap(data1sc, fzAnno, colors, nrows, x_start, y_start, x_spacing, annotation, sz, bf, showColnm, showRownm, doclust, smplDist, clstDist, fzCol, fzRow)
+
+  #Cairo::Cairo(file = paste0(plotNm, ".png"), unit="px", dpi=72, width=w, height=h, type="png");    
+  #print(pstatic)
+  #dev.off()
+
   return(.set.mbSetObj(mbSetObj))
 }
 
@@ -970,7 +978,7 @@ PlotCovariateMap<- function(mbSetObj, thresh = "0.05", theme="default", imgName=
 }
 
 CreateStaticHeatmap <- function(data1sc, fzAnno, colors, nrows, x_start, y_start, x_spacing, annotation, sz, bf, showColnm, showRownm, doclust, smplDist, clstDist, fzCol, fzRow) {
-  # Prepare annotations if needed
+  library(pheatmap);
   # Note: In pheatmap, annotations are usually a data frame where each column is a different annotation
   # You might need to adjust this part based on your actual data structure for annotations
   
@@ -993,8 +1001,8 @@ CreateStaticHeatmap <- function(data1sc, fzAnno, colors, nrows, x_start, y_start
            fontsize = fzAnno, # Set the font size for annotations
            fontsize_row = fzRow,
            fontsize_col = fzCol,
-           show_rownames = showRownm,
-           show_colnames = showColnm,
+           show_rownames = F,
+           show_colnames = T,
            annotation = annotation
   )
 

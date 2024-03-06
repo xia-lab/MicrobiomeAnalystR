@@ -12,9 +12,9 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
   nodes <- vector(mode="list");
   names <- res$name;
   if(ncol(res$xyz) > nrow(res$xyz)){
-  orig.pos.xyz <- t(res$xyz);
+    orig.pos.xyz <- t(res$xyz);
   }else{
-  orig.pos.xyz <- res$xyz;
+    orig.pos.xyz <- res$xyz;
   }
   
   ticksX <- pretty(range(orig.pos.xyz[,1]*1.2),10, bound=F);
@@ -46,13 +46,26 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
   
   meta.vec <- metadf
   meta.vec.num = as.integer(metadf)
-  col.s <- gg_color_hue(length(levels(metadf)))
-  for(i in 1:length(meta.vec.num)){
-    col[i] = col.s[meta.vec.num[i]];
+  
+  
+  if(all(sapply(meta.vec, function(x) !is.na(as.numeric(x))))){
+    sorted_unique_meta_vec <- sort(unique(as.numeric(levels(meta.vec))))
+    col.s <- generateColorGradient(sorted_unique_meta_vec)
+    # Create a named vector where names are sorted unique meta.vec values and values are corresponding colors
+    col <- generateColorGradient(meta.vec)
+    # Prepare legend data
+    legendData <- list(label = sorted_unique_meta_vec, color = col.s)
+    
+  }else{
+    col.s <- gg_color_hue(length(levels(metadf)))
+    for(i in 1:length(meta.vec.num)){
+      col[i] = col.s[meta.vec.num[i]];
+    }
+    legendData <- list(label=unique(meta.vec),color=col.s)
+    
   }
-
-  legendData <- list(label=unique(meta.vec),color=col.s)
-
+  
+  
   if("facB" %in% names(res)){
     meta.vec2 <- res$facB
     phyobjdata <- qs::qread("merged.data.qs");
@@ -61,13 +74,13 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
     shape <- vector();
     meta.vec.num <- as.integer(as.factor(meta.vec2))
     shape.s <- c("circle", "triangle", "square", "diamond")[1:length(unique(meta.vec2))];
-
+    
     for(i in 1:length(meta.vec.num)){
       shape[i] = shape.s[meta.vec.num[i]];
     }
     legendData2 <- list(label=unique(meta.vec2),shape=shape.s);
   }
-
+  
   nodeSize = 18;
   
   for(i in 1:length(names)){
@@ -88,7 +101,7 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
     if("facB" %in% names(res)){
       nodes[[i]][["meta2"]] <- meta.vec2[i]
       nodes[[i]][["shape"]] <- shape[i]
-
+      
     }
   }
   
@@ -98,19 +111,19 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
   
   if(!containsLoading){
     netData <- list(nodes=nodes,
-  edges="NA",
-  meta=metadf, 
-  loading="NA",
-  axis=res$axis, 
-  ticks=ticks,
-  metaCol = legendData);
+                    edges="NA",
+                    meta=metadf, 
+                    loading="NA",
+                    axis=res$axis, 
+                    ticks=ticks,
+                    metaCol = legendData);
   }else{
     res2 <- qs::qread("loading3d.qs");
-
+    
     if(ncol(res2$xyz) > nrow(res2$xyz)){
-    orig.load.xyz <- t(res2$xyz);
+      orig.load.xyz <- t(res2$xyz);
     }else{
-    orig.load.xyz <- res2$xyz;
+      orig.load.xyz <- res2$xyz;
     }
     
     ticksX <- pretty(range(orig.load.xyz[,1]),10);
@@ -136,9 +149,9 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
     
     names <- res2$name;
     if("entrez" %in% names(res2)){
-    ids <- res2$entrez;
+      ids <- res2$entrez;
     }else{
-    ids <- res2$name;
+      ids <- res2$name;
     }
     colres <- rgba_to_hex_opacity(res2$cols);
     colorb <- colres[[1]];
@@ -161,6 +174,7 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
         colorb=colorb[i],
         colorw=colorb[i]
       );
+      
     }
     
     ticksLoading <- list(x=ticksX, y=ticksY, z=ticksZ);
@@ -174,19 +188,19 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
                     axis=res$axis,
                     axisLoading=res2$axis, 
                     metaCol = legendData);
-  #res2$pos.xyz <- load.xyz;
-  #qs::qsave(res2, "pca3d_loadings.qs");
+    #res2$pos.xyz <- load.xyz;
+    #qs::qsave(res2, "pca3d_loadings.qs");
   }
-
+  
   if("facB" %in% names(res)){
     netData$metaShape <- legendData2;
-}
-
+  }
+  
   rownames(pos.xyz) <- res$name;
   mbSetObj$analSet$pos.xyz <- pos.xyz;
   qs::qsave(pos.xyz,"pos.xyz.qs");
-
-
+  
+  
   sink(filenm);
   cat(toJSON(netData));
   sink();
@@ -236,11 +250,11 @@ scale_range <- function(x, new_min = 0, new_max = 1) {
 
 
 ComputeEncasing <- function(filenm, type, names.vec, level=0.95, omics="NA"){
-
-
+  
+  
   level <- as.numeric(level)
   names = strsplit(names.vec, "; ")[[1]]
-
+  
   pos.xyz <- qs::qread("pos.xyz.qs");
   #print(head(pos.xyz));
   inx = rownames(pos.xyz) %in% names;
@@ -274,3 +288,16 @@ gg_color_hue <- function(n) {
   hues = seq(15, 375, length = n + 1)
   hcl(h = hues, l = 65, c = 100)[1:n]
 }
+
+generateColorGradient <- function(values, low="green", high="red") {
+  # Normalize values to the range from 0 to 1
+  values <- as.numeric(values);
+  normalized_values <- (values - min(values)) / (max(values) - min(values))
+  
+  # Generate colors
+  colors <- grDevices::colorRampPalette(c(low, high))(length(values))
+  
+  # Map normalized values to colors
+  return(colors[as.numeric(cut(normalized_values, breaks = length(values), labels = FALSE))])
+}
+

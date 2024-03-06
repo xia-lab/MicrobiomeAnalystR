@@ -759,16 +759,8 @@ ProcessMaaslinRes <- function(mbSetObj,taxalvl,analysis.var,thresh){
 
 
 #####lib path
-if(file.exists("/Users/lzy/Documents/examples_data_microbiomeanalyst")){
+lib.path.mmp <<- "../../lib/mmp/"
   
-  lib.path.mmp <<- "/Users/lzy/Documents/examples_data_microbiomeanalyst/gem_m2m/"
-  
-}else if(file.exists("../../lib/mmp/")){  
-  
-  lib.path.mmp <<- "../../lib/mmp/"
-  
-}
-
 
 MetaboIDmap <- function(netModel,predDB,IDtype,met.vec=NA){
   
@@ -970,10 +962,9 @@ CreatPathwayLib <- function(contain){
   
   includeInfo = list(nodes=unique(unlist(current.lib)))
   edges.bc = qs::qread(paste0(lib.path.mmp,"edge.bac.qs"))
-  edges  = data.frame(edge=rep(edges.bc$id_edge,2),cpd = c(edges.bc$from,edges.bc$to))
-  edges = unique(edges[!(grepl("undef",edges$cpd)),])
+  edges  = data.frame(edge=edges.bc$id_rxn,cpd = edges.bc$met)
   edges = edges[which(edges$cpd %in% includeInfo$nodes),]
-  edges = edges.bc[which(edges.bc$id_edge %in% edges$edge),]
+  edges = edges.bc[which(edges.bc$id_rxn %in% edges$edge),]
   
   includeInfo$edges = edges
   
@@ -2350,8 +2341,7 @@ tuneKOmap <- function(){
   include = rownames(current.proc$mic$data.proc)
   edges.ko = edges.ko[which(edges.ko$ko %in% include),]
   includeInfo = list(edges=edges.ko)
-  includeInfo$nodes = unique(c(edges.ko$from,edges.ko$to))
-  includeInfo$nodes =includeInfo$nodes[!(grepl("unddef",includeInfo$nodes))]
+  includeInfo$nodes = unique(edges.ko$met)
   
   json.mat <- rjson::toJSON(includeInfo);
   sink("includeInfo.json");
@@ -3553,7 +3543,6 @@ RemoveData <- function(dataName){
 }
 
 GetMicMetDataDims <- function(dataType,dataName){
- 
   if(is.null(current.proc$mic)){
     
     data<-data.table::fread(dataName)
