@@ -725,7 +725,8 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   load_MASS();
- 
+  load_phyloseq();
+
   claslbl <<- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
 
   if(mbSetObj$module.type=="sdp"){
@@ -1115,6 +1116,8 @@ PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="defaul
 #'@import DESeq2
 
 PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, fc.thresh=0, comp1=1, comp2=2){
+  load_phyloseq();
+
   if(opts=="DESeq2"){
     .prepare.deseq(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, fc.thresh, comp1, comp2);
     .perform.computing();
@@ -1737,7 +1740,7 @@ PlotCorr <- function(mbSetObj, imgName, format="png", dpi=72,appendnm, width=NA)
 
 
 Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, variable, appendname){
-  
+  load_phyloseq();
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
   if(pattern %in% names(mbSetObj$dataSet$sample_data)){
@@ -2050,7 +2053,7 @@ KendallCorrFunc <- function(var1, var2, data){
 #'@export
 
 GenerateTemplates <- function(mbSetObj, variable){
-  
+  load_phyloseq();
   mbSetObj <- .get.mbSetObj(mbSetObj);
   print(variable)
   clslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);

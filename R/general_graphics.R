@@ -71,6 +71,7 @@ PlotTreeGraph <- function(mbSetObj, plotNm, distnm, clstDist, metadata,
                           plotType = "rectangle") {
   load_ape()
   load_viridis()
+  load_phyloseq();
 
   mbSetObj <- .get.mbSetObj(mbSetObj)
 
@@ -806,6 +807,7 @@ PlotHeatmap <- function(mbSetObj, plotNm, dataOpt = "norm",
 #' @export
 GetColorSchema <- function(mbSetObj, grayscale = F) {
   mbSetObj <- .get.mbSetObj(mbSetObj)
+  load_phyloseq();
 
   # test if total group number is over 9
   claslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]])

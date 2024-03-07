@@ -29,7 +29,7 @@ PerformMetaEffectSize <- function(mbSetObj=NA, imgName="", taxrank="OTU", selMet
   mdata.all <- mbSetObj$mdata.all;
   sel.nms <- names(mdata.all)[mdata.all==1];
   
-  dat <- qs::qread("merged.data.raw.qs");
+  dat <- qs::qread("merged.data.qs");
   #dat <- subsetPhyloseqByDataset(mbSetObj, dat);
   
   if(taxrank!="OTU"){      
@@ -74,37 +74,25 @@ PerformMetaEffectSize <- function(mbSetObj=NA, imgName="", taxrank="OTU", selMet
   #}
   library(MMUPHin);
   
-  if(mbSetObj$dataSet$is.normalized){
     if(identical(cov, character(0))){
       fit_lm_meta <- lm_meta(feature_abd = data,
                              batch = "dataset",
                              exposure = selMeta,
                              data = metadata,
-                             control = list(verbose = FALSE, normalization="NONE", transform="NONE", rma_method=ef.method, analysis_method=de.method));
+                             control = list(verbose = FALSE, normalization="NONE", 
+                            #transform="NONE", 
+                            rma_method=ef.method, analysis_method=de.method));
     }else{
       fit_lm_meta <- lm_meta(feature_abd = data,
                              batch = "dataset",
                              exposure = selMeta,
                              data = metadata,
                              covariates = cov,
-                             control = list(verbose = FALSE, normalization="NONE", transform="NONE", rma_method=ef.method, analysis_method=de.method));
+                             control = list(verbose = FALSE, normalization="NONE", 
+                            #transform="NONE", 
+                            rma_method=ef.method, analysis_method=de.method));
     }
-  }else{
-    if(identical(cov, character(0))){
-      fit_lm_meta <- lm_meta(feature_abd = data,
-                             batch = "dataset",
-                             exposure = selMeta,
-                             data = metadata,
-                             control = list(verbose = FALSE, rma_method=ef.method, analysis_method=de.method));
-    }else{
-      fit_lm_meta <- lm_meta(feature_abd = data,
-                             batch = "dataset",
-                             exposure = selMeta,
-                             data = metadata,
-                             covariates = cov,
-                             control = list(verbose = FALSE, rma_method=ef.method, analysis_method=de.method));
-    }
-  }
+  
   
   
   
