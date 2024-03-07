@@ -2078,6 +2078,8 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
       return(x$vectors)
     })
     pdataframe <- cbind(sam_data, pdataframe);
+    pdataframe$sample_id <- rownames(pdataframe)
+
     res <- lapply(ord.list, function(x){ return(x$stat.info)})
     stats <- unlist(res);
     for(i in 1:length(stats)){
@@ -2149,7 +2151,7 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
     box = box + viridis::scale_color_viridis(option="magma", discrete = TRUE) + viridis::scale_fill_viridis(option="magma", discrete = TRUE)
   }
   
-  box = box + theme(strip.text.x = element_text(size = 12));
+  box = box + theme(text = element_text(size = 14));
   
   Cairo::Cairo(file=plotNm, width=width, height=height, type=format, bg="white",dpi=dpi);
   print(box);
