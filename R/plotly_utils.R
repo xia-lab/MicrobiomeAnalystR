@@ -66,10 +66,14 @@ gdef2trace <- plotly:::gdef2trace
     )
   }
   # if a device (or RStudio) is already open, use the device size as default size
-  if (!is.null(grDevices::dev.list()) || plotly:::is_rstudio()) {
-    width <- width %||% default(grDevices::dev.size("px")[1])
-    height <- height %||% default(grDevices::dev.size("px")[2])
-  }
+if (!is.null(grDevices::dev.list()) || plotly:::is_rstudio()) {
+    if (is.null(width)) {
+        width <- grDevices::dev.size("px")[1]
+    }
+    if (is.null(height)) {
+        height <- grDevices::dev.size("px")[2]
+    }
+}
   # open the device and make sure it closes on exit
   dev_fun(filename = tempfile_path, width = width %||% 640, height = height %||% 480)
   on.exit(grDevices::dev.off(), add = TRUE)

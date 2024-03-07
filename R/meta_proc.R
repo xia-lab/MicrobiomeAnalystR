@@ -941,7 +941,7 @@ MergeDatasets <- function(mbSetObj, taxo_type, sample_var){
 PerformDataMerging <- function(mbSetObj, data1, data2, taxo_type, sample_var, init=T, type="proc"){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   sel.nms <- names(mbSetObj$dataSets);
-  
+  load_phyloseq();
   #reading user data
   if(type == "proc"){
   data <- data1$proc.phyobj;
