@@ -29,7 +29,7 @@ PerformMetaEffectSize <- function(mbSetObj=NA, imgName="", taxrank="OTU", selMet
   mdata.all <- mbSetObj$mdata.all;
   sel.nms <- names(mdata.all)[mdata.all==1];
   
-  dat <- qs::qread("merged.data.raw.qs");
+  dat <- qs::qread("merged.data.qs");
   #dat <- subsetPhyloseqByDataset(mbSetObj, dat);
   
   if(taxrank!="OTU"){      
@@ -74,37 +74,25 @@ PerformMetaEffectSize <- function(mbSetObj=NA, imgName="", taxrank="OTU", selMet
   #}
   library(MMUPHin);
   
-  if(mbSetObj$dataSet$is.normalized){
     if(identical(cov, character(0))){
       fit_lm_meta <- lm_meta(feature_abd = data,
                              batch = "dataset",
                              exposure = selMeta,
                              data = metadata,
-                             control = list(verbose = FALSE, normalization="NONE", transform="NONE", rma_method=ef.method, analysis_method=de.method));
+                             control = list(verbose = FALSE, normalization="NONE", 
+                            #transform="NONE", 
+                            rma_method=ef.method, analysis_method=de.method));
     }else{
       fit_lm_meta <- lm_meta(feature_abd = data,
                              batch = "dataset",
                              exposure = selMeta,
                              data = metadata,
                              covariates = cov,
-                             control = list(verbose = FALSE, normalization="NONE", transform="NONE", rma_method=ef.method, analysis_method=de.method));
+                             control = list(verbose = FALSE, normalization="NONE", 
+                            #transform="NONE", 
+                            rma_method=ef.method, analysis_method=de.method));
     }
-  }else{
-    if(identical(cov, character(0))){
-      fit_lm_meta <- lm_meta(feature_abd = data,
-                             batch = "dataset",
-                             exposure = selMeta,
-                             data = metadata,
-                             control = list(verbose = FALSE, rma_method=ef.method, analysis_method=de.method));
-    }else{
-      fit_lm_meta <- lm_meta(feature_abd = data,
-                             batch = "dataset",
-                             exposure = selMeta,
-                             data = metadata,
-                             covariates = cov,
-                             control = list(verbose = FALSE, rma_method=ef.method, analysis_method=de.method));
-    }
-  }
+  
   
   
   
@@ -241,7 +229,6 @@ SetupMetaStats <- function(BHth, paramSet,analSet){
 #'License: GNU GPL (>= 2)
 #'@export
 CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank="Family", view.mode="ratio", format="png", dpi=100) {
-  save.image("summary.RData");
   mbSetObj <- .get.mbSetObj(mbSetObj);
   mdata.all <- mbSetObj$mdata.all;
   sel.nms <- names(mdata.all)[mdata.all==1];
@@ -420,28 +407,32 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
     print(fig);
     dev.off();
   }else{
-    
     data <- lapply(res.list, function(x) x$AlphaDiversity) %>%
       do.call(bind_rows, .)
-    box1 <- ggplot(data, aes(Diversity, dataset, fill = study_condition))  +
-      geom_boxplot(alpha=0.7, outlier.shape = NA,
-                   width=0.2)+
-      
-      #reduce the width of jitter
-      stat_summary(fun.y=mean, #add mean point
+    combined_data <- data %>%
+      mutate(dataset = 'Combined') # Create a combined dataset
+
+    # Bind this combined data with the original data
+    augmented_data <- bind_rows(data, combined_data)
+
+    # Now, create the plot with the augmented data
+    box1 <- ggplot(augmented_data, aes(Diversity, dataset, fill = study_condition)) +
+      geom_boxplot(alpha=0.7, outlier.shape = NA, width=0.2) +
+      stat_summary(fun=mean, # Change from fun.y to fun for ggplot2 updates
                    geom = "point",
                    shape = 16,
                    size = 1,
                    aes(group=study_condition),
                    color = "black",
-                   position = position_dodge(0.2))+ 
+                   position = position_dodge(0.2)) + 
       scale_fill_discrete(name = "Metadata") +
       facet_grid( .~ Metric, scales = "free_x") + 
-      theme(text = element_text(size = 16));
-    
-    Cairo::Cairo(file = imgName, unit="px", dpi=dpi, width=800, height=600, type=format, bg="white");
-    print(box1);
-    dev.off();
+      theme(text = element_text(size = 16))
+
+    # Create the plot
+    Cairo::Cairo(file = imgName, unit="px", dpi=dpi, width=800, height=600, type=format, bg="white")
+    print(box1)
+    dev.off()
   }
   tbl <- as.data.frame(tbl[, !colnames(tbl) %in% c("Significant", "Nsamples", "Study", "mean_LFD", "mean_HFD")]);
   mbSetObj$analSet$alpha.summary <- tbl[order(tbl$dataset, tbl$Metric),];
@@ -622,7 +613,7 @@ PlotDiscreteDiagnostic <- function(mbSetObj, fileName, metadata, format="png", d
 
 PlotContinuousPopulation <- function(mbSetObj, loadingName, ordinationName, metadata, format="png", dpi=72){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
+
   require(vegan);
   require(MMUPHin);
   require(tidyverse);

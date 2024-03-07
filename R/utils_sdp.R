@@ -191,7 +191,7 @@ ReadShotgunBiomData <- function(mbSetObj, dataName, geneidtype, module.type, ism
 #'@import ggfortify
 PreparePCA4Shotgun <- function(mbSetObj, imgName,imgName2, format="json", inx1, inx2, inx3,
                               variable, showlabel, format2d="png", dpi=72){
-  
+  load_phyloseq();
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   load_ggfortify();
@@ -610,6 +610,7 @@ PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",fi
 }
 
 .prepare.global<-function(mbSetObj, category,contain ,file.nm){
+  load_phyloseq();
   LoadKEGGKO_lib(category,contain);
   mbSetObj <- .get.mbSetObj(mbSetObj);
   print(c(category,contain,file.nm))

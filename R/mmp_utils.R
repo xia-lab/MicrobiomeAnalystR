@@ -645,6 +645,8 @@ doMaAslin <- function(input.data,thresh = 0.05,adj.bool=F){
 
 
 PrepareResTable <- function(mbSetObj,micDataType,taxalvl,is.norm=F){
+  load_phyloseq();
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
   mbSetObj$analSet$maaslin$taxalvl <- taxalvl;
   if(micDataType=="otu"){
@@ -1677,7 +1679,7 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
 
 .prepare.global.tune<-function(mbSetObj, dataType,category, file.nm,contain){
   
-  
+  load_phyloseq();
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   phenotype <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[selected.meta.data]]);

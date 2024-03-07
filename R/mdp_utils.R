@@ -629,10 +629,10 @@ abundances<-function(x, transform="identity") {
     # Pick OTU matrix
     otu <- get_taxa(x)
     # Ensure that taxa are on the rows
-    if (all(c(!taxa_are_rows(x), ntaxa(x) > 1, nsamples(x) > 1))) {
+    if (all(c(!taxa_are_rows(x), phyloseq::ntaxa(x) > 1, nsamples(x) > 1))) {
       otu <- t(otu)
     }
-    if (ntaxa(x) == 1) {
+    if (phyloseq::ntaxa(x) == 1) {
       otu <- matrix(otu, nrow=1)
       rownames(otu) <- taxa(x)
       colnames(otu) <- sample_names(x)
@@ -1882,11 +1882,10 @@ sink();
 PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, metadata, 
                                  showlabel, taxrank, taxa, alphaopt, ellopt, comp.method, format="png", dpi=72,
                                  custom_col = "none",pairwise, interactive = FALSE){
- 
   combined <- F;
   mbSetObj <- .get.mbSetObj(mbSetObj);
   module.type <- mbSetObj$module.type;
-
+  load_ggplot()
   load_datatable();
   load_viridis();
   load_phyloseq();
@@ -1915,11 +1914,11 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
       proc.phyobj <- mbSetObj$dataSet$proc.phyobj;
       norm.phyobj <- mbSetObj$dataSet$norm.phyobj;
     }    
-
+    
     #using normalized data
     
     phyloseq_objs <- readDataQs("phyloseq_objs.qs",mbSetObj$module.type,dataName)
-
+    
     data <- phyloseq_objs$merged_obj[[taxrank]]
     if(is.null(data)){
       AddErrMsg("Errors in projecting to the selected taxanomy level!");
@@ -1967,14 +1966,16 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
     }else if(colopt=="continuous") {
       require("MMUPHin");
       require("vegan");
-
+      
+      proc.phyobj <- qs::qread("merged.data.raw.qs");
       data <- proc.phyobj;
-
+      
       #sub_sam_data <- sam_data[which(sam_data[,metadata] == meta.grp), ]
       #sub_data <- data@otu_table[, rownames(sub_sam_data)];
       sub_sam_data <- sample_data(data); 
       
-      sub_data <- as.matrix(otu_table(data)); #data@otu_table[, rownames(sub_sam_data)];
+      #sub_data <- as.matrix(otu_table(data)); 
+      sub_data <- data@otu_table[, rownames(sub_sam_data)];
       sub_data <- apply(sub_data, 2, function(x) x / sum(x))
       dist.data <- vegdist(t(sub_data));
       
@@ -2033,12 +2034,12 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
     }else{
       ord <- ordinate(data, method = ordmeth,distName);
     }
-
-      if(ordmeth == "NMDS"){
-        ord$vectors <- ord$points;
-        colnames(ord$vectors) <- c("Axis.1", "Axis.2")
-      }
-
+    
+    if(ordmeth == "NMDS"){
+      ord$vectors <- ord$points;
+      colnames(ord$vectors) <- c("Axis.1", "Axis.2")
+    }
+    
     if(colopt == "continuous"){
       ord$vectors <- as.data.frame(ord$vectors);
       ord$vectors <- cbind(sample_data(data)$loading, ord$vectors);
@@ -2076,6 +2077,8 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
       return(x$vectors)
     })
     pdataframe <- cbind(sam_data, pdataframe);
+    pdataframe$sample_id <- rownames(pdataframe)
+
     res <- lapply(ord.list, function(x){ return(x$stat.info)})
     stats <- unlist(res);
     for(i in 1:length(stats)){
@@ -2147,8 +2150,8 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
     box = box + viridis::scale_color_viridis(option="magma", discrete = TRUE) + viridis::scale_fill_viridis(option="magma", discrete = TRUE)
   }
   
-  box = box + theme(strip.text.x = element_text(size = 12));
-
+  box = box + theme(text = element_text(size = 14));
+  
   Cairo::Cairo(file=plotNm, width=width, height=height, type=format, bg="white",dpi=dpi);
   print(box);
   dev.off();
@@ -2999,18 +3002,20 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
     data1 <- qs::qread("merged.data.raw.qs");
     sample_table <- sample_data(data1);
     data <- as.data.frame(t(otu_table(data1)),check.names=FALSE);
-    facet2="dataset";
+    #if(facet2 == "none"){
+      #facet2="dataset";
+    #}
   }else{
     #using filtered data
     data <- mbSetObj$dataSet$filt.data;
     if("matrix" %in% class(mbSetObj$dataSet$filt.data)){
       data<-otu_table(data,taxa_are_rows =TRUE);
     }
-  
+    
     sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
     data1 <- merge_phyloseq(data, tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
   }
-
+  
   yLbl <- "Actual Abundance";
   data <- as.data.frame(t(otu_table(data1)),check.names=FALSE);
   flag <- (facet2 == "null" || facet2 == "none" || facet2 == metadata);
@@ -3022,7 +3027,7 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
     data$variable <- paste(data1@sam_data[[metadata]], data1@sam_data[[facet2]], sep = ";");
     clsLbl <- unique(factor(paste(data1@sam_data[[metadata]],data1@sam_data[[facet2]], sep = ";")));
   }
-
+  
   data <- aggregate(. ~variable,data,sum);
   rownames(data) <- data[,1];
   data <- data[,-1];
@@ -3203,14 +3208,14 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
   }else{
     guide_num = 5
   }
-
+  
   rdaName = paste(barplotName, ".rda", sep="");
   jsonName = paste(barplotName, ".json", sep="");
   barplotName = paste(barplotName, ".",format, sep="");
   mbSetObj$imgSet$stack<-barplotName;
   mbSetObj$imgSet$stackRda <-rdaName;
   mbSetObj$imgSet$stackType <- "group";
-
+  
   stackdata <<- data
   Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
   box <- ggplot(data,aes(x = step, y = value, fill = variable))+
@@ -3227,6 +3232,9 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
   
   if(flag){
     box <- box;
+    #if(mbSetObj$module.type == "meta" && "variable2" %in% colnames(data)){
+    #  box <- box + facet_grid(variable2 ~ . , scales = "free", space = "free");
+    #}
   } else {
     box <- box + facet_grid(variable2 ~ ., scales = "free");
   }
@@ -3259,22 +3267,18 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
   }else{
     box <- box + scale_fill_manual(values=c(x.colors)) + guides(fill=guide_legend(ncol=guide_num))
   }
-
-  if(mbSetObj$module.type == "meta"){
-      box <- box + facet_grid(variable2 ~ . , scales = "free", space = "free");
-  }
-
+  
   save(box,file=rdaName);
   print(box+guides(fill=guide_legend(ncol=3)));
   dev.off();
-
-    p <- ggplotly_modified(box, tempfile_path = paste0(getwd(), "/temp_file4plotly"));
-
-jsonlist <- RJSONIO::toJSON(p, pretty = T,force = TRUE,.na = "null");
-sink(jsonName);
-cat(jsonlist);
-sink();
-
+  
+  p <- ggplotly_modified(box, tempfile_path = paste0(getwd(), "/temp_file4plotly"));
+  
+  jsonlist <- RJSONIO::toJSON(p, pretty = T,force = TRUE,.na = "null");
+  sink(jsonName);
+  cat(jsonlist);
+  sink();
+  
   mbSetObj$analSet$stack<-data;
   mbSetObj$analSet$stack.taxalvl<-taxalvl;
   mbSetObj$analSet$plot<-"Stacked Bar";
