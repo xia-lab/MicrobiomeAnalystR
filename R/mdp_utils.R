@@ -1882,7 +1882,6 @@ sink();
 PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, metadata, 
                                  showlabel, taxrank, taxa, alphaopt, ellopt, comp.method, format="png", dpi=72,
                                  custom_col = "none",pairwise, interactive = FALSE){
-  save.image("beta.RData");
   combined <- F;
   mbSetObj <- .get.mbSetObj(mbSetObj);
   module.type <- mbSetObj$module.type;
@@ -2990,7 +2989,6 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pai
 PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, facet2, imgOpt,
                                      feat_cnt, colpalopt, calcmeth, toptaxa,abunTopTaxaOpt, 
                                      appendnm, format="png", dpi=80, interactive = FALSE){
-  save.image("taxaAbun.RData");
   load_phyloseq();
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
