@@ -622,7 +622,8 @@ PlotDiscreteDiagnostic <- function(mbSetObj, fileName, metadata, format="png", d
 
 PlotContinuousPopulation <- function(mbSetObj, loadingName, ordinationName, metadata, format="png", dpi=72){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
+  save.image("cont.RData");
+
   require(vegan);
   require(MMUPHin);
   require(tidyverse);

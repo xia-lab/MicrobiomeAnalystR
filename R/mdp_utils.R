@@ -1882,11 +1882,11 @@ sink();
 PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, metadata, 
                                  showlabel, taxrank, taxa, alphaopt, ellopt, comp.method, format="png", dpi=72,
                                  custom_col = "none",pairwise, interactive = FALSE){
- 
+  save.image("beta.RData");
   combined <- F;
   mbSetObj <- .get.mbSetObj(mbSetObj);
   module.type <- mbSetObj$module.type;
-
+  load_ggplot()
   load_datatable();
   load_viridis();
   load_phyloseq();
@@ -1915,11 +1915,11 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
       proc.phyobj <- mbSetObj$dataSet$proc.phyobj;
       norm.phyobj <- mbSetObj$dataSet$norm.phyobj;
     }    
-
+    
     #using normalized data
     
     phyloseq_objs <- readDataQs("phyloseq_objs.qs",mbSetObj$module.type,dataName)
-
+    
     data <- phyloseq_objs$merged_obj[[taxrank]]
     if(is.null(data)){
       AddErrMsg("Errors in projecting to the selected taxanomy level!");
@@ -1967,14 +1967,16 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
     }else if(colopt=="continuous") {
       require("MMUPHin");
       require("vegan");
-
+      
+      proc.phyobj <- qs::qread("merged.data.raw.qs");
       data <- proc.phyobj;
-
+      
       #sub_sam_data <- sam_data[which(sam_data[,metadata] == meta.grp), ]
       #sub_data <- data@otu_table[, rownames(sub_sam_data)];
       sub_sam_data <- sample_data(data); 
       
-      sub_data <- as.matrix(otu_table(data)); #data@otu_table[, rownames(sub_sam_data)];
+      #sub_data <- as.matrix(otu_table(data)); 
+      sub_data <- data@otu_table[, rownames(sub_sam_data)];
       sub_data <- apply(sub_data, 2, function(x) x / sum(x))
       dist.data <- vegdist(t(sub_data));
       
@@ -2033,12 +2035,12 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
     }else{
       ord <- ordinate(data, method = ordmeth,distName);
     }
-
-      if(ordmeth == "NMDS"){
-        ord$vectors <- ord$points;
-        colnames(ord$vectors) <- c("Axis.1", "Axis.2")
-      }
-
+    
+    if(ordmeth == "NMDS"){
+      ord$vectors <- ord$points;
+      colnames(ord$vectors) <- c("Axis.1", "Axis.2")
+    }
+    
     if(colopt == "continuous"){
       ord$vectors <- as.data.frame(ord$vectors);
       ord$vectors <- cbind(sample_data(data)$loading, ord$vectors);
@@ -2148,7 +2150,7 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
   }
   
   box = box + theme(strip.text.x = element_text(size = 12));
-
+  
   Cairo::Cairo(file=plotNm, width=width, height=height, type=format, bg="white",dpi=dpi);
   print(box);
   dev.off();

@@ -348,6 +348,7 @@ ClearRCommandHistory <- function(mbSetObj=NA){
 ####################################
 GetResRowNames <- function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
+  print(head(mbSetObj$analSet$resTable));
   return(rownames(mbSetObj$analSet$resTable));
 }
 
