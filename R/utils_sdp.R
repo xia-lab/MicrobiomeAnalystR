@@ -375,8 +375,19 @@ PlotFunctionStack<-function(mbSetObj, summaryplot, functionlvl, abundcal, geneid
     #removing zero abundance KEGG pathways, metabolism and modules
     result <- result[ rowSums(result)!=0, ];
   }
-    
-  fast.write(result, file="funcprof_abund.csv");
+  output <- result
+  if(functionlvl=="KEGG pathways"){
+    set2nm <- qs::qread("../../lib/mmp/set2nm.qs") 
+  nms = unname(set2nm[["pathway"]][match(rownames(output),names(set2nm[["pathway"]]))])
+  output = cbind(name=nms,output)
+
+  }else if(functionlvl=="KEGG modules"){
+  set2nm <- qs::qread("../../lib/mmp/set2nm.qs")
+   nms = unname(set2nm[["module"]][match(rownames(output),names(set2nm[["module"]]))])
+  output = cbind(name=nms,output)
+ }
+  
+  fast.write(output, file="funcprof_abund.csv");
 
   # now plotting
   w <- 1000;
@@ -563,6 +574,7 @@ PrepareQueryJson <- function(mbSetObj){
  labels <- qs::qread("../../lib/ko/ko_lbs.qs")
  labels <-labels[labels$info %in% query.ko,c(3,4)]
  labels <- aggregate(labels$info,list(labels$id_edge),function(x) paste(x,collapse = ","))
+
   json.mat <- rjson::toJSON(list(query.res=query.res,id_rxn=labels[,1],label=labels[,2]));
   sink(paste0(netQueryNm, ".json"));
   cat(json.mat);
