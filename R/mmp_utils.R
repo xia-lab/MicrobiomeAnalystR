@@ -404,8 +404,7 @@ CompareMic <- function(mbSetObj, taxalvl,initDE=1,
 
 
 
-CompareMet <- function(mbSetObj, analysisVar,
-                       alg="limma",plvl=0.05,ref,compr, selected="NA",nonpar=FALSE){
+CompareMet <- function(mbSetObj, analysisVar,alg="limma",plvl=0.05,ref, compr, selected="NA",nonpar=FALSE){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   # current.proc$sample<<-data.frame(mbSetObj$dataSet$sample_data)
