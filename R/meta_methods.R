@@ -414,7 +414,6 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
 
     # Bind this combined data with the original data
     augmented_data <- bind_rows(data, combined_data)
-
     # Now, create the plot with the augmented data
     box1 <- ggplot(augmented_data, aes(Diversity, dataset, fill = study_condition)) +
       geom_boxplot(alpha=0.7, outlier.shape = NA, width=0.2) +
