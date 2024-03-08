@@ -873,7 +873,7 @@ paras = paras[!paras$feature %in% nafeat,]
 }
 
 PostProcessMaaslin <- function(mbSetObj,analysis.var,comp=NULL, thresh = 0.05,taxrank,is.norm,imgNm){
-
+    load_phyloseq();
     mbSetObj <- .get.mbSetObj(mbSetObj);
     input.data<-maaslin.para$input_data
     res <- mbSetObj$analSet$maaslin$results
@@ -975,7 +975,6 @@ PostProcessMaaslin <- function(mbSetObj,analysis.var,comp=NULL, thresh = 0.05,ta
 
 
 PlotCovariateMapMas <- function(mbSetObj, theme="default", imgName="NA", format="png", dpi=72, interactive=F){
-  save.image("cov.RData");
   mbSetObj <- .get.mbSetObj(mbSetObj);
   both.mat <- mbSetObj$analSet$cov.mat
   both.mat <- both.mat[order(-both.mat[,"pval.adj"]),]

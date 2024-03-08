@@ -29,7 +29,7 @@ PerformMetaEffectSize <- function(mbSetObj=NA, imgName="", taxrank="OTU", selMet
   mdata.all <- mbSetObj$mdata.all;
   sel.nms <- names(mdata.all)[mdata.all==1];
   
-  dat <- qs::qread("merged.data.raw.qs");
+  dat <- qs::qread("merged.data.qs");
   #dat <- subsetPhyloseqByDataset(mbSetObj, dat);
   
   if(taxrank!="OTU"){      
@@ -74,37 +74,25 @@ PerformMetaEffectSize <- function(mbSetObj=NA, imgName="", taxrank="OTU", selMet
   #}
   library(MMUPHin);
   
-  if(mbSetObj$dataSet$is.normalized){
     if(identical(cov, character(0))){
       fit_lm_meta <- lm_meta(feature_abd = data,
                              batch = "dataset",
                              exposure = selMeta,
                              data = metadata,
-                             control = list(verbose = FALSE, normalization="NONE", transform="NONE", rma_method=ef.method, analysis_method=de.method));
+                             control = list(verbose = FALSE, normalization="NONE", 
+                            #transform="NONE", 
+                            rma_method=ef.method, analysis_method=de.method));
     }else{
       fit_lm_meta <- lm_meta(feature_abd = data,
                              batch = "dataset",
                              exposure = selMeta,
                              data = metadata,
                              covariates = cov,
-                             control = list(verbose = FALSE, normalization="NONE", transform="NONE", rma_method=ef.method, analysis_method=de.method));
+                             control = list(verbose = FALSE, normalization="NONE", 
+                            #transform="NONE", 
+                            rma_method=ef.method, analysis_method=de.method));
     }
-  }else{
-    if(identical(cov, character(0))){
-      fit_lm_meta <- lm_meta(feature_abd = data,
-                             batch = "dataset",
-                             exposure = selMeta,
-                             data = metadata,
-                             control = list(verbose = FALSE, rma_method=ef.method, analysis_method=de.method));
-    }else{
-      fit_lm_meta <- lm_meta(feature_abd = data,
-                             batch = "dataset",
-                             exposure = selMeta,
-                             data = metadata,
-                             covariates = cov,
-                             control = list(verbose = FALSE, rma_method=ef.method, analysis_method=de.method));
-    }
-  }
+  
   
   
   
@@ -249,7 +237,7 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
     AddErrMsg("Need to select at least one summary statistics!");
     return(0);
   }
-
+  
   #print(summary.stat.vec);
   
   library(tidyverse);
@@ -292,7 +280,7 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
         return(0);
       }
     }
-
+    
     #data <- bf_ratio(data);
     data@sam_data$dataset <- rep(Study, nrow(data@sam_data));
     data@sam_data$sample_id <- gsub("-", ".", data@sam_data$sample_id);
@@ -307,7 +295,7 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
       dplyr::select(sample_id, dataset, matches(sel.meta), Metric, Diversity);
     
     colnames(res)[which(colnames(res) == sel.meta)] <- "study_condition";
-
+    
     #R package conflict with rename
     res <-
       res %>%
@@ -320,60 +308,63 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
       )  %>%
       plyr::mutate(log2FC=log2(Diversity)-mean_log2Control);
     
-
+    
     res <- res[!is.na(res$log2FC),];
     
     PS$AlphaDiversity <- res;
+    PS$AlphaDiversity_Stats <- 
+      PS$AlphaDiversity %>%
+      group_by(Metric) %>%
+      do({
+        # Now, using tryCatch inside the do() to handle individual t-test failures
+        tryCatch({
+          broom::tidy(t.test(log2FC ~ study_condition, data = ., conf.int = TRUE, conf.level = 0.95))
+        }, error = function(e) {
+          # Instead of stopping or returning 0, create a fallback result
+          message("T-test failed for ", Study, " in Metric ", unique(.$Metric), ": ", e$message)
+          return(tibble(
+            estimate = NA_real_,      # NA as we cannot estimate
+            p.value = 1,              # Set P-value to 1, indicating non-significance
+            estimate1 = NA_real_,     # NA as we don't have this from failed t-test
+            estimate2 = NA_real_,     # NA as well
+            conf.low = NA_real_,      # NA for confidence interval
+            conf.high = NA_real_,     # NA for confidence interval
+            method = "Fallback due to error",
+            alternative = "NA"
+          ))
+        })
+      }) %>%
+      dplyr::mutate(dataset = Study) %>%
+      dplyr::select(dataset, Metric, log2FC = estimate, Pvalue = p.value, mean_LFD = estimate1, mean_HFD = estimate2, CI_low = conf.low, CI_high = conf.high)
     
-    tryCatch(
-      {
-        PS$AlphaDiversity_Stats <-
-          PS$AlphaDiversity %>%
-          group_by(Metric) %>% 
-          do(
-            broom::tidy(t.test(log2FC~study_condition, data=., conf.int=TRUE, conf.level=0.95))
-          ) %>%
-          plyr::mutate(dataset=Study) %>%
-          dplyr::select(dataset, Metric, log2FC=estimate, Pvalue=p.value, mean_LFD=estimate2, mean_HFD=estimate1, CI_low=conf.low, CI_high=conf.high)
-      },
-      error = function(e) {
-        print(e);
-        if(grepl( "data are essentially constant", e, fixed = TRUE)){
-          AddErrMsg(paste0("T-test failed for ", Study, ". Please try again with other taxa rank or unselect this dataset.", collapse=" "));
-        }
-        return(0);
-      }, finally = {
-        if(!exists("res")){
-          return(0);
-        }
-        res.list[[Study]] <- PS;
-      })  
+    # Save the results
+    res.list[[Study]] <- PS;  
   }
   
   mod<-lapply(res.list, function(x) x$AlphaDiversity) %>%
     do.call(bind_rows, .) %>%
     plyr::mutate(study_condition=factor(study_condition)) %>%
     group_by(Metric)
-  
+  mod <- mod %>% filter(!is.na(log2FC) & !is.infinite(log2FC))
   AlphaCombined<-tibble(dataset=character(0), Metric=character(0), log2FC=numeric(0), Pvalue=numeric(0), mean_LFD=numeric(0), mean_HFD=numeric(0), CI_low=numeric(0), CI_high=numeric(0))
-    control_level <- levels(mod$study_condition)[1];
-    non_control_level <- levels(mod$study_condition)[2];
-
-for(i in unique(mod$Metric)){
-  fit <- lmerTest::lmer(log2FC ~ study_condition + (1|dataset), data=subset(mod, Metric==i))
-  cf <- confint(fit, level = 0.95)
+  control_level <- levels(mod$study_condition)[1];
+  non_control_level <- levels(mod$study_condition)[2];
   
-  AlphaCombined <- bind_rows(AlphaCombined, tibble(
-    dataset="Combined", 
-    Metric=i, 
-    log2FC=summary(fit)$coefficients[paste0("study_condition", non_control_level), "Estimate"], 
-    Pvalue=anova(fit)$`Pr(>F)`, 
-    mean_LFD=NA, 
-    mean_HFD=NA, 
-    CI_low=cf[paste0("study_condition", non_control_level),1], 
-    CI_high=cf[paste0("study_condition", non_control_level),2]
-  ))
-}
+  for(i in unique(mod$Metric)){
+    fit <- lmerTest::lmer(log2FC ~ study_condition + (1|dataset), data=subset(mod, Metric==i))
+    cf <- confint(fit, level = 0.95)
+    
+    AlphaCombined <- bind_rows(AlphaCombined, tibble(
+      dataset="Combined", 
+      Metric=i, 
+      log2FC=summary(fit)$coefficients[paste0("study_condition", non_control_level), "Estimate"], 
+      Pvalue=anova(fit)$`Pr(>F)`, 
+      mean_LFD=NA, 
+      mean_HFD=NA, 
+      CI_low=cf[paste0("study_condition", non_control_level),1], 
+      CI_high=cf[paste0("study_condition", non_control_level),2]
+    ))
+  }
   
   NSamples<-
     lapply(names(res.list), function(x) tibble(dataset=x, Nsamples=length(unique(res.list[[x]]$AlphaDiversity$sample_id)))) %>% 
@@ -416,28 +407,32 @@ for(i in unique(mod$Metric)){
     print(fig);
     dev.off();
   }else{
-    
     data <- lapply(res.list, function(x) x$AlphaDiversity) %>%
       do.call(bind_rows, .)
-    box1 <- ggplot(data, aes(Diversity, dataset, fill = study_condition))  +
-      geom_boxplot(alpha=0.7, outlier.shape = NA,
-                   width=0.2)+
-      
-      #reduce the width of jitter
-      stat_summary(fun.y=mean, #add mean point
+    combined_data <- data %>%
+      mutate(dataset = 'Combined') # Create a combined dataset
+
+    # Bind this combined data with the original data
+    augmented_data <- bind_rows(data, combined_data)
+
+    # Now, create the plot with the augmented data
+    box1 <- ggplot(augmented_data, aes(Diversity, dataset, fill = study_condition)) +
+      geom_boxplot(alpha=0.7, outlier.shape = NA, width=0.2) +
+      stat_summary(fun=mean, # Change from fun.y to fun for ggplot2 updates
                    geom = "point",
                    shape = 16,
                    size = 1,
                    aes(group=study_condition),
                    color = "black",
-                   position = position_dodge(0.2))+ 
+                   position = position_dodge(0.2)) + 
       scale_fill_discrete(name = "Metadata") +
       facet_grid( .~ Metric, scales = "free_x") + 
-      theme(text = element_text(size = 16));
-    
-    Cairo::Cairo(file = imgName, unit="px", dpi=dpi, width=800, height=600, type=format, bg="white");
-    print(box1);
-    dev.off();
+      theme(text = element_text(size = 16))
+
+    # Create the plot
+    Cairo::Cairo(file = imgName, unit="px", dpi=dpi, width=800, height=600, type=format, bg="white")
+    print(box1)
+    dev.off()
   }
   tbl <- as.data.frame(tbl[, !colnames(tbl) %in% c("Significant", "Nsamples", "Study", "mean_LFD", "mean_HFD")]);
   mbSetObj$analSet$alpha.summary <- tbl[order(tbl$dataset, tbl$Metric),];
@@ -618,7 +613,7 @@ PlotDiscreteDiagnostic <- function(mbSetObj, fileName, metadata, format="png", d
 
 PlotContinuousPopulation <- function(mbSetObj, loadingName, ordinationName, metadata, format="png", dpi=72){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
+
   require(vegan);
   require(MMUPHin);
   require(tidyverse);
@@ -684,4 +679,29 @@ PlotContinuousPopulation <- function(mbSetObj, loadingName, ordinationName, meta
   dev.off();
   
   return(.set.mbSetObj(mbSetObj));
+}
+
+handle_t_test <- function(data) {
+  result <- tryCatch(
+    {
+      broom::tidy(t.test(log2FC ~ study_condition, data = data, conf.int = TRUE, conf.level = 0.95))
+    },
+    error = function(e) {
+      message("Error in t.test: ", e$message)  # Print the error message
+      
+      # Return a tibble/data.frame with the same structure as broom::tidy(t.test) but with Pvalue set to 1
+      tibble::tibble(
+        estimate = NA_real_,  # NA values for estimates since the test did not properly execute
+        estimate1 = NA_real_,
+        estimate2 = NA_real_,
+        statistic = NA_real_,
+        p.value = 1,  # Set P-value to 1 indicating no significant difference
+        parameter = NA_real_,
+        conf.low = NA_real_,
+        conf.high = NA_real_,
+        conf.level = 0.95  # The confidence level you've used
+      )
+    }
+  )
+  return(result)
 }

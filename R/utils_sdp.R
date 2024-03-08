@@ -191,7 +191,7 @@ ReadShotgunBiomData <- function(mbSetObj, dataName, geneidtype, module.type, ism
 #'@import ggfortify
 PreparePCA4Shotgun <- function(mbSetObj, imgName,imgName2, format="json", inx1, inx2, inx3,
                               variable, showlabel, format2d="png", dpi=72){
-  
+  load_phyloseq();
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   load_ggfortify();
@@ -561,9 +561,9 @@ PrepareQueryJson <- function(mbSetObj){
   filtKOmap(query.ko, includeInfoNm)
   
  labels <- qs::qread("../../lib/ko/ko_lbs.qs")
- labels <-labels[labels$info %in% query.ko,c(2,4)]
- labels <- aggregate(labels$info,list(labels$id),function(x) paste(x,collapse = ","))
-  json.mat <- rjson::toJSON(list(query.res=query.res,id=labels[,1],label=labels[,2]));
+ labels <-labels[labels$info %in% query.ko,c(3,4)]
+ labels <- aggregate(labels$info,list(labels$id_edge),function(x) paste(x,collapse = ","))
+  json.mat <- rjson::toJSON(list(query.res=query.res,id_rxn=labels[,1],label=labels[,2]));
   sink(paste0(netQueryNm, ".json"));
   cat(json.mat);
   sink();
@@ -575,9 +575,9 @@ PrepareQueryJson <- function(mbSetObj){
 filtKOmap <- function(include, fileName){
   edges.ko = qs::qread("../../lib/mmp/ko.info.qs")
   edges.ko = edges.ko[which(edges.ko$ko %in% include),]
+  
   includeInfo = list(edges=edges.ko)
-  includeInfo$nodes = unique(c(edges.ko$from,edges.ko$to))
-  includeInfo$nodes =includeInfo$nodes[!(grepl("unddef",includeInfo$nodes))]
+  includeInfo$nodes = unique(edges.ko$met)
   
   json.mat <- rjson::toJSON(includeInfo);
   sink(paste0(fileName, ".json"));
@@ -610,9 +610,10 @@ PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",fi
 }
 
 .prepare.global<-function(mbSetObj, category,contain ,file.nm){
+  load_phyloseq();
   LoadKEGGKO_lib(category,contain);
   mbSetObj <- .get.mbSetObj(mbSetObj);
-
+  print(c(category,contain,file.nm))
   phenotype <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[selected.meta.data]]);
   genemat <- as.data.frame(t(otu_table(mbSetObj$dataSet$norm.phyobj)),check.names=FALSE);
   # first, get the matched entries from current.mset
@@ -672,6 +673,7 @@ PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",fi
 
 # Utility function
 LoadKEGGKO_lib<-function(category,contain="all"){
+   print(contain)
   if(category == "module"){
        current.setlink <- "http://www.genome.jp/kegg-bin/show_module?";
        if(contain=="bac"){

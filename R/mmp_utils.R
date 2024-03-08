@@ -192,7 +192,7 @@ PerformDEAnalyse<- function(mbSetObj, taxalvl="Genus",netType="gem",overlay,init
 }
 
 
-PerformPairDEAnalyse <- function(mbSetObj, taxalvl, analysisVar,alg="limma",plvl=0.05, selected="NA",nonpar=FALSE){
+PerformPairDEAnalyse <- function(mbSetObj, taxalvl, analysisVar,alg="limma",plvl=1, selected="NA",nonpar=FALSE){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   require(dplyr)
@@ -644,6 +644,8 @@ doMaAslin <- function(input.data,thresh = 0.05,adj.bool=F){
 
 
 PrepareResTable <- function(mbSetObj,micDataType,taxalvl,is.norm=F){
+  load_phyloseq();
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
   mbSetObj$analSet$maaslin$taxalvl <- taxalvl;
   if(micDataType=="otu"){
@@ -758,16 +760,8 @@ ProcessMaaslinRes <- function(mbSetObj,taxalvl,analysis.var,thresh){
 
 
 #####lib path
-if(file.exists("/Users/lzy/Documents/examples_data_microbiomeanalyst")){
+lib.path.mmp <<- "../../lib/mmp/"
   
-  lib.path.mmp <<- "/Users/lzy/Documents/examples_data_microbiomeanalyst/gem_m2m/"
-  
-}else if(file.exists("../../lib/mmp/")){  
-  
-  lib.path.mmp <<- "../../lib/mmp/"
-  
-}
-
 
 MetaboIDmap <- function(netModel,predDB,IDtype,met.vec=NA){
   
@@ -969,10 +963,9 @@ CreatPathwayLib <- function(contain){
   
   includeInfo = list(nodes=unique(unlist(current.lib)))
   edges.bc = qs::qread(paste0(lib.path.mmp,"edge.bac.qs"))
-  edges  = data.frame(edge=rep(edges.bc$id_edge,2),cpd = c(edges.bc$from,edges.bc$to))
-  edges = unique(edges[!(grepl("undef",edges$cpd)),])
+  edges  = data.frame(edge=edges.bc$id_rxn,cpd = edges.bc$met)
   edges = edges[which(edges$cpd %in% includeInfo$nodes),]
-  edges = edges.bc[which(edges.bc$id_edge %in% edges$edge),]
+  edges = edges.bc[which(edges.bc$id_rxn %in% edges$edge),]
   
   includeInfo$edges = edges
   
@@ -1061,7 +1054,7 @@ doGemPrediction <- function(predDB,taxalvl,psc=0.5,metType,matchonly=T,sigonly=T
     AddErrMsg("Names not match!");
     return(0);
   }
-  
+  OTUtab <- apply(OTUtab, 2, function(x) ReScale(rank(x),0,1) )
   fun_prediction = NULL
   fun_m2m_pair <- list()
   message('Generating metabolic profile..')
@@ -1069,7 +1062,7 @@ doGemPrediction <- function(predDB,taxalvl,psc=0.5,metType,matchonly=T,sigonly=T
   rownames(dbnorm) <- m2m_db$taxa
   for(sample in 1:ncol(OTUtab)){
     fun_prediction_sample = dbnorm * as.numeric(OTUtab[,sample])
-    fun_prediction_sample <- t(preprocessCore::normalize.quantiles(t(fun_prediction_sample), copy=FALSE))
+    #fun_prediction_sample <- t(preprocessCore::normalize.quantiles(t(fun_prediction_sample), copy=FALSE))
     #??zero should be back transfer??
     fun_m2m_pair[[sample]] <- fun_prediction_sample
     fun_prediction_sample = colMeans(fun_prediction_sample)
@@ -1317,7 +1310,7 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
     
     data.abd <- data.frame(mic=as.character(predDE$mic[match(pred.dat$pair,rownames(predDE))]),
                            met=as.character(predDE$met[match(pred.dat$pair,rownames(predDE))]),
-                           var = ReScale(rowMeans(pred.dat[,-1]),0,1),
+                           var = rowMeans(pred.dat[,-1]),                        
                            value = predDE$P_value)
     
     data.abd <- data.abd[order(data.abd$value,-(data.abd$var)),]
@@ -1685,7 +1678,7 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
 
 .prepare.global.tune<-function(mbSetObj, dataType,category, file.nm,contain){
   
-  
+  load_phyloseq();
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   phenotype <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[selected.meta.data]]);
@@ -2349,8 +2342,7 @@ tuneKOmap <- function(){
   include = rownames(current.proc$mic$data.proc)
   edges.ko = edges.ko[which(edges.ko$ko %in% include),]
   includeInfo = list(edges=edges.ko)
-  includeInfo$nodes = unique(c(edges.ko$from,edges.ko$to))
-  includeInfo$nodes =includeInfo$nodes[!(grepl("unddef",includeInfo$nodes))]
+  includeInfo$nodes = unique(edges.ko$met)
   
   json.mat <- rjson::toJSON(includeInfo);
   sink("includeInfo.json");
@@ -3552,7 +3544,6 @@ RemoveData <- function(dataName){
 }
 
 GetMicMetDataDims <- function(dataType,dataName){
- 
   if(is.null(current.proc$mic)){
     
     data<-data.table::fread(dataName)
