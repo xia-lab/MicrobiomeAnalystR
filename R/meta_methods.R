@@ -89,7 +89,7 @@ PerformMetaEffectSize <- function(mbSetObj=NA, imgName="", taxrank="OTU", selMet
                              data = metadata,
                              covariates = cov,
                              control = list(verbose = FALSE, normalization="NONE", 
-                            #transform="NONE", 
+                          #  transform="NONE", 
                             rma_method=ef.method, analysis_method=de.method));
     }
   
@@ -295,7 +295,7 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
       dplyr::select(sample_id, dataset, matches(sel.meta), Metric, Diversity);
     
     colnames(res)[which(colnames(res) == sel.meta)] <- "study_condition";
-    
+ 
     #R package conflict with rename
     res <-
       res %>%

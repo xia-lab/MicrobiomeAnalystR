@@ -1195,6 +1195,11 @@ return(1)
   
   ord.inx <- order(-sigHits, resTable$Pvalues);
   resTable <- resTable[ord.inx, , drop=FALSE];
+
+ if(mbSetObj[["module.type"]]=="sdp"){
+  ko_dic <- readRDS("../../lib/ko/ko_dic.rds")
+ resTable <- cbind(name=ko_dic$Name[match(rownames(resTable),ko_dic$KO)], resTable)
+ }
   fast.write(resTable, file="rnaseq_de.csv");
   
   if(nrow(resTable) > 500){
@@ -1329,16 +1334,23 @@ return(1)
   resTable <- as.data.frame(resTable, check.names=FALSE)
   ord.inx <- order(-sigHits, resTable$Pvalues);
   resTable <- resTable[ord.inx, , drop=FALSE]
+  if(mbSetObj[["module.type"]]=="sdp"){
+  ko_dic <- readRDS("../../lib/ko/ko_dic.rds")
+  output <- cbind(name=ko_dic$Name[match(rownames(resTable),ko_dic$KO)], resTable)
+  mbSetObj$analSet$rnaseq$resTable.edger.all <- output
+  fast.write(output, file="rnaseq_de.csv")
+  }else{
   mbSetObj$analSet$rnaseq$resTable.edger.all <- resTable
-
   fast.write(resTable, file="rnaseq_de.csv")
 
-  if (nrow(resTable) > 500) {
+ }
+  
+ if (nrow(resTable) > 500) {
     resTable <- resTable[1:500, ]
   }
 
   mbSetObj$analSet$rnaseq$resTable <- mbSetObj$analSet$resTable <- as.data.frame(resTable, check.names=FALSE)
-
+  
   # Only getting the names of DE features
   diff_ft <<- rownames(resTable)[which(resTable$FDR < p.lvl & abs(resTable$log2FC) > fc.thresh)]
   taxrank <<- taxrank  
@@ -1840,8 +1852,8 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, 
   clslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   boxdata <- as.data.frame(data,check.names=FALSE);
   boxdata$class <- clslbl;
-  mbSetObj$analSet$boxdata <- boxdata;
-  
+  mbSetObj$analSet$boxdata <- boxdata; 
+
   if(dist.name == "sparcc"){
     
     pattern.data <- cbind(data, new.template)

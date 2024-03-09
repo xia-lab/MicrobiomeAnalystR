@@ -2388,7 +2388,7 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
     colnames(data)[ind1] <- "Others";
     data<- as.data.frame(do.call(cbind, by(t(data),INDICES=names(data),FUN=colSums)),check.names=FALSE);
   }
-  
+
   feat_no<-ncol(data);
   #adjust height according to number of legends
   h<-540;
@@ -2416,7 +2416,7 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
   if(w < min.w){
     w <- min.w;
   }
-  
+  print(c(w,h))
   fast.write(t(data), file="taxa_abund.csv");
   data$facetOpt <- as.character(clsLbl);
   data$step <- factor(rownames(data), levels = rownames(data));
@@ -2466,7 +2466,7 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
   mbSetObj$imgSet$stackRda <-rdaName;
   mbSetObj$imgSet$stackType <- "area";
 
-  Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
+  Cairo::Cairo(file=barplotName,width=min(w,1000), height=h, type=format, bg="white",dpi=dpi);
   
   box <- ggplot(data,aes(x=step,y=value)) + theme_bw() +
     theme(axis.text.x = element_text(angle = 90, hjust =1,vjust=0.5)) +
@@ -2722,7 +2722,7 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
   } else {
     h <- 1100;
   }
-  w <- h + 100;
+  w <- h + 200;
 
   data <- data[row.names(metalp),]
   data[[get("facet")]] <- metalp[[get("facet")]]
