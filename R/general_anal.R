@@ -1339,25 +1339,17 @@ return(1)
   output <- cbind(name=ko_dic$Name[match(rownames(resTable),ko_dic$KO)], resTable)
   mbSetObj$analSet$rnaseq$resTable.edger.all <- output
   fast.write(output, file="rnaseq_de.csv")
-  if (nrow(output) > 500) {
-    output <- output[1:500, ]
-  }
-
-  mbSetObj$analSet$rnaseq$resTable <- mbSetObj$analSet$resTable <- as.data.frame(output, check.names=FALSE)
-
- }else{
+  }else{
   mbSetObj$analSet$rnaseq$resTable.edger.all <- resTable
   fast.write(resTable, file="rnaseq_de.csv")
-if (nrow(resTable) > 500) {
+
+ }
+  
+ if (nrow(resTable) > 500) {
     resTable <- resTable[1:500, ]
   }
 
   mbSetObj$analSet$rnaseq$resTable <- mbSetObj$analSet$resTable <- as.data.frame(resTable, check.names=FALSE)
-
- }
-  
- 
-
   
   # Only getting the names of DE features
   diff_ft <<- rownames(resTable)[which(resTable$FDR < p.lvl & abs(resTable$log2FC) > fc.thresh)]

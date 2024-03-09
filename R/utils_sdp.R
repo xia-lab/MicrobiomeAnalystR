@@ -274,7 +274,7 @@ PreparePCA4Shotgun <- function(mbSetObj, imgName,imgName2, format="json", inx1, 
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import reshape
-PlotFunctionStack<-function(mbSetObj, summaryplot, functionlvl, abundcal, geneidtype, metadata,
+PlotFunctionStack <-function(mbSetObj, summaryplot, functionlvl, abundcal, geneidtype, metadata,
                             colpalopt, format="png", dpi=72){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -608,7 +608,6 @@ filtKOmap <- function(include, fileName){
 #'@export
 PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",file.nm){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  print(enrich.type)
   if(enrich.type == "hyper"){
   LoadKEGGKO_lib(category,contain);
     mbSetObj<-PerformKOEnrichAnalysis_List(mbSetObj, file.nm);
@@ -668,6 +667,7 @@ PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",fi
   hits = dat.in$subsets
   file.nm = dat.in$filenm;
   my.res <- dat.in$my.res;
+
   if(all(c(length(my.res)==1, is.na(my.res)))){
         AddErrMsg("No match was found to the selected metabolite set library!");
         return(0);
@@ -679,13 +679,13 @@ PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",fi
 
     mbSetObj <- recordEnrTable(mbSetObj, "global", my.res, "KEGG", "Global Test");
     mbSetObj <- Save2KEGGJSON(mbSetObj, hits, my.res, file.nm);
-    .set.mbSetObj(mbSetObj);
-    return(mbSetObj);
+print("heredone")
+    return(.set.mbSetObj(mbSetObj));
 }
 
 # Utility function
 LoadKEGGKO_lib<-function(category,contain="all"){
-   print(contain)
+
   if(category == "module"){
        current.setlink <- "http://www.genome.jp/kegg-bin/show_module?";
        if(contain=="bac"){
@@ -782,7 +782,6 @@ PerformKOProjection <- function(mbSetObj){
     current.msg <<- paste(" Due to computational constraints, only top 5000 features will be used. ", collapse="\n");
   }
 
-# print(resTable[1:5,]);
   mbSetObj$analSet$sig.mat <- resTable;
 
   p.inx <- colnames(resTable) %in% c("P-value", "Pvalues");
@@ -934,10 +933,10 @@ PerformKOEnrichAnalysis_List <- function(mbSetObj, file.nm){
 # Utility function
 # for KO01100
 Save2KEGGJSON <- function(mbSetObj, hits.query, res.mat, file.nm){
-
+  print(file.nm)
   resTable <- data.frame(Pathway=rownames(res.mat), res.mat,check.names=FALSE);
   current.msg <<- "Functional enrichment analysis was completed";
-  
+ 
   if(!exists("ko.edge.map")){
     
     if(.on.public.web){
@@ -949,7 +948,6 @@ Save2KEGGJSON <- function(mbSetObj, hits.query, res.mat, file.nm){
     ko.edge.map <- ko.edge.map[ko.edge.map$net=="ko01100",];  #only one map
     ko.edge.map <<- ko.edge.map;
   }
-  
   hits.edge <- lapply(hits.query, function(x) {
   as.character(unique(ko.edge.map$edge[ko.edge.map$gene%in%unlist(x)]));});
   
