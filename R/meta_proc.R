@@ -879,7 +879,7 @@ CheckMetaDataIntegrity <- function(mbSetObj, taxo_type="OTU", sample_var="NA"){
 #'License: GNU GPL (>= 2)
 #'@export
 MergeDatasets <- function(mbSetObj, taxo_type, sample_var){
-
+  
   mbSetObj <- .get.mbSetObj(mbSetObj);
   if(sample_var == "null"){
     #sample_var = colnames(sam_data)[1];
@@ -889,16 +889,28 @@ MergeDatasets <- function(mbSetObj, taxo_type, sample_var){
     data <- mbSetObj$dataSets[[1]];
     data2 <- mbSetObj$dataSets[[2]];
     PerformDataMerging(mbSetObj, data, data2, taxo_type, sample_var, T, "norm");
+    PerformDataMerging(mbSetObj, data, data2, taxo_type, sample_var, T, "raw");
+
     if(length(sel.nms)>2){
       for(i in 3:length(sel.nms)){
         dataX <- mbSetObj$dataSets[[i]];
         merged.data <- qs::qread("merged.data.norm.qs");
-        orig.proc <-  mbSetObj$dataSet$norm.phyobj;
+        merged.data.raw <- qs::qread("merged.data.raw.qs");
+
+        orig.norm <-  mbSetObj$dataSet$norm.phyobj;
+        orig.proc <-  mbSetObj$dataSet$proc.phyobj;
+
         mbSetObj$dataSet$norm.phyobj <- merged.data;
+        mbSetObj$dataSet$proc.phyobj <- merged.data.raw;
+
         PerformDataMerging(mbSetObj, mbSetObj$dataSet, dataX, taxo_type, sample_var, F, "norm");
-        mbSetObj$dataSet$norm.phyobj <- orig.proc;
+        PerformDataMerging(mbSetObj, mbSetObj$dataSet, dataX, taxo_type, sample_var, F, "raw");
+
+        mbSetObj$dataSet$norm.phyobj <- orig.norm;
+        mbSetObj$dataSet$proc.phyobj <- orig.proc;
       }
     }
+
     phyobj <- qs::qread("merged.data.norm.qs");
     microbiome.meta <- qs::qread("microbiome_meta.qs");
     microbiome.meta$data <- as.data.frame(otu_table(phyobj));
@@ -928,13 +940,15 @@ MergeDatasets <- function(mbSetObj, taxo_type, sample_var){
     }
   }
   merged.data <- qs::qread("merged.data.raw.qs");
-       
+
   sam_data <- as.data.frame(as.matrix(merged.data@sam_data));
   rownames(sam_data) <- rownames(sample_data(merged.data));
   cls.lbl <- sam_data[,1];
   qs::qsave(merged.data, "merged.data.raw.qs");
   norm.data <- transform_sample_counts(merged.data, function(x) x / sum(x) );
   qs::qsave(norm.data, "merged.data.qs");
+
+
   return(1);
 }
 
@@ -946,13 +960,18 @@ PerformDataMerging <- function(mbSetObj, data1, data2, taxo_type, sample_var, in
   if(type == "proc"){
   data <- data1$proc.phyobj;
   current.refset <- data2$proc.phyobj;
+current.sample <- current.refset@sam_data
+  }else if(type == "filt"){
+  data <- data1$filt.data;
+  current.refset <- data2$filt.data;
+current.sample <- data2$proc.phyobj@sam_data
   }else{
   data <- data1$norm.phyobj;
   current.refset <- data2$norm.phyobj;
+current.sample <- current.refset@sam_data
   }
 
   #sample data
-  current.sample <- current.refset@sam_data
   otu_no <- ntaxa(data);
   
   #since we use modified name for each OTU(to make it unique and convenient);in order to do mapping we need complete and original mapping label.
@@ -1037,6 +1056,8 @@ PerformDataMerging <- function(mbSetObj, data1, data2, taxo_type, sample_var, in
 
   if(type == "proc"){
   qs::qsave(merged.data, "merged.data.raw.qs");
+  }else if(type == "filt"){
+  qs::qsave(merged.data, "merged.data.filt.qs");
   }else{
   qs::qsave(merged.data, "merged.data.norm.qs");
   }

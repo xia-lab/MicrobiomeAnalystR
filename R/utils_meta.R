@@ -428,7 +428,8 @@ GetResColNamesMeta <- function(mbSetObj, type="alpha"){
     if(type == "alpha"){
         vec <- colnames(mbSetObj$analSet$alpha.summary)[-c(1,2)];
     }else if (type == "beta"){
-        vec <- colnames(mbSetObj$analSet$beta.summary)[-c(4,5)];
+        vec <- colnames(mbSetObj$analSet$beta.summary);
+        vec <- vec[-c((length(vec)-1):length(vec))]
     }
     return(vec)
 }
@@ -450,7 +451,11 @@ GetResMatrix<- function(mbSetObj, type="alpha"){
     if(type == "alpha"){
         df <- mbSetObj$analSet$alpha.summary[,-c(1:2)];
     }else if (type == "beta"){
-        df <- mbSetObj$analSet$beta.summary[,-c(4,5)];
+        df <- mbSetObj$analSet$beta.summary
+        # Subset only numeric columns
+        df <- df[, -c((ncol(df)-1):ncol(df))]
+
+
     }
 
     return(signif(as.matrix(df), 5))

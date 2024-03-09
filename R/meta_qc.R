@@ -122,7 +122,7 @@ PerformBatchCorrection <- function(){
     adj.otu.tbl <- fit_adjust_batch$feature_abd_adj;
     phyobj@otu_table <- otu_table(adj.otu.tbl, taxa_are_rows = TRUE);
     
-    qs::qsave(phyobj, "merged.data.raw.qs");
+    qs::qsave(phyobj, "merged.data.norm.qs");
     microbiome.meta$data <- adj.otu.tbl;
     qs::qsave(microbiome.meta, "microbiome_meta.qs");
     merged.data <- transform_sample_counts(phyobj, function(x) x / sum(x) );

@@ -1882,6 +1882,7 @@ sink();
 PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, metadata, 
                                  showlabel, taxrank, taxa, alphaopt, ellopt, comp.method, format="png", dpi=72,
                                  custom_col = "none",pairwise, interactive = FALSE){
+  save.image("beta.Rdata");
   combined <- F;
   mbSetObj <- .get.mbSetObj(mbSetObj);
   module.type <- mbSetObj$module.type;
@@ -1909,7 +1910,7 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
       norm.phyobj <- qs::qread("merged.data.qs");
       proc.phyobj <- subsetPhyloseqByDataset(mbSetObj, proc.phyobj);
       norm.phyobj <- subsetPhyloseqByDataset(mbSetObj, norm.phyobj);
-      
+
     }else{
       proc.phyobj <- mbSetObj$dataSet$proc.phyobj;
       norm.phyobj <- mbSetObj$dataSet$norm.phyobj;
@@ -1968,14 +1969,14 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
       require("vegan");
       
       proc.phyobj <- qs::qread("merged.data.raw.qs");
-      data <- proc.phyobj;
+      data1 <- proc.phyobj;
       
       #sub_sam_data <- sam_data[which(sam_data[,metadata] == meta.grp), ]
       #sub_data <- data@otu_table[, rownames(sub_sam_data)];
-      sub_sam_data <- sample_data(data); 
+      sub_sam_data <- sample_data(data1); 
       
-      #sub_data <- as.matrix(otu_table(data)); 
-      sub_data <- data@otu_table[, rownames(sub_sam_data)];
+      #sub_data <- as.matrix(otu_table(data1)); 
+      sub_data <- data1@otu_table[, rownames(sub_sam_data)];
       sub_data <- apply(sub_data, 2, function(x) x / sum(x))
       dist.data <- vegdist(t(sub_data));
       
@@ -1987,8 +1988,9 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
       
       loading <- data.frame(feature = rownames(fit_continuous$consensus_loadings),
                             loading1 = fit_continuous$consensus_loadings[, 1]);
-      sample_data(data)$loading <- fit_continuous$consensus_scores[, 1];
-      oldDF <- as(sample_data(data), "data.frame");
+      
+      sample_data(data1)$loading <- fit_continuous$consensus_scores[, 1];
+      oldDF <- as(sample_data(data1), "data.frame");
       newDF <- oldDF[oldDF$dataset %in% dataName, ];
       sample_data(data) <- sample_data(newDF);
       
