@@ -89,7 +89,7 @@ PerformMetaEffectSize <- function(mbSetObj=NA, imgName="", taxrank="OTU", selMet
                              data = metadata,
                              covariates = cov,
                              control = list(verbose = FALSE, normalization="NONE", 
-                            #transform="NONE", 
+                          #  transform="NONE", 
                             rma_method=ef.method, analysis_method=de.method));
     }
   
@@ -295,7 +295,7 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
       dplyr::select(sample_id, dataset, matches(sel.meta), Metric, Diversity);
     
     colnames(res)[which(colnames(res) == sel.meta)] <- "study_condition";
-    
+ 
     #R package conflict with rename
     res <-
       res %>%
@@ -518,9 +518,15 @@ PlotBetaSummary <- function(mbSetObj, plotNm,taxalvl, sel.meta, alg, format="png
   df$dataset <- data.nms.vec;
   colnames(df) <- gsub("-", "_", colnames(df), perl = TRUE);
   
-  
-  p <- ggplot(df, aes(x=R_squared, y=dataset, color=dist)) +
-    geom_point(shape=16, alpha=0.8, size=4) +
+  if("R_squared" %in% colnames(df)){
+  p <- ggplot(df, aes(x=R_squared, y=dataset, color=dist));
+  }else if("R" %in% colnames(df)){
+  p <- ggplot(df, aes(x=R, y=dataset, color=dist));
+  }else{
+  p <- ggplot(df, aes(x=F_value, y=dataset, color=dist));
+  }
+
+p <- p + geom_point(shape=16, alpha=0.8, size=4) +
     theme(panel.border = element_blank(), axis.line = element_line(), text = element_text(size = 14)) +
     theme(axis.text.x=element_text(angle=45, hjust=1)) +
     scale_alpha_manual(values=c(0.5,0));
