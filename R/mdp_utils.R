@@ -1882,7 +1882,7 @@ sink();
 PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, metadata, 
                                  showlabel, taxrank, taxa, alphaopt, ellopt, comp.method, format="png", dpi=72,
                                  custom_col = "none",pairwise, interactive = FALSE){
-  save.image("beta.Rdata");
+  #save.image("beta.Rdata");
   combined <- F;
   mbSetObj <- .get.mbSetObj(mbSetObj);
   module.type <- mbSetObj$module.type;
