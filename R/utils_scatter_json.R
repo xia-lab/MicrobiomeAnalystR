@@ -180,26 +180,25 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
       ids = diablo.res$loadingNames[[tax]]
       rownames(loading.data) = names
       de = combined.res$comp.res[[tax]]
-      de = de[which(rownames(de) %in% ids),]
+      de = de[match(rownames(de) ,ids),]
       de[de == "NaN"] = 1
-      pv = as.numeric(de[,"P_value"])
+      pv = as.numeric(de[,"T.Stats"])
       pv_no_zero = pv[pv != 0]
       minval = min(pv_no_zero)
       pv[pv == 0] = minval/2
-      pvals <<- -log10(pv);
+      pvals <<- pv;
       type.vec <- pvals;
       if(exists("comp.res.inx",combined.res)){
-        for(i in 1:length(unique(combined.res$comp.res.inx[[tax]]))){
+            for(i in 1:length(unique(combined.res$comp.res.inx[[tax]]))){
           inx = combined.res$comp.res.inx[[tax]] == i
           type.vec[inx] <- omicstype.vec[i]
+            }
         }
-      }
       colors<- ComputeColorGradient(pvals,  F);
       colorb <- colors;
       sizes <- as.numeric(rescale2NewRange(-log10(pv), 15, 25));
       nodes2 <- vector(mode="list");
-      
-      #loading.data = loading.data[which(rownames(loading.data) %in% as.character(ids)),];
+      loading.data = loading.data[match(rownames(loading.data),rownames(de)),];
       
       seed.inx <- names %in% unique(seeds[[tax]]);
       seed_arr <- rep("notSeed",length(names));
@@ -232,7 +231,7 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
       netData[[tax]] <- list(omicstype=omicstype.vec, nodes=nodes, edges=edge.mat, modules=modules, objects=a$objects, ellipse=meshes, meta=metadf, loading=nodes2, reductionOpt=reductionOptGlobal , objectsLoading=aLoading$objects, sigMat=sig.mats[[tax]]);
       
       type <- omicstype.vec[2]
-      netData[[tax]][[ type]] <- nodes_samples2;
+      netData[[tax]][[type]] <- nodes_samples2;
 
       if(tax == taxrank){
         library(dplyr)
