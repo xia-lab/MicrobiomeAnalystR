@@ -50,7 +50,7 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
   comp.res1 = lapply( d.list[["mic"]][["comp.res"]],function(x) rbind(x, d.list[["met"]][["comp.res"]]) )
   
   enrich.nms1 = lapply(d.list[["mic"]][["enrich.nms"]],function(x) c(x, d.list[["met"]][["enrich.nms"]]) )
-  comp.res.inx1 =lapply(d.list[["mic"]][["comp.res"]],function(x) c(rep(1,nrow(x)), rep(2,nrow( d.list[["met"]][["comp.res"]])) ));
+  comp.res.inx1 =lapply(d.list[["mic"]][["comp.res"]],function(x){ c(rep(1,nrow(x)), rep(2,nrow( d.list[["met"]][["comp.res"]])) ));
   featureNms <- lapply( d.list[["mic"]][["data.proc"]] ,function(x) c(rownames(x), rownames(d.list[["met"]][["data.proc"]]) ));
   
   combined.res$comp.res = comp.res1

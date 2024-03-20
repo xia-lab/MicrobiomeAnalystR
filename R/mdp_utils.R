@@ -248,22 +248,6 @@ PerformLayOut <- function(g){
   pos.xy;
 }
 
-rescale2NewRange <- function(qvec, a, b){
-  q.min <- min(qvec);
-  q.max <- max(qvec);
-  if(length(qvec) < 50){
-    a <- a*2;
-  }
-  if(q.max == q.min){
-    new.vec <- rep(8, length(qvec));
-  }else{
-    coef.a <- (b-a)/(q.max-q.min);
-    const.b <- b - coef.a*q.max;
-    new.vec <- coef.a*qvec + const.b;
-  }
-  return(new.vec);
-}
-
 PrepareCorrExpValues <- function(mbSetObj, meta, taxalvl, color, layoutOpt, comparison, wilcox.cutoff){
   load_phyloseq();
 

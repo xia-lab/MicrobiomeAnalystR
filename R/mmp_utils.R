@@ -2465,6 +2465,7 @@ DoStatComparisonVis <- function(filenm, alg, meta, selected, meta.vec, omicstype
   res = cbind(res, rownames(res))
   de = res
   de[de == "NaN"] = 1
+  print(head(de));
   pv = as.numeric(de[,"p_value"])
   pv_no_zero = pv[pv != 0]
   minval = min(pv_no_zero)
@@ -3606,22 +3607,6 @@ CleanMMP<- function(){
 
 ReScale <- function(x,first,last){(last-first)/(max(x)-min(x))*(x-min(x))+first}
 
-rescale2NewRange <- function(qvec, a, b){ReScale
-  qvec = replace(qvec, qvec == 0, 1)
-  q.min <- min(qvec);
-  q.max <- max(qvec);
-  if(length(qvec) < 50){
-    a <- a*2;
-  }
-  if(q.max == q.min){
-    new.vec <- rep(8, length(qvec));
-  }else{
-    coef.a <- (b-a)/(q.max-q.min);
-    const.b <- b - coef.a*q.max;
-    new.vec <- coef.a*qvec + const.b;
-  }
-  return(new.vec);
-}
 
 
 GetNetsName <- function(){
