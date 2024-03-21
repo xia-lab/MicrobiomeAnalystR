@@ -12,7 +12,6 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
   if(!exists("phyloseq_objs")){
     phyloseq_objs <- qs::qread("phyloseq_objs.qs")
   }
-  #print(micDataType)
   
   metdat <- current.proc$met$data.proc
   if(micDataType=="ko"){
@@ -130,9 +129,7 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
                                         metdat,tax)
       
       procrustes.res$misc[[tax]]$pct2 <- pca.scatter$pct2
-      
       netData[[tax]][["misc"]] <- procrustes.res$misc[[tax]]
-      
       qs::qsave(procrustes.res,"procrustes.res.qs")
       
     }else if(reductionOptGlobal == "diablo"){
@@ -191,7 +188,6 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
       names <- names[match(ids, rownames(loading.data))];
       
       de[de == "NaN"] = 1
-      print(head(de));
       pv = as.numeric(de[,"T.Stats"])
       pv_no_zero = pv[pv != 0]
       minval = min(pv_no_zero)
@@ -213,7 +209,6 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
       sizes <- as.numeric(rescale2NewRange(pv, 15, 25));
       nodes2 <- vector(mode="list");
       
-      print(head(loading.data));
       seed.inx <- names %in% unique(seeds[[tax]]);
       seed_arr <- rep("notSeed",length(names));
       seed_arr[seed.inx] <- "seed";
@@ -283,7 +278,6 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
         netData[[tax]][[nm]] <- pca_nodes;
         
         loading.data<-pca.scatter[[paste0("pca_", omicstype.vec[i])]]$loading
-        #print(head(loading.data))
         loadingNames <- rownames(loading.data);
         enrich_ids <- intersect(combined.res$enrich_ids[[tax]],loadingNames)
         loading.enrich = enrich_ids[order(match(enrich_ids, loadingNames))]
