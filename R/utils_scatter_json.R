@@ -6,7 +6,6 @@
 ## J. Xia, jeff.xia@mcgill.ca
 ###################################################
 my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
-  save.image("scatterpair.RData");
   omicstype.vec <- c("microbiome","metabolomics");
   
   library(RJSONIO)
@@ -189,7 +188,7 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
       loading.data = loading.data[common_rows, ]
       de = de[common_rows, ]
       ids <- ids[match(ids, rownames(loading.data))];
-      names <- names[match(names, rownames(loading.data))];
+      names <- names[match(ids, rownames(loading.data))];
       
       de[de == "NaN"] = 1
       print(head(de));
@@ -221,8 +220,8 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
       
       for(i in 1:length(rownames(loading.data))){
         nodes2[[i]] <- list(
-          id=ids[i],
-          label=names[i],
+          id=rownames(loading.data)[i],
+          label=rownames(loading.data)[i],
           size=sizes[i],
           cluster=1,
           omicstype=type.vec[i],
