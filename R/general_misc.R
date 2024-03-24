@@ -384,7 +384,9 @@ ClearStrings<-function(query){
   return(query);
 }
 
-cleanMem <- function(n=10) { for (i in 1:n) gc() }
+cleanMem <- function() { 
+    gc(); 
+}
 
 # based on phyloseq post: https://github.com/joey711/shiny-phyloseq/blob/master/panels/paneldoc/Transform.md
 clr_transform <- function(x, base=2){
