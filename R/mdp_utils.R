@@ -248,22 +248,6 @@ PerformLayOut <- function(g){
   pos.xy;
 }
 
-rescale2NewRange <- function(qvec, a, b){
-  q.min <- min(qvec);
-  q.max <- max(qvec);
-  if(length(qvec) < 50){
-    a <- a*2;
-  }
-  if(q.max == q.min){
-    new.vec <- rep(8, length(qvec));
-  }else{
-    coef.a <- (b-a)/(q.max-q.min);
-    const.b <- b - coef.a*q.max;
-    new.vec <- coef.a*qvec + const.b;
-  }
-  return(new.vec);
-}
-
 PrepareCorrExpValues <- function(mbSetObj, meta, taxalvl, color, layoutOpt, comparison, wilcox.cutoff){
   load_phyloseq();
 
@@ -2565,7 +2549,6 @@ sink();
 #'@import reshape
 #'@import ggplot2
 #'@import viridis
-
 PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, imgOpt, 
                               feat_cnt, colpalopt, calcmeth, toptaxa, abunTopTaxaOpt, 
                               appendnm, format="png", dpi=72, interactive = FALSE){
@@ -2573,9 +2556,9 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
   load_ggplot();
   load_viridis();
   load_phyloseq(); 
-
+  save.image("tax.RData");
   mbSetObj <- .get.mbSetObj(mbSetObj);
-
+  
   if(mbSetObj$module.type == "meta"){
     data1 <- qs::qread("merged.data.raw.qs");
     #data1 <- subsetPhyloseqByDataset(mbSetObj, data1);
@@ -2622,7 +2605,7 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
   data <- t(data[,ord.inx]);
   
   data_tax <- tax_table(data1);
-
+  
   if(taxalvl=="OTU"){
     taxa_nm <- as.matrix(colnames(data));
     rownames(taxa_nm) <- colnames(data);
@@ -2720,9 +2703,13 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
   } else if (feat_no < 100){
     h <- h+300;
   } else {
-    h <- 1100;
+    h <- h+300 +3*(feat_no-100);
   }
   w <- h + 200;
+  sam_num <- nrow(data);
+  if(sam_num>50){
+    w <- h + sam_num*7;
+  }
 
   data <- data[row.names(metalp),]
   data[[get("facet")]] <- metalp[[get("facet")]]
@@ -2763,7 +2750,7 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
   mbSetObj$imgSet$stack <- barplotName;
   mbSetObj$imgSet$stackRda <-rdaName;
   mbSetObj$imgSet$stackType <- "default";
-
+  
   
   if(length(unique(data$sample)) <= 10){
     guide_num = 3
@@ -2772,7 +2759,7 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
   }else{
     guide_num = 5
   }
-    Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
+  Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
   box <- ggplot(data = data,
                 aes(x = sample,
                     y = value,
@@ -2826,23 +2813,24 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
   if(facet == "newnewnew"){
     box <- box + theme(strip.text.x = element_blank())
   }
-  
+    box <- box + theme( text = element_text(size = 14), axis.text.x = element_text(size = 9))
+
   save(box,file=rdaName);
   print(box)
   dev.off();
   p <- ggplotly_modified(box, tempfile_path = paste0(getwd(), "/temp_file4plotly"));
-
-jsonlist <- RJSONIO::toJSON(p, pretty = T,force = TRUE,.na = "null");
-sink(jsonName);
-cat(jsonlist);
-sink();
-
+  
+  jsonlist <- RJSONIO::toJSON(p, pretty = T,force = TRUE,.na = "null");
+  sink(jsonName);
+  cat(jsonlist);
+  sink();
+  
   mbSetObj$analSet$stack <- data;
   mbSetObj$analSet$stack.taxalvl <- taxalvl;
   mbSetObj$analSet$plot <- "Stacked Bar";
   
-    return(.set.mbSetObj(mbSetObj));
-  }
+  return(.set.mbSetObj(mbSetObj));
+}
 
 
 #'Function to perform categorical comparison.

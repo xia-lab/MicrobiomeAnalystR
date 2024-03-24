@@ -2303,13 +2303,11 @@ GetMMPMetTable<-function(mbSetObj){
   print(xtable::xtable(mbSetObj$analSet$met.map, caption="Result from Metabolite Name Mapping"),
         tabular.environment = "longtable", caption.placement="top", size="\\scriptsize");
 }
-
-#Generate json file for plotly for comparison tests
 GenerateCompJson <- function(mbSetObj = NA, fileName, format,type, mode = 1, taxlvl, parent = "Phylum", sigLevel = 0.05, fcLevel = 0) {
-
+  save.image("comp.RData");
   library(RColorBrewer)
   library("dplyr");
-
+  
   sigLevel <- as.numeric(sigLevel)
   fcLevel <- as.numeric(fcLevel)
   mbSetObj <- .get.mbSetObj(mbSetObj)
@@ -2320,153 +2318,161 @@ GenerateCompJson <- function(mbSetObj = NA, fileName, format,type, mode = 1, tax
     resList <- list(data = resTable, param = mbSetObj$paramSet$univar)
     mbSetObj$imgSet$uni.manhattan <- gsub("json",format,fileName);
     mbSetObj$imgSet$uni.manhattan.plotly <- gsub("json","rda",fileName);
-   mbSetObj$imgSet$uni.manhattan.json <- fileName;
+    mbSetObj$imgSet$uni.manhattan.json <- fileName;
   } else if (type %in% c("zigfit", "ffm")) {
     resTable <- mbSetObj$analSet$metagenoseq$resTable
     resTable$id <- rownames(resTable)
     resList <- list(data = resTable, param = mbSetObj$paramSet$metagenoseq)
     mbSetObj$imgSet$metagenome.manhattan <- gsub("json",format,fileName);
     mbSetObj$imgSet$metagenome.manhattan.plotly <- gsub("json","rda",fileName);
-   mbSetObj$imgSet$metagenome.manhattan.json <- fileName;
+    mbSetObj$imgSet$metagenome.manhattan.json <- fileName;
   } else if (type %in% c("EdgeR", "DESeq2")) {
     resTable <- mbSetObj$analSet$rnaseq$resTable
     resTable$id <- rownames(resTable)
     resList <- list(data = resTable, param = mbSetObj$paramSet$rnaseq)
-   mbSetObj$imgSet$rnaseq.manhattan <- gsub("json",format,fileName);
-   mbSetObj$imgSet$rnaseq.manhattan.plotly <- gsub("json","rda",fileName);
-   mbSetObj$imgSet$rnaseq.manhattan.json <- fileName;
+    mbSetObj$imgSet$rnaseq.manhattan <- gsub("json",format,fileName);
+    mbSetObj$imgSet$rnaseq.manhattan.plotly <- gsub("json","rda",fileName);
+    mbSetObj$imgSet$rnaseq.manhattan.json <- fileName;
   }
-
- if(mbSetObj[["module.type"]]=="mdp"){
-
-tax_table <- data.frame(mbSetObj[["dataSet"]][["proc.phyobj"]]@tax_table)
-
-  if (taxlvl == "OTU") {
-    resTable[["parent"]] <- tax_table[[parent]][match(resTable$id, rownames(tax_table))]
-  } else {
-    resTable[["parent"]] <- tax_table[[parent]][match(resTable$id, tax_table[[taxlvl]])]
-  }
-  resTable[["parent"]][is.na(resTable[["parent"]])] <- "Not_Assigned"
-
-
-  resTable <- resTable %>%
-    group_by(parent) %>%
-    group_modify(~ .x %>%
-      mutate(len = if (n() > 3) {
-        sample(1:(n() %/% 3), size = n(), replace = TRUE)
-      } else {
-        seq_len(n())
-      }))
-
-  don <- data.frame(resTable %>%
-    group_by(parent) %>%
-    summarise(chr_len = max(len)) %>%
-    mutate(tot = cumsum(chr_len) - chr_len) %>%
-    select(-chr_len) %>%
-    left_join(resTable, ., by = c("parent" = "parent")) %>%
-    arrange(parent, len) %>%
-    mutate(BPcum = len + tot))
-
-  if (type %in% c("EdgeR", "DESeq2")) {
-    don$shape <- ifelse(don$log2FC > 0, "triangle-up", "triangle-down")
-    don$shape[don$FDR > sigLevel | abs(don$log2FC) < fcLevel] <- "circle"
-    resList$param$multigroup <- FALSE
-  } else {
-    resList$param$multigroup <- TRUE
-    don$shape <- "circle"
-  }
-
-  colors <- setNames(colorRampPalette(brewer.pal(8, "Set1"))(length(unique(resTable$parent))), unique(resTable$parent))
-  don$color <- unname(colors[match(don$parent, names(colors))])
-  don$color[don$FDR > sigLevel | abs(don$log2FC ) <fcLevel] <- "#808080"
-  don$size <- 7 + (don$logCPM - min(don$logCPM)) * 7 / (max(don$logCPM) - min(don$logCPM))
-
-  axisdf <- don %>%
-    group_by(parent) %>%
-    summarize(
-      center = (max(BPcum) + min(BPcum)) / 2,
-      start = min(BPcum) - 0.5, end = max(BPcum) + 0.5
-    )
-  resList$data <- don
-  resList$axisdf <- axisdf
-  resList$param$parent <- parent
-
- feat_no <- length(unique(don$parent));
-
-  h<-6
-  if(feat_no < 10){
-    h <- 6;
-  } else if (feat_no < 20){
-    h <- h+1;
-  } else if (feat_no < 50){
-    h <- h+2;
-  } else if (feat_no < 100){
-    h <- h+2;
-  } else {
-    h <- 10;
-  }
-  w <- h + 4;
-
- fileName2 = gsub("json",format,fileName)
-
-p <- ggplot(don, aes(x=BPcum, y=-log10(Pvalues),size=logCPM,color=I(color))) +
-  geom_point(aes(shape=shape), fill = "black", alpha=1) +
-  scale_size_continuous(range = c(0.5, 3))
-
-if (mode == 2) {
-    axisdf$color <- scales::alpha(unname(colors[match(axisdf$parent, names(colors))]), 0.1)
-
-    areadf <- lapply(1:nrow(axisdf), function(x) {
-      info <- list(
-        x = c(axisdf$start[x], axisdf$start[x], axisdf$end[x], axisdf$end[x], axisdf$start[x]),
-        y = c(0, ceiling(max(-log10(resTable$Pvalues))), ceiling(max(-log10(resTable$Pvalues))), 0, 0),
-        mode = "line",
-        fill = "toself",
-        fillcolor = axisdf$color[x],
-        line = list(
-          color = "rgba(255,255,255,0.1)",
-          width = 0,
-          dash = "solid"
-        ),
-        showlegend = F,
-        name = axisdf$parent[x],
-        legendgroup = axisdf$parent[x],
-        hoverinfo = ""
+  
+  if(mbSetObj[["module.type"]]=="mdp"){
+    
+    tax_table <- data.frame(mbSetObj[["dataSet"]][["proc.phyobj"]]@tax_table)
+    
+    if (taxlvl == "OTU") {
+      resTable[["parent"]] <- tax_table[[parent]][match(resTable$id, rownames(tax_table))]
+    } else {
+      resTable[["parent"]] <- tax_table[[parent]][match(resTable$id, tax_table[[taxlvl]])]
+    }
+    resTable[["parent"]][is.na(resTable[["parent"]])] <- "Not_Assigned"
+    
+    
+    resTable <- resTable %>%
+      group_by(parent) %>%
+      group_modify(~ .x %>%
+                     mutate(len = if (n() > 3) {
+                       sample(1:(n() %/% 3), size = n(), replace = TRUE)
+                     } else {
+                       seq_len(n())
+                     }))
+    
+    don <- data.frame(resTable %>%
+                        group_by(parent) %>%
+                        summarise(chr_len = max(len)) %>%
+                        mutate(tot = cumsum(chr_len) - chr_len) %>%
+                        select(-chr_len) %>%
+                        left_join(resTable, ., by = c("parent" = "parent")) %>%
+                        arrange(parent, len) %>%
+                        mutate(BPcum = len + tot))
+    
+    if (type %in% c("EdgeR", "DESeq2")) {
+      don$shape <- ifelse(don$log2FC > 0, "triangle-up", "triangle-down")
+      don$shape[don$FDR > sigLevel | abs(don$log2FC) < fcLevel] <- "circle"
+      resList$param$multigroup <- FALSE
+    } else {
+      resList$param$multigroup <- TRUE
+      don$shape <- "circle"
+    }
+    
+    colors <- setNames(colorRampPalette(brewer.pal(8, "Set1"))(length(unique(resTable$parent))), unique(resTable$parent))
+    don$color <- unname(colors[match(don$parent, names(colors))])
+    don$color[don$FDR > sigLevel | abs(don$log2FC ) <fcLevel] <- "#808080"
+    if(is.null(don$logCPM)){
+      don$size <- 10.5;
+    }else{
+      don$size <- 7 + (don$logCPM - min(don$logCPM)) * 7 / (max(don$logCPM) - min(don$logCPM))
+    }
+    axisdf <- don %>%
+      group_by(parent) %>%
+      summarize(
+        center = (max(BPcum) + min(BPcum)) / 2,
+        start = min(BPcum) - 0.5, end = max(BPcum) + 0.5
       )
-      return(info)
-    })
-    resList$areadf <- areadf
-  p <- p+geom_rect(data=axisdf, aes(NULL,NULL,xmin=start,xmax=end,fill=as.factor(parent)),
-            ymin=0,ymax=Inf, colour="white", size=0, alpha=0.1)
-  }
+    resList$data <- don
+    resList$axisdf <- axisdf
+    resList$param$parent <- parent
+    
+    feat_no <- length(unique(don$parent));
+    
+    h<-6
+    if(feat_no < 10){
+      h <- 6;
+    } else if (feat_no < 20){
+      h <- h+1;
+    } else if (feat_no < 50){
+      h <- h+2;
+    } else if (feat_no < 100){
+      h <- h+2;
+    } else {
+      h <- 10;
+    }
+    w <- h + 4;
+    
+    fileName2 = gsub("json",format,fileName)
+    if(!is.null(don$logCPM) && "logCPM" %in% names(don)) {
+     p <- ggplot(don, aes(x=BPcum, y=-log10(Pvalues), size=logCPM, color=color)) +
+       geom_point(aes(shape=shape), alpha=1) +
+       scale_size_continuous(range = c(0.5, 3))
+   } else {
+     p <- ggplot(don, aes(x=BPcum, y=-log10(Pvalues), color=color)) +
+       geom_point(aes(shape=shape), size=3, alpha=1)
+   }
+
+    
+    if (mode == 2) {
+      axisdf$color <- scales::alpha(unname(colors[match(axisdf$parent, names(colors))]), 0.1)
+      
+      areadf <- lapply(1:nrow(axisdf), function(x) {
+        info <- list(
+          x = c(axisdf$start[x], axisdf$start[x], axisdf$end[x], axisdf$end[x], axisdf$start[x]),
+          y = c(0, ceiling(max(-log10(resTable$Pvalues))), ceiling(max(-log10(resTable$Pvalues))), 0, 0),
+          mode = "line",
+          fill = "toself",
+          fillcolor = axisdf$color[x],
+          line = list(
+            color = "rgba(255,255,255,0.1)",
+            width = 0,
+            dash = "solid"
+          ),
+          showlegend = F,
+          name = axisdf$parent[x],
+          legendgroup = axisdf$parent[x],
+          hoverinfo = ""
+        )
+        return(info)
+      })
+      resList$areadf <- areadf
+      p <- p+geom_rect(data=axisdf, aes(NULL,NULL,xmin=start,xmax=end,fill=as.factor(parent)),
+                       ymin=0,ymax=Inf, colour="white", size=0, alpha=0.1)
+    }
     p<- p+scale_x_continuous( label = axisdf$parent, breaks= axisdf$center ) +
-     scale_y_continuous(expand = c(0, 0) ) +  
-    theme_bw() +
-  theme(axis.text.x = element_text(angle=90,hjust =0.5,vjust = 0.5,size=6))+
-  labs(x = "") +
-  theme( 
-   legend.position="none",
-    panel.border = element_blank(),
-    panel.grid.major.x = element_blank(),
-    panel.grid.minor.x = element_blank()
-  ) 
- save(p,file=gsub("json","rda",fileName));
- Cairo::Cairo(file = fileName2, width = w, height = h,unit="in", type = format, bg = "white", dpi = 200)
-
-
-  plot(p)
-  dev.off()
- 
- }
-
-
+      scale_y_continuous(expand = c(0, 0) ) +  
+      theme_bw() +
+      theme(axis.text.x = element_text(angle=90,hjust =0.5,vjust = 0.5,size=6))+
+      labs(x = "") +
+      theme( 
+        legend.position="none",
+        panel.border = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank()
+      ) 
+    save(p,file=gsub("json","rda",fileName));
+    Cairo::Cairo(file = fileName2, width = w, height = h,unit="in", type = format, bg = "white", dpi = 200)
+    
+    
+    plot(p)
+    dev.off()
+    
+  }
+  
+  
   json.obj <- rjson::toJSON(resList)
   sink(fileName)
   cat(json.obj)
   sink()
-
- 
-
+  
+  
+  
   return(.set.mbSetObj(mbSetObj))
 }
 

@@ -5,7 +5,6 @@
 ## G. Zhou (guangyan.zhou@mail.mcgill.ca) 
 ## J. Xia, jeff.xia@mcgill.ca
 ###################################################
-
 my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
   omicstype.vec <- c("microbiome","metabolomics");
   
@@ -13,7 +12,6 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
   if(!exists("phyloseq_objs")){
     phyloseq_objs <- qs::qread("phyloseq_objs.qs")
   }
-  #print(micDataType)
   
   metdat <- current.proc$met$data.proc
   if(micDataType=="ko"){
@@ -33,7 +31,7 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
     sig.mats[[s]][["microbiome"]] <- sig.mic[[s]]
     sig.mats[[s]][["metabolomics"]] <- sig.met
   }
-
+  
   seeds <- lapply(sig.mic,function(x) c(rownames(x),rownames(sig.met)))
   #meta <- meta ### for other methods not import here
   
@@ -68,7 +66,7 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
     pos.xyz <-   pos.xyz.all[[tax]]
     nodes <- vector(mode="list");
     names <-  make.unique(as.character(rownames(pos.xyz)))
-
+    
     a=list();
     a$objects = "NA";
     meshes="NA"
@@ -131,13 +129,11 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
                                         metdat,tax)
       
       procrustes.res$misc[[tax]]$pct2 <- pca.scatter$pct2
-      
       netData[[tax]][["misc"]] <- procrustes.res$misc[[tax]]
-      
       qs::qsave(procrustes.res,"procrustes.res.qs")
-
+      
     }else if(reductionOptGlobal == "diablo"){
-
+      
       pos.xyz2 <-   diablo.res$pos.xyz2[[tax]]
       names <- rownames(pos.xyz2)
       nodes_samples2 <- vector(mode="list");
@@ -180,35 +176,47 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
       ids = diablo.res$loadingNames[[tax]]
       rownames(loading.data) = names
       de = combined.res$comp.res[[tax]]
-      de = de[which(rownames(de) %in% ids),]
+      de = de[match(rownames(de) ,ids),]
+      
+      # Find the common row names between loading.data and de
+      common_rows = intersect(rownames(loading.data), rownames(de))
+      
+      # Subset both datasets to only include the common rows, maintaining their original order
+      loading.data = loading.data[common_rows, ]
+      de = de[common_rows, ]
+      ids <- ids[match(ids, rownames(loading.data))];
+      names <- names[match(ids, rownames(loading.data))];
+      
       de[de == "NaN"] = 1
-      pv = as.numeric(de[,"P_value"])
+      pv = as.numeric(de[,"T.Stats"])
       pv_no_zero = pv[pv != 0]
       minval = min(pv_no_zero)
       pv[pv == 0] = minval/2
-      pvals <<- -log10(pv);
+      pvals <<- pv;
       type.vec <- pvals;
       if(exists("comp.res.inx",combined.res)){
-        for(i in 1:length(unique(combined.res$comp.res.inx[[tax]]))){
-          inx = combined.res$comp.res.inx[[tax]] == i
+        match.inx <- match(combined.res$enrich_ids[[tax]], rownames(loading.data))
+        res <- combined.res$comp.res.inx[[tax]]
+        res <- res[match.inx]
+        res <- res[!is.na(res)]
+        for(i in 1:length(unique(res))){
+          inx = res== i
           type.vec[inx] <- omicstype.vec[i]
         }
       }
       colors<- ComputeColorGradient(pvals,  F);
       colorb <- colors;
-      sizes <- as.numeric(rescale2NewRange(-log10(pv), 15, 25));
+      sizes <- as.numeric(rescale2NewRange(pv, 15, 25));
       nodes2 <- vector(mode="list");
-      
-      #loading.data = loading.data[which(rownames(loading.data) %in% as.character(ids)),];
       
       seed.inx <- names %in% unique(seeds[[tax]]);
       seed_arr <- rep("notSeed",length(names));
       seed_arr[seed.inx] <- "seed";
       
-      for(i in 1:length(pvals)){
+      for(i in 1:length(rownames(loading.data))){
         nodes2[[i]] <- list(
-          id=ids[i],
-          label=names[i],
+          id=rownames(loading.data)[i],
+          label=rownames(loading.data)[i],
           size=sizes[i],
           cluster=1,
           omicstype=type.vec[i],
@@ -232,18 +240,17 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
       netData[[tax]] <- list(omicstype=omicstype.vec, nodes=nodes, edges=edge.mat, modules=modules, objects=a$objects, ellipse=meshes, meta=metadf, loading=nodes2, reductionOpt=reductionOptGlobal , objectsLoading=aLoading$objects, sigMat=sig.mats[[tax]]);
       
       type <- omicstype.vec[2]
-      netData[[tax]][[ type]] <- nodes_samples2;
-
+      netData[[tax]][[type]] <- nodes_samples2;
+      
       if(tax == taxrank){
         library(dplyr)
         loading.data <- as.data.frame( signif(loading.data),4)
         loading.data$omicstype <- type.vec
-        head(loading.data);
         loading.data.met <- loading.data[loading.data$omicstype == "metabolomics",]
         loading.data.mic <- loading.data[loading.data$omicstype == "microbiome",]
         loading.data.met$omicstype <- NULL;
         loading.data.mic$omicstype <- NULL;
-
+        
         fast.write(loading.data.met, file=paste0("loading_diablo_metabolome_",taxrank,".csv"));
         fast.write(loading.data.mic, file=paste0("loading_diablo_microbiome_",taxrank,".csv"));     
         sig.mats[[tax]][["microbiome"]]$ids <- NULL;
@@ -251,7 +258,7 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
         fast.write(sig.mats[[tax]][["microbiome"]], file=paste0("sig_diablo_microbiome_",taxrank,".csv"));
         fast.write(sig.mats[[tax]][["metabolomics"]], file=paste0("sig_diablo_metabolome_",taxrank,".csv"));
       }
-
+      
       pca.scatter <- generatePCAscatter(phyloseq_objs$count_tables[[tax]],
                                         metdat,tax)
       
@@ -271,7 +278,6 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
         netData[[tax]][[nm]] <- pca_nodes;
         
         loading.data<-pca.scatter[[paste0("pca_", omicstype.vec[i])]]$loading
-        #print(head(loading.data))
         loadingNames <- rownames(loading.data);
         enrich_ids <- intersect(combined.res$enrich_ids[[tax]],loadingNames)
         loading.enrich = enrich_ids[order(match(enrich_ids, loadingNames))]
@@ -306,14 +312,14 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
       
       netData[[tax]][["misc"]] <- diablo.res$misc[[tax]]
       
-
+      
       
       qs::qsave(diablo.res,"diablo.res.qs")
     }
     
   }
-
-
+  
+  
   jsonNms_scatter <<- filenm;
   
   sink(filenm);
@@ -323,9 +329,9 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
     cat(RJSONIO::toJSON(netData));
   }
   sink();
-
-
-
+  
+  
+  
   return(1)
   
 }

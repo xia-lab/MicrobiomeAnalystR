@@ -1027,3 +1027,43 @@ recordEnrTable <- function(mbSetObj, vis.type, dataTable, library, algo){
         .set.mbSetObj(mbSetObj);
         return(mbSetObj);
 }
+
+rescale2NewRange <- function(qvec, new_min, new_max) {
+  # Print the first few elements of qvec
+  print(head(qvec))
+  
+  # Replace zeros with ones
+  qvec = replace(qvec, qvec == 0, 1)
+  
+  # Find the minimum value in qvec, excluding NA values
+  min_value <- min(qvec, na.rm = TRUE)
+  
+  # Replace NA values with the minimum value
+  qvec[is.na(qvec)] <- min_value
+  
+  # Recalculate the minimum and maximum values after replacing NAs
+  q_min <- min(qvec, na.rm = TRUE)
+  q_max <- max(qvec, na.rm = TRUE)
+  
+  # Print the max and min values
+  print(q_max)
+  print(q_min)
+  
+  # Initialize new_vec
+  new_vec <- numeric(length(qvec))
+  
+  # Handle the case where all qvec values are the same
+  if(q_max == q_min) {
+    # If all values in qvec are the same, set them all to the midpoint of the new range
+    new_vec <- rep((new_max + new_min) / 2, length(qvec))
+  } else {
+    # Calculate the scale and offset for the new range
+    coef_a <- (new_max - new_min) / (q_max - q_min)
+    const_b <- new_max - coef_a * q_max
+    # Apply the transformation to qvec
+    new_vec <- coef_a * qvec + const_b
+  }
+  
+  # Return the rescaled vector
+  return(new_vec)
+}
