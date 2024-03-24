@@ -7,7 +7,7 @@ my.fast.spar <- function(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, out
   
   # only works for unix
   my.os <- tolower(GetOS());
-  
+
   if(my.os == "mac" | my.os == "windows"){
     AddErrMsg("The built-in fastspar only works for unix system. Please visit https://github.com/scwatts/fastspar for more details.");
     return(0);
@@ -27,7 +27,7 @@ my.fast.spar <- function(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, out
   
   # make sure they are executable
   my.cmd <- paste("chmod a+x", path_fastspar, path_fastspar_bs, path_fastspar_pvals);
-  system(my.cmd);
+system(my.cmd);
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   if(.on.public.web){

@@ -27,11 +27,11 @@ SanityCheckData <- function(mbSetObj, filetype, disableFilter = FALSE){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   dataName <- mbSetObj$dataSet$name;
   module.type <- mbSetObj$module.type;
-  feat.sums <- apply(mbSetObj$dataSet$data.orig, 1, function(x){sum(x>0, na.rm=T)});
+  feat.sums <- apply(mbSetObj$dataSet$data.orig, 1, function(x){sum(x, na.rm=T)});
   if(disableFilter){
     data.proc <- mbSetObj$dataSet$data.orig
   }else{
-    gd.inx <- feat.sums > 1; # occur in at least 2 samples
+    gd.inx <- feat.sums >= 1; # occur in at least 2 samples
     if(length(which(gd.inx=="TRUE"))==0){
       AddErrMsg("Reads occur in only one sample.  All these are considered as artifacts and have been removed from data. No data left after such processing.");
       return(0);
@@ -41,11 +41,11 @@ SanityCheckData <- function(mbSetObj, filetype, disableFilter = FALSE){
   
   # filtering the constant features here
   # check for columns with all constant (var=0)
-  varCol <- apply(data.proc, 1, var, na.rm=T);
-  constCol <- varCol == 0 | is.na(varCol);
+  # varCol <- apply(data.proc, 1, var, na.rm=T);
+  # constCol <- varCol == 0 | is.na(varCol);
   
   # making copy of data.proc and proc.phyobj(phyloseq)
-  data.proc <- data.proc[!constCol, ];
+  #data.proc <- data.proc[!constCol, ];
   
   if(length(data.proc)==0){
     AddErrMsg("All features are found to be constant and have been removed from data. No data left after such processing.");
@@ -195,7 +195,7 @@ SanityCheckMetData <- function(mbSetObj,isNormMetInput, disableFilter = FALSE){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  feat.sums <- apply(mbSetObj$dataSet$metabolomics$data.orig, 1, function(x){sum(x>0, na.rm=T)});
+  feat.sums <- apply(mbSetObj$dataSet$metabolomics$data.orig, 1, function(x){sum(x, na.rm=T)});
  
   if(mbSetObj$dataSet$metabolomics$feature.type=="peak" &  any(grepl("[a-z]|[A-Z]|@",mbSetObj$dataSet$metabolomics$comp_metnm))){
    AddErrMsg("The peak format is not correct! Please use Generic Format if the data is a peak table. Note that if retention times are included, they must
@@ -205,21 +205,13 @@ SanityCheckMetData <- function(mbSetObj,isNormMetInput, disableFilter = FALSE){
   if(disableFilter){
     data.proc <-mbSetObj$dataSet$metabolomics$data.orig
   }else{
-    gd.inx <- feat.sums > 1; # occur in at least 2 samples
+    gd.inx <- feat.sums >= 1; # occur in at least 2 samples
     if(length(which(gd.inx=="TRUE"))==0){
       AddErrMsg("Reads occur in only one sample.  All these are considered as artifacts and have been removed from data. No data left after such processing.");
       return(0);
     }
     data.proc <- mbSetObj$dataSet$metabolomics$data.orig[gd.inx, ]; 
   }
-  
-  # filtering the constant features here
-  # check for columns with all constant (var=0)
-  varCol <- apply(data.proc, 1, var, na.rm=T);
-  constCol <- varCol == 0 | is.na(varCol);
-  
-  # making copy of data.proc
-  data.proc <- data.proc[!constCol, ];
   
   if(length(data.proc)==0){
     AddErrMsg("All features are found to be constant and have been removed from data. No data left after such processing.");
