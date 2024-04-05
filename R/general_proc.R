@@ -568,8 +568,8 @@ UpdateSampleItems <- function(mbSetObj){
 #'@export
 #'@import edgeR
 #'@import metagenomeSeq
-PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,isAutoScale=F){
-  
+PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,isAutoScale=F,rareDepth){
+  print(rareDepth)
   mbSetObj <- .get.mbSetObj(mbSetObj);
   dataName <- mbSetObj$dataSet$name;
   module.type <- mbSetObj$module.type;
@@ -582,7 +582,7 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
   #rarefying (should?) affect filt.data in addition to norm 
   
   if(rare.opt != "none"){
-    data <- PerformRarefaction(mbSetObj, data, rare.opt);
+    data <- PerformRarefaction(mbSetObj, data, rare.opt,rareDepth);
     if(is.null(data)){
        return(0)
      }
@@ -903,8 +903,7 @@ PerformMetaboNormalization <- function(mbSetObj, rowNorm, transNorm, scaleNorm,i
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PerformRarefaction <- function(mbSetObj, data, rare.opt){
-  
+PerformRarefaction <- function(mbSetObj, data, rare.opt,rareDepth){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   data <- data.matrix(data);
@@ -962,6 +961,29 @@ PerformRarefaction <- function(mbSetObj, data, rare.opt){
     msg <- c(msg, paste("Rarefaction without replacement to minimum library depth."));
   }
   
+}else if(rare.opt=="rareto"){
+
+  if(max((sample_sums(phy.obj)))<rareDepth){
+     AddErrMsg("The specified library depth exceeds that of all samples! Please provide a suitable depth value for rarefaction!")
+     return(NULL)
+  }
+  phy.obj <- tryCatch({
+    # Your function call
+    rarefied_data <- rarefy_even_depth(phy.obj, sample.size = rareDepth,replace=TRUE,rngseed = T)
+    return(rarefied_data)
+  }, error = function(e) {
+    # Custom error handling
+    err.vec <<- e$message
+    # Return NULL or some other value indicating failure
+    return(NULL)
+  }
+  )
+  if(is.NULL(phy.obj)){
+    return(NULL)
+  }else{
+    msg <- c(msg, paste("Rarefy with replacement to selected library depth."));
+  }
+
 }
   msg <- paste(msg, collapse=" ");
   #print(msg);
