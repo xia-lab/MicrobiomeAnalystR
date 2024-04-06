@@ -905,7 +905,7 @@ PerformMetaboNormalization <- function(mbSetObj, rowNorm, transNorm, scaleNorm,i
 #'@export
 PerformRarefaction <- function(mbSetObj, data, rare.opt,rareDepth){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
+
   data <- data.matrix(data);
   tax_nm<-rownames(data);
 
@@ -962,7 +962,6 @@ PerformRarefaction <- function(mbSetObj, data, rare.opt,rareDepth){
   }
   
 }else if(rare.opt=="rareto"){
-
   if(max((sample_sums(phy.obj)))<rareDepth){
      AddErrMsg("The specified library depth exceeds that of all samples! Please provide a suitable depth value for rarefaction!")
      return(NULL)
@@ -1845,7 +1844,9 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
     mbSetObj$dataSet$norm.phyobj <-mbSetObj$dataSet$proc.phyobj;
   }
   
-  return(.set.mbSetObj(mbSetObj));
+  .set.mbSetObj(mbSetObj)
+
+  return(c(min(sample_sums(mbSetObj$dataSet$proc.phyobj)),max(sample_sums(mbSetObj$dataSet$proc.phyobj))));
 }
 
 
