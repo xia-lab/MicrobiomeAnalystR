@@ -3312,9 +3312,9 @@ PlotRarefactionCurve <- function(mbSetObj, data.src, linecolor, linetype, facet,
   }
   
   sample_table_msg <- sample_data(data_rare, errorIfNULL=TRUE);
-  
+
   if(min(table(factor(sample_table_msg [[linecolor]]))) < 3 | min(table(factor(sample_table_msg [[linetype]]))) < 3 | min(table(factor(sample_table_msg [[facet]]))) < 3){
-    AddErrMsg("Too many groups to be displayed - please select a more meaningful group option with at least 3 samples per group.");
+    AddErrMsg("Please select a more meaningful group option or adjust the library depth during the rarefaction step to ensure a minimum of three samples per group.");
     return(0);
   }
   

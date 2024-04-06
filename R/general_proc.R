@@ -890,6 +890,29 @@ PerformMetaboNormalization <- function(mbSetObj, rowNorm, transNorm, scaleNorm,i
   return(.set.mbSetObj(mbSetObj));
 }
 
+#'Get function to obtain the library scale for rarefraction
+GetLibscale <- function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  dataName <- mbSetObj$dataSet$name;
+  module.type <- mbSetObj$module.type;
+  data <- readDataQs("filt.data.orig", module.type, dataName);
+  data <- data.matrix(data);
+  tax_nm<-rownames(data);
+  data <- round(data);
+  
+  # create phyloseq obj
+  otu.tab<-otu_table(data,taxa_are_rows =TRUE);
+  taxa_names(otu.tab)<-tax_nm;
+  
+  mbSetObj$dataSet$sample_data$sample_id<-rownames(mbSetObj$dataSet$sample_data);
+  sample_table<-sample_data(mbSetObj$dataSet$sample_data, errorIfNULL=TRUE);
+  phy.obj<-merge_phyloseq(otu.tab,sample_table);
+  
+ return(c(min(sample_sums(phy.obj)),quantile(sample_sums(phy.obj) ,0.75)))
+
+}
+
+
 
 #'Utility function to perform rarefraction (used by PerformNormalization)
 #'@description This function performs rarefraction on the uploaded
@@ -909,7 +932,6 @@ PerformRarefaction <- function(mbSetObj, data, rare.opt,rareDepth){
   data <- data.matrix(data);
   tax_nm<-rownames(data);
 
-  print(err.vec)
   # data must be count data (not contain fractions)
   data <- round(data);
   
@@ -962,6 +984,7 @@ PerformRarefaction <- function(mbSetObj, data, rare.opt,rareDepth){
   }
   
 }else if(rare.opt=="rareto"){
+  print(max((sample_sums(phy.obj))))
   if(max((sample_sums(phy.obj)))<rareDepth){
      AddErrMsg("The specified library depth exceeds that of all samples! Please provide a suitable depth value for rarefaction!")
      return(NULL)
@@ -1844,9 +1867,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
     mbSetObj$dataSet$norm.phyobj <-mbSetObj$dataSet$proc.phyobj;
   }
   
-  .set.mbSetObj(mbSetObj)
-
-  return(c(min(sample_sums(mbSetObj$dataSet$proc.phyobj)),max(sample_sums(mbSetObj$dataSet$proc.phyobj))));
+  return(.set.mbSetObj(mbSetObj));
 }
 
 
