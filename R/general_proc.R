@@ -31,14 +31,23 @@ SanityCheckData <- function(mbSetObj, filetype, disableFilter = FALSE){
   if(disableFilter){
     data.proc <- mbSetObj$dataSet$data.orig
   }else{
-    gd.inx <- feat.sums >= 1; # occur in at least 2 samples
+    gd.inx <- feat.sums > 1; 
     if(length(which(gd.inx=="TRUE"))==0){
       AddErrMsg("Reads occur in only one sample.  All these are considered as artifacts and have been removed from data. No data left after such processing.");
       return(0);
     }
     data.proc <- mbSetObj$dataSet$data.orig[gd.inx, ]; 
   }
-  
+
+  if(length(which(feat.sums<=1))>0){
+    singleton <- TRUE
+    singleton_length <- length(feat.sums<=1)
+  }else{
+    singleton <- FALSE
+    singleton_length <- 0
+
+  }
+
   # filtering the constant features here
   # check for columns with all constant (var=0)
   # varCol <- apply(data.proc, 1, var, na.rm=T);
@@ -170,7 +179,7 @@ if(!all(smp.sums)>0 ){
   
   if(.on.public.web){
     .set.mbSetObj(mbSetObj)
-    return(c(1,taxa_no,sample_no,vari_no, smin,smean,smax,gd_feat,samplemeta_no,tot_size, tree_exist, samname_same, samname_same_number, sample_no_in_outfile, disc_no, cont_no,vari_dup_no,tree_tip));
+    return(c(1,taxa_no,sample_no,vari_no, smin,smean,smax,gd_feat,samplemeta_no,tot_size, tree_exist, samname_same, samname_same_number, sample_no_in_outfile, disc_no, cont_no,vari_dup_no,tree_tip,singleton,singleton_length));
   }else{
     print("Sanity check passed!")
     
@@ -907,7 +916,6 @@ GetLibscale <- function(mbSetObj){
   mbSetObj$dataSet$sample_data$sample_id<-rownames(mbSetObj$dataSet$sample_data);
   sample_table<-sample_data(mbSetObj$dataSet$sample_data, errorIfNULL=TRUE);
   phy.obj<-merge_phyloseq(otu.tab,sample_table);
-  
  return(c(min(sample_sums(phy.obj)),quantile(sample_sums(phy.obj) ,0.75)))
 
 }
