@@ -2556,7 +2556,7 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
   load_ggplot();
   load_viridis();
   load_phyloseq(); 
-  save.image("tax.RData");
+  #save.image("tax.RData");
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(mbSetObj$module.type == "meta"){

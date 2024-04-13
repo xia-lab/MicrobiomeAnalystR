@@ -2304,7 +2304,7 @@ GetMMPMetTable<-function(mbSetObj){
         tabular.environment = "longtable", caption.placement="top", size="\\scriptsize");
 }
 GenerateCompJson <- function(mbSetObj = NA, fileName, format,type, mode = 1, taxlvl, parent = "Phylum", sigLevel = 0.05, fcLevel = 0) {
-  save.image("comp.RData");
+  #save.image("comp.RData");
   library(RColorBrewer)
   library("dplyr");
   
