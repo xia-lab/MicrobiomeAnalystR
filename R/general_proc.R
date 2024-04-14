@@ -22,57 +22,64 @@
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-SanityCheckData <- function(mbSetObj, filetype, disableFilter = FALSE){
-  
+SanityCheckData <- function(mbSetObj, filetype, preFilter = "sample",rmConstant){
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
   dataName <- mbSetObj$dataSet$name;
   module.type <- mbSetObj$module.type;
-  feat.sums <- apply(mbSetObj$dataSet$data.orig, 1, function(x){sum(x, na.rm=T)});
-  if(disableFilter){
-    data.proc <- mbSetObj$dataSet$data.orig
-  }else{
-    gd.inx <- feat.sums > 1; 
+  
+   feat.sums <- rowSums(mbSetObj$dataSet$data.orig,na.rm = T) ###
+   if(length(which(feat.sums<=1))>0){
+     singleton <- TRUE
+     singleton_length <- length(feat.sums<=1)
+   }else{
+    singleton <- FALSE
+    singleton_length <- 0
+  }
+
+  if( preFilter == "sample"){
+    feat.sums <- apply(mbSetObj$dataSet$data.orig, 1, function(x){sum(x>0, na.rm=T)});
+    gd.inx <- feat.sums > 1; #  occur in at least 2 samples
     if(length(which(gd.inx=="TRUE"))==0){
       AddErrMsg("Reads occur in only one sample.  All these are considered as artifacts and have been removed from data. No data left after such processing.");
       return(0);
     }
     data.proc <- mbSetObj$dataSet$data.orig[gd.inx, ]; 
-  }
-
-  if(length(which(feat.sums<=1))>0){
-    singleton <- TRUE
-    singleton_length <- length(feat.sums<=1)
   }else{
-    singleton <- FALSE
-    singleton_length <- 0
-
+     gd.inx <- feat.sums > 1; # not singleton
+    if(length(which(gd.inx=="TRUE"))==0){
+      AddErrMsg("No data left after removing the singleton.");
+      return(0);
+    }
+    data.proc <- mbSetObj$dataSet$data.orig[gd.inx, ]; 
   }
+  
+ if(rmConstant=="true"){
 
-  # filtering the constant features here
-  # check for columns with all constant (var=0)
-  # varCol <- apply(data.proc, 1, var, na.rm=T);
-  # constCol <- varCol == 0 | is.na(varCol);
-  
+   # filtering the constant features here
+   # check for columns with all constant (var=0)
+   varCol <- apply(data.proc, 1, var, na.rm=T);
+   constCol <- varCol == 0 | is.na(varCol);
   # making copy of data.proc and proc.phyobj(phyloseq)
-  #data.proc <- data.proc[!constCol, ];
-  
-  if(length(data.proc)==0){
+   data.proc <- data.proc[!constCol, ];
+   if(length(data.proc)==0){
     AddErrMsg("All features are found to be constant and have been removed from data. No data left after such processing.");
     return(0);
+  }
   }
 
   ##### Excluding samples that contain only zero values
   
   smp.sums <- apply(mbSetObj$dataSet$data.orig, 2, function(x){sum(x>0, na.rm=T)});
 
-if(!all(smp.sums)>0 ){
+ if(!all(smp.sums)>0 ){
   kp.inx <- smp.sums > 0;  
   if(length(which(kp.inx=="TRUE"))==0){
     AddErrMsg("Every sample exclusively comprises zero values!");
     return(0);
-  }
-  data.proc <- mbSetObj$dataSet$data.orig[, kp.inx]; 
-}
+   }
+  data.proc <- data.proc[, kp.inx]; 
+ }
   
   saveDataQs(data.proc, "data.proc.orig", module.type, dataName);
   saveDataQs(data.proc, "data.prefilt", module.type, dataName);
@@ -159,7 +166,6 @@ if(!all(smp.sums)>0 ){
   saveDataQs(data.proc,"data.proc", module.type, dataName);
   saveDataQs(mbSetObj$dataSet$sample_data, "data.sample_data", module.type, dataName);
   
-  #mbSetObj$dataSet$data.orig <- NULL;
   mbSetObj$dataSet$tree <- tree_exist
   
   vari_no <- ncol(mbSetObj$dataSet$sample_data);
@@ -172,7 +178,7 @@ if(!all(smp.sums)>0 ){
   smean <- mean(smpl.sums)
   smax <- max(smpl.sums);
   gd_feat <- nrow(data.proc);
-  
+
   if(exists("current.proc")){
     current.proc$mic$data.proc<<-data.proc
   }
@@ -204,7 +210,7 @@ SanityCheckMetData <- function(mbSetObj,isNormMetInput, disableFilter = FALSE){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  feat.sums <- apply(mbSetObj$dataSet$metabolomics$data.orig, 1, function(x){sum(x, na.rm=T)});
+  feat.sums <- apply(mbSetObj$dataSet$metabolomics$data.orig, 1, function(x){sum(x>0, na.rm=T)});
  
   if(mbSetObj$dataSet$metabolomics$feature.type=="peak" &  any(grepl("[a-z]|[A-Z]|@",mbSetObj$dataSet$metabolomics$comp_metnm))){
    AddErrMsg("The peak format is not correct! Please use Generic Format if the data is a peak table. Note that if retention times are included, they must
@@ -214,13 +220,21 @@ SanityCheckMetData <- function(mbSetObj,isNormMetInput, disableFilter = FALSE){
   if(disableFilter){
     data.proc <-mbSetObj$dataSet$metabolomics$data.orig
   }else{
-    gd.inx <- feat.sums >= 1; # occur in at least 2 samples
+    gd.inx <- feat.sums > 1; # occur in at least 2 samples
     if(length(which(gd.inx=="TRUE"))==0){
       AddErrMsg("Reads occur in only one sample.  All these are considered as artifacts and have been removed from data. No data left after such processing.");
       return(0);
     }
     data.proc <- mbSetObj$dataSet$metabolomics$data.orig[gd.inx, ]; 
   }
+  
+  # filtering the constant features here
+  # check for columns with all constant (var=0)
+  varCol <- apply(data.proc, 1, var, na.rm=T);
+  constCol <- varCol == 0 | is.na(varCol);
+  
+  # making copy of data.proc
+  data.proc <- data.proc[!constCol, ];
   
   if(length(data.proc)==0){
     AddErrMsg("All features are found to be constant and have been removed from data. No data left after such processing.");
