@@ -37,21 +37,28 @@ SanityCheckData <- function(mbSetObj, filetype, preFilter = "sample",rmConstant)
     singleton_length <- 0
   }
 
-  if( preFilter == "sample"){
-    feat.sums <- apply(mbSetObj$dataSet$data.orig, 1, function(x){sum(x>0, na.rm=T)});
-    gd.inx <- feat.sums > 1; #  occur in at least 2 samples
+  if(preFilter == "sample"){ # sample singleton
+    smpl.sums <- apply(mbSetObj$dataSet$data.orig, 1, function(x){sum(x>0, na.rm=T)});
+    gd.inx <- smpl.sums > 1; #  occur in at least 2 samples
     if(length(which(gd.inx=="TRUE"))==0){
       AddErrMsg("Reads occur in only one sample.  All these are considered as artifacts and have been removed from data. No data left after such processing.");
       return(0);
     }
     data.proc <- mbSetObj$dataSet$data.orig[gd.inx, ]; 
-  }else{
+    print("sample singleton performed");
+
+  }else if(preFilter == "count"){ # global singleton
      gd.inx <- feat.sums > 1; # not singleton
     if(length(which(gd.inx=="TRUE"))==0){
       AddErrMsg("No data left after removing the singleton.");
       return(0);
     }
     data.proc <- mbSetObj$dataSet$data.orig[gd.inx, ]; 
+    print("global singleton performed");
+
+  }else{ # none performed
+    data.proc <- mbSetObj$dataSet$data.orig;
+    print("none filtering performed");
   }
   
  if(rmConstant=="true"){
