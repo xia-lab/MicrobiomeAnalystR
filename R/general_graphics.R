@@ -249,7 +249,6 @@ PlotBoxData <- function(mbSetObj, boxplotName, feat, plotType, format = "png", d
   if (is.null(variable)) {
     variable <- colnames(sample_table)[1]
   }
- 
   data <- mbSetObj$analSet$boxdata
   a <- as.numeric(data[, feat])
   min.val <- min(abs(a[a != 0])) / 5

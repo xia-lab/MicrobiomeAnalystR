@@ -465,7 +465,7 @@ PerformUnivarTest <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, t
 
 
   #individual boxplot for features
-  box_data <- data.frame(dat3t_boxplot[,sigfeat %in% nm_boxplot],check.names=FALSE);
+  box_data <- data.frame(dat3t_boxplot,check.names=FALSE);
   box_data$class <- claslbl_boxplot;
   mbSetObj$analSet$boxdata <- box_data;
   fast.write(t(box_data), "uni_abund_data.csv")
@@ -647,7 +647,6 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
   sigHits <- (resTable$FDR < p.lvl & abs(resTable$log2FC) > fc.thresh);
   resTable <- resTable[order(-sigHits, resTable$Pvalues), , drop=FALSE]
   de.Num <- length(which(sigHits));
-  print(de.Num)
   if(de.Num == 0){
     current.msg <<- paste( "No significant features were identified using the given p value cutoff. Please change the cutoff limit.");
   }else{
@@ -669,7 +668,7 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
   #prepare individual boxplot
   box_data <- MRcounts(data);
   #subset only diff. Abundant features
-  box_data <- box_data[sigfeat, ];
+  #box_data <- box_data[sigfeat, ];
   
   #samples in rows
   box_data <- t(box_data);
@@ -1210,11 +1209,10 @@ return(1)
   
   #only getting the names of DE features
   diff_ft <<- rownames(resTable)[sigHits]
-  
   #individual boxplot for features
   sigfeat <- rownames(resTable);
-  box_data <- as.data.frame(dat3t[ ,sigfeat],check.names=FALSE);
-  colnames(box_data) <- sigfeat;
+  box_data <- as.data.frame(dat3t,check.names=FALSE);
+ #colnames(box_data) <- sigfeat;
   box_data$class <- claslbl;
   
   mbSetObj$analSet$boxdata <- box_data;
@@ -1357,8 +1355,8 @@ return(1)
 
   # Individual boxplot for features
   sigfeat <- diff_ft  # Use the DE features identified
-  box_data <- as.data.frame(dat3t[, sigfeat], check.names=FALSE)
-  colnames(box_data) <- sigfeat
+  box_data <- as.data.frame(dat3t, check.names=FALSE)
+  #colnames(box_data) <- sigfeat
   box_data$class <- claslbl
 
   mbSetObj$analSet$boxdata <- box_data
