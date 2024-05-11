@@ -472,7 +472,7 @@ sweaveRScript4exec <- function(users.path){
 sweaveBash4exec <- function(users.path){
 
   ## Prepare Configuration script for slurm running
-  conf_inf <- "#!/bin/bash\n#\n#SBATCH --job-name=16S_Processing\n#\n#SBATCH --ntasks=1\n#SBATCH --time=600:00\n#SBATCH --mem-per-cpu=4G\n#SBATCH --cpus-per-task=4\n"
+  conf_inf <- "#!/bin/bash\n#\n#SBATCH --job-name=16S_Processing\n#\n#SBATCH --ntasks=1\n#SBATCH --time=600:00\n#SBATCH --mem-per-cpu=5G\n#SBATCH --cpus-per-task=2\n"
   
   ## Prepare R script for running
   # need to require("dada2")
