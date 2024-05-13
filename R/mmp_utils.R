@@ -3733,38 +3733,3 @@ ComputeEncasingDiablo <- function(filenm, type, names.vec, level=0.95, omics="NA
   sink();
   return(filenm);
 }
-
-
-ComputeEncasing <- function(filenm, type, names.vec, level=0.95, omics="NA"){
-  
-  
-  level <- as.numeric(level)
-  names = strsplit(names.vec, "; ")[[1]]
-  
-  pos.xyz <- qs::qread("pos.xyz.qs");
-  #print(head(pos.xyz));
-  inx = rownames(pos.xyz) %in% names;
-  coords = as.matrix(pos.xyz[inx,c(1:3)])
-  mesh = list()
-  if(type == "alpha"){
-    library(alphashape3d)
-    library(rgl)
-    sh=ashape3d(coords, 1.0, pert = FALSE, eps = 1e-09);
-    mesh[[1]] = as.mesh3d(sh, triangles=T);
-  }else if(type == "ellipse"){
-    library(rgl);
-    pos=cov(coords, y = NULL, use = "everything");
-    mesh[[1]] = ellipse3d(x=as.matrix(pos), level=level);
-  }else{
-    library(ks);
-    res=kde(coords);
-    r = plot(res, cont=level*100, display="rgl");
-    sc = scene3d();
-    mesh = sc$objects;
-  }
-  library(RJSONIO);
-  sink(filenm);
-  cat(toJSON(mesh));
-  sink();
-  return(filenm);
-}
