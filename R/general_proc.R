@@ -598,8 +598,8 @@ UpdateSampleItems <- function(mbSetObj){
 #'@export
 #'@import edgeR
 #'@import metagenomeSeq
-PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,isAutoScale=F,rareDepth){
-  print(rareDepth)
+PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,isAutoScale=F, rareDepth=NULL){
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
   dataName <- mbSetObj$dataSet$name;
   module.type <- mbSetObj$module.type;
@@ -955,15 +955,18 @@ GetLibscale <- function(mbSetObj){
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PerformRarefaction <- function(mbSetObj, data, rare.opt,rareDepth){
+PerformRarefaction <- function(mbSetObj, data, rare.opt,rareDepth=NULL){
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
   data <- data.matrix(data);
   tax_nm<-rownames(data);
-
   # data must be count data (not contain fractions)
   data <- round(data);
   
+  if(is.null(rareDepth)){
+    rare.opt <- "rarewi"; # use default
+  }
+
   # create phyloseq obj
   otu.tab<-otu_table(data,taxa_are_rows =TRUE);
   taxa_names(otu.tab)<-tax_nm;
@@ -977,15 +980,15 @@ PerformRarefaction <- function(mbSetObj, data, rare.opt,rareDepth){
   if(rare.opt=="rarewi"){
   
   phy.obj <- tryCatch({
-    # Your function call
-    rarefied_data <- rarefy_even_depth(phy.obj, replace=TRUE,rngseed = T)
-    return(rarefied_data)
-  }, error = function(e) {
-    # Custom error handling
-    err.vec <<- e$message
-    # Return NULL or some other value indicating failure
-    return(NULL)
-  }
+        # Your function call
+        rarefied_data <- rarefy_even_depth(phy.obj, replace=TRUE,rngseed = T)
+        return(rarefied_data)
+    }, error = function(e) {
+        # Custom error handling
+        err.vec <<- e$message
+        # Return NULL or some other value indicating failure
+        return(NULL)
+    }
   )
   if(is.NULL(phy.obj)){
     return(NULL)
@@ -1014,6 +1017,7 @@ PerformRarefaction <- function(mbSetObj, data, rare.opt,rareDepth){
   
 }else if(rare.opt=="rareto"){
   print(max((sample_sums(phy.obj))))
+
   if(max((sample_sums(phy.obj)))<rareDepth){
      AddErrMsg("The specified library depth exceeds that of all samples! Please provide a suitable depth value for rarefaction!")
      return(NULL)
