@@ -629,7 +629,7 @@ ReadPeakList <- function(mbSetObj=NA, dataName = NA, rankOpt="pval",rtOpt,mode,i
   mbSetObj$dataSet$metabolomics$feature.type <- "peak";
   mbSetObj$dataSet$metabolomics$read <- TRUE
 
-return(.set.mSet(mbSetObj));
+return(.set.mbSetObj(mbSetObj));
 }
 
 #'Function to create a summary of a sample using a piechart at different tax level.
