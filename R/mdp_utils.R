@@ -1770,7 +1770,7 @@ sink();
     grp_size <- length(levels(CLASS))
     
     if(grp_size <= 2){
-      width <- 500;
+      width <- 400;
     }else if(grp_size >= 3 & grp_size < 6){
       width <- 600;
     }else{
@@ -2449,7 +2449,7 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
   mbSetObj$imgSet$stack <- barplotName;
   mbSetObj$imgSet$stackRda <-rdaName;
   mbSetObj$imgSet$stackType <- "area";
-
+ 
   Cairo::Cairo(file=barplotName,width=min(w,1000), height=h, type=format, bg="white",dpi=dpi);
   
   box <- ggplot(data,aes(x=step,y=value)) + theme_bw() +

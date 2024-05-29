@@ -330,7 +330,7 @@ PlotBoxMultiData <- function(mbSetObj, boxplotName, analysis.var, feat, plotType
   }
 
   
-   
+
 
   if (var.type == "disc") {
      plot1 <- ggplot2::ggplot(data, aes(x = data$class, y = data[, feat], fill = data$class))  
