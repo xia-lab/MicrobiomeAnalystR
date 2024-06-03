@@ -9,7 +9,7 @@ MessageOutput <- function(msg, eol = "\n"){
   write.table(msg, file = "seq_process_details.txt", quote = F, row.names = F, col.names = F, append = T, eol = eol)
 }
 
-PerformSeqCheck <- function(home_dir = ""){  
+PerformSeqCheck <- function(home_dir = ""){
   require(dada2)
   
   path <- home_dir
@@ -17,8 +17,10 @@ PerformSeqCheck <- function(home_dir = ""){
   fnFs <- sort(list.files(paste0(path, "/upload"), pattern="_R1.fastq", full.names = TRUE))
   fnRs <- sort(list.files(paste0(path, "/upload"), pattern="_R2.fastq", full.names = TRUE))
   
-  if(length(fnRs)>2){
+  if(length(fnRs)>=2){
     p1 <- plotQualityProfile(c(fnFs[1:2], fnRs[1:2]))
+  } else if(length(fnRs)==1){
+    p1 <- plotQualityProfile(c(fnFs[1], fnRs[1]))
   } else {
     p1 <- plotQualityProfile(fnFs[1:2])
   }
@@ -501,6 +503,51 @@ sweaveBash4exec <- function(users.path){
   
   return(1)
 }
+
+sweaveBash4execPro <- function(users.path, isfromGoogle = FALSE, source_path){
+
+  ## Prepare Configuration script for slurm running
+  conf_inf <- paste0("#!/bin/bash\n#\n#SBATCH --job-name=16S_Processing\n#\n#SBATCH --ntasks=2\n#SBATCH --time=600:00\n#SBATCH --mem-per-cpu=5G\n#SBATCH --cpus-per-task=2\n#SBATCH --output=", users.path, "/seq_process_details.txt\n")
+  
+  ## to check if need to download files from google drive at the begining
+  if(isfromGoogle){
+    download_script <- paste0("Rscript --vanilla ", source_path, "/XiaLabPro/R/download_googledrive.R ", users.path)
+  } else {
+    download_script <- "";
+  }
+  
+  
+  ## Prepare R script for running
+  # need to require("dada2")
+  str <- paste0('library(dada2)');
+  
+  # Set working dir & funcs to be used
+  str <- paste0(str, ";\n", "setwd(\'",users.path,"\')");
+  str <- paste0(str, ";\n", "load('dataObj_param.rda')");
+  str <- paste0(str, ";\n", "dataObj <<- dataObj");
+  str <- paste0(str, ";\n", "MessageOutput <- dataObj[['funs']][['MessageOutput']]");
+  str <- paste0(str, ";\n", "PerformSeqCheck <- dataObj[['funs']][['PerformSeqCheck']]");
+  str <- paste0(str, ";\n", "PerformSeqImport <- dataObj[['funs']][['PerformSeqImport']]");
+  str <- paste0(str, ";\n", "PerformSeqProcessing <- dataObj[['funs']][['PerformSeqProcessing']]");
+  
+  ## Construct the exec pipeline
+  str <- paste0(str, ';\n',  "PerformSeqImport('.')")
+  str <- paste0(str, ';\n',  "PerformSeqProcessing()")
+  
+  # sink command for running
+  sink("ExecuteRaw16Seq.sh");
+  
+  cat(conf_inf);
+  if(download_script!=""){
+    cat("\n\n", download_script, "\n\n")
+  }
+  cat(paste0("\nR -e \"\n", str, "\n\""));
+  
+  sink();
+  
+  return(1)
+}
+
 
 ReadRawMeta<-function(fileName){
   if(grepl(".txt", fileName, fixed=T)){
