@@ -326,15 +326,12 @@ PlotBoxMultiData <- function(mbSetObj, boxplotName, analysis.var, feat, plotType
     plot.title <- "Log-transformed Counts"
   } else {
     feat2 <- feat
-    plot.title <- paste0(feat, ": Normalized Counts")
+    plot.title <- "Normalized Counts"
   }
-
-  
-
-
+ 
   if (var.type == "disc") {
      plot1 <- ggplot2::ggplot(data, aes(x = data$class, y = data[, feat], fill = data$class))  
-     plot2 <- ggplot2::ggplot(data, aes(x = data$class, data$log_feat, fill = data$class)) 
+     plot2 <- ggplot2::ggplot(data, aes(x = data$class, data[,feat2], fill = data$class)) 
     
     if(plotType == "violin"){
         plot1 <- plot1 + geom_violin(trim=FALSE) 
@@ -354,7 +351,7 @@ PlotBoxMultiData <- function(mbSetObj, boxplotName, analysis.var, feat, plotType
      plot2 <- plot2 +theme_bw() + geom_jitter(size=1) + 
             stat_summary(fun=mean, colour="yellow", geom="point", shape=18, size=3, show.legend = FALSE)+
              labs(y = "", x = variable, fill = variable) + theme(axis.text.x = element_text(angle=90, hjust=1))+
-             ggtitle("Log-transformed Count") +
+             ggtitle(plot.title) +
             theme(plot.title = element_text(hjust = 0.5), legend.position = "none")+
              theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank())
 
@@ -376,16 +373,11 @@ PlotBoxMultiData <- function(mbSetObj, boxplotName, analysis.var, feat, plotType
       theme(plot.title = element_text(hjust = 0.5))
   }
 
-  if (is.norm == "false") {
+ 
     Cairo::Cairo(file = boxplotName, width = 720, height = 360, type = format, bg = "white", dpi = dpi)
     grid.arrange(ggplotGrob(plot1), ggplotGrob(plot2), ncol = 2, nrow = 1, top = feat)
     dev.off()
-  } else {
-    Cairo::Cairo(file = boxplotName, width = 720, height = 360, type = format, bg = "white", dpi = dpi)
-    grid.arrange(ggplotGrob(plot2), ncol = 1, nrow = 1)
-    dev.off()
-  }
-
+   
   return(.set.mbSetObj(mbSetObj))
 }
 
@@ -414,7 +406,7 @@ PlotBoxMultiMetabo <- function(mbSetObj, boxplotName, analysis.var, feat,plotTyp
 
   if (var.type == "disc") {
     df.orig <- data.frame(value = as.numeric(dt.orig[, feat]), name = claslbl)
-   df.norm <- data.frame(value = as.numeric(dt.norm[, feat]), name = claslbl)
+    df.norm <- data.frame(value = as.numeric(dt.norm[, feat]), name = claslbl)
 
     plot1 <- ggplot2::ggplot(data = df.orig, aes(x =name, y = value, fill = name))  
      plot2 <- ggplot2::ggplot(data = df.norm, aes(x =name, y = value, fill = name)) 
@@ -464,16 +456,11 @@ PlotBoxMultiMetabo <- function(mbSetObj, boxplotName, analysis.var, feat,plotTyp
       theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
   }
 
-  if (mbSetObj$dataSet$metabolomics$isNormInput == "false") {
+ 
     Cairo::Cairo(file = boxplotName, width = 720, height = 360, type = format, bg = "white", dpi = dpi)
     grid.arrange(ggplotGrob(plot1), ggplotGrob(plot2), ncol = 2, nrow = 1, top = feat)
     dev.off()
-  } else {
-    Cairo::Cairo(file = boxplotName, width = 720, height = 360, type = format, bg = "white", dpi = dpi)
-    grid.arrange(ggplotGrob(plot2), ncol = 1, nrow = 1)
-    dev.off()
-  }
-
+   
   message("metabo box plot done")
   return(.set.mbSetObj(mbSetObj))
 }
