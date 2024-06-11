@@ -1197,9 +1197,12 @@ return(1)
 
  if(mbSetObj[["module.type"]]=="sdp"){
   ko_dic <- readRDS("../../lib/ko/ko_dic.rds")
- resTable <- cbind(name=ko_dic$Name[match(rownames(resTable),ko_dic$KO)], resTable)
- }
-  fast.write(resTable, file="rnaseq_de.csv");
+   output <- cbind(name=ko_dic$Name[match(rownames(resTable),ko_dic$KO)], resTable)
+  fast.write(output, file="rnaseq_de.csv");
+ }else{
+  fast.write(resTable, file="rnaseq_de.csv")
+  }
+
   
   if(nrow(resTable) > 500){
     resTable<-resTable[1:500, ];
