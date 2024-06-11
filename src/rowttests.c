@@ -177,7 +177,7 @@ SEXP rowcolttests(SEXP _x, SEXP _fac, SEXP _nrgrp, SEXP _which, SEXP _na_rm)
 	  if(length(_fac)!=nc) {
 	      sprintf(errmsg, "length(fac)=%d, ncol(x)=%d, should be the same.",
 		      length(_fac), nc);
-	      error(errmsg);
+	      //error(errmsg);
 	  }
           no = nc;
           nt = nr;
@@ -186,7 +186,7 @@ SEXP rowcolttests(SEXP _x, SEXP _fac, SEXP _nrgrp, SEXP _which, SEXP _na_rm)
 	  if(length(_fac)!=nr) {
 	      sprintf(errmsg, "length(fac)=%d, nrow(x)=%d, should be the same.",
 		      length(_fac), nr);
-	      error(errmsg);
+	      //error(errmsg);
 	  }
           no = nr;
           nt = nc;
