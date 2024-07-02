@@ -381,7 +381,7 @@ IsPoorReplicate <- function(mbSetObj){
 }
 
 GetResMat <- function(mbSetObj){
-  mbSetObj <- .get.mbSetObj(mbSetObj);
+  mbSetObj <- .get.mbSetObj(mbSetObj); 
   return(as.matrix(signif(mbSetObj$analSet$resTable),5));
 }
 

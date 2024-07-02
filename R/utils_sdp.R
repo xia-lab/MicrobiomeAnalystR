@@ -291,9 +291,12 @@ PlotFunctionStack <-function(mbSetObj, summaryplot, functionlvl, abundcal, genei
     AddErrMsg("ECs are not supported for functional profiling!")
     return(0)
   }
-
-  summaryplot <- paste(summaryplot, ".", format, sep="");
   
+  jsonName = paste(summaryplot, ".json", sep="");
+  rdaName = paste(summaryplot, ".rda", sep="");
+  summaryplot <- paste(summaryplot, ".", format, sep="");
+
+
   load_reshape();
 
   data <- mbSetObj$dataSet$proc.phyobj;
@@ -436,7 +439,7 @@ PlotFunctionStack <-function(mbSetObj, summaryplot, functionlvl, abundcal, genei
   }else {
     x.colors <- rep(custom_col42,length.out=x);
   }
-    
+
   Cairo::Cairo(file=summaryplot,width=w, height=600, type=format, bg="white",dpi=dpi);
   mbSetObj$imgSet$func.prof<-summaryplot;
 
@@ -470,6 +473,21 @@ PlotFunctionStack <-function(mbSetObj, summaryplot, functionlvl, abundcal, genei
 
   print(box);
   dev.off();
+ # for plotly
+  save(box,file=rdaName);
+    p <- ggplotly_modified(box, tempfile_path = paste0(getwd(), "/temp_file4plotly"));
+
+   narm <- p[["x"]][["data"]]
+   for(i in 1:length(narm)){
+       narm[[i]]$y[is.na(narm[[i]]$y)]=0;
+   }
+   p[["x"]][["data"]] <- narm
+
+jsonlist <- RJSONIO::toJSON(p, pretty = T,force = TRUE,.na = "null");
+sink(jsonName);
+cat(jsonlist);
+sink();
+
   mbSetObj$analSet$func.prof<-data;
   mbSetObj$analSet$func.lvl<-functionlvl;
   return(.set.mbSetObj(mbSetObj))
