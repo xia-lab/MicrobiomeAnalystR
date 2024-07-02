@@ -663,7 +663,8 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
     if(scale.opt != "none"){
       if(scale.opt=="colsum"){
         data <- sweep(data, 2, colSums(data), FUN="/")
-        data <- data*10000000;
+        #data <- data*10000000;
+        data <- data*1000000;
         if(i==1){
           msg <- c(msg, paste("Performed ```total sum scaling``` normalization."));
         }
