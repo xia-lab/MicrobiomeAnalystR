@@ -2301,8 +2301,8 @@ GetMMPMetTable<-function(mbSetObj){
   print(xtable::xtable(mbSetObj$analSet$met.map, caption="Result from Metabolite Name Mapping"),
         tabular.environment = "longtable", caption.placement="top", size="\\scriptsize");
 }
+
 GenerateCompJson <- function(mbSetObj = NA, fileName, format,type, mode = 1, taxlvl, parent = "Phylum", sigLevel = 0.05, fcLevel = 0) {
-  #save.image("comp.RData");
   library(RColorBrewer)
   library("dplyr");
   
@@ -2358,7 +2358,7 @@ GenerateCompJson <- function(mbSetObj = NA, fileName, format,type, mode = 1, tax
                         group_by(parent) %>%
                         summarise(chr_len = max(len)) %>%
                         mutate(tot = cumsum(chr_len) - chr_len) %>%
-                        select(-chr_len) %>%
+                        #select(-chr_len) %>%
                         left_join(resTable, ., by = c("parent" = "parent")) %>%
                         arrange(parent, len) %>%
                         mutate(BPcum = len + tot))

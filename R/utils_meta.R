@@ -1,5 +1,5 @@
 ##################################################
-## R script for ExpressAnalyst
+## R script for MicrobiomeAnalyst
 ## Description: Functions related to web interface
 ## Author: Guangyan Zhou, guangyan.zhou@mail.mcgill.ca
 ##################################################

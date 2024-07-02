@@ -9,10 +9,12 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
                                       corr.net.name, plotNet = FALSE, netType="static", netLayout="kk",
                                       netTextSize = 2.5){
 
+  save.image("mycorr.RData");
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  mbSetObj$dataSet$cor.method <- cor.method
-  mbSetObj$analSet$abund.opt <- abundOpt
-  current.msg <<- "" 
+  mbSetObj$dataSet$cor.method <- cor.method;
+  mbSetObj$analSet$abund.opt <- abundOpt;
+  current.msg <<- ""; 
   if(.on.public.web){
     load_ppcor();
     load_igraph();
