@@ -1997,8 +1997,13 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
       }
       
       qs::qsave(data, "data_unifra.qs");
-      ord <- ordinate(data,method = ordmeth,"unifrac",weighted=TRUE);
-      
+
+
+        if(ordmeth=="PCA"){
+          ord <- prcomp(t(data@otu_table@.Data), center=TRUE, scale=F)
+      }else{
+               ord <- ordinate(data,method = ordmeth,"unifrac",weighted=TRUE);
+      }
     } else if (distName=="unifrac") {
       
       load_ape();      
@@ -2016,14 +2021,26 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
       }
       
       qs::qsave(data, "data_unifra.qs");
-      ord <- ordinate(data, method = ordmeth,"unifrac");
-    }else{
-      ord <- ordinate(data, method = ordmeth,distName);
-    }
-    
+   
+  if(ordmeth=="PCA"){
+          ord <- prcomp(t(data@otu_table@.Data), center=TRUE, scale=F)
+      }else{
+             ord <- ordinate(data, method = ordmeth,"unifrac");
+      }
+    }else{ 
+      if(ordmeth=="PCA"){
+          ord <- prcomp(t(data@otu_table@.Data), center=TRUE, scale=F)
+      }else{
+           ord <- ordinate(data, method = ordmeth,distName);
+      }
+
+    }   
     if(ordmeth == "NMDS"){
       ord$vectors <- ord$points;
       colnames(ord$vectors) <- c("Axis.1", "Axis.2")
+    }else if(ordmeth == "PCA"){
+        ord$vectors <- ord$x;
+      colnames(ord$vectors)[1:3] <- c("Axis.1", "Axis.2", "Axis.3")
     }
     
     if(colopt == "continuous"){
