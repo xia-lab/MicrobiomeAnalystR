@@ -26,12 +26,12 @@ PerformAlphaDiversityComp<-function(mbSetObj, opt, metadata, pair.wise = "false"
   stat.info <- NULL;
   
   if(length(levels(cls)) > 2){
-    if(opt=="tt"){
-      res <- anova(aov(x ~ cls));
-      stat.info <- paste("p-value: ", signif(res$"Pr(>F)"[1], 5), "; [ANOVA] F-value: ", signif(res$"F value"[1], 5), sep="");
-    }else{
+    if(opt=="nonpar"){
       res <- kruskal.test(x ~ cls);
       stat.info <- paste("p-value: ", signif(res$p.value, 5), "; [Kruskal-Wallis] statistic: ", signif(res$statistic, 5) , sep="");
+    }else{
+      res <- anova(aov(x ~ cls));
+      stat.info <- paste("p-value: ", signif(res$"Pr(>F)"[1], 5), "; [ANOVA] F-value: ", signif(res$"F value"[1], 5), sep="");
     }
 
     if(pair.wise != "false"){
@@ -48,6 +48,8 @@ PerformAlphaDiversityComp<-function(mbSetObj, opt, metadata, pair.wise = "false"
 
             if(opt=="tt"){
                 res <- t.test(x[inx1], x[inx2]);
+            }else if(opt=="ht"){
+                res <- ecolTest::Hutcheson_t_test(x[inx1], x[inx2], shannon.base = 10);
             }else{
                 res <- wilcox.test(x[inx1], x[inx2]);
             }
@@ -68,6 +70,9 @@ PerformAlphaDiversityComp<-function(mbSetObj, opt, metadata, pair.wise = "false"
     if(opt=="tt"){
       res <- t.test(x[inx1], x[inx2]);
       stat.info <- paste("p-value: ", signif(res$p.value, 5), "; [T-test] statistic: ", signif(res$statistic, 5), sep="");
+    }else if(opt=="ht"){
+       res <- ecolTest::Hutcheson_t_test(x[inx1], x[inx2], shannon.base = 10);
+       stat.info <- paste("p-value: ", signif(res$p.value, 5), "; [Hutcheson T-test] statistic: ", signif(res$statistic, 5), sep="");
     }else{
       res <- wilcox.test(x[inx1], x[inx2]);
       stat.info <- paste("p-value: ", signif(res$p.value, 5), "; [Mann-Whitney] statistic: ", signif(res$statistic, 5), sep="");
