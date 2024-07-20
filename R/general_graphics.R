@@ -518,7 +518,7 @@ PlotHeatmap <- function(mbSetObj, plotNm, dataOpt = "norm",
                         scaleOpt = "row", smplDist, clstDist, palette, metadata,
                         taxrank, viewOpt, doclust, format = "png", showColnm, showRownm,
                         unitCol, unitRow, fzCol, fzRow, annoPer, fzAnno,
-                        appendnm = "F",ifgrp="F",grpSel,grpMethod, rowV = F, colV = T, 
+                        appendnm = "F",ifgrp="F",grpSel, rowV = F, colV = T, 
                         var.inx = NA, border = T, width = NA, dpi = 72) {
   mbSetObj <- .get.mbSetObj(mbSetObj)
   load_iheatmapr()
@@ -674,12 +674,8 @@ PlotHeatmap <- function(mbSetObj, plotNm, dataOpt = "norm",
   my.mns <- matrix(ncol=length(lvs),nrow=nrow(data1sc));
   hc.cls <- annotation[[grpSel]][match(colnames(data1sc),rownames(annotation))]
   for(i in 1:length(lvs)){
-    if(grpMethod=="mean"){
       my.mns[,i]<- rowMeans(data1sc[,hc.cls== lvs[i]]);
-    }else{
-      my.mns[,i]<- rowSums(data1sc[,hc.cls== lvs[i]]);
-    }
- 
+  
   }
   colnames(my.mns) <- lvs;
   rownames(my.mns) <- rownames(data1sc);
