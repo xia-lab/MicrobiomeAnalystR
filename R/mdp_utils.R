@@ -238,18 +238,15 @@ simpleCap <- function(x) {
 }
 
 PerformLayOut <- function(g){
+
   vc <- vcount(g);
-  if(vc > 3000) {
-    pos.xy <- layout.lgl(g, maxiter = 100);
-  }else if(vc > 2000) {
-    pos.xy <- layout.lgl(g, maxiter = 150);
-  }else if(vc > 1000) {
-    pos.xy <- layout.lgl(g, maxiter = 200);
-  }else if(vc < 150){
-    pos.xy <- layout.kamada.kawai(g);
-  }else{
-    pos.xy <- layout.fruchterman.reingold(g);
-  }
+    if(vc > 5000) {
+      pos.xy <- layout_with_lgl(g);
+    }else if(vc < 100){
+      pos.xy <- layout_with_kk(g);
+    }else{
+      pos.xy <- layout_with_fr(g);
+    }
   pos.xy;
 }
 
