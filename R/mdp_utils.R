@@ -26,12 +26,12 @@ PerformAlphaDiversityComp<-function(mbSetObj, opt, metadata, pair.wise = "false"
   stat.info <- NULL;
   
   if(length(levels(cls)) > 2){
-    if(opt=="tt"){
-      res <- anova(aov(x ~ cls));
-      stat.info <- paste("p-value: ", signif(res$"Pr(>F)"[1], 5), "; [ANOVA] F-value: ", signif(res$"F value"[1], 5), sep="");
-    }else{
+    if(opt=="nonpar"){
       res <- kruskal.test(x ~ cls);
       stat.info <- paste("p-value: ", signif(res$p.value, 5), "; [Kruskal-Wallis] statistic: ", signif(res$statistic, 5) , sep="");
+    }else{
+      res <- anova(aov(x ~ cls));
+      stat.info <- paste("p-value: ", signif(res$"Pr(>F)"[1], 5), "; [ANOVA] F-value: ", signif(res$"F value"[1], 5), sep="");
     }
 
     if(pair.wise != "false"){
@@ -48,6 +48,8 @@ PerformAlphaDiversityComp<-function(mbSetObj, opt, metadata, pair.wise = "false"
 
             if(opt=="tt"){
                 res <- t.test(x[inx1], x[inx2]);
+            }else if(opt=="ht"){
+                res <- ecolTest::Hutcheson_t_test(x[inx1], x[inx2], shannon.base = 10);
             }else{
                 res <- wilcox.test(x[inx1], x[inx2]);
             }
@@ -68,6 +70,9 @@ PerformAlphaDiversityComp<-function(mbSetObj, opt, metadata, pair.wise = "false"
     if(opt=="tt"){
       res <- t.test(x[inx1], x[inx2]);
       stat.info <- paste("p-value: ", signif(res$p.value, 5), "; [T-test] statistic: ", signif(res$statistic, 5), sep="");
+    }else if(opt=="ht"){
+       res <- ecolTest::Hutcheson_t_test(x[inx1], x[inx2], shannon.base = 10);
+       stat.info <- paste("p-value: ", signif(res$p.value, 5), "; [Hutcheson T-test] statistic: ", signif(res$statistic, 5), sep="");
     }else{
       res <- wilcox.test(x[inx1], x[inx2]);
       stat.info <- paste("p-value: ", signif(res$p.value, 5), "; [Mann-Whitney] statistic: ", signif(res$statistic, 5), sep="");
@@ -233,18 +238,15 @@ simpleCap <- function(x) {
 }
 
 PerformLayOut <- function(g){
+
   vc <- vcount(g);
-  if(vc > 3000) {
-    pos.xy <- layout.lgl(g, maxiter = 100);
-  }else if(vc > 2000) {
-    pos.xy <- layout.lgl(g, maxiter = 150);
-  }else if(vc > 1000) {
-    pos.xy <- layout.lgl(g, maxiter = 200);
-  }else if(vc < 150){
-    pos.xy <- layout.kamada.kawai(g);
-  }else{
-    pos.xy <- layout.fruchterman.reingold(g);
-  }
+    if(vc > 5000) {
+      pos.xy <- layout_with_lgl(g);
+    }else if(vc < 100){
+      pos.xy <- layout_with_kk(g);
+    }else{
+      pos.xy <- layout_with_fr(g);
+    }
   pos.xy;
 }
 
@@ -1997,8 +1999,13 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
       }
       
       qs::qsave(data, "data_unifra.qs");
-      ord <- ordinate(data,method = ordmeth,"unifrac",weighted=TRUE);
-      
+
+
+        if(ordmeth=="PCA"){
+          ord <- prcomp(t(data@otu_table@.Data), center=TRUE, scale=F)
+      }else{
+               ord <- ordinate(data,method = ordmeth,"unifrac",weighted=TRUE);
+      }
     } else if (distName=="unifrac") {
       
       load_ape();      
@@ -2016,14 +2023,26 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
       }
       
       qs::qsave(data, "data_unifra.qs");
-      ord <- ordinate(data, method = ordmeth,"unifrac");
-    }else{
-      ord <- ordinate(data, method = ordmeth,distName);
-    }
-    
+   
+  if(ordmeth=="PCA"){
+          ord <- prcomp(t(data@otu_table@.Data), center=TRUE, scale=F)
+      }else{
+             ord <- ordinate(data, method = ordmeth,"unifrac");
+      }
+    }else{ 
+      if(ordmeth=="PCA"){
+          ord <- prcomp(t(data@otu_table@.Data), center=TRUE, scale=F)
+      }else{
+           ord <- ordinate(data, method = ordmeth,distName);
+      }
+
+    }   
     if(ordmeth == "NMDS"){
       ord$vectors <- ord$points;
       colnames(ord$vectors) <- c("Axis.1", "Axis.2")
+    }else if(ordmeth == "PCA"){
+        ord$vectors <- ord$x;
+      colnames(ord$vectors)[1:3] <- c("Axis.1", "Axis.2", "Axis.3")
     }
     
     if(colopt == "continuous"){

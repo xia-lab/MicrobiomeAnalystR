@@ -518,15 +518,13 @@ PlotHeatmap <- function(mbSetObj, plotNm, dataOpt = "norm",
                         scaleOpt = "row", smplDist, clstDist, palette, metadata,
                         taxrank, viewOpt, doclust, format = "png", showColnm, showRownm,
                         unitCol, unitRow, fzCol, fzRow, annoPer, fzAnno,
-                        appendnm = "F", rowV = F, colV = T, var.inx = NA, border = T, width = NA, dpi = 72) {
+                        appendnm = "F",ifgrp="F",grpSel, rowV = F, colV = T, 
+                        var.inx = NA, border = T, width = NA, dpi = 72) {
   mbSetObj <- .get.mbSetObj(mbSetObj)
   load_iheatmapr()
   load_rcolorbrewer()
   load_viridis()
-  load_phyloseq()
-
-  print(c(unitCol, unitRow, fzCol, fzRow, annoPer, fzAnno))
-  print(c(showColnm, showRownm))
+  load_phyloseq() 
   set.seed(2805614)
   # used for color pallete
   variable <<- metadata
@@ -668,10 +666,29 @@ PlotHeatmap <- function(mbSetObj, plotNm, dataOpt = "norm",
 
   data1sc <- as.matrix(apply(data1, 2, as.numeric))
   rownames(data1sc) <- rownames(data1)
+
+ if(ifgrp=="T"){
+   annotation = annotation[,grpSel,drop=F]
+ 
+  lvs <- levels(annotation[[grpSel]]);
+  my.mns <- matrix(ncol=length(lvs),nrow=nrow(data1sc));
+  hc.cls <- annotation[[grpSel]][match(colnames(data1sc),rownames(annotation))]
+  for(i in 1:length(lvs)){
+      my.mns[,i]<- rowMeans(data1sc[,hc.cls== lvs[i]]);
+  
+  }
+  colnames(my.mns) <- lvs;
+  rownames(my.mns) <- rownames(data1sc);
+  data1sc <- my.mns; 
+   annotation = unique(annotation)
+  rownames(annotation) = annotation[[grpSel]]
+}
+  
   data1sc <- scale_mat(data1sc, scaleOpt)
-
-
+ 
   data1sc <- round(data1sc, 5)
+  
+ 
   w <- min(1500, ncol(data1sc) * unitCol + 50)
   h <- min(1800, nrow(data1sc) * unitRow + 50)
 

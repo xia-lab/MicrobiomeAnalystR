@@ -663,7 +663,8 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
     if(scale.opt != "none"){
       if(scale.opt=="colsum"){
         data <- sweep(data, 2, colSums(data), FUN="/")
-        data <- data*10000000;
+        #data <- data*10000000;
+        data <- data*1000000;
         if(i==1){
           msg <- c(msg, paste("Performed ```total sum scaling``` normalization."));
         }
@@ -1182,6 +1183,10 @@ PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataN
     colLegendNm = "Group";
 
   }
+
+  # save the full lib size 
+  fast.write(cbind(Size=smpl.sums), file="norm_libsizes.csv");
+
   # Create a data frame for ggplot
   if(is.data.frame(col.vec)){
     library_size_data <- data.frame(Sample = names(smpl.sums), LibrarySize = smpl.sums, group = as.character(col.vec[[colnames(col.vec)]]))

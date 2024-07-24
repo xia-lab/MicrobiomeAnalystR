@@ -1126,69 +1126,6 @@ SelectRefData <- function(mbSetObj){
     return(1)
 }
 
-PlotLibSizeHistogram <- function(mbSetObj, imgName,format="png", dpi=72, dataName=""){
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-
-  if(dataName != ""){
-    # plot single dataset or not, in metaanal
-    ind <- T; 
-  }else{
-    dataName <- mbSetObj$dataSet$name;
-    ind <- F;
-  }
-  module.type <- mbSetObj$module.type;
-  
-  if(all(c(mbSetObj$module.type == "meta", !ind))){
-    sums.list <- list();
-    for(i in 1:length(mbSetObj$dataSets)){
-      dataName <- mbSetObj$dataSets[[i]]$name;
-      data.proc <- readDataQs("data.proc", module.type, dataName);
-      data_bef <- data.matrix(data.proc);
-      smpl.sums <- colSums(data_bef);
-      names(smpl.sums) <- colnames(data_bef);
-      smpl.sums <- sort(smpl.sums);
-      sums.list[[i]] <- smpl.sums
-    }
-    smpl.sums  <- unlist(sums.list)
-  }else{
-    data.proc <- readDataQs("data.proc", module.type, dataName);
-    data_bef <- data.matrix(data.proc);
-    smpl.sums <- colSums(data_bef);
-    names(smpl.sums) <- colnames(data_bef);
-    smpl.sums <- sort(smpl.sums);
-  }
-  
-  # save the full lib size 
-  fast.write(cbind(Size=smpl.sums), file="norm_libsizes.csv");
-  
-  smpl.sums <- sort(smpl.sums);
-  vip.nms <- names(smpl.sums);
-  vip.nms <- substr(vip.nms, 1, 16);
-  
-  myH <- ncol(data_bef)*25 + 50;
-  imgName = paste(imgName,".", format, sep="");
-  mbSetObj$imgSet$lib.size<-imgName;
-  
-  df <- data.frame(sampleName=vip.nms, counts=smpl.sums, index=seq(1,length(smpl.sums)))
-  p1 <- ggplot(df) +
-    geom_histogram(aes(x = counts), color = "black", fill = "gray", bins = 30) +
-    labs(x = "Library size", y = "Frequency (n)") + 
-    # scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10^x), 
-    # labels = scales::trans_format("log10", scales::math_format(10^.x))) +
-    theme_bw() +
-    theme(panel.grid.major = element_blank(), # Removes the grid
-          panel.grid.minor = element_blank(),
-          panel.border = element_blank(),
-          panel.background = element_blank(),
-          axis.line = element_line(colour = "black")) # Adds y-axis
-  
-  Cairo::Cairo(file=imgName, width=580, height=450, type=format, bg="white",dpi=dpi);
-  print(p1)
-  dev.off();
-
-  return(.set.mbSetObj(mbSetObj))
-}
-
 subsetPhyloseqByDataset <- function(mbSetObj, phyobj){
    mbSetObj <- .get.mbSetObj(mbSetObj);
    mdata.all <- mbSetObj$mdata.all;
