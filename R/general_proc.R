@@ -1146,7 +1146,7 @@ PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataN
   library(ggplot2)
   library(dplyr)
   library(Cairo)
-
+  
   if(dataName != ""){
     ind <- TRUE
   } else {
@@ -1172,7 +1172,7 @@ PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataN
     smpl.sums <- unlist(sums.list);
     col.vec <- unlist(datanm.list);
     colLegendNm = "Dataset";
-
+  
   } else {
     data.proc <- readDataQs("data.proc", module.type, dataName)
     data_bef <- data.matrix(data.proc)
@@ -1181,23 +1181,28 @@ PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataN
     smpl.sums <- sort(smpl.sums)
     col.vec <- as.vector(mbSetObj$dataSet$sample_data[match(names(smpl.sums),rownames(mbSetObj$dataSet$sample_data)),1]);
     colLegendNm = "Group";
-
+  
   }
-
+  
   # save the full lib size 
   fast.write(cbind(Size=smpl.sums), file="norm_libsizes.csv");
-
+  
   # Create a data frame for ggplot
   if(is.data.frame(col.vec)){
     library_size_data <- data.frame(Sample = names(smpl.sums), LibrarySize = smpl.sums, group = as.character(col.vec[[colnames(col.vec)]]))
   } else {
     library_size_data <- data.frame(Sample = names(smpl.sums), LibrarySize = smpl.sums, group = col.vec)
   }
-
+  
   colnames(library_size_data)[3] <- "group";
   library_size_data <- library_size_data %>% arrange(desc(LibrarySize))
   library_size_data$Sample = factor(library_size_data$Sample, levels=library_size_data[order(library_size_data$LibrarySize), "Sample"])
-
+  
+  # Determine the width based on the number of samples
+  num_samples <- length(smpl.sums)
+  width <- ifelse(num_samples < 50, 800, 800 + (num_samples - 50) * 10)
+  height <- 600
+  
   # Plotting with ggplot2
   imgName <- paste0(origImgName, ".", format)
   g <- ggplot(library_size_data, aes(x = Sample, y = LibrarySize)) +
@@ -1208,16 +1213,15 @@ PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataN
           legend.text = element_text(size = 14), legend.title = element_text(size = 14))
   
   if(imgName != ""){
-  Cairo::Cairo(file=imgName, width=800, height=600, type=format, bg="white",dpi=dpi);
-  print(g);
-  dev.off();
+    Cairo::Cairo(file=imgName, width=width, height=height, type=format, bg="white", dpi=dpi);
+    print(g);
+    dev.off();
   }
   
   mbSetObj$imgSet$lib.size <- imgName;
   
   mean_line <- mean(library_size_data$LibrarySize)
   annotation_offset <- 0.05 * (max(library_size_data$LibrarySize) - min(library_size_data$LibrarySize))
-  
   
   # Split the data by group
   grouped_data <- split(library_size_data, library_size_data$group)

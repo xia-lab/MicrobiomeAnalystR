@@ -229,6 +229,7 @@ SetupMetaStats <- function(BHth, paramSet,analSet){
 #'License: GNU GPL (>= 2)
 #'@export
 CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank="Family", view.mode="ratio", format="png", dpi=100) {
+  save.image("alpha.RData");
   mbSetObj <- .get.mbSetObj(mbSetObj);
   mdata.all <- mbSetObj$mdata.all;
   sel.nms <- names(mdata.all)[mdata.all==1];
