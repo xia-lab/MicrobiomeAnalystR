@@ -73,7 +73,12 @@ my.pcoa.3d <- function(mbSetObj, ordMeth, distName, taxrank, colopt, variable, t
                                   outgroup = new.outgroup,
                                   resolve.root=TRUE)
     }
+    if(ordMeth=="PCA"){
+             GP.ord  <- prcomp(t(data@otu_table@.Data), center=TRUE, scale=F)
+      }else{
+       
     GP.ord <-ordinate(data,ordMeth,"unifrac",weighted=TRUE);
+      }
   } else if (distName=="unifrac"){
     pg_tree <- qs::qread("tree.qs");
     pg_tb <- tax_table(data);
@@ -94,18 +99,43 @@ my.pcoa.3d <- function(mbSetObj, ordMeth, distName, taxrank, colopt, variable, t
                                   outgroup = new.outgroup,
                                   resolve.root=TRUE)
     }
-    GP.ord <-ordinate(data,ordMeth,"unifrac",weighted=FALSE);
+   
+ if(ordMeth=="PCA"){
+       GP.ord  <- prcomp(t(data@otu_table@.Data), center=TRUE, scale=F)
+      }else{
+       
+       GP.ord <-ordinate(data,ordMeth,"unifrac",weighted=FALSE);
+      }
   }else{
-    GP.ord <- ordinate(data,ordMeth,distName);
+ 
+    
+      if(ordMeth=="PCA"){
+             GP.ord  <- prcomp(t(data@otu_table@.Data), center=TRUE, scale=F)
+      }else{
+       
+       GP.ord <- ordinate(data,ordMeth,distName);
+      }
   }
  
   # obtain variance explained
-  sum.pca <- GP.ord;
-  imp.pca <- sum.pca$values;
+
+  if(ordMeth=="PCA"){
+     sum.pca <-  GP.ord;
+     sum.pca$vectors <- sum.pca$x;
+  imp.pca <- summary(GP.ord)$importance;
+  std.pca <- imp.pca[1,]; # standard devietation
+  var.pca <- imp.pca[2,]; # variance explained by each PC
+  cum.pca <- imp.pca[3,]; # cummulated variance explained
+  
+
+  }else{
+    sum.pca <- GP.ord;
+ imp.pca <- sum.pca$values;
   std.pca <- imp.pca[1,]; # eigen values
   var.pca <- imp.pca[,2]; # variance explained by each PC
   cum.pca <- imp.pca[5,]; # cummulated variance explained
-  sum.pca <- append(sum.pca, list(std=std.pca, variance=var.pca, cum.var=cum.pca));
+   }
+ sum.pca <- append(sum.pca, list(std=std.pca, variance=var.pca, cum.var=cum.pca));
   
   pca3d <- list();
   
