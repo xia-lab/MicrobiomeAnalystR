@@ -1183,6 +1183,10 @@ PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataN
     colLegendNm = "Group";
 
   }
+
+  # save the full lib size 
+  fast.write(cbind(Size=smpl.sums), file="norm_libsizes.csv");
+
   # Create a data frame for ggplot
   if(is.data.frame(col.vec)){
     library_size_data <- data.frame(Sample = names(smpl.sums), LibrarySize = smpl.sums, group = as.character(col.vec[[colnames(col.vec)]]))
