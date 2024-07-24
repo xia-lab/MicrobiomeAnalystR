@@ -160,16 +160,16 @@ PerformSeqProcessing <- function(){
   if(params$is_paired){
     p1 <- plotErrors(errF, nominalQ=TRUE)
     Cairo::Cairo(file = "error_images_f.png",  unit="in", dpi=72, width=12, height=10, type="png", bg="white");
-    print(p1)
+    suppressWarnings(print(p1))
     dev.off();
     p2 <- plotErrors(errR, nominalQ=TRUE)
     Cairo::Cairo(file = "error_images_r.png",  unit="in", dpi=72, width=12, height=10, type="png", bg="white");
-    print(p2)
+    suppressWarnings(print(p2))
     dev.off();
   } else {
     p0 <- plotErrors(errF, nominalQ=TRUE)
     Cairo::Cairo(file = "error_images_f.png",  unit="in", dpi=72, width=12, height=10, type="png", bg="white");
-    print(p0)
+    suppressWarnings(print(p0))
     dev.off();
   }
 
