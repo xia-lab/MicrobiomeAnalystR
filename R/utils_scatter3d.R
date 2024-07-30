@@ -60,7 +60,7 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
     legendData <- list(label = sorted_unique_meta_vec, color = col.s)
     
   }else{
-    print("not_numeric");
+    #print("not_numeric");
 
     col.s <- gg_color_hue(length(levels(metadf)))
     for(i in 1:length(meta.vec.num)){

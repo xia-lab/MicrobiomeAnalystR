@@ -850,8 +850,8 @@ MapKO2KEGGEdges<- function(kos, net="ko01100"){
   my.map <- ko.edge.map[all.hits, ];
   q.map <- data.frame(gene=names(kos), expr=as.numeric(kos),check.names=FALSE);
   
-  print(head(my.map));
-  print(head(q.map));
+  #print(head(my.map));
+  #print(head(q.map));
 
   # first merge to get ko abundance to each edge
   dat <- merge(my.map, q.map, by="gene");

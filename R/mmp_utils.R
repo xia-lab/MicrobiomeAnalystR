@@ -2464,7 +2464,7 @@ DoStatComparisonVis <- function(filenm, alg, meta, selected, meta.vec, omicstype
   res = cbind(res, rownames(res))
   de = res
   de[de == "NaN"] = 1
-  print(head(de));
+  #print(head(de));
   pv = as.numeric(de[,"p_value"])
   pv_no_zero = pv[pv != 0]
   minval = min(pv_no_zero)

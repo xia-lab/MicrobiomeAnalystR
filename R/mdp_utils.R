@@ -2001,10 +2001,10 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
       qs::qsave(data, "data_unifra.qs");
 
 
-        if(ordmeth=="PCA"){
+      if(ordmeth=="PCA"){
           ord <- prcomp(t(data@otu_table@.Data), center=TRUE, scale=F)
       }else{
-               ord <- ordinate(data,method = ordmeth,"unifrac",weighted=TRUE);
+          ord <- ordinate(data,method = ordmeth,"unifrac",weighted=TRUE);
       }
     } else if (distName=="unifrac") {
       
