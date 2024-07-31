@@ -156,7 +156,7 @@ PerformSeqProcessing <- function(){
   }
 
   write.table(30.0, file = "log_progress.txt", quote = F, row.names = F, col.names = F, append = F)
-  MessageOutput("Plotting error frequnecy bar plots ... ")
+  MessageOutput("Plotting error frequency bar plots ... ")
   if(params$is_paired){
     p1 <- plotErrors(errF, nominalQ=TRUE)
     Cairo::Cairo(file = "error_images_f.png",  unit="in", dpi=72, width=12, height=10, type="png", bg="white");

@@ -577,7 +577,7 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
         fit <- fitZig(data, mod);  
       }, warning = function(w){ print() },
       error = function(e) {
-        current.msg <<- paste( "fitZig model failed to fit to your data! Consider a different model or further filtering your dataset!");
+        AddErrMsg("fitZig model failed to fit to your data! Consider a different model or further filtering your dataset!");
       }, finally = {
         if(!exists("fit")){
           return(0);
@@ -586,7 +586,7 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
       })
   }else{
     if(length(levels(cls)) > 2){
-      current.msg <<- paste( "More than two groups present in your experimental factor. This model can only be used with two groups.");
+      AddErrMsg("More than two groups present in your experimental factor. This model can only be used with two groups.");
       return(0);
     }else{
       tryCatch(
@@ -594,7 +594,7 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
           fit <-fitFeatureModel(data, mod);
         }, warning = function(w){ print() },
         error = function(e) {
-          current.msg <<- paste( "fitFeatureModel model failed to fit to your data! Consider a different model or further filtering your dataset!");
+          AddErrMsg("fitFeatureModel model failed to fit to your data! Consider a different model or further filtering your dataset!");
         }, finally = {
           if(!exists("fit")){
             return(0);
