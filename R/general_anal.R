@@ -524,14 +524,21 @@ PerformUnivarTest <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, t
 
 PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank, model,comp1,comp2, fc.thresh=0){
   load_phyloseq();
-
+  
   mbSetObj <- .get.mbSetObj(mbSetObj);
   load_metagenomeseq();
   current.msg<<-"null"
+ 
+  sample_table <- sample_data(mbSetObj$dataSet$norm.phyobj, errorIfNULL=TRUE);
   filt.dataphy <- mbSetObj$dataSet$filt.data;
+  if(model=="ffm"){
+ sample_table <- sample_table[which(sample_table[[variable]] %in% c(comp1,comp2)),]
+  filt.dataphy <- filt.dataphy[,colnames(filt.dataphy) %in% rownames(sample_table)]
+  }
+ 
   filt.dataphy <- apply(filt.dataphy,2,as.integer);
   filt.dataphy <- otu_table(filt.dataphy,taxa_are_rows =TRUE);
-  sample_table <- sample_data(mbSetObj$dataSet$norm.phyobj, errorIfNULL=TRUE);
+
   filt.dataphy <- merge_phyloseq(filt.dataphy, sample_table);
   taxa_names(filt.dataphy) <- rownames(mbSetObj$dataSet$filt.data);
   data <- filt.dataphy;
@@ -566,11 +573,11 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
     nm <- taxa_names(data);
   }
   tree_data <<- data;
-
+ 
   data <- phyloseq_to_metagenomeSeq(data);
   data <- cumNorm(data, p=cumNormStat(data));
   mod <- model.matrix(~phenoData(data)@data[,variable]);
-
+ 
   if(model=="zigfit"){
     tryCatch(
       {
@@ -589,18 +596,32 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
       current.msg <<- paste( "More than two groups present in your experimental factor. This model can only be used with two groups.");
       return(0);
     }else{
-      tryCatch(
-        {
-          fit <-fitFeatureModel(data, mod);
-        }, warning = function(w){ print() },
-        error = function(e) {
-          current.msg <<- paste( "fitFeatureModel model failed to fit to your data! Consider a different model or further filtering your dataset!");
-        }, finally = {
-          if(!exists("fit")){
-            return(0);
-          }
-          fit <- fit
-        })
+      
+fit <- tryCatch({
+  # Capture warnings as they occur and continue execution
+  result <- withCallingHandlers(
+    expr = {
+      fitFeatureModel(data, mod)
+    },
+    warning = function(w) {
+      # Print the warning message
+      invokeRestart("muffleWarning")  # Muffle the warning and continue
+    }
+  )
+  result  # Return the result from the try block
+},
+error = function(e) {
+ 
+  current.msg <<- paste("fitFeatureModel model failed to fit to your data! Consider a different model or further filtering your dataset!")
+  return(NULL)
+}
+)
+
+# Check if fit was successful
+if (is.null(fit)) {
+  return(0)
+}
+
     }
   }
 
@@ -609,7 +630,8 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
   
   rownames(x) <- gsub(":1", "", x = rownames(x), fixed = TRUE);
   x$OTUnames <- as.character(rownames(x))
-  
+    
+
   if (!is.null(tax_table(data, errorIfNULL = FALSE))) {
     #Attach the bacterial taxonomy to the table, if available
     TAX = data.frame(tax_table(data),check.names=FALSE);
@@ -618,7 +640,7 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
   } else {
     res = x;
   }
-  
+ 
   if(model=="ffm"){
     resTable <- res[,c("pvalues","adjPvalues","logFC")];
     resTable <- signif(resTable[,c(3,1,2)], digits = 5);
@@ -628,15 +650,24 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
     resTable <- signif(resTable[,1:2], digits = 5);
     colnames(resTable) <- c("Pvalues","FDR");
   }
-
+ 
   #getting log2fc from edgeR
   if(!is.null(mbSetObj$analSet$rnaseq$resTable.edger.all)& mbSetObj[["analSet"]][["var.type"]]== variable & mbSetObj[["analSet"]][["rnaseq.taxalvl"]]==taxrank){
   edger_df <- mbSetObj$analSet$rnaseq$resTable.edger.all
+     if(model=="ffm"){
   resTable_logFC <- edger_df[match(rownames(resTable), rownames(edger_df)), 'log2FC']
   resTable_logCPM <- edger_df[match(rownames(resTable), rownames(edger_df)), 'logCPM']
   resTable <- data.frame(log2FC = resTable_logFC, resTable,logCPM=resTable_logCPM)
+  resTable$Pvalues[is.na( resTable$Pvalues)] = resTable$FDR[is.na( resTable$Pvalues)] <-1
+}else{
+  resTable_logCPM <- edger_df[match(rownames(resTable), rownames(edger_df)), 'logCPM']
+  resTable <- data.frame(resTable,logCPM=resTable_logCPM)
+
+}
+ 
   }else{
   claslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]])
+  
   dge <- phyloseq_to_edgeR(tree_data, variable)
   if(comp1 %in% claslbl && comp2 %in% claslbl ){
     et <- edgeR::exactTest(dge, c(comp1,comp2))
@@ -645,14 +676,22 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
   }
   tt <- edgeR::topTags(et, n=nrow(dge$table), adjust.method="BH", sort.by="PValue")
    res <- tt@.Data[[1]]
+
+  if(model=="ffm"){
    resTable_logFC <- res[match(rownames(resTable), rownames(res)), 'logFC']
   resTable_logCPM <- res[match(rownames(resTable), rownames(res)), 'logCPM']
-  resTable <- data.frame(log2FC = resTable_logFC, resTable,logCPM=resTable_logCPM)
-
-
+ resTable <- data.frame(log2FC = resTable_logFC, resTable,logCPM=resTable_logCPM)
+}else{
+  resTable_logCPM <- res[match(rownames(resTable), rownames(res)), 'logCPM']
+ resTable <- data.frame(resTable,logCPM=resTable_logCPM)
+}
  }
-
+ 
+    if(model=="ffm"){
   sigHits <- (resTable$FDR < p.lvl & abs(resTable$log2FC) > fc.thresh);
+   }else{
+  sigHits <- (resTable$FDR < p.lvl );
+  }
   resTable <- resTable[order(-sigHits, resTable$Pvalues), , drop=FALSE]
   de.Num <- length(which(sigHits));
   if(de.Num == 0){
@@ -666,8 +705,7 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
   if(nrow(resTable) > 500){
     resTable <- resTable[1:500, ];
   }
-  
-  mbSetObj$analSet$metagenoseq$resTable <- mbSetObj$analSet$resTable <- data.frame(resTable,check.names=FALSE);
+   mbSetObj$analSet$metagenoseq$resTable <- mbSetObj$analSet$resTable <- data.frame(resTable,check.names=FALSE);
   
   #only getting the names of DE features
   diff_ft <<- rownames(resTable)[1:de.Num];
