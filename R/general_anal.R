@@ -584,45 +584,41 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
         fit <- fitZig(data, mod);  
       }, warning = function(w){ print() },
       error = function(e) {
-        current.msg <<- paste( "fitZig model failed to fit to your data! Consider a different model or further filtering your dataset!");
+        AddErrMsg("fitZig model failed to fit to your data! Consider a different model or further filtering your dataset!");
       }, finally = {
         if(!exists("fit")){
           return(0);
         }
         fit <- fit
       })
-  }else{
+  }else{ # fitFeature
     if(length(levels(cls)) > 2){
-      current.msg <<- paste( "More than two groups present in your experimental factor. This model can only be used with two groups.");
+      AddErrMsg("More than two groups present in your experimental factor. This model can only be used with two groups.");
       return(0);
     }else{
       
-fit <- tryCatch({
-  # Capture warnings as they occur and continue execution
-  result <- withCallingHandlers(
-    expr = {
-      fitFeatureModel(data, mod)
-    },
-    warning = function(w) {
-      # Print the warning message
-      invokeRestart("muffleWarning")  # Muffle the warning and continue
-    }
-  )
-  result  # Return the result from the try block
-},
-error = function(e) {
- 
-  current.msg <<- paste("fitFeatureModel model failed to fit to your data! Consider a different model or further filtering your dataset!")
-  return(NULL)
-}
-)
+        fit <- tryCatch({
+        # Capture warnings as they occur and continue execution
+        result <- withCallingHandlers(
+            expr = {
+                fitFeatureModel(data, mod)
+            },
+            warning = function(w) {
+            # Print the warning message
+            invokeRestart("muffleWarning")  # Muffle the warning and continue
+            }
+        )
+        result  # Return the result from the try block
+        },error = function(e) {
+            AddErrMsg("fitFeatureModel model failed to fit to your data! Consider a different model or further filtering your dataset!")
+            return(NULL)
+        })
 
-# Check if fit was successful
-if (is.null(fit)) {
-  return(0)
-}
-
-    }
+        # Check if fit was successful
+        if (is.null(fit)) {
+            return(0)
+        }
+     }
   }
 
   x <- MRfulltable(fit, number = nrow(assayData(data)$counts));
