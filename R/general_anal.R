@@ -2412,7 +2412,7 @@ GenerateCompJson <- function(mbSetObj = NA, fileName, format,type, mode = 1, tax
                         arrange(parent, len) %>%
                         mutate(BPcum = len + tot))
     print(type)
-    if (type %in% c("EdgeR", "DESeq2")) {
+    if (type %in% c("EdgeR", "DESeq2","ffm")) {
       don$shape <- ifelse(don$log2FC > 0, "triangle-up", "triangle-down")
       don$shape[don$FDR > sigLevel | abs(don$log2FC) < fcLevel] <- "circle"
       resList$param$multigroup <- FALSE
