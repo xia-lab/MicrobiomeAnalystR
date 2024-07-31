@@ -1032,7 +1032,7 @@ recordEnrTable <- function(mbSetObj, vis.type, dataTable, library, algo){
 
 rescale2NewRange <- function(qvec, new_min, new_max) {
   # Print the first few elements of qvec
-  print(head(qvec))
+  #print(head(qvec))
   
   # Replace zeros with ones
   qvec = replace(qvec, qvec == 0, 1)
