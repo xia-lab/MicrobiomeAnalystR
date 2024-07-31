@@ -4303,6 +4303,15 @@ PlotlyTaxaAbundance <- function(rdaName, type){
        }
        p[["x"]][["data"]] <- narm
     }
-
+ p <- p %>% layout(note="stack")
     return(p);
+}
+
+PlotlyCompManht <- function(rdaName){
+  
+ load(rdaName)
+
+p <- plotly::ggplotly(p, width=1000, height=800,tooltip = "text");
+
+return(p)
 }

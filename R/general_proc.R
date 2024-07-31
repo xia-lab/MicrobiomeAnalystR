@@ -1333,7 +1333,8 @@ PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataN
       xaxis = plot_data$layout$xaxis,
       yaxis = plot_data$layout$yaxis,
       shapes = plot_data$layout$shapes,
-      annotations = plot_data$annotations
+      annotations = plot_data$annotations,
+      note = "proc"
     )
     
     return(fig);

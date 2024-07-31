@@ -396,7 +396,13 @@ PerformUnivarTest <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, t
 
   }
 
-  sigHits <- (resTable$FDR < p.lvl & abs(resTable$log2FC) > fc.thresh);
+  if(length(cls)>2){
+  sigHits <- (resTable$FDR < p.lvl );
+  resTable$log2FC = NULL;
+  }else{
+    sigHits <- (resTable$FDR < p.lvl & abs(resTable$log2FC) > fc.thresh);
+}
+
   resTable <- resTable[order(-sigHits, resTable$Pvalues), ]
   de.Num <- sum(sigHits);
   
@@ -405,6 +411,8 @@ PerformUnivarTest <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, t
   }else{
     current.msg <<- paste("A total of", de.Num, "significant features were identified!");
   }
+
+ 
   
   if(nrow(resTable) > 500){
     resTable <- resTable[1:500, ];
@@ -2365,7 +2373,7 @@ GenerateCompJson <- function(mbSetObj = NA, fileName, format,type, mode = 1, tax
                         left_join(resTable, ., by = c("parent" = "parent")) %>%
                         arrange(parent, len) %>%
                         mutate(BPcum = len + tot))
-    
+    print(type)
     if (type %in% c("EdgeR", "DESeq2")) {
       don$shape <- ifelse(don$log2FC > 0, "triangle-up", "triangle-down")
       don$shape[don$FDR > sigLevel | abs(don$log2FC) < fcLevel] <- "circle"
@@ -2377,7 +2385,12 @@ GenerateCompJson <- function(mbSetObj = NA, fileName, format,type, mode = 1, tax
     
     colors <- setNames(colorRampPalette(brewer.pal(8, "Set1"))(length(unique(resTable$parent))), unique(resTable$parent))
     don$color <- unname(colors[match(don$parent, names(colors))])
-    don$color[don$FDR > sigLevel | abs(don$log2FC ) <fcLevel] <- "#808080"
+    if("log2FC" %in% names(don)){
+don$color[don$FDR > sigLevel | abs(don$log2FC ) <fcLevel] <- "#808080"
+  }else{
+don$color[don$FDR > sigLevel] <- "#808080"
+}
+    
     if(is.null(don$logCPM)){
       don$size <- 10.5;
     }else{
@@ -2408,12 +2421,20 @@ GenerateCompJson <- function(mbSetObj = NA, fileName, format,type, mode = 1, tax
       h <- 10;
     }
     w <- h + 4;
-    
+  
+    don$text = apply(don,1,function(x){
+ paste("Feature ID: ", x["id"], 
+              "<br>P-value: ", format(x["Pvalues"], scientific = TRUE),
+              "<br>FDR: ", format(x["FDR"], scientific = TRUE),
+  "<br>Parent: ", format(x["parent"], scientific = TRUE))
+})
+ 
     fileName2 = gsub("json",format,fileName)
     if(!is.null(don$logCPM) && "logCPM" %in% names(don)) {
      p <- ggplot(don, aes(x=BPcum, y=-log10(Pvalues), size=logCPM, color=color)) +
-       geom_point(aes(shape=shape), alpha=1) +
+       geom_point(aes(shape=shape, text = text), alpha=1) +
        scale_size_continuous(range = c(0.5, 3))
+   
    } else {
      p <- ggplot(don, aes(x=BPcum, y=-log10(Pvalues), color=color)) +
        geom_point(aes(shape=shape), size=3, alpha=1)
@@ -2438,7 +2459,7 @@ GenerateCompJson <- function(mbSetObj = NA, fileName, format,type, mode = 1, tax
           showlegend = F,
           name = axisdf$parent[x],
           legendgroup = axisdf$parent[x],
-          hoverinfo = ""
+          hoverinfo = "none"
         )
         return(info)
       })
@@ -2562,6 +2583,8 @@ PlotlyCompRes <- function(mbSetObj = NA, type="", fileName="") {
 ");
   return(p)
 }
+
+
 
 getColor <- function(pValue, log2fc, pval.thresh, log2fcThreshold) {
   pValueThreshold <- pval.thresh# Replace with the actual way to access this value in R
