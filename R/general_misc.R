@@ -1106,10 +1106,9 @@ ComputeEncasing <- function(filenm, type, names.vec, level=0.95, omics="NA"){
 
 AddFeatureToReport <- function(mbSetObj=NA, id, imgName){
     mbSetObj <- .get.mbSetObj(mbSetObj);
-    if (is.null(mSetObj$imgSet$featureList)) {
-      mSetObj$imgSet$featureList <- list()
+    if (is.null(mbSetObj$imgSet$featureList)) {
+      mbSetObj$imgSet$featureList <- list()
     }
-    mSetObj$imgSet$featureList[[id]] <- imgName; 
-    print(mSetObj$imgSet$featureList);
+    mbSetObj$imgSet$featureList[[id]] <- imgName; 
     return(.set.mbSetObj(mbSetObj));
 }
