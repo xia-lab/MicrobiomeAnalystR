@@ -66,7 +66,7 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
     for(i in 1:length(meta.vec.num)){
       col[i] = col.s[meta.vec.num[i]];
     }
-    legendData <- list(label=unique(meta.vec),color=col.s)
+    legendData <- list(label=levels(as.factor(meta.vec)),color=col.s)
     
   }
   
@@ -83,7 +83,7 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
     for(i in 1:length(meta.vec.num)){
       shape[i] = shape.s[meta.vec.num[i]];
     }
-    legendData2 <- list(label=unique(meta.vec2),shape=shape.s);
+    legendData2 <- list(label=levels(as.factor(meta.vec2)),shape=shape.s);
   }
   
   nodeSize = 18;
