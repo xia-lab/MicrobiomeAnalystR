@@ -30,7 +30,7 @@ PerformMetaEffectSize <- function(mbSetObj=NA, imgName="", taxrank="OTU", selMet
   sel.nms <- names(mdata.all)[mdata.all==1];
   
   dat <- qs::qread("merged.data.qs");
-  #dat <- subsetPhyloseqByDataset(mbSetObj, dat);
+  dat <- subsetPhyloseqByDataset(mbSetObj, dat);
   
   if(taxrank!="OTU"){      
       dat <- fast_tax_glom_mem(dat, taxrank);
@@ -145,7 +145,7 @@ SetupMetaStats <- function(BHth, paramSet,analSet){
   paramSet$BHth <- BHth;
   #all common genes
   dat <- qs::qread("merged.data.qs");
-  #dat <- subsetPhyloseqByDataset(mbSetObj, dat);
+  dat <- subsetPhyloseqByDataset(mbSetObj, dat);
   
   meta.res.obj <- analSet$meta.res.obj;
   gene.ids <- rownames(otu_table(dat));
