@@ -220,7 +220,7 @@ sparse_linear = function(mat, wins_quant = c(0.05, 0.95), method, soft=FALSE, th
   
   # Winsorization
   mat = apply(mat, 2, function(x)
-    DescTools::Winsorize(x, probs = wins_quant, na.rm = TRUE))
+    DescTools::Winsorize(x, val = quantile(x, probs = wins_quant, na.rm = TRUE)))
   
   # Co-occurrence matrix
   mat_occur = mat
@@ -331,7 +331,7 @@ sparse_dist = function(mat, wins_quant= c(0.05, 0.95), R, thresh_hard = 0, max_p
 
     # Winsorization
     mat = apply(mat, 2, function(x)
-        DescTools::Winsorize(x, probs = wins_quant, na.rm = TRUE))
+        DescTools::Winsorize(x, val = quantile(x, probs = wins_quant, na.rm = TRUE)))
 
     # Co-occurrence matrix
     mat_occur = mat
