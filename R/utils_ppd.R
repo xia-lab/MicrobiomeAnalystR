@@ -12,6 +12,9 @@ PrepareMergedData <- function(mbSetObj, metadata, keepfeat){
   set.seed(1315);
   metadata <<- metadata;
   data<- qs::qread("merged.data.qs");
+  if(mbSetObj$module.type == "meta"){
+      data <- subsetPhyloseqByDataset(mbSetObj, data);
+  }
 
   if(keepfeat!="All features"){ # trim data
     feat_no<-round(ntaxa(data)*0.20);

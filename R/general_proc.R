@@ -420,7 +420,7 @@ ApplyVarianceFilter <- function(mbSetObj, filtopt, filtPerct){
 
   rm.msg1 <- paste0("A total of ```", sum(!remain), "``` low variance features were removed based on ```", filtopt, "```.");
   rm.msg2 <- paste0("The number of features remains after the data filtering step: ```", nrow(data), "```.");
-  mbSetObj$dataSet$filt.msg <- c(current.msg, rm.msg1, rm.msg2);
+  mbSetObj$dataSet$filt.msg <- c(rm.msg1, rm.msg2);
   return(.set.mbSetObj(mbSetObj));
   
 }

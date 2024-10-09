@@ -1542,10 +1542,13 @@ PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
     load_reshape();
     load_phyloseq();
   }
-  
-  #using filtered data
-  data <- mbSetObj$dataSet$filt.data;
-  
+  if(mbSetObj$module.type == "meta"){
+    merged <- qs::qread("merged.data.qs");
+    data <- subsetPhyloseqByDataset(mbSetObj, merged);
+  }else{
+    #using filtered data
+    data <- mbSetObj$dataSet$filt.data;
+  }
   if("matrix" %in% class(mbSetObj$dataSet$filt.data)){
     data<-otu_table(data, taxa_are_rows =TRUE);
   }
@@ -2580,7 +2583,7 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
   
   if(mbSetObj$module.type == "meta"){
     data1 <- qs::qread("merged.data.raw.qs");
-    #data1 <- subsetPhyloseqByDataset(mbSetObj, data1);
+    data1 <- subsetPhyloseqByDataset(mbSetObj, data1);
     sample_table <- sample_data(data1);
     data <- as.data.frame(otu_table(data1),check.names=FALSE);
     #facet2="dataset";
