@@ -2127,14 +2127,14 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
   box$layers <- box$layers[-1];
   
   if(showlabel=="samnm"){
-    box = box + geom_text(aes(label=sample_id), hjust=0.5, vjust=2, size=3, fontface="bold");
+    box = box + ggrepel::geom_text_repel(aes(label=sample_id), hjust=0.5, vjust=2, size=3, fontface="bold");
     box = box + geom_point(size=4, alpha=0.6) + theme_bw();
   }else if(showlabel=="none"){
     box=box+geom_point(size=4, alpha=0.8) + theme_bw();
   }else{
     showlabel <<- showlabel;
     bx_data <<- data.frame(box$data,check.names=FALSE);
-    box = box + geom_text(aes(label=bx_data[ ,showlabel]), hjust=0.5, vjust=2, size=3, fontface="bold");
+    box = box + ggrepel::geom_text_repel(aes(label=bx_data[ ,showlabel]), hjust=0.5, vjust=2, size=3, fontface="bold");
     box = box + geom_point(size=4, alpha=0.6) + theme_bw();
   }
   
