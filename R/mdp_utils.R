@@ -443,19 +443,19 @@ PrepareBoxPlot <- function(mbSetObj, taxrank, variable){
 #'@import RColorBrewer
 #'@import viridis
 CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
-                              palette, viewOpt, analOpt, expFact, group, 
+                              palette, viewOpt, analOpt, expFact, group, expFact2,
                               format="png", dpi=72, width=NA, interactive = FALSE){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   data <- mbSetObj$dataSet$proc.phyobj;
-  #print(expFact)
+ 
   expFact <- expFact
+   expFact2 <- expFact2
   group <- group
-  
-  if(!analOpt == "all_samples"){
+ 
+  if(analOpt == "smpl_grp"){
     data <- eval(parse(text = paste("phyloseq:::subset_samples(data,", expFact, "==", "\"", group, "\"", ")", sep="")))
-    
     # check min 2 reps 
     samples_left <- nsamples(data)
     
@@ -463,6 +463,9 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
       AddErrMsg("More than 2 replicates are required in your group!")
       return(0)
     }
+  }else if(analOpt == "smpl_grp_all"){
+   grp <- as.character(mbSetObj[["dataSet"]][["sample_data"]][[expFact2]])
+   data <- eval(parse(text = paste("phyloseq:::subset_samples(data,", expFact2, "%in%", "\"", grp, "\"", ")", sep="")))
   }
   
   if(taxrank=="OTU"){
@@ -484,7 +487,7 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
     data1 <- as.matrix(t(sapply(by(data1, rownames(data1), colSums), identity)));
     data <- otu_table(data1, taxa_are_rows=T);
   }
-
+ 
   #transform data to relative abundances, then obtain full phyloseq obj of just core microbiota
   data.compositional <- transform_sample_counts(data,function(x) x / sum(x));
   data.core <- core(data.compositional, detection = detection, prevalence = preval);
@@ -496,15 +499,8 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
   
   imgName = paste(imgName, ".", format, sep="");
   mbSetObj$imgSet$core <- imgName;
-  
-  #if more than 1500 features will be present; subset to most abundant=>1500 features.
-  #OTUs already in unique names;
-  if(ntaxa(data.core)>1500){
-    data.core = prune_taxa(names(sort(taxa_sums(data.core), TRUE))[1:1500], data.core);
-    viewOpt == "overview";
-  }
-  
-  #setting the size of plot
+
+    #setting the size of plot
   if(is.na(width)){
     minW <- 800;
     myW <- 10*18 + 200;
@@ -517,8 +513,12 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
   myH <- nrow(data.core)*18 + 150;
   h <- round(myH/65);
   
-  if(viewOpt == "overview"){
-    if(is.na(width)){
+  #if more than 1500 features will be present; subset to most abundant=>1500 features.
+  #OTUs already in unique names;
+  if(ntaxa(data.core)>1500){
+    data.core = prune_taxa(names(sort(taxa_sums(data.core), TRUE))[1:1500], data.core);
+    viewOpt == "overview";
+     if(is.na(width)){
       if(w >9.3){
         w <- 9.3;
       }
@@ -527,11 +527,12 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
       h <- w;
     }
   }
+ 
+
+  if(viewOpt!="bar"){
+Cairo::Cairo(file=imgName, unit="in",width=w, height=h, type=format, bg="white",dpi=dpi);
   
-  Cairo::Cairo(file=imgName, unit="in",width=w, height=h, type=format, bg="white",dpi=dpi);
-  
-  # set up colors for heatmap
-  if(palette=="gbr"){
+     if(palette=="gbr"){
     colors <- grDevices::colorRampPalette(c("green", "black", "red"), space="rgb")(10);
   }else if(palette == "heat"){
     colors <- heat.colors(10);
@@ -547,13 +548,48 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
     load_rcolorbrewer();
     colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdBu"))(10));
   }
-  
-  p <- plot_core(data.core, plot.type = "heatmap", colours = colors, prevalences = seq(.05, 1, .05), 
+   p <- plot_core(data.core, plot.type=viewOpt, colours = colors, prevalences = seq(.05, 1, .05), 
                  detections = 10^seq(log10(detection), log10(max(abundances(data.core))), length = 10)) + 
     ylab(paste0("\n", taxrank)) + xlab("\nDetection Threshold (Relative Abundance (%))") + 
     guides(fill = guide_legend(keywidth = 1.5, keyheight = 1)) + 
     theme(axis.text=element_text(size=10), axis.title=element_text(size=11.5), legend.title=element_text(size=11));
   
+  }else{
+   Cairo::Cairo(file=imgName, unit="in",width=h, height=w/1.5, type=format, bg="white",dpi=dpi);
+  
+   dt = abundances(data.core)
+  prev = apply(dt,1,function(x) sum(x>detection)/length(x))
+  dt = data.frame(feat = rownames(dt),prev = prev,stringsAsFactors = F) 
+dt <- dt[order(-dt$prev), ]
+     if(palette=="gbr"){
+    colors <- grDevices::colorRampPalette(c("green", "black", "red"), space="rgb")(nrow(dt));
+  }else if(palette == "heat"){
+    colors <- heat.colors(nrow(dt));
+  }else if(palette == "topo"){
+    colors <- topo.colors(nrow(dt));
+  }else if(palette == "gray"){
+    colors <- grDevices::colorRampPalette(c("grey90", "grey10"), space="rgb")(nrow(dt));
+  }else if(palette == "viridis") {
+    colors <- rev(viridis::viridis(nrow(dt)))
+  }else if(palette == "plasma") {
+    colors <- rev(viridis::plasma(nrow(dt)))
+  }else {
+    load_rcolorbrewer();
+    colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdBu"))(nrow(dt)));
+  }
+    
+  p <- ggplot(dt, aes(x = reorder(feat, -prev), y = prev, fill = reorder(feat, -prev))) +
+    geom_bar(stat = "identity", color = "black") +
+      scale_fill_manual(values = colors)  +
+      ylab(paste0("\n", "Prevalence")) +   xlab(paste0("\n", taxrank)) + 
+      guides(fill = "none") + 
+      theme_bw()+
+      theme(axis.text=element_text(size=10), 
+        axis.title=element_text(size=11.5), 
+        axis.text.x = element_text(angle = 90, hjust = 1))
+
+  }
+
   print(p);
   dev.off();
   
@@ -661,7 +697,8 @@ plot_core<-function(x, prevalences=seq(.1, 1, 0.1), detections=20,
     res <- core_heatmap(abundances(x),
                         dets=detections, cols=colours,
                         min.prev=min.prevalence, taxa.order=taxa.order)
-  }
+
+  } 
   p <- res$plot;
   if (horizontal) {
     p <- p + coord_flip() + theme(axis.text.x=element_text(angle=90))

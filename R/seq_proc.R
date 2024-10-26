@@ -295,7 +295,7 @@ checkParing <- function(){
 
 GetSanityVec <- function(paired){
   # this function is checking the sainty of all fastq files
-  allUPFiles <- list.files("upload/", pattern = "fastq|fq", full.names = TRUE);
+   allUPFiles <- list.files("upload/", pattern = "fastq|fq", full.names = TRUE);
   Sanity_vec <- vector();
   # 1. is real fastq file or not
   valid_vec <- vapply(allUPFiles, validate_fastq, FUN.VALUE = logical(1L));
@@ -312,6 +312,7 @@ GetSanityVec <- function(paired){
   }else{
     meta_df <- data.frame()
   }
+ 
   if(paired == 2){
     allNames <- vapply(allUPFiles, function(x){
       gsub("_R1.fastq|_R2.fastq|_R1.fq|_R2.fq", "", x)
