@@ -586,7 +586,7 @@ dt <- dt[order(-dt$prev), ]
       theme_bw()+
       theme(axis.text=element_text(size=10), 
         axis.title=element_text(size=11.5), 
-        axis.text.x = element_text(angle = 90, hjust = 1))
+        axis.text.x = element_text(angle = 45, hjust = 1))
 
   }
 
