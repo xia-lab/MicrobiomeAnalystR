@@ -737,7 +737,7 @@ combined_plot <- plot_grid(
 )
 
 w <- max(13, ncol * 5.5)  
-h <- max(5, nrow * 4.5)  
+h <- max(5, nrow * 5)  
 print(c(ncol,nrow,w,h))
  
 Cairo::Cairo(file = imgName, unit = "in", width = w, height = h, type = format, bg = "white", dpi = dpi)
@@ -805,7 +805,7 @@ dev.off()
     facet_wrap(~ group, scales = "free_x")+    
     scale_x_reordered() 
   
- w <- max(10, num_features * 0.2)   
+ w <- max(13, num_features * 0.2)   
  h <- max(5, num_groups * 3)          
  
  Cairo::Cairo(file = imgName, unit = "in", width = w, height = h, type = format, bg = "white", dpi = dpi)
