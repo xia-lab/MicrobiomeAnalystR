@@ -454,8 +454,17 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
    expFact2 <- expFact2
   group <- group
  
-  if(analOpt == "smpl_grp"){
-    data <- eval(parse(text = paste("phyloseq:::subset_samples(data,", expFact, "==", "\"", group, "\"", ")", sep="")))
+ 
+ if(analOpt == "smpl_grp_all"){
+  # grp <- as.character(mbSetObj[["dataSet"]][["sample_data"]][[expFact2]])
+  # data <- eval(parse(text = paste("phyloseq:::subset_samples(data,", expFact2, "%in%", "\"", grp, "\"", ")", sep="")))
+   mbSetObj <- core_comp_grp(mbSetObj,imgName, preval, detection, taxrank,
+                          palette, viewOpt,expFact2,format, dpi, width)
+   
+  }else{
+
+   if(analOpt == "smpl_grp"){
+     data <- eval(parse(text = paste("phyloseq:::subset_samples(data,", expFact, "==", "\"", group, "\"", ")", sep="")))
     # check min 2 reps 
     samples_left <- nsamples(data)
     
@@ -463,11 +472,7 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
       AddErrMsg("More than 2 replicates are required in your group!")
       return(0)
     }
-  }else if(analOpt == "smpl_grp_all"){
-   grp <- as.character(mbSetObj[["dataSet"]][["sample_data"]][[expFact2]])
-   data <- eval(parse(text = paste("phyloseq:::subset_samples(data,", expFact2, "%in%", "\"", grp, "\"", ")", sep="")))
-  }
-  
+ }
   if(taxrank=="OTU"){
     data <- otu_table(data,taxa_are_rows=T);
   }else{
@@ -560,7 +565,7 @@ Cairo::Cairo(file=imgName, unit="in",width=w, height=h, type=format, bg="white",
    dt = abundances(data.core)
   prev = apply(dt,1,function(x) sum(x>detection)/length(x))
   dt = data.frame(feat = rownames(dt),prev = prev,stringsAsFactors = F) 
-dt <- dt[order(-dt$prev), ]
+  dt <- dt[order(-dt$prev), ]
      if(palette=="gbr"){
     colors <- grDevices::colorRampPalette(c("green", "black", "red"), space="rgb")(nrow(dt));
   }else if(palette == "heat"){
@@ -613,9 +618,206 @@ dt <- dt[order(-dt$prev), ]
         detection=detection,
         analOpt = analOpt,
         expFact = expFact, 
-        group = group
-    );
+        group = group,
+        expFact2 = expFact2
+    )
+   };
   return(.set.mbSetObj(mbSetObj));
+}
+
+core_comp_grp <- function(mbSetObj,imgName, preval, detection, taxrank,
+                          palette, viewOpt,expFact2,format="png", dpi=72, width=NA){
+  
+  data <- mbSetObj$dataSet$proc.phyobj;
+  grp <- unique(as.character(mbSetObj[["dataSet"]][["sample_data"]][[expFact2]]))
+  dt <- lapply(grp,function(group) eval(parse(text = paste("phyloseq:::subset_samples(data,", expFact2, "==", "\"", group, "\"", ")", sep=""))))
+  names(dt) <- grp 
+  dt <-lapply(dt,function(data){
+    if(taxrank=="OTU"){
+      data <- otu_table(data,taxa_are_rows=T);
+    }else{
+      #merging at taxonomy levels
+      data <- fast_tax_glom_mem(data, taxrank);
+      if(is.null(data)){
+        AddErrMsg("Errors in projecting to the selected taxanomy level!");
+        return(0);
+      }
+      nm <- as.character(tax_table(data)[,taxrank]);
+      y <- which(is.na(nm)==TRUE);
+      #converting NA values to unassigned
+      nm[y] <- "Not_Assigned";
+      data1 <- as.matrix(otu_table(data));
+      rownames(data1) <- nm;
+      #all NA club together
+      data1 <- as.matrix(t(sapply(by(data1, rownames(data1), colSums), identity)));
+      data <- otu_table(data1, taxa_are_rows=T);
+    }
+  })
+  dt.compositional <- lapply(dt,function(data) transform_sample_counts(data,function(x) x / sum(x))) ;
+  data.core <- lapply(dt.compositional,function(data.compositional) core(data.compositional, detection = detection, prevalence = preval));
+  
+  core.nm <- lapply(dt.compositional,function(data.compositional) data.frame(prevalence(data.compositional, detection = detection, sort = TRUE),check.names=FALSE));
+  core.nm <- lapply(names(core.nm), function(name) {
+    x <- core.nm[[name]]
+    z <- tibble::rownames_to_column(x, "Feature")
+    names(z)[2] <- "Prevalence"
+    z$Group <- name  
+    return(z)
+  })
+  core.nm = do.call(rbind,core.nm)
+  fileName <- "core_microbiome.csv";
+  fast.write(core.nm, file=fileName);
+  
+  
+  imgName = paste( imgName, ".", format, sep="");
+  mbSetObj$imgSet$core <- imgName;
+ 
+
+   if(viewOpt!="bar"){
+ 
+  
+     if(palette=="gbr"){
+    colors <- grDevices::colorRampPalette(c("green", "black", "red"), space="rgb")(10);
+  }else if(palette == "heat"){
+    colors <- heat.colors(10);
+  }else if(palette == "topo"){
+    colors <- topo.colors(10);
+  }else if(palette == "gray"){
+    colors <- grDevices::colorRampPalette(c("grey90", "grey10"), space="rgb")(10);
+  }else if(palette == "viridis") {
+    colors <- rev(viridis::viridis(10))
+  }else if(palette == "plasma") {
+    colors <- rev(viridis::plasma(10))
+  }else {
+    load_rcolorbrewer();
+    colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdBu"))(10));
+  }
+  library(gridExtra)
+  library(cowplot)   
+  num_groups <- length(data.core)
+  ncol <- min(3, ceiling(sqrt(num_groups)))   
+   nrow <- ceiling(num_groups / ncol)   
+   num_features <- length(unique(unlist(lapply(data.core,function(x) rownames(x)))))
+   axis_text_size <- ifelse(num_features > 50, 6, ifelse(num_features > 30, 8, 10))
+ 
+   plots <- lapply(seq_along(data.core), function(i) {
+         coredt <- data.core[[i]]
+    plot <- plot_core(coredt, plot.type = viewOpt, colours = colors, 
+                    prevalences = seq(.05, 1, .05), 
+                    detections = 10^seq(log10(detection), log10(max(abundances(coredt))), length = 10)) + 
+    guides(fill = guide_legend(keywidth = 1.5, keyheight = 1)) +
+    theme(
+      axis.text.y = element_text(size = axis_text_size),        
+       axis.text.x = element_text(size = axis_text_size, angle = 45, vjust = 0.5, hjust = 1),         
+      axis.title.y = element_text(angle = 90, size = 11.5)) +
+     ylab(names(data.core)[i]) 
+     
+  if (i > (nrow - 1) * ncol) {
+    plot <- plot + xlab("\nDetection Threshold (Relative Abundance (%))")
+  } else {
+    plot <- plot + theme(axis.title.x = element_blank())
+  }
+   
+  return(plot)
+})
+ 
+shared_legend <- get_legend(plots[[1]])
+ 
+plots <- lapply(plots, function(p) p + theme(legend.position = "none"))
+ 
+combined_plot <- plot_grid(
+  plot_grid(plotlist = plots, ncol = ncol, align = "hv"),   
+  shared_legend,                                           
+  rel_widths = c(4, 0.5)                                 
+)
+
+w <- max(13, ncol * 5.5)  
+h <- max(5, nrow * 4.5)  
+print(c(ncol,nrow,w,h))
+ 
+Cairo::Cairo(file = imgName, unit = "in", width = w, height = h, type = format, bg = "white", dpi = dpi)
+print(combined_plot)
+dev.off()
+  
+  }else{
+  
+  dtls = lapply(data.core, abundances)  
+  prev =lapply(dtls,function(dt) apply(dt,1,function(x) sum(x>detection)/length(x)))
+  dtls= lapply(prev,function(dt) data.frame(feat = names(dt),prev = dt,stringsAsFactors = F) )
+  dtls <- lapply(dtls,function(dt) dt[order(-dt$prev), ])
+  dtls <- lapply(names(dtls), function(name) {
+    x <- dtls[[name]]
+    x$group <- name  # Add a new column with the name of each element
+    return(x)
+  })
+  
+  dt = do.call(rbind,dtls)
+  colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdBu"))(100))
+  
+  # Ensure that feat is ordered by prev within each Group
+  dt <- dt %>%
+    group_by(group) %>%
+    arrange(desc(prev), .by_group = TRUE) %>%
+    mutate(feat = factor(feat, levels = unique(feat))) %>%
+    ungroup()
+  
+  library(tidytext)
+  
+  # Generate a reversed color palette
+  if(palette=="gbr"){
+    colors <- grDevices::colorRampPalette(c("green", "black", "red"), space="rgb")(100);
+  }else if(palette == "heat"){
+    colors <- heat.colors(100);
+  }else if(palette == "topo"){
+    colors <- topo.colors(100);
+  }else if(palette == "gray"){
+    colors <- grDevices::colorRampPalette(c("grey90", "grey10"), space="rgb")(100);
+  }else if(palette == "viridis") {
+    colors <- rev(viridis::viridis(100))
+  }else if(palette == "plasma") {
+    colors <- rev(viridis::plasma(100))
+  }else {
+    load_rcolorbrewer();
+    colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdBu"))(100));
+  }
+  
+  num_features <- length(unique(dt$feat)) 
+  num_groups <- length(unique(dt$group))
+  axis_text_size <- ifelse(num_features > 50, 6, ifelse(num_features > 30, 8, 10))
+  axis_title_size <- ifelse(num_features > 50, 9, ifelse(num_features > 30, 11, 12))
+   
+ plot<- ggplot(dt, aes(x = reorder_within(feat, -prev, group), y = prev, fill = prev)) + 
+    geom_bar(stat = "identity", color = "black") + 
+    scale_fill_gradientn(colors = colors, name = "Prevalence") +  # Global color scale
+    ylab("\nPrevalence") + 
+    xlab(paste0("\n", taxrank)) + 
+    theme_bw() + 
+    theme(
+      axis.text = element_text(size = axis_text_size), 
+      axis.title = element_text(size = 11.5), 
+      axis.text.x = element_text(size = axis_text_size, angle = 45, hjust = 1)  # Adjust x-axis label size
+    ) + 
+    facet_wrap(~ group, scales = "free_x")+    
+    scale_x_reordered() 
+  
+ w <- max(10, num_features * 0.2)   
+ h <- max(5, num_groups * 3)          
+ 
+ Cairo::Cairo(file = imgName, unit = "in", width = w, height = h, type = format, bg = "white", dpi = dpi)
+ print(plot)
+ dev.off()
+}
+core.nm$Prevalence =  signif(core.nm$Prevalence ,5)
+ mbSetObj$analSet$core<- as.matrix(core.nm);
+  mbSetObj$analSet$core.taxalvl<-taxrank;
+ mbSetObj$paramSet$core <- list(
+   taxalvl=taxrank,
+   preval=preval, 
+   detection=detection,
+   analOpt = "smpl_grp_all",
+   expFact2 = expFact2
+ )
+ return(mbSetObj)
 }
 
 ######################Adapted from the Microbiome R package#########################
