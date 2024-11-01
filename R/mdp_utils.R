@@ -674,9 +674,7 @@ core_comp_grp <- function(mbSetObj,imgName, preval, detection, taxrank,
  
 
    if(viewOpt!="bar"){
- 
-  
-     if(palette=="gbr"){
+   if(palette=="gbr"){
     colors <- grDevices::colorRampPalette(c("green", "black", "red"), space="rgb")(10);
   }else if(palette == "heat"){
     colors <- heat.colors(10);
@@ -706,11 +704,18 @@ core_comp_grp <- function(mbSetObj,imgName, preval, detection, taxrank,
                     prevalences = seq(.05, 1, .05), 
                     detections = 10^seq(log10(detection), log10(max(abundances(coredt))), length = 10)) + 
     guides(fill = guide_legend(keywidth = 1.5, keyheight = 1)) +
+     ggtitle(names(data.core)[i]) + 
     theme(
       axis.text.y = element_text(size = axis_text_size),        
        axis.text.x = element_text(size = axis_text_size, angle = 45, vjust = 0.5, hjust = 1),         
-      axis.title.y = element_text(angle = 90, size = 11.5)) +
-     ylab(names(data.core)[i]) 
+      axis.title.y = element_text(angle = 90, size = 11.5),
+  plot.title = element_text(size = 12, hjust = 0.5) )  
+
+  if ((i - 1) %% ncol == 0) {
+    plot <- plot + ylab(paste0("\n", taxrank))
+  } else {
+    plot <- plot + theme(axis.title.y = element_blank())
+  }
      
   if (i > (nrow - 1) * ncol) {
     plot <- plot + xlab("\nDetection Threshold (Relative Abundance (%))")
