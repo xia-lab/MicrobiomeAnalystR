@@ -13,6 +13,7 @@ my.16sfun.anot<-function(mbSetObj, type, pipeline,ggversion) {
   merge.otu <- apply(merge.otu, 2, as.numeric);
   current.msg<<- "null"
   err.vec <<- "null"
+  print(c(pipeline,type))
  if(pipeline %in% c("Ref99NR","Ref100NR")){
     func.meth<-"Tax4Fun2";
     database_mode <- pipeline
@@ -54,8 +55,7 @@ my.16sfun.anot<-function(mbSetObj, type, pipeline,ggversion) {
     result_path<-as.data.frame(round(1000000*result_path),check.names=FALSE);  # get to integers
 
 }else{
-
-    #getting whole taxa labels back
+ 
     if(type=="SILVA"){
      rownames(merge.otu) <- unname(mbSetObj$dataSet$comp_taxnm);
         func.meth<-"Tax4Fun";
@@ -699,7 +699,9 @@ subsetSILVAToKEGG <- as.data.frame(as.matrix(subsetSILVAToKEGG))
     RefProfile <- Tax4FunReferenceData$PathwayAbundancesKEGGBacArch
     FctCat <- Tax4FunReferenceData$PathwayInformationKEGGBacArch
   }
-  
+  print(str(subsetOTUTables))
+  print(dim(subsetOTUTables))
+ 
   Tax4FunProfile <- matrix(data=0,nrow=ncol(subsetOTUTables),ncol=nrow(RefProfile))
   for(i in 1:ncol(subsetOTUTables)){
     KEGGTaxProfile <- t(subsetSILVAToKEGG) %*% subsetOTUTables[,i]
@@ -877,9 +879,9 @@ get.fun.lib.path <- function(type){
   # yao laptop
   if(file.exists("/Users/lzy/Documents")){
     if(type == "tax4fun"){
-        return("/Users/lzy/Documents/MicrobiomeAnalystR-master/function_database/SILVA123");
+        return("/Users/lzy/Documents/MicrobiomeAnalyst/function_database/SILVA123");
     }else if(type == "tax4fun2"){
-        return("/Users/lzy/Documents/MicrobiomeAnalystR-master/function_database/Tax4Fun2");
+        return("/Users/lzy/Documents/MicrobiomeAnalyst/function_database/Tax4Fun2");
     }else if(type == "picrust12"){
         return("/Users/lzy/Documents/MicrobiomeAnalystR-master/function_database/picrust12");
     }else{
