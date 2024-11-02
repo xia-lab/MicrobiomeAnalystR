@@ -445,7 +445,7 @@ PrepareBoxPlot <- function(mbSetObj, taxrank, variable){
 CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
                               palette, viewOpt, analOpt, expFact, group, expFact2,
                               format="png", dpi=72, width=NA, interactive = FALSE){
-  
+  print(viewOpt)
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   data <- mbSetObj$dataSet$proc.phyobj;
@@ -455,7 +455,8 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
   group <- group
  
  
- if(analOpt == "smpl_grp_all"){
+ if(analOpt == "smpl_grp_all" & viewOpt=="bar"){
+ 
   # grp <- as.character(mbSetObj[["dataSet"]][["sample_data"]][[expFact2]])
   # data <- eval(parse(text = paste("phyloseq:::subset_samples(data,", expFact2, "%in%", "\"", grp, "\"", ")", sep="")))
    mbSetObj <- core_comp_grp(mbSetObj,imgName, preval, detection, taxrank,
@@ -465,14 +466,21 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
 
    if(analOpt == "smpl_grp"){
      data <- eval(parse(text = paste("phyloseq:::subset_samples(data,", expFact, "==", "\"", group, "\"", ")", sep="")))
-    # check min 2 reps 
-    samples_left <- nsamples(data)
+    
+    
+ }else if(analOpt == "smpl_grp_all"){
+
+ grp <- as.character(mbSetObj[["dataSet"]][["sample_data"]][[expFact2]])
+  data <- eval(parse(text = paste("phyloseq:::subset_samples(data,", expFact2, "%in%", "\"", grp, "\"", ")", sep="")))
+ }
+
+# check min 2 reps 
+samples_left <- nsamples(data)
     
     if(samples_left<2){
       AddErrMsg("More than 2 replicates are required in your group!")
       return(0)
     }
- }
   if(taxrank=="OTU"){
     data <- otu_table(data,taxa_are_rows=T);
   }else{
@@ -708,8 +716,7 @@ core_comp_grp <- function(mbSetObj,imgName, preval, detection, taxrank,
     theme(
       axis.text.y = element_text(size = axis_text_size),        
        axis.text.x = element_text(size = axis_text_size, angle = 45, vjust = 0.5, hjust = 1),         
-      axis.title.y = element_text(angle = 90, size = 11.5),
-  plot.title = element_text(size = 12, hjust = 0.5) )  
+      axis.title = element_text(angle = 90, size = 12)  )  
 
   if ((i - 1) %% ncol == 0) {
     plot <- plot + ylab(paste0("\n", taxrank))
@@ -757,57 +764,42 @@ dev.off()
   })
   
   dt = do.call(rbind,dtls)
-  colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdBu"))(100))
-  
-  # Ensure that feat is ordered by prev within each Group
-  dt <- dt %>%
-    group_by(group) %>%
-    arrange(desc(prev), .by_group = TRUE) %>%
-    mutate(feat = factor(feat, levels = unique(feat))) %>%
-    ungroup()
-  
-  library(tidytext)
-  
-  # Generate a reversed color palette
-  if(palette=="gbr"){
-    colors <- grDevices::colorRampPalette(c("green", "black", "red"), space="rgb")(100);
-  }else if(palette == "heat"){
-    colors <- heat.colors(100);
-  }else if(palette == "topo"){
-    colors <- topo.colors(100);
-  }else if(palette == "gray"){
-    colors <- grDevices::colorRampPalette(c("grey90", "grey10"), space="rgb")(100);
-  }else if(palette == "viridis") {
-    colors <- rev(viridis::viridis(100))
-  }else if(palette == "plasma") {
-    colors <- rev(viridis::plasma(100))
-  }else {
-    load_rcolorbrewer();
-    colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdBu"))(100));
-  }
-  
+ 
+ 
   num_features <- length(unique(dt$feat)) 
   num_groups <- length(unique(dt$group))
-  axis_text_size <- ifelse(num_features > 50, 6, ifelse(num_features > 30, 8, 10))
-  axis_title_size <- ifelse(num_features > 50, 9, ifelse(num_features > 30, 11, 12))
-   
- plot<- ggplot(dt, aes(x = reorder_within(feat, -prev, group), y = prev, fill = prev)) + 
-    geom_bar(stat = "identity", color = "black") + 
-    scale_fill_gradientn(colors = colors, name = "Prevalence") +  # Global color scale
+  axis_text_size <- ifelse(num_features > 80, 6, ifelse(num_features > 30, 8, 10))
+  axis_title_size <- ifelse(num_features > 80, 9, ifelse(num_features > 30, 11, 12))
+
+library(ggsci)
+library(dplyr)
+library(tidyr)
+df_complete <- dt %>%
+  complete(feat, group, fill = list(prev = 0))
+df_complete <- df_complete %>%
+  arrange(group, desc(prev)) %>%
+  mutate(feat = factor(feat, levels = unique(feat))) # Order feat within each group by descending prev
+
+ plot<- ggplot(df_complete, aes(x = feat, y = prev, fill = group)) +
+  geom_bar(stat = "identity") +
     ylab("\nPrevalence") + 
     xlab(paste0("\n", taxrank)) + 
-    theme_bw() + 
-    theme(
-      axis.text = element_text(size = axis_text_size), 
-      axis.title = element_text(size = 11.5), 
-      axis.text.x = element_text(size = axis_text_size, angle = 45, hjust = 1)  # Adjust x-axis label size
-    ) + 
-    facet_wrap(~ group, scales = "free_x")+    
-    scale_x_reordered() 
-  
- w <- max(13, num_features * 0.2)   
- h <- max(5, num_groups * 3)          
+  scale_fill_d3() + # Apply the D3 color palette
+  facet_grid(group ~ ., scales = "free_x", space = "free_x") + # Facet by group in one column
+  theme_minimal() +
+  theme(
+    strip.text.y = element_text(angle = 0, size = 12), # Rotate facet labels to make them more readable
+    legend.position = "none", # Remove the legend
+    panel.spacing = unit(0.5, "lines"),
+    # Adjust x-axis text size and show only on the bottom panel
+    axis.text.x = element_text(angle = 45, hjust = 1, size = axis_text_size), # Adjust font size
+    axis.ticks.x = element_line(),
+    axis.title.x = element_text(vjust = -0.5)
+  )
  
+ w <- min(max(9, num_features * 0.2),13)
+ h <- max(6, num_groups * 2)          
+ print(c(w,h))
  Cairo::Cairo(file = imgName, unit = "in", width = w, height = h, type = format, bg = "white", dpi = dpi)
  print(plot)
  dev.off()
