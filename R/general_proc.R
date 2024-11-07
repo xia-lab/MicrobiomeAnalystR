@@ -189,7 +189,7 @@ SanityCheckData <- function(mbSetObj, filetype, preFilter = "sample", rmConstant
   if(exists("current.proc")){
     current.proc$mic$data.proc<<-data.proc
   }
-  
+ 
   if(.on.public.web){
     .set.mbSetObj(mbSetObj)
     return(c(1,taxa_no,sample_no,vari_no, smin,smean,smax,gd_feat,samplemeta_no,tot_size, tree_exist, samname_same, samname_same_number, sample_no_in_outfile, disc_no, cont_no,vari_dup_no,tree_tip,singleton,singleton_length));
@@ -344,7 +344,6 @@ ApplyAbundanceFilter <- function(mbSetObj, filt.opt, count, smpl.perc){
     
   }
   
-  
   saveDataQs(mbSetObj$dataSet$filt.data, "filt.data.orig", module.type, dataName);
   #qs::qsave(mbSetObj$dataSet$filt.data, file="filt.data.orig"); # save an copy
   current.msg <<- paste("A total of ", sum(!kept.inx), " low abundance features were removed based on ", filt.opt, ".", sep="");
@@ -421,6 +420,7 @@ ApplyVarianceFilter <- function(mbSetObj, filtopt, filtPerct){
   rm.msg1 <- paste0("A total of ```", sum(!remain), "``` low variance features were removed based on ```", filtopt, "```.");
   rm.msg2 <- paste0("The number of features remains after the data filtering step: ```", nrow(data), "```.");
   mbSetObj$dataSet$filt.msg <- c(rm.msg1, rm.msg2);
+
   return(.set.mbSetObj(mbSetObj));
   
 }
@@ -558,7 +558,7 @@ UpdateSampleItems <- function(mbSetObj){
   unmhit.indx <- which(hit.inx==FALSE);
   allnm <- colnames(data.proc.orig);
   mbSetObj$dataSet$remsam <- allnm[unmhit.indx];
-  
+ 
   mbSetObj$dataSet$proc.phyobj <- prune_samples(colnames(prefilt.data),proc.phyobj.orig);
   qs::qsave(prefilt.data, file="data.prefilt")
   current.msg <<- "Successfully updated the sample items!";
@@ -758,7 +758,7 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
   }
   ### Normalized object for each taxonomy level
   saveDataQs(data.list, "phyloseq_objs.qs", module.type, dataName); 
-  
+
   return(.set.mbSetObj(mbSetObj));
 }
 
@@ -1511,7 +1511,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
   load_splitstackshape();
   
   data.proc <- readDataQs("data.proc", module.type, dataName);
-  
+ 
   # do some sanity check here on sample and feature names
   smpl.nms <- colnames(data.proc);
   taxa.nms <- row.names(data.proc);
@@ -1586,7 +1586,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
             taxmat= data.frame(matrix(NA, ncol = 7, nrow = nrow(taxonomy)),check.names=FALSE);
             colnames(taxmat) <- classi.lvl;
             taxmat[,1:ncol(taxonomy)]<-taxonomy;
-            taxmat<-taxmat[colSums(!is.na(taxmat))>0];
+            taxmat<-taxmat[colSums(!is.na(taxmat))>0]; 
             taxmat<-as.matrix(taxmat);
             rownames(taxmat)<-c(1:nrow(taxmat));
             #phyloseq taxonomy object
@@ -1613,7 +1613,8 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
             }
             taxa_names(taxa_table)<-c(1:nrow(taxa_table));
           }else if(any(c(taxa_type=="GreengenesID", taxa_type=="Others/Not_specific"))){
-            
+            print("here")
+
             # need to parse Taxonomy still!
             load_splitstackshape();               
             
@@ -1624,7 +1625,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
             taxmat <- data.frame(matrix(NA, ncol = 7, nrow = nrow(taxonomy)),check.names=FALSE);
             colnames(taxmat) <- classi.lvl;
             taxmat[,1:ncol(taxonomy)] <- taxonomy;
-            taxmat <- taxmat[colSums(!is.na(taxmat))>0];
+            taxmat <- taxmat[colSums(!is.na(taxmat))>0]; 
             taxmat <- as.matrix(taxmat);
             rownames(taxmat) <- c(1:nrow(taxmat));
             #phyloseq taxonomy object
@@ -1634,7 +1635,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
           
           
         }
-        
+ 
         # making unique id for each OTU consist of lowest taxonomy level present followed by row number
         tmat <- as(tax_table(taxa_table), "matrix")
         rowLn <- nrow(tmat);
@@ -1646,13 +1647,14 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
         }
         
         na.inx <- is.na(tmat);
-        blank.inx <- which(tmat=="")
+        blank.inx <- which(tmat==""|tmat=="__")
         num.mat[na.inx] <- 0;
         num.mat[blank.inx] <- 0;
         maxInx <- apply(num.mat, 1, max);
         gd.coords <- cbind(1:rowLn, maxInx);
         gd.nms <- tmat[gd.coords];
         mynames <- make.unique(gd.nms, sep="_");
+ 
         
         if(length(mynames) != nrow(tmat)){
           AddErrMsg(paste("Errors with the taxonomy table! Please check if there are any names with all NA."));
@@ -1713,7 +1715,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
       if(isNormInput=="false"){
         data.proc<-apply(data.proc,2,as.integer);
       }   
-      data.proc<-otu_table(data.proc,taxa_are_rows =TRUE);
+       data.proc<-otu_table(data.proc,taxa_are_rows =TRUE);
       taxa_names(data.proc)<-taxa_names(mbSetObj$dataSet$taxa_table);
       # removing constant column and making standard names
       ind<-apply(mbSetObj$dataSet$taxa_table[,1], 2, function(x) which(x %in% c("Root", "root")));
@@ -1872,6 +1874,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
       AddErrMsg("Issues with sample names in your files! Make sure names are not purely numeric (i.e. 1, 2, 3).");
       return(0);
     }
+     data.proc <- data.proc[!grepl("^__",rownames(data.proc)),] 
     mbSetObj$dataSet$proc.phyobj <- merge_phyloseq(data.proc, mbSetObj$dataSet$sample_data, mbSetObj$dataSet$taxa_table);
     
     if(length(rank_names(mbSetObj$dataSet$proc.phyobj)) > 7){
@@ -1880,7 +1883,8 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
     #also using unique names for our further data
     prefilt.data <- readDataQs("data.prefilt", module.type, dataName);
     rownames(prefilt.data)<-taxa_names(mbSetObj$dataSet$taxa_table);
-    
+  
+    prefilt.data <- prefilt.data[!grepl("^__",rownames(prefilt.data)),]
     saveDataQs(prefilt.data, "data.prefilt", module.type, dataName);
     
   }else if(mbSetObj$module.type == "sdp"| mbSetObj$micDataType =="ko"){
@@ -1909,7 +1913,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
     mbSetObj$dataSet$proc.phyobj <- mbSetObj$dataSet$proc.phyobj;
     mbSetObj$dataSet$norm.phyobj <-mbSetObj$dataSet$proc.phyobj;
   }
-  
+ 
   return(.set.mbSetObj(mbSetObj));
 }
 
