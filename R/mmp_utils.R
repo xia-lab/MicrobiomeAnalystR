@@ -1509,11 +1509,11 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
     dend_col <- hclust(dist(t(data1), method = smplDist), method = clstDist)
     p <- p %>% add_col_dendro(dend_col)
   }
-  
-  pwidget <- to_widget(p)
-  save(pwidget, file = plotwidget)
-  
+   options(device = "pdf") 
   as_list <- to_plotly_list(p)
+   pwidget <- to_widget(p)
+   save(pwidget, file = plotwidget)
+ 
   ### add the layer for  annotation
   if(exists("annols")){    
     annht <- as_list$layout$annotations
@@ -2901,7 +2901,7 @@ CreatM2MHeatmapList<-function(mbSetObj, plotNm,  format="png",
     p <- p %>% add_col_dendro(dend_col)
   }
   
-  
+  options(device = "pdf") 
   as_list <- to_plotly_list(p)
 
   plotwidget <- paste0(plotNm, ".rda")
