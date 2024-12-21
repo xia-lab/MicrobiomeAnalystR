@@ -3166,6 +3166,7 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pai
                 sep = " ~ "))
       }
     }
+   
     res <- adonis2(formula = f, data = sampledf);
     resTab <- res[1,];
     stat.info <- paste("[PERMANOVA] F-value: ", signif(resTab$F, 5),  "; R-squared: ", signif(resTab$R2, 5), "; p-value: ", signif(resTab$Pr, 5), sep="");   
