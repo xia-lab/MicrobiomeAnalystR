@@ -760,7 +760,7 @@ ProcessMaaslinRes <- function(mbSetObj,taxalvl,analysis.var,thresh){
 
 
 #####lib path
-lib.path.mmp <<- "../../lib/mmp/"
+lib.path.mmp <<- paste0(rpath, "lib/mmp/");
   
 
 MetaboIDmap <- function(netModel,predDB,IDtype,met.vec=NA){
@@ -1733,7 +1733,7 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
       current.set <- qs::qread(paste0(lib.path.mmp,"ko_set_bac.qs"))
     }
     
-    set2nm <-  qs::qread("../../lib/mmp/set2nm.qs")[["pathway"]];
+    set2nm <-  qs::qread(paste0(rpath, "lib/mmp/set2nm.qs")[["pathway"]]);
     set.ids <- names(current.set);
     names(set.ids) <- names(current.set)<-  set2nm[set.ids];
     
@@ -3692,7 +3692,7 @@ ComputeEncasingDiablo <- function(filenm, type, names.vec, level=0.95, omics="NA
       diablo.res <- qs::qread("diablo.res.qs")
     }
     if(grepl("pca_", omics, fixed=TRUE)){
-      pos.xyz<-diablo.res$pca.scatter[[taxalvl]]$omics$score/1000
+      pos.xyz<-diablo.res$pca.scatter[[taxalvl]][[omics]]$score/1000
     }else{
       
       if(omics == "microbiome"){

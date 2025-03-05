@@ -1238,7 +1238,7 @@ return(1)
   resTable <- resTable[ord.inx, , drop=FALSE];
 
  if(mbSetObj[["module.type"]]=="sdp"){
-  ko_dic <- readRDS("../../lib/ko/ko_dic.rds")
+  ko_dic <- readRDS(paste0(rpath, "lib/ko/ko_dic.rds"))
    output <- cbind(name=ko_dic$Name[match(rownames(resTable),ko_dic$KO)], resTable)
   fast.write(output, file="rnaseq_de.csv");
  }else{
@@ -1378,7 +1378,7 @@ return(1)
   ord.inx <- order(-sigHits, resTable$Pvalues);
   resTable <- resTable[ord.inx, , drop=FALSE]
   if(mbSetObj[["module.type"]]=="sdp"){
-  ko_dic <- readRDS("../../lib/ko/ko_dic.rds")
+  ko_dic <- readRDS(paste0(rpath, "lib/ko/ko_dic.rds"))
   output <- cbind(name=ko_dic$Name[match(rownames(resTable),ko_dic$KO)], resTable)
   mbSetObj$analSet$rnaseq$resTable.edger.all <- output
   fast.write(output, file="rnaseq_de.csv")
@@ -1573,7 +1573,8 @@ FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, feat){
   #removing Inf values from table
   is.na(mbSetObj$analSet$resTable) <- sapply(mbSetObj$analSet$resTable, is.infinite);
   mbSetObj$analSet$resTable[is.na(mbSetObj$analSet$resTable)]<-0;
-  
+  mbSetObj$analSet$resTable.cor<-mbSetObj$analSet$resTable;
+
   mbSetObj$analSet$pattern <- feat;
   mbSetObj$analSet$taxrank <- taxrank;
   mbSetObj$analSet$feat.corr <- TRUE;
@@ -2527,7 +2528,18 @@ don$color[don$FDR > sigLevel] <- "#808080"
   cat(json.obj)
   sink()
   
-  
+   # Generate a descriptive text summarizing the analysis
+  analysis_description <- paste0(
+    "A comparative statistical analysis was performed using the '", type, 
+    "' method to identify differentially abundant features at the '", taxlvl, 
+    "' taxonomic level. The significance threshold was set at a p-value of ", 
+    sigLevel, " with an adjusted false discovery rate (FDR) cutoff. ",
+    "Additionally, a fold change threshold of ", fcLevel, 
+    " was applied to filter features based on their relative abundance differences."
+  )
+
+  # Store the description in mbSetObj for later reference
+  mbSetObj$analSet$comp.desc <- analysis_description
   
   return(.set.mbSetObj(mbSetObj))
 }

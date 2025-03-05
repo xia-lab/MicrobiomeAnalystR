@@ -3,6 +3,7 @@
 ## Description: Data/resource management functions
 ## Author: Jeff Xia, jeff.xia@mcgill.ca
 ###################################################
+  rpath <<- "../../"
 
 # This is only for web version
 #.on.public.web <- TRUE; # only TRUE when on MicrobiomeAnalyst web server
@@ -88,9 +89,9 @@ Init.mbSetObj <- function(){
   
   if(.on.public.web){
     if(is.null(sub.dir)){
-      lib.path <- paste("../../lib/", filenm, sep="");
+      lib.path <- paste(rpath, "lib/", filenm, sep="");
     }else{
-      lib.path <- paste("../../lib/", sub.dir, "/", filenm,  sep="");
+      lib.path <- paste(rpath, "lib/", sub.dir, "/", filenm,  sep="");
     }
     return(readRDS(lib.path));
   }else{

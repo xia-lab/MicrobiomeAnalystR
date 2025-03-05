@@ -930,7 +930,7 @@ checkfac = function(fac) {
  if(dir.exists("/Users/lzy/NetBeansProjects/MicrobiomeAnalyst")){
         path <- "/Users/lzy/NetBeansProjects/MicrobiomeAnalyst/target/MicrobiomeAnalyst-3.15/resources/rscripts/microbiomeanalystr/src/MicrobiomeAnalyst.so"
     }else{
-        path = "../../rscripts/MicrobiomeAnalystR/src/MicrobiomeAnalyst.so";
+        path = paste0(rpath, "rscripts/MicrobiomeAnalystR/src/MicrobiomeAnalyst.so");
 }
      return(path)  
 }
@@ -982,7 +982,7 @@ if(grp.num <= 18){ # update color and respect default
 
 
 .load.scripts.on.demand <- function(fileName=""){
-    complete.path <- paste0("../../rscripts/MicrobiomeAnalystR/R/", fileName);
+    complete.path <- paste0(rpath, "rscripts/MicrobiomeAnalystR/R/", fileName);
     compiler::loadcmp(complete.path);
 }
 
@@ -1105,10 +1105,112 @@ ComputeEncasing <- function(filenm, type, names.vec, level=0.95, omics="NA"){
 }
 
 AddFeatureToReport <- function(mbSetObj=NA, id, imgName){
-    mbSetObj <- .get.mbSetObj(mbSetObj);
-    if (is.null(mbSetObj$imgSet$featureList)) {
-      mbSetObj$imgSet$featureList <- list()
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  if (is.null(mbSetObj$imgSet$featureList)) {
+    mbSetObj$imgSet$featureList <- list();
+  }
+  mbSetObj$imgSet$featureList[[id]] <- imgName; 
+  return(.set.mbSetObj(mbSetObj));
+}
+
+setResourceDir <- function(path){
+  rpath <<- path;
+}
+
+CheckResTableExists <- function(mbSetObj = NA, type) {
+  mbSetObj <- .get.mbSetObj(mbSetObj)
+  
+  # Default to 1 (exists), but change to 0 if missing
+  res <- 1
+  
+  # Check different types
+  if (type == "correlation") {
+    res <- ifelse(is.null(mbSetObj$analSet$resTable.cor), 0, 1)
+    
+  } else if (type == "pairAlphaDiv") {
+    res <- ifelse(is.null(mbSetObj$analSet$alpha.stat.pair), 0, 1)
+    
+  } else if (type == "pairPermanova") {
+    res <- ifelse(is.null(mbSetObj$analSet$beta.stat.pair), 0, 1)
+    
+  } else if (type == "lefse") {
+    res <- ifelse(is.null(mbSetObj$analSet$lefse$resTable), 0, 1)
+    
+  } else if (type == "maaslin") {
+    res <- ifelse(is.null(mbSetObj$analSet$maaslin$resTable), 0, 1)
+    
+  } else if (type %in% c("EdgeR", "DESeq2")) {
+    res <- ifelse(
+      !is.null(mbSetObj$analSet$rnaseq$resTable) && 
+      !is.null(mbSetObj$paramSet$rnaseq) &&
+      mbSetObj$paramSet$rnaseq$method == type, 1, 0
+    )
+    
+  } else if (type %in% c("nonpar", "tt")) {
+    res <- ifelse(
+      !is.null(mbSetObj$analSet$univar$resTable) && 
+      !is.null(mbSetObj$paramSet$univar) &&
+      mbSetObj$paramSet$univar$method == type, 1, 0
+    )
+    
+  } else if (type %in% c("zigfit", "ffm")) {
+    res <- ifelse(
+      !is.null(mbSetObj$analSet$metagenoseq$resTable) && 
+      !is.null(mbSetObj$paramSet$metagenoseq) &&
+      mbSetObj$paramSet$metagenoseq$method == type, 1, 0
+    )
+  }
+  
+  return(res)
+}
+           
+SetCurrentResTable <- function(mbSetObj = NA, type) {
+  mbSetObj <- .get.mbSetObj(mbSetObj)
+  
+  if (type == "correlation") {
+    mbSetObj$analSet$resTable <- mbSetObj$analSet$resTable.cor
+    
+  } else if (type == "pairAlphaDiv") {
+    mbSetObj$analSet$resTable <- mbSetObj$analSet$alpha.stat.pair
+    
+  } else if (type == "pairPermanova") {
+    mbSetObj$analSet$resTable <- mbSetObj$analSet$beta.stat.pair
+    
+  } else if (type == "lefse") {
+    mbSetObj$analSet$resTable <- mbSetObj$analSet$lefse$resTable
+    
+  } else if (type == "maaslin") {
+    mbSetObj$analSet$resTable <- mbSetObj$analSet$maaslin$resTable
+    
+  } else if (type %in% c("EdgeR", "DESeq2")) {
+    if (!is.null(mbSetObj$analSet$rnaseq$resTable) &&
+        !is.null(mbSetObj$paramSet$rnaseq) &&
+        mbSetObj$paramSet$rnaseq$method == type) {
+      mbSetObj$analSet$resTable <- mbSetObj$analSet$rnaseq$resTable
+    } else {
+      #mbSetObj$analSet$resTable <- NULL
     }
-    mbSetObj$imgSet$featureList[[id]] <- imgName; 
-    return(.set.mbSetObj(mbSetObj));
+    
+  } else if (type %in% c("nonpar", "tt")) {
+    if (!is.null(mbSetObj$analSet$univar$resTable) &&
+        !is.null(mbSetObj$paramSet$univar) &&
+        mbSetObj$paramSet$univar$method == type) {
+      mbSetObj$analSet$resTable <- mbSetObj$analSet$univar$resTable
+    } else {
+      #mbSetObj$analSet$resTable <- NULL
+    }
+    
+  } else if (type %in% c("zigfit", "ffm")) {
+    if (!is.null(mbSetObj$analSet$metagenoseq$resTable) &&
+        !is.null(mbSetObj$paramSet$metagenoseq) &&
+        mbSetObj$paramSet$metagenoseq$method == type) {
+      mbSetObj$analSet$resTable <- mbSetObj$analSet$metagenoseq$resTable
+    } else {
+      #mbSetObj$analSet$resTable <- NULL
+    }
+  } else {
+    stop("Invalid type provided")
+  }
+  
+  return(1)
 }

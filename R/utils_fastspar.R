@@ -14,7 +14,7 @@ my.fast.spar <- function(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, out
   }
   
   if(.on.public.web){
-    spar_home <- "../../lib/fastspar/";
+    spar_home <- paste0(rpath, "lib/fastspar/");
   }else if (file.exists("/home/jasmine/Downloads/fastspar/fastspar")){ #jas local
     spar_home <- "/home/jasmine/Downloads/fastspar/"
   }else{

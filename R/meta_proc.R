@@ -28,7 +28,7 @@ Init.DataMeta <- function(mbSetObj, onWeb=T){
   cmdSet <<- list(annotated=FALSE);
   mdata.all <<- list();
   msg.vec <<- vector(mode="character");
-  lib.path <<- "../../data/";
+  lib.path <<- paste0(rpath, "data/");
   data.org <<- NULL;
   if(onWeb){
   Set.Config("web");
@@ -608,6 +608,8 @@ GetMetaInfoMeta <- function(mbSetObj, dataName, type="disc"){
 #'@export
 
 CheckMetaDataIntegrity <- function(mbSetObj, taxo_type="OTU", sample_var="NA"){
+  load_phyloseq();
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
   paramSet <- readSet(paramSet, "paramSet");
   paramSet$performedDE <- FALSE;
@@ -879,7 +881,8 @@ CheckMetaDataIntegrity <- function(mbSetObj, taxo_type="OTU", sample_var="NA"){
 #'License: GNU GPL (>= 2)
 #'@export
 MergeDatasets <- function(mbSetObj, taxo_type, sample_var){
-  
+  load_phyloseq();
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
   if(sample_var == "null"){
     #sample_var = colnames(sam_data)[1];
@@ -983,7 +986,7 @@ current.sample <- current.refset@sam_data
     #taxonomy mapping file
     
     if(.on.public.web){
-      otu.dic <<- qs::qread("../../lib/picrust/greengenes_taxmap.qs");
+      otu.dic <<- qs::qread(paste0(rpath, "lib/picrust/greengenes_taxmap.qs"));
     }else{
       otu.dic <<- readRDS("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/picrust/greengenes_taxmap.rds");
     }

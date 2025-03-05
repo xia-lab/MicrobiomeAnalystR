@@ -315,6 +315,7 @@ GetMetaDataGroups <- function(mbSetObj=NA, dataName){
      mbSetObj$dataSet <- readDataset(dataName);
   }
   colnms = colnames(mbSetObj$dataSet$sample_data)
+  print(paste("GetMetaDataGroups===", colnms));
   return(colnms[colnms!="sample_id"]);
   
 }
@@ -349,7 +350,10 @@ UpdateMetaOrder <- function(mbSetObj=NA, metaName){
 
 GetUniqueMetaNames <-function(mbSetObj=NA, metadata){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  #print(head(mbSetObj[["dataSet"]][["meta.types"]]));
+  if(metadata == "NA"){
+    metadata <- names(mbSetObj[["dataSet"]][["meta.types"]])[1];
+  }
+
   data.type <- mbSetObj[["dataSet"]][["meta.types"]][metadata];
   
   if(data.type == "cont"){
@@ -474,7 +478,13 @@ GetSampleGroups <- function(mbSetObj){
 
 GetMetaDataCol <- function(mbSetObj,colnm){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  cls = levels(mbSetObj$dataSet$sample_data[,colnm]);
-  return(cls[cls!="NA"]);
-}
+  if(colnm == "NA"){
+    colnm <- 1;
+  }
 
+  df <- sample_data(mbSetObj$dataSet$sample_data)
+  cls <- levels(df[[colnm]])
+  cls <- cls[cls!="NA"];
+  return(cls);
+}
+  
