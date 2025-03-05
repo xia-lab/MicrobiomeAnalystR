@@ -1163,7 +1163,7 @@ CheckResTableExists <- function(mbSetObj = NA, type) {
   
   return(res)
 }
-           
+      
 SetCurrentResTable <- function(mbSetObj = NA, type) {
   mbSetObj <- .get.mbSetObj(mbSetObj)
   
@@ -1211,6 +1211,5 @@ SetCurrentResTable <- function(mbSetObj = NA, type) {
   } else {
     stop("Invalid type provided")
   }
-  
-  return(1)
+  return(.set.mbSetObj(mbSetObj));
 }

@@ -333,7 +333,7 @@ RecordRCommand <- function(mbSetObj=NA, cmd){
 GetRCommandHistory <- function(mbSetObj=NA){
   mbSetObj <- .get.mbSetObj(mbSetObj); 
   if(is.null(mbSetObj$cmdSet)){
-    return("NA");
+    return(c("NA"));
   }
   return(mbSetObj$cmdSet);
 }
