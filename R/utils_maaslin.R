@@ -798,7 +798,7 @@ paras = paras[!paras$feature %in% nafeat,]
         if (x == y)
           x
         else
-          gsub(x, "", y)
+          sub(x, "", y)
       }, paras$metadata, paras$name)
  
     ##############################

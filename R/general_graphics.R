@@ -757,23 +757,18 @@ PlotHeatmap <- function(mbSetObj, plotNm, dataOpt = "norm",
     dend_col <- hclust(dist(t(data1), method = smplDist), method = clstDist)
     p <- p %>% add_col_dendro(dend_col)
   }
-
-  as_list <- to_plotly_list(p)
-
-
-
+options(device = "pdf") 
+as_list <- to_plotly_list(p)
   as_list[["layout"]][["width"]] <- w
   as_list[["layout"]][["height"]] <- h
 
 
-  as_json <- attr(as_list, "TOJSON_FUNC")(as_list)
+   as_json <- attr(as_list, "TOJSON_FUNC")(as_list)
   as_json <- paste0("{ \"x\":", as_json, ",\"evals\": [],\"jsHooks\": []}")
 
-  print(plotjs)
+   print(plotjs)
   write(as_json, plotjs)
 
-
-  write(as_json, plotjs)
 
   # storing for Report Generation
   mbSetObj$analSet$heatmap <- data1

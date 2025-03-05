@@ -239,8 +239,8 @@ mydata <- sapply(mydata[,-1,drop=F], format, trim = TRUE)
   my.meta.blank <- any(grepl("[[:blank:]]", my.meta)| grepl("[[:blank:]]", names(my.meta)));
   if(my.meta.blank){
     names(my.meta) <- gsub("\\s+","_", names(my.meta));
-    rownms <- rownames(my.meta)
-    my.meta <- data.frame(sapply(my.meta, function(x) gsub(" ","_",x)));
+    rownms <- rownames(my.meta);
+    my.meta <- data.frame(sapply(my.meta, function(x) gsub(" ","_",iconv(x, from = "ISO-8859-1", to = "UTF-8"))));
    rownames(my.meta) <- rownms
     na.msg1 <- c(na.msg1, "Blank spaces in group names are replaced with underscore '_'");
   }
