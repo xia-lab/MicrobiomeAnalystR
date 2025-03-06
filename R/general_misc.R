@@ -1017,7 +1017,7 @@ SetParam<- function(mbSetObj=NA, paramName, value){
 }
 
 #either mmp or sdp;
-recordEnrTable <- function(mbSetObj, vis.type, dataTable, library, algo){
+recordEnrTable <- function(mbSetObj, vis.type, dataTable, library, algo, mset=NA,hits.query=NA,setids=NA){
        # vis.type <- mbSetObj$paramSet$koProj.type;
         if(is.null(mbSetObj$imgSet$enrTables)){
             mbSetObj$imgSet$enrTables <- list();
@@ -1026,6 +1026,11 @@ recordEnrTable <- function(mbSetObj, vis.type, dataTable, library, algo){
         mbSetObj$imgSet$enrTables[[vis.type]]$table <- dataTable;
         mbSetObj$imgSet$enrTables[[vis.type]]$library <- library;
         mbSetObj$imgSet$enrTables[[vis.type]]$algo <- algo;
+        print(mset);
+        mbSetObj$imgSet$enrTables[[vis.type]]$current.mset <- mset;
+        mbSetObj$imgSet$enrTables[[vis.type]]$hits.query <- hits.query;
+        mbSetObj$imgSet$enrTables[[vis.type]]$current.setids <- setids;
+
         .set.mbSetObj(mbSetObj);
         return(mbSetObj);
 }
@@ -1159,7 +1164,18 @@ CheckResTableExists <- function(mbSetObj = NA, type) {
       !is.null(mbSetObj$paramSet$metagenoseq) &&
       mbSetObj$paramSet$metagenoseq$method == type, 1, 0
     )
-  }
+  }else if (type == "koEnr") {
+    vis.type <- mbSetObj$paramSet$koProj.type;
+    res.mat <- mbSetObj$imgSet$enrTables[[vis.type]]$table;
+    res <- ifelse(is.null(res.mat), 0, 1)
+    
+  }else if (type == "list") {
+    res.mat <- mbSetObj$imgSet$enrTables[["list"]]$table;
+    res <- ifelse(is.null(res.mat), 0, 1)
+    
+  }else if (type == "tsea") {
+    res <- ifelse(is.null(mbSetObj$analSet$ora.mat), 0, 1)
+  } 
   
   return(res)
 }
@@ -1212,4 +1228,30 @@ SetCurrentResTable <- function(mbSetObj = NA, type) {
     stop("Invalid type provided")
   }
   return(.set.mbSetObj(mbSetObj));
+}
+
+
+GetHTMLPathSet <- function(type, setNm){
+  mbSetObj <- .get.mbSetObj(mbSetObj)
+  print(type)
+  print(setNm);
+  save.image("pathset.RData");
+  imgSet <- mbSetObj$imgSet;
+  current.mset <- imgSet$enrTables[[type]]$current.mset;
+  hits.query <- imgSet$enrTables[[type]]$hits.query;
+  set <- current.mset[[setNm]]; 
+  
+  #set <- cur.setids[[setNm]];
+  
+  hits <- hits.query
+  
+  # highlighting with different colors
+  red.inx <- which(set %in% hits[[setNm]]);
+  
+  # use actual cmpd names
+  #nms <- names(set);
+  nms <- set;
+  nms[red.inx] <- paste("<font color=\"red\">", "<b>", nms[red.inx], "</b>", "</font>",sep="");
+
+  return(cbind(setNm, paste(unique(nms), collapse="; ")));
 }

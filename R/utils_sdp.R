@@ -674,7 +674,7 @@ PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",fi
         res.mat <- res.mat[ord.inx,];
         return(res.mat);
     }
-    dat.in <- list(cls=phenotype, data=genemat, subsets=hits, set.num=set.num, filenm=file.nm , my.fun=my.fun);
+    dat.in <- list(cls=phenotype, data=genemat, subsets=hits, set.num=set.num, filenm=file.nm , my.fun=my.fun, curr.mset=current.mset);
     qs::qsave(dat.in, file="dat.in.qs");
     return(1);
 }
@@ -685,7 +685,7 @@ PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",fi
   hits = dat.in$subsets
   file.nm = dat.in$filenm;
   my.res <- dat.in$my.res;
-
+  curr.mset <- dat.in$curr.mset;
   if(all(c(length(my.res)==1, is.na(my.res)))){
         AddErrMsg("No match was found to the selected metabolite set library!");
         return(0);
@@ -695,7 +695,7 @@ PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",fi
     nms <- rownames(my.res);
     hits <- hits[nms];
 
-    mbSetObj <- recordEnrTable(mbSetObj, "global", my.res, "KEGG", "Global Test");
+    mbSetObj <- recordEnrTable(mbSetObj, "global", my.res, "KEGG", "Global Test", curr.mset, hits);
     mbSetObj <- Save2KEGGJSON(mbSetObj, hits, my.res, file.nm);
 print("heredone")
     return(.set.mbSetObj(mbSetObj));
@@ -938,17 +938,40 @@ PerformKOEnrichAnalysis_List <- function(mbSetObj, file.nm){
  #report related object
     if(!is.null(mbSetObj$paramSet$koProj.type)){
         vis.type <- mbSetObj$paramSet$koProj.type;
-        if(is.null(mbSetObj$imgSet$enrTables)){
-            mbSetObj$imgSet$enrTables <- list();
-        }
-        mbSetObj$imgSet$enrTables[[vis.type]] <- list();
-        mbSetObj$imgSet$enrTables[[vis.type]]$table <- res.mat;
-        mbSetObj$imgSet$enrTables[[vis.type]]$library <- "KEGG";
-        mbSetObj$imgSet$enrTables[[vis.type]]$algo <- "Overrepresentation Analysis";
+        mbSetObj <- recordEnrTable(mbSetObj, vis.type, res.mat, "KEGG", "Overrepresentation Analysis", current.mset, hits.query, NA);
     }
  
   mbSetObj <- Save2KEGGJSON(mbSetObj, hits.query, res.mat, file.nm);
   return(mbSetObj);
+}
+
+GetKOEnrichmentResTable <- function(mbSetObj=NA, type){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  if(type == "koEnr"){
+  vis.type <- mbSetObj$paramSet$koProj.type;
+  }else{
+  vis.type <- type;
+  }
+  res.mat <- mbSetObj$imgSet$enrTables[[vis.type]]$table;
+  return(res.mat)
+}
+
+GetKOEnrRowNames <- function(mbSetObj, type){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  res.mat <- GetKOEnrichmentResTable(mbSetObj, type);
+  return(rownames(res.mat));
+}
+
+GetKOEnrColNames <- function(mbSetObj, type){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  res.mat <- GetKOEnrichmentResTable(mbSetObj, type);
+  return(colnames(res.mat));
+}
+
+GetKOEnrMat <- function(mbSetObj, type){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  res.mat <- GetKOEnrichmentResTable(mbSetObj, type);
+  return(as.matrix(signif(res.mat),5));
 }
 
 # Utility function

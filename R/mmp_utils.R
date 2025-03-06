@@ -2728,7 +2728,7 @@ PerformMetListEnrichment <- function(mbSetObj, contain,file.nm){
     return(x)
   })
   
-  mbSetObj <- recordEnrTable(mbSetObj, "mmp", resTable, "KEGG", "Overrepresentation Analysis");
+  mbSetObj <- recordEnrTable(mbSetObj, "mmp", resTable, "KEGG", "Overrepresentation Analysis", current.mset, hits.query);
 
   json.res <- list(hits.query =convert2JsonList(hits.query),
                    path.nms = path.nms,
