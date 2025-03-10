@@ -760,6 +760,8 @@ generateResFigures <- function(mbSetObj = NA){
   colnames(otu_table)[1] <- "#NAME"
   dataObj[["res"]][["otu_table"]] <- otu_table
   write.table(otu_table, file = "microbiomeAnalyst_16s_abund.txt", sep = "\t", row.names = FALSE, quote = FALSE)
+  mbSetObj$dataSet$rawOutput <- otu_table;
+
   ## save well-formatted meta data file
   meta_idx <- sapply(Samples, function(x){
     grep(x, meta_dt[,1])[1]
@@ -768,7 +770,8 @@ generateResFigures <- function(mbSetObj = NA){
   colnames(meta_dtx) <- colnames(meta_dt)
   colnames(meta_dtx)[1] <- "#NAME"
   write.table(meta_dtx, file = "microbiomeAnalyst_16s_meta.txt", sep = "\t", row.names = FALSE, quote = FALSE)
-  
+  mbSetObj$dataSet$rawOutputMeta <- meta_dtx;
+
   ps <- phyloseq(otu_table(dataObj[["res"]][["seqtab.nochim"]], taxa_are_rows=TRUE), 
                  sample_data(samdf), 
                  tax_table(dataObj[["res"]][["taxa"]]))

@@ -697,7 +697,6 @@ PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",fi
 
     mbSetObj <- recordEnrTable(mbSetObj, "global", my.res, "KEGG", "Global Test", curr.mset, hits);
     mbSetObj <- Save2KEGGJSON(mbSetObj, hits, my.res, file.nm);
-print("heredone")
     return(.set.mbSetObj(mbSetObj));
 }
 
@@ -948,7 +947,7 @@ PerformKOEnrichAnalysis_List <- function(mbSetObj, file.nm){
 GetKOEnrichmentResTable <- function(mbSetObj=NA, type){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   if(type == "koEnr"){
-  vis.type <- mbSetObj$paramSet$koProj.type;
+  vis.type <- "global";
   }else{
   vis.type <- type;
   }

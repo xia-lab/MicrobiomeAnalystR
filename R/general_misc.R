@@ -1022,11 +1022,12 @@ recordEnrTable <- function(mbSetObj, vis.type, dataTable, library, algo, mset=NA
         if(is.null(mbSetObj$imgSet$enrTables)){
             mbSetObj$imgSet$enrTables <- list();
         }
+        print("recordEnr");
+        print(vis.type);
         mbSetObj$imgSet$enrTables[[vis.type]] <- list();
         mbSetObj$imgSet$enrTables[[vis.type]]$table <- dataTable;
         mbSetObj$imgSet$enrTables[[vis.type]]$library <- library;
         mbSetObj$imgSet$enrTables[[vis.type]]$algo <- algo;
-        print(mset);
         mbSetObj$imgSet$enrTables[[vis.type]]$current.mset <- mset;
         mbSetObj$imgSet$enrTables[[vis.type]]$hits.query <- hits.query;
         mbSetObj$imgSet$enrTables[[vis.type]]$current.setids <- setids;
@@ -1142,7 +1143,7 @@ CheckResTableExists <- function(mbSetObj = NA, type) {
     res <- ifelse(is.null(mbSetObj$analSet$lefse$resTable), 0, 1)
     
   } else if (type == "maaslin") {
-    res <- ifelse(is.null(mbSetObj$analSet$maaslin$resTable), 0, 1)
+    res <- ifelse(is.null(mbSetObj$analSet$cov$resTable), 0, 1)
     
   } else if (type %in% c("EdgeR", "DESeq2")) {
     res <- ifelse(
@@ -1165,17 +1166,22 @@ CheckResTableExists <- function(mbSetObj = NA, type) {
       mbSetObj$paramSet$metagenoseq$method == type, 1, 0
     )
   }else if (type == "koEnr") {
-    vis.type <- mbSetObj$paramSet$koProj.type;
+    vis.type <- "global";
     res.mat <- mbSetObj$imgSet$enrTables[[vis.type]]$table;
     res <- ifelse(is.null(res.mat), 0, 1)
-    
+
+
   }else if (type == "list") {
     res.mat <- mbSetObj$imgSet$enrTables[["list"]]$table;
     res <- ifelse(is.null(res.mat), 0, 1)
     
   }else if (type == "tsea") {
-    res <- ifelse(is.null(mbSetObj$analSet$ora.mat), 0, 1)
-  } 
+    res <- ifelse(is.null(mbSetObj$analSet$ora.mat), 0, 1);
+  } else if (type == "rawOutput") {
+    res <- ifelse(is.null(mbSetObj$dataSet$rawOutput), 0, 1);
+  }else if (type == "rawOutputMeta") {
+    res <- ifelse(is.null(mbSetObj$dataSet$rawOutputMeta), 0, 1);
+  }
   
   return(res)
 }
@@ -1184,25 +1190,25 @@ SetCurrentResTable <- function(mbSetObj = NA, type) {
   mbSetObj <- .get.mbSetObj(mbSetObj)
   
   if (type == "correlation") {
-    mbSetObj$analSet$resTable <- mbSetObj$analSet$resTable.cor
+    mbSetObj$analSet$resTable <- apply_signif_df(mbSetObj$analSet$resTable.cor)
     
   } else if (type == "pairAlphaDiv") {
-    mbSetObj$analSet$resTable <- mbSetObj$analSet$alpha.stat.pair
+    mbSetObj$analSet$resTable <- apply_signif_df(mbSetObj$analSet$alpha.stat.pair)
     
   } else if (type == "pairPermanova") {
-    mbSetObj$analSet$resTable <- mbSetObj$analSet$beta.stat.pair
+    mbSetObj$analSet$resTable <- apply_signif_df(mbSetObj$analSet$beta.stat.pair)
     
   } else if (type == "lefse") {
-    mbSetObj$analSet$resTable <- mbSetObj$analSet$lefse$resTable
+    mbSetObj$analSet$resTable <- apply_signif_df(mbSetObj$analSet$lefse$resTable)
     
   } else if (type == "maaslin") {
-    mbSetObj$analSet$resTable <- mbSetObj$analSet$maaslin$resTable
+    mbSetObj$analSet$resTable <- apply_signif_df(mbSetObj$analSet$cov$resTable)
     
   } else if (type %in% c("EdgeR", "DESeq2")) {
     if (!is.null(mbSetObj$analSet$rnaseq$resTable) &&
         !is.null(mbSetObj$paramSet$rnaseq) &&
         mbSetObj$paramSet$rnaseq$method == type) {
-      mbSetObj$analSet$resTable <- mbSetObj$analSet$rnaseq$resTable
+      mbSetObj$analSet$resTable <- apply_signif_df(mbSetObj$analSet$rnaseq$resTable)
     } else {
       #mbSetObj$analSet$resTable <- NULL
     }
@@ -1211,7 +1217,7 @@ SetCurrentResTable <- function(mbSetObj = NA, type) {
     if (!is.null(mbSetObj$analSet$univar$resTable) &&
         !is.null(mbSetObj$paramSet$univar) &&
         mbSetObj$paramSet$univar$method == type) {
-      mbSetObj$analSet$resTable <- mbSetObj$analSet$univar$resTable
+      mbSetObj$analSet$resTable <- apply_signif_df(mbSetObj$analSet$univar$resTable)
     } else {
       #mbSetObj$analSet$resTable <- NULL
     }
@@ -1220,10 +1226,14 @@ SetCurrentResTable <- function(mbSetObj = NA, type) {
     if (!is.null(mbSetObj$analSet$metagenoseq$resTable) &&
         !is.null(mbSetObj$paramSet$metagenoseq) &&
         mbSetObj$paramSet$metagenoseq$method == type) {
-      mbSetObj$analSet$resTable <- mbSetObj$analSet$metagenoseq$resTable
+      mbSetObj$analSet$resTable <- apply_signif_df(mbSetObj$analSet$metagenoseq$resTable)
     } else {
       #mbSetObj$analSet$resTable <- NULL
     }
+  } else if (type == "rawOutput") {
+    mbSetObj$analSet$resTable <- apply_signif_df(mbSetObj$dataSet$rawOutput);
+  }else if (type == "rawOutputMeta") {
+    mbSetObj$analSet$resTable <- apply_signif_df(mbSetObj$dataSet$rawOutputMeta);
   } else {
     stop("Invalid type provided")
   }
@@ -1233,9 +1243,7 @@ SetCurrentResTable <- function(mbSetObj = NA, type) {
 
 GetHTMLPathSet <- function(type, setNm){
   mbSetObj <- .get.mbSetObj(mbSetObj)
-  print(type)
-  print(setNm);
-  save.image("pathset.RData");
+
   imgSet <- mbSetObj$imgSet;
   current.mset <- imgSet$enrTables[[type]]$current.mset;
   hits.query <- imgSet$enrTables[[type]]$hits.query;
@@ -1254,4 +1262,61 @@ GetHTMLPathSet <- function(type, setNm){
   nms[red.inx] <- paste("<font color=\"red\">", "<b>", nms[red.inx], "</b>", "</font>",sep="");
 
   return(cbind(setNm, paste(unique(nms), collapse="; ")));
+}
+
+apply_signif_df <- function(df, digits = 5) {
+  df[] <- lapply(df, function(col) {
+    if (is.numeric(col)) {
+      signif(col, digits)
+    } else {
+      col  # Keep character and other non-numeric columns unchanged
+    }
+  })
+  return(df)
+}
+
+PopulateRawOutput <- function(mbSetObj = NA, dataName = "microbiomeAnalyst_16s_abund.txt", metaName = "microbiomeAnalyst_16s_meta.txt") {
+  
+  mbSetObj <- .get.mbSetObj(mbSetObj)
+  
+  if (!file.exists(dataName)) {
+    cat("Error: Data file not found:", dataName, "\n")
+    return(0)
+  }
+  
+  if (!file.exists(metaName)) {
+    cat("Error: Metadata file not found:", metaName, "\n")
+    return(0)
+  }
+  
+  otu_table <- read.table(dataName, sep = "\t", header = TRUE, stringsAsFactors = FALSE, check.names = FALSE, comment.char = "")
+  meta_data <- read.table(metaName, sep = "\t", header = TRUE, stringsAsFactors = FALSE, check.names = FALSE, comment.char = "")
+  
+  if (colnames(otu_table)[1] == "#NAME") {
+    colnames(otu_table)[1] <- "SampleID"
+  }
+  
+  if (colnames(meta_data)[1] == "#NAME") {
+    colnames(meta_data)[1] <- "SampleID"
+  }
+  
+  if (any(duplicated(otu_table[, 1]))) {
+    otu_table[, 1] <- make.unique(as.character(otu_table[, 1]))
+  }
+  rownames(otu_table) <- otu_table[, 1]
+  otu_table <- otu_table[, -1, drop = FALSE]
+  
+  if (any(duplicated(meta_data[, 1]))) {
+    meta_data[, 1] <- make.unique(as.character(meta_data[, 1]))
+  }
+  rownames(meta_data) <- meta_data[, 1]
+  meta_data <- meta_data[, -1, drop = FALSE]
+  
+  mbSetObj$dataSet$rawOutput <- apply_signif_df(otu_table)
+  mbSetObj$dataSet$rawOutputMeta <- apply_signif_df(meta_data)
+
+  cat("OTU Table Dimensions:", dim(otu_table), "\n")
+  cat("Metadata Table Dimensions:", dim(meta_data), "\n")
+
+  return(.set.mbSetObj(mbSetObj))
 }
