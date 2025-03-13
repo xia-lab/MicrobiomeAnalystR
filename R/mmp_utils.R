@@ -700,6 +700,8 @@ PrepareResTable <- function(mbSetObj,micDataType,taxalvl,is.norm=F){
   mbSetObj$analSet$multiboxdata <- box_data;
   mbSetObj$analSet$sig.count <- sig.count;
   mbSetObj$analSet$resTable <- resTab;
+  mbSetObj$analSet$maaslin$resTable <- resTab;
+
   resMsg<<- paste0(resMsg,current.msg)
   return(.set.mbSetObj(mbSetObj))
 }

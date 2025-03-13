@@ -1143,8 +1143,11 @@ CheckResTableExists <- function(mbSetObj = NA, type) {
     res <- ifelse(is.null(mbSetObj$analSet$lefse$resTable), 0, 1)
     
   } else if (type == "maaslin") {
-    res <- ifelse(is.null(mbSetObj$analSet$cov$resTable), 0, 1)
-    
+    if(mbSetObj$module.type == "mmp"){
+        res <- ifelse(is.null(mbSetObj$analSet$maaslin), 0, 1)
+    }else{
+        res <- ifelse(is.null(mbSetObj$analSet$cov$resTable), 0, 1)
+    }
   } else if (type %in% c("EdgeR", "DESeq2")) {
     res <- ifelse(
       !is.null(mbSetObj$analSet$rnaseq$resTable) && 
@@ -1205,7 +1208,11 @@ SetCurrentResTable <- function(mbSetObj = NA, type) {
     mbSetObj$analSet$resTable <- apply_signif_df(mbSetObj$analSet$lefse$resTable)
     
   } else if (type == "maaslin") {
-    mbSetObj$analSet$resTable <- apply_signif_df(mbSetObj$analSet$cov$resTable)
+    if(mbSetObj$module.type == "mmp"){
+        mbSetObj$analSet$resTable <- apply_signif_df(mbSetObj$analSet$maaslin$resTable)
+    }else{
+        mbSetObj$analSet$resTable <- apply_signif_df(mbSetObj$analSet$cov$resTable)
+    }
     
   } else if (type %in% c("EdgeR", "DESeq2")) {
     if (!is.null(mbSetObj$analSet$rnaseq$resTable) &&
