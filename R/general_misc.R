@@ -1181,6 +1181,9 @@ CheckResTableExists <- function(mbSetObj = NA, type) {
     res <- ifelse(is.null(mbSetObj$dataSet$rawOutput), 0, 1);
   }else if (type == "rawOutputMeta") {
     res <- ifelse(is.null(mbSetObj$dataSet$rawOutputMeta), 0, 1);
+  }else if (type == "rf") {
+    res <- ifelse(is.null(mbSetObj$analSet$rf.sigmat), 0, 1)
+    
   }
   
   return(res)
@@ -1234,6 +1237,8 @@ SetCurrentResTable <- function(mbSetObj = NA, type) {
     mbSetObj$analSet$resTable <- apply_signif_df(mbSetObj$dataSet$rawOutput);
   }else if (type == "rawOutputMeta") {
     mbSetObj$analSet$resTable <- apply_signif_df(mbSetObj$dataSet$rawOutputMeta);
+  }else if (type == "rf") {
+    mbSetObj$analSet$resTable <- signif(mbSetObj$analSet$rf.sigmat, 5);
   } else {
     stop("Invalid type provided")
   }

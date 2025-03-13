@@ -4550,8 +4550,6 @@ PlotlyTaxaAbundance <- function(rdaName, type){
 PlotlyCompManht <- function(rdaName){
   
  load(rdaName)
-
 p <- plotly::ggplotly(p, width=1000, height=800,tooltip = "text");
-
 return(p)
 }
