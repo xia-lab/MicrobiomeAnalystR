@@ -1174,6 +1174,9 @@ CheckResTableExists <- function(mbSetObj = NA, type) {
     res <- ifelse(is.null(res.mat), 0, 1)
 
 
+  }else if (type %in% c("mmp_ko", "mmp_metabolite", "mmp_otu", "mmp")) {
+    res.mat <- mbSetObj$imgSet$enrTables[[type]]$table;
+    res <- ifelse(is.null(res.mat), 0, 1)
   }else if (type == "list") {
     res.mat <- mbSetObj$imgSet$enrTables[["list"]]$table;
     res <- ifelse(is.null(res.mat), 0, 1)
@@ -1187,7 +1190,16 @@ CheckResTableExists <- function(mbSetObj = NA, type) {
   }else if (type == "rf") {
     res <- ifelse(is.null(mbSetObj$analSet$rf.sigmat), 0, 1)
     
-  }
+  }else if (type == "metaAlpha") {
+    res <- ifelse(is.null(mbSetObj$analSet$alpha.summary), 0, 1)
+    
+  }else if (type == "metaBeta") {
+    res <- ifelse(is.null(mbSetObj$analSet$beta.summary), 0, 1)
+    
+  }else if (type == "metaMarker") {
+    analSet <- readSet(analSet, "analSet");
+    res <- ifelse(is.null(analSet$meta.mat.all), 0, 1)
+  } 
   
   return(res)
 }
@@ -1246,6 +1258,9 @@ SetCurrentResTable <- function(mbSetObj = NA, type) {
     mbSetObj$analSet$resTable <- apply_signif_df(mbSetObj$dataSet$rawOutputMeta);
   }else if (type == "rf") {
     mbSetObj$analSet$resTable <- signif(mbSetObj$analSet$rf.sigmat, 5);
+  }else if (type %in% c("mmp_ko", "mmp_metabolite", "mmp_otu", "mmp")) {
+    mbSetObj$analSet$resTable <- signif(mbSetObj$imgSet$enrTables[[type]]$table, 5);
+    print(head(mbSetObj$analSet$resTable));
   } else {
     stop("Invalid type provided")
   }
