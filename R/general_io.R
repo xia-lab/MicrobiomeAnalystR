@@ -35,6 +35,26 @@
 #'License: GNU GPL (>= 2)
 #'@export
 Init.mbSetObj <- function(){
+  if(file.exists("/data/sqlite/")){ #vip server
+    sqlite.path <<- "/data/sqlite/";
+  }else if(file.exists("/home/glassfish/sqlite/")){ #.on.public.web
+    sqlite.path <<- "/home/glassfish/sqlite/";
+  }else if(file.exists("/Users/xialab/Dropbox/sqlite/")){ # xia local
+    sqlite.path<<- "/Users/xialab/Dropbox/sqlite/";
+  }else if(file.exists("/Users/xia/Dropbox/sqlite/")){ # xia local
+    sqlite.path <<- "/Users/jeffxia/Dropbox/sqlite/";
+  }else if(file.exists("/Users/jeffxia/Dropbox/sqlite/")){ # xia local2
+    sqlite.path <<- "/Users/jeffxia/Dropbox/sqlite/";
+  }else if(file.exists("/media/zzggyy/disk/sqlite/")){
+    sqlite.path <<-"/media/zzggyy/disk/sqlite/"; #zgy local)
+  }else if(file.exists("/home/zgy/sqlite/")){
+    sqlite.path <<-"/home/zgy/sqlite/"; #zgy local)
+  }else if(file.exists("/home/qiang/Music/")){# qiang local
+    sqlite.path <<-"/home/qiang/sqlite/";
+  }else{
+    #url.pre <<- paste0(dirname(system.file("database", "sqlite/GeneID_25Species_JE/ath_genes.sqlite", package="MetaboAnalystR")), "/")
+    url.pre <<- "";
+  }
 
   rm(list = ls(all.names = TRUE))
   dataSet <- list();
@@ -347,9 +367,17 @@ ClearRCommandHistory <- function(mbSetObj=NA){
 ####################################
 ############ Get Funs ##############
 ####################################
+GetResRowSymbols <- function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  if(mbSetObj$module.type == "sdp"){
+    return(doGene2KONameMapping(rownames(mbSetObj$analSet$resTable)));
+  }else{
+    return(rownames(mbSetObj$analSet$resTable))
+  }
+}
+
 GetResRowNames <- function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  #print(head(mbSetObj$analSet$resTable));
   return(rownames(mbSetObj$analSet$resTable));
 }
 

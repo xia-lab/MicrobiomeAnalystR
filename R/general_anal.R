@@ -1238,8 +1238,9 @@ return(1)
   resTable <- resTable[ord.inx, , drop=FALSE];
 
  if(mbSetObj[["module.type"]]=="sdp"){
-  ko_dic <- readRDS(paste0(rpath, "lib/ko/ko_dic.rds"))
-   output <- cbind(name=ko_dic$Name[match(rownames(resTable),ko_dic$KO)], resTable)
+  ko_names <- doGene2KONameMapping(rownames(resTable));
+  output <- cbind(name=ko_names, resTable)
+  mbSetObj$analSet$rnaseq$resTableNames <- mbSetObj$analSet$resTable <- ko_names;
   fast.write(output, file="rnaseq_de.csv");
  }else{
   fast.write(resTable, file="rnaseq_de.csv")
@@ -1247,9 +1248,10 @@ return(1)
 
   
   if(nrow(resTable) > 500){
-    resTable<-resTable[1:500, ];
+    resTable<-resTable[1:500, ]; 
   }
   
+
   mbSetObj$analSet$rnaseq$resTable <- mbSetObj$analSet$resTable <- as.data.frame(resTable,check.names=FALSE);
   
   #only getting the names of DE features
@@ -1378,8 +1380,9 @@ return(1)
   ord.inx <- order(-sigHits, resTable$Pvalues);
   resTable <- resTable[ord.inx, , drop=FALSE]
   if(mbSetObj[["module.type"]]=="sdp"){
-  ko_dic <- readRDS(paste0(rpath, "lib/ko/ko_dic.rds"))
-  output <- cbind(name=ko_dic$Name[match(rownames(resTable),ko_dic$KO)], resTable)
+  ko_names <- doGene2KONameMapping(rownames(resTable));
+  output <- cbind(name=ko_names, resTable)
+  mbSetObj$analSet$rnaseq$resTableNames <- mbSetObj$analSet$resTable <- ko_names;
   mbSetObj$analSet$rnaseq$resTable.edger.all <- output
   fast.write(output, file="rnaseq_de.csv")
   }else{
