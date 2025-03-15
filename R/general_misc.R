@@ -1347,3 +1347,36 @@ PopulateRawOutput <- function(mbSetObj = NA, dataName = "microbiomeAnalyst_16s_a
 
   return(.set.mbSetObj(mbSetObj))
 }
+
+
+doGene2KONameMapping <- function(enIDs) {
+library(RSQLite)
+
+
+  # Establish connection to the SQLite database
+  db_path <- paste0(sqlite.path, "/ko_genes.sqlite")
+
+  con <- dbConnect(SQLite(), dbname = db_path)
+  
+  # Ensure gene_id values are properly formatted as strings in SQL query
+  formatted_ids <- paste0("'", enIDs, "'", collapse = ", ")
+  query <- paste0("SELECT gene_id, symbol FROM entrez WHERE gene_id IN (", formatted_ids, ")")
+  
+  
+  # Execute the query
+  ko.dic <- dbGetQuery(con, query)
+
+  # Close the database connection
+  dbDisconnect(con)
+  
+  # Map enIDs to their corresponding symbols
+  ko.dic.enIDs <- ko.dic$gene_id  # Keep as character, no conversion needed
+  hit.inx <- match(enIDs, ko.dic.enIDs)
+  kos <- ko.dic$symbol[hit.inx]
+
+  # Assign original KO IDs to unmapped entries
+  na.inx <- is.na(kos)
+  kos[na.inx] <- enIDs[na.inx]
+
+  return(kos)
+}
