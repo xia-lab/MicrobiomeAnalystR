@@ -341,10 +341,20 @@ SetMetaTypes <- function(mbSetObj=NA, dataName, metaTypes.vec){
 
 UpdateMetaOrder <- function(mbSetObj=NA, metaName){
   mbSetObj <- .get.mbSetObj(mbSetObj);
+
   if(exists('meta.ord.vec')){
-    metadata <- mbSetObj$dataSet$sample_data[,metaName];
-    mbSetObj$dataSet$sample_data[,metaName] <- factor(as.character(metadata), levels=meta.ord.vec)
+   
+if( isS4(mbSetObj$dataSet$sample_data)){
+  metadata <- sample_data(mbSetObj$dataSet$sample_data)
+  metadata[[metaName]] <- factor(metadata[[metaName]], levels = meta.ord.vec)
+  mbSetObj$dataSet$sample_data <- sample_data(metadata)
+}else{
+  metadata <- mbSetObj$dataSet$sample_data[,metaName];
+  mbSetObj$dataSet$sample_data[,metaName] <- factor(as.character(metadata), levels=meta.ord.vec)
+}
+ 
   }
+
     return(.set.mbSetObj(mbSetObj));
 }
 

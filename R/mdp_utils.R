@@ -17,14 +17,14 @@
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PerformAlphaDiversityComp<-function(mbSetObj, opt, metadata, pair.wise = "false"){
-  
+PerformAlphaDiversityComp <- function(mbSetObj, opt, metadata, pair.wise = "false"){
+  print(metadata)
   mbSetObj <- .get.mbSetObj(mbSetObj); 
   data <- mbSetObj$analSet$alpha;
   cls <- as.factor(data[,metadata]);
   x <- data$value;
   stat.info <- NULL;
-  
+  print(c("cls",cls))
   if(length(levels(cls)) > 2){
     if(opt=="nonpar"){
       res <- kruskal.test(x ~ cls);
@@ -1688,6 +1688,7 @@ PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName, metadata,
       data <- mbSetObj$dataSet$proc.phyobj;
     }
   }
+
   if(taxrank!="OTU"){
     #merging at taxonomy levels
     data <- fast_tax_glom_mem(data, taxrank);

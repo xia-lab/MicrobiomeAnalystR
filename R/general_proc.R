@@ -757,8 +757,7 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
     
   }
   ### Normalized object for each taxonomy level
-  saveDataQs(data.list, "phyloseq_objs.qs", module.type, dataName); 
-
+  saveDataQs(data.list, "phyloseq_objs.qs", module.type, dataName);  
   return(.set.mbSetObj(mbSetObj));
 }
 
@@ -1509,10 +1508,8 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
   module.type <- mbSetObj$module.type;
   load_phyloseq();
   load_splitstackshape();
-  
-  data.proc <- readDataQs("data.proc", module.type, dataName);
- 
-  # do some sanity check here on sample and feature names
+   data.proc <- readDataQs("data.proc", module.type, dataName);
+   # do some sanity check here on sample and feature names
   smpl.nms <- colnames(data.proc);
   taxa.nms <- row.names(data.proc);
   # check for uniqueness of dimension name
@@ -1555,7 +1552,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
   }
   #standard name to be used
   classi.lvl<- c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species");
-  if(any(c(mbSetObj$module.type == "mdp", mbSetObj$micDataType =="otu", mbSetObj$module.type == "ppd", mbSetObj$module.type == "meta"))){
+  if(any(c(mbSetObj$module.type == "mdp", mbSetObj$micDataType =="otu", mbSetObj$module.type == "ppd", mbSetObj$module.type == "meta"))){ 
     if(type=="text"){
       # prepare data for phyloseq visualization.
       # if features names are present in specific taxonomy format (greengenes or silva).
@@ -1635,7 +1632,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
           
           
         }
- 
+     
         # making unique id for each OTU consist of lowest taxonomy level present followed by row number
         tmat <- as(tax_table(taxa_table), "matrix")
         rowLn <- nrow(tmat);
@@ -1714,7 +1711,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
       # creating phyloseq object
       if(isNormInput=="false"){
         data.proc<-apply(data.proc,2,as.integer);
-      }   
+      }  
        data.proc<-otu_table(data.proc,taxa_are_rows =TRUE);
       taxa_names(data.proc)<-taxa_names(mbSetObj$dataSet$taxa_table);
       # removing constant column and making standard names
@@ -1737,13 +1734,14 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
       colnames(mbSetObj$dataSet$taxa_table)<-classi.lvl[1:ncol(mbSetObj$dataSet$taxa_table)]; 
       #sanity check: no of sample of both abundance and metadata should match.
       indx<-match(colnames(data.proc), rownames(mbSetObj$dataSet$sample_data));
-      
+     
       if(all(is.na(indx))){
         AddErrMsg("Please make sure that sample names and their number are same in metadata and OTU abundance files.");
         return(0);
       }else{
         mbSetObj$dataSet$sample_data<-mbSetObj$dataSet$sample_data[indx, ,drop=FALSE];
       }
+ 
       mbSetObj$dataSet$sample_data<-sample_data(mbSetObj$dataSet$sample_data, errorIfNULL=TRUE);
       #cleaning up the names#deleting [] if present; and substituting (space,.,/ with underscore(_))
       if(!all(validUTF8(mbSetObj$dataSet$taxa_table))){
