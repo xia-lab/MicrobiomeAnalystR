@@ -3688,7 +3688,9 @@ ComputeEncasingDiablo <- function(filenm, type, names.vec, level=0.95, omics="NA
   level <- as.numeric(level)
   names = strsplit(names.vec, "; ")[[1]]
   
-  if(reductionOptGlobal %in% c("diablo", "spls") || omics != "NA"){
+
+ # if(reductionOptGlobal %in% c("diablo", "spls") || omics != "NA"){
+ if(reductionOptGlobal %in% c("diablo", "spls")){
     if(!exists("diablo.res")){
       diablo.res <- qs::qread("diablo.res.qs")
     }

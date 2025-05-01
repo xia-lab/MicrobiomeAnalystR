@@ -2403,6 +2403,7 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
   
   #saving info for report generation
   mbSetObj$analSet$beta <- data;
+  mbSetObj$analSet$beta.metadata <- metadata;
   mbSetObj$analSet$beta.meth <- ordmeth;
   mbSetObj$analSet$beta.dist <- distName;
   mbSetObj$analSet$beta.taxalvl <- taxrank;
