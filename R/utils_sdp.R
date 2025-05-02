@@ -976,7 +976,7 @@ GetKOEnrMat <- function(mbSetObj, type){
 # Utility function
 # for KO01100
 Save2KEGGJSON <- function(mbSetObj, hits.query, res.mat, file.nm){
-  print(file.nm)
+  #print(file.nm)
   resTable <- data.frame(Pathway=rownames(res.mat), res.mat,check.names=FALSE);
   current.msg <<- "Functional enrichment analysis was completed";
  
