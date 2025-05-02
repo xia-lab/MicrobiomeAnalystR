@@ -508,9 +508,9 @@ performLimma <-function(data,sample_data,sample_type,analysisVar){
       })
       colnames(design) = c(grp.nms[order(grp.nms)],unlist(nms))
     }else{
-      colnames(design) =  grp.nms[order(grp.nms)]
-      
+      colnames(design) =  grp.nms[order(grp.nms)];
     }
+
     inx = 0;
     myargs <- list();
     for(m in 1:(length(grp.nms)-1)){
