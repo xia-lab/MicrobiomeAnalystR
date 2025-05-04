@@ -42,7 +42,7 @@ PlotMetaPCA <- function(imgNm, dpi, format,factor="NA"){
     xlab(xlabel) + ylab(ylabel) + 
     theme_bw()
   
-  Cairo(file=imgNm, width=8, height=6, type=format, bg="white", unit="in", dpi=dpi);
+  Cairo(file=imgNm, width=9, height=8, type=format, bg="white", unit="in", dpi=dpi);
   print(pcafig);
   dev.off();
   

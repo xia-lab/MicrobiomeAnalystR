@@ -39,7 +39,7 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
   Sys.setenv(RGL_USE_NULL = TRUE)
   library(rgl)
   library(igraph)
-  
+
   if(reductionOptGlobal == "procrustes"){
     if(!exists("procrustes.res")){
       procrustes.res <- qs::qread("procrustes.res.qs")
@@ -114,6 +114,7 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
         )
       );
     }
+
     if(reductionOptGlobal == "procrustes"){
       pos.xyz.length = nrow(pos.xyz)
       edge.mat <- cbind(id=c(1:(pos.xyz.length)), source=names[c(1:(pos.xyz.length/2))], target=names[c(((pos.xyz.length/2)+1):pos.xyz.length) ], opacity = 0);
@@ -308,12 +309,8 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
         netData[[tax]][[nm]] <- pca_loading;
       }
       
-      diablo.res$misc[[tax]]$pct2 <- c( diablo.res$misc[[tax]]$pct2, pca.scatter$pct2)
-      
-      netData[[tax]][["misc"]] <- diablo.res$misc[[tax]]
-      
-      
-      
+      diablo.res$misc[[tax]]$pct2 <- c( diablo.res$misc[[tax]]$pct2, pca.scatter$pct2);
+      netData[[tax]][["misc"]] <- diablo.res$misc[[tax]];
       qs::qsave(diablo.res,"diablo.res.qs")
     }
     

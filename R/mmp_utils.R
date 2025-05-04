@@ -508,9 +508,9 @@ performLimma <-function(data,sample_data,sample_type,analysisVar){
       })
       colnames(design) = c(grp.nms[order(grp.nms)],unlist(nms))
     }else{
-      colnames(design) =  grp.nms[order(grp.nms)]
-      
+      colnames(design) =  grp.nms[order(grp.nms)];
     }
+
     inx = 0;
     myargs <- list();
     for(m in 1:(length(grp.nms)-1)){
@@ -1640,7 +1640,7 @@ PrepareOTUQueryJson <- function(mbSetObj,taxalvl,contain="bac"){
 
 PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,contain="hsabac",enrich.type){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-
+ 
   if(enrich.type == "hyper"){
     if(dataType=="metabolite"){
       mbSetObj <- PerformMetListEnrichment(mbSetObj, contain, file.nm);
@@ -1674,6 +1674,7 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
     mbSetObj=performPeakEnrich(lib=contain);
     mbSetObj <- .get.mbSetObj(mbSet);
   }
+  print("s6")
   if(!exists("taxalvl")){taxalvl = "ko"}
   mbSetObj$analSet$keggnet$background <- contain
   mbSetObj$analSet$keggnet$taxalvl <- taxalvl
@@ -2628,9 +2629,8 @@ GetMetMapCol <-function(mbSetObj, colInx){
 }
 
 PerformMetListEnrichment <- function(mbSetObj, contain,file.nm){
-  
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  
+    mbSetObj <- .get.mbSetObj(mbSetObj);
+ 
   if(contain=="bac"){
     current.set <- qs::qread(paste0(lib.path.mmp,"kegg_bac_mummichog.qs"))$pathways$cpds
     
@@ -2647,8 +2647,7 @@ PerformMetListEnrichment <- function(mbSetObj, contain,file.nm){
     current.set <- qs::qread(paste0(taxalvl,".current.lib.qs"))
     
   }
-  
-  current.universe <- unique(unlist(current.set));
+   current.universe <- unique(unlist(current.set));
   met.map <- mbSetObj$analSet$met.map
   
   # prepare for the result table
@@ -2656,7 +2655,7 @@ PerformMetListEnrichment <- function(mbSetObj, contain,file.nm){
   res.mat <- matrix(0, nrow=set.size, ncol=5);
   rownames(res.mat) <- names(current.set);
   colnames(res.mat) <- c("Total", "Expected", "Hits", "Pval", "FDR");
-  
+ 
   # prepare query
   ora.vec <- NULL;
   ora.vec <- met.map$kegg[!is.na(met.map$kegg)];
@@ -2666,7 +2665,7 @@ PerformMetListEnrichment <- function(mbSetObj, contain,file.nm){
   ora.vec <- ora.vec[hits.inx];
   #ora.nms <- ora.nms[hits.inx];
   q.size <- length(ora.vec);
-  
+ 
   # get the matched query for each pathway
   hits.query <- lapply(current.set, function(x) {
     ora.vec[ora.vec%in%unlist(x)];});
@@ -2692,7 +2691,7 @@ PerformMetListEnrichment <- function(mbSetObj, contain,file.nm){
   # now, clean up result, synchronize with hit.query
   res.mat <- res.mat[hit.num>0,,drop = F];
   hits.query <- hits.query[hit.num>0];
-  
+ 
   if(nrow(res.mat)> 1){
     # order by p value
     ord.inx <- order(res.mat[,4]);
@@ -2716,7 +2715,7 @@ PerformMetListEnrichment <- function(mbSetObj, contain,file.nm){
     }
   }
   fast.write(res.mat, file=paste(file.nm, ".csv", sep=""), row.names=F);
-  
+ 
   resTable <- data.frame(Pathway=rownames(res.mat), res.mat,check.names=FALSE);
   
   path.pval = resTable$Pval; if(length(path.pval) ==1) { path.pval <- matrix(path.pval) };
@@ -2733,8 +2732,8 @@ PerformMetListEnrichment <- function(mbSetObj, contain,file.nm){
     return(x)
   })
   
-  mbSetObj <- recordEnrTable(mbSetObj, "mmp", resTable, "KEGG", "Overrepresentation Analysis", current.mset, hits.query);
-
+  mbSetObj <- recordEnrTable(mbSetObj, "mmp", resTable, "KEGG", "Overrepresentation Analysis", current.set, hits.query);
+ 
   json.res <- list(hits.query =convert2JsonList(hits.query),
                    path.nms = path.nms,
                    path.pval = path.pval,
@@ -3692,7 +3691,9 @@ ComputeEncasingDiablo <- function(filenm, type, names.vec, level=0.95, omics="NA
   level <- as.numeric(level)
   names = strsplit(names.vec, "; ")[[1]]
   
-  if(reductionOptGlobal %in% c("diablo", "spls") || omics != "NA"){
+
+ # if(reductionOptGlobal %in% c("diablo", "spls") || omics != "NA"){
+ if(reductionOptGlobal %in% c("diablo", "spls")){
     if(!exists("diablo.res")){
       diablo.res <- qs::qread("diablo.res.qs")
     }
