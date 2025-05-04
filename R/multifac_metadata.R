@@ -312,10 +312,15 @@ GetMetaTypes <- function(mbSetObj=NA, dataName){
 GetMetaDataGroups <- function(mbSetObj=NA, dataName){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   if(mbSetObj$module.type == "meta"){
+     if(dataName == ""){
+        mbSetObj$dataSet <- mbSetObj$dataSets[[1]]
+     }else{
      mbSetObj$dataSet <- readDataset(dataName);
+    }
   }
   colnms = colnames(mbSetObj$dataSet$sample_data)
-  print(paste("GetMetaDataGroups===", colnms));
+
+  print(head(mbSetObj$dataSet$sample_data))
   return(colnms[colnms!="sample_id"]);
   
 }

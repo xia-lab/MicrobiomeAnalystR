@@ -949,6 +949,7 @@ PostProcessMaaslin <- function(mbSetObj,analysis.var,comp=NULL, thresh = 0.05,ta
     colnames(noadj.mat) <- c("pval.no", "fdr.no")
 
     both.mat <- merge(adj.mat, noadj.mat, by = "row.names")
+
     both.mat$pval.adj <- -log10(both.mat$pval.adj)
     both.mat$fdr.adj <- -log10(both.mat$fdr.adj)
     both.mat$pval.no <- -log10(both.mat$pval.no)

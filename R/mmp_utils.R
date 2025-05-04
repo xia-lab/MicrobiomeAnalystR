@@ -1601,10 +1601,13 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
   mbSetObj$analSet$integration$htMode <- htMode
   mbSetObj$analSet$integration$sign <- sign
   mbSetObj$imgSet$heatmap_cormmp <- plotwidget
+
   message("heatmap done")
   .set.mbSetObj(mbSetObj)
   return(overlyNum)
 }
+
+
 
 ###########################################################
 ####################KEGG Metabolism Network################
