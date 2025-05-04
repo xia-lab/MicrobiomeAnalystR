@@ -18,7 +18,7 @@
 #'License: GNU GPL (>= 2)
 #'@export
 PerformAlphaDiversityComp <- function(mbSetObj, opt, metadata, pair.wise = "false"){
-  print(metadata)
+  #print(metadata)
   mbSetObj <- .get.mbSetObj(mbSetObj); 
   data <- mbSetObj$analSet$alpha;
   cls <- as.factor(data[,metadata]);
@@ -445,15 +445,14 @@ PrepareBoxPlot <- function(mbSetObj, taxrank, variable){
 CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
                               palette, viewOpt, analOpt, expFact, group, expFact2,
                               format="png", dpi=72, width=NA, interactive = FALSE){
-  print(viewOpt)
+  #print(viewOpt)
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   data <- mbSetObj$dataSet$proc.phyobj;
  
   expFact <- expFact
-   expFact2 <- expFact2
+  expFact2 <- expFact2
   group <- group
- 
  
  if(analOpt == "smpl_grp_all" & viewOpt=="bar"){
  
@@ -463,105 +462,102 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
                           palette, viewOpt,expFact2,format, dpi, width)
    
   }else{
-
-   if(analOpt == "smpl_grp"){
-     data <- eval(parse(text = paste("phyloseq:::subset_samples(data,", expFact, "==", "\"", group, "\"", ")", sep="")))
-    
-    
- }else if(analOpt == "smpl_grp_all"){
-
- grp <- as.character(mbSetObj[["dataSet"]][["sample_data"]][[expFact2]])
-  data <- eval(parse(text = paste("phyloseq:::subset_samples(data,", expFact2, "%in%", "\"", grp, "\"", ")", sep="")))
+    if(analOpt == "smpl_grp"){
+        data <- eval(parse(text = paste("phyloseq:::subset_samples(data,", expFact, "==", "\"", group, "\"", ")", sep="")));
+    }else if(analOpt == "smpl_grp_all"){
+        grp <- as.character(mbSetObj[["dataSet"]][["sample_data"]][[expFact2]])
+        data <- eval(parse(text = paste("phyloseq:::subset_samples(data,", expFact2, "%in%", "\"", grp, "\"", ")", sep="")))
  }
 
-# check min 2 reps 
-samples_left <- nsamples(data)
+    # check min 2 reps 
+    samples_left <- nsamples(data)
     
     if(samples_left<2){
       AddErrMsg("More than 2 replicates are required in your group!")
       return(0)
     }
-  if(taxrank=="OTU"){
-    data <- otu_table(data,taxa_are_rows=T);
-  }else{
-    #merging at taxonomy levels
-    data <- fast_tax_glom_mem(data, taxrank);
-    if(is.null(data)){
-      AddErrMsg("Errors in projecting to the selected taxanomy level!");
-      return(0);
+
+    if(taxrank=="OTU"){
+        data <- otu_table(data,taxa_are_rows=T);
+    }else{
+        #merging at taxonomy levels
+        data <- fast_tax_glom_mem(data, taxrank);
+        if(is.null(data)){
+            AddErrMsg("Errors in projecting to the selected taxanomy level!");
+            return(0);
+        }
+        nm <- as.character(tax_table(data)[,taxrank]);
+        y <- which(is.na(nm)==TRUE);
+        #converting NA values to unassigned
+        nm[y] <- "Not_Assigned";
+        data1 <- as.matrix(otu_table(data));
+        rownames(data1) <- nm;
+        #all NA club together
+        data1 <- as.matrix(t(sapply(by(data1, rownames(data1), colSums), identity)));
+        data <- otu_table(data1, taxa_are_rows=T);
     }
-    nm <- as.character(tax_table(data)[,taxrank]);
-    y <- which(is.na(nm)==TRUE);
-    #converting NA values to unassigned
-    nm[y] <- "Not_Assigned";
-    data1 <- as.matrix(otu_table(data));
-    rownames(data1) <- nm;
-    #all NA club together
-    data1 <- as.matrix(t(sapply(by(data1, rownames(data1), colSums), identity)));
-    data <- otu_table(data1, taxa_are_rows=T);
-  }
  
-  #transform data to relative abundances, then obtain full phyloseq obj of just core microbiota
-  data.compositional <- transform_sample_counts(data,function(x) x / sum(x));
-  data.core <- core(data.compositional, detection = detection, prevalence = preval);
+    #transform data to relative abundances, then obtain full phyloseq obj of just core microbiota
+    data.compositional <- transform_sample_counts(data,function(x) x / sum(x));
+    data.core <- core(data.compositional, detection = detection, prevalence = preval);
  
-  core.nm <- data.frame(prevalence(data.compositional, detection = detection, sort = TRUE),check.names=FALSE);
-  colnames(core.nm)[1] <- "Prevelance";
-  fileName <- "core_microbiome.csv";
-  fast.write(core.nm, file=fileName);
+    core.nm <- data.frame(prevalence(data.compositional, detection = detection, sort = TRUE),check.names=FALSE);
+    colnames(core.nm)[1] <- "Prevelance";
+    fileName <- "core_microbiome.csv";
+    fast.write(core.nm, file=fileName);
   
-  imgName = paste(imgName, ".", format, sep="");
-  mbSetObj$imgSet$core <- imgName;
+    imgName = paste(imgName, ".", format, sep="");
+    mbSetObj$imgSet$core <- imgName;
 
     #setting the size of plot
-  if(is.na(width)){
-    minW <- 800;
-    myW <- 10*18 + 200;
-    if(myW < minW){
-      myW <- minW;
+    if(is.na(width)){
+        minW <- 800;
+        myW <- 10*18 + 200;
+        if(myW < minW){
+            myW <- minW;
+        }
+        w <- round(myW/72,2);
     }
-    w <- round(myW/72,2);
-  }
   
-  myH <- nrow(data.core)*18 + 150;
-  h <- round(myH/65);
+    myH <- nrow(data.core)*18 + 150;
+    h <- round(myH/65);
   
-  #if more than 1500 features will be present; subset to most abundant=>1500 features.
-  #OTUs already in unique names;
-  if(ntaxa(data.core)>1500){
-    data.core = prune_taxa(names(sort(taxa_sums(data.core), TRUE))[1:1500], data.core);
-    viewOpt == "overview";
-     if(is.na(width)){
-      if(w >9.3){
-        w <- 9.3;
-      }
+    #if more than 1500 features will be present; subset to most abundant=>1500 features.
+    #OTUs already in unique names;
+    if(ntaxa(data.core)>1500){
+        data.core = prune_taxa(names(sort(taxa_sums(data.core), TRUE))[1:1500], data.core);
+        viewOpt == "overview";
+        if(is.na(width)){
+            if(w >9.3){
+                w <- 9.3;
+            }
+        }
+        if(h > w){
+            h <- w;
+        }
     }
-    if(h > w){
-      h <- w;
-    }
-  }
  
 
   if(viewOpt!="bar"){
-Cairo::Cairo(file=imgName, unit="in",width=w, height=h, type=format, bg="white",dpi=dpi);
+    Cairo::Cairo(file=imgName, unit="in",width=w, height=h, type=format, bg="white",dpi=dpi);
   
      if(palette=="gbr"){
-    colors <- grDevices::colorRampPalette(c("green", "black", "red"), space="rgb")(10);
-  }else if(palette == "heat"){
-    colors <- heat.colors(10);
-  }else if(palette == "topo"){
-    colors <- topo.colors(10);
-  }else if(palette == "gray"){
-    colors <- grDevices::colorRampPalette(c("grey90", "grey10"), space="rgb")(10);
-  }else if(palette == "viridis") {
-    colors <- rev(viridis::viridis(10))
-  }else if(palette == "plasma") {
-    colors <- rev(viridis::plasma(10))
-  }else {
-    load_rcolorbrewer();
-    colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdBu"))(10));
-  }
-   p <- plot_core(data.core, plot.type=viewOpt, colours = colors, prevalences = seq(.05, 1, .05), 
+        colors <- grDevices::colorRampPalette(c("green", "black", "red"), space="rgb")(10);
+    }else if(palette == "heat"){
+        colors <- heat.colors(10);
+    }else if(palette == "topo"){
+        colors <- topo.colors(10);
+    }else if(palette == "gray"){
+        colors <- grDevices::colorRampPalette(c("grey90", "grey10"), space="rgb")(10);
+    }else if(palette == "viridis") {
+        colors <- rev(viridis::viridis(10))
+    }else if(palette == "plasma") {
+        colors <- rev(viridis::plasma(10))
+    }else {
+        load_rcolorbrewer();
+        colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdBu"))(10));
+    }
+    p <- plot_core(data.core, plot.type=viewOpt, colours = colors, prevalences = seq(.05, 1, .05), 
                  detections = 10^seq(log10(detection), log10(max(abundances(data.core))), length = 10)) + 
     ylab(paste0("\n", taxrank)) + xlab("\nDetection Threshold (Relative Abundance (%))") + 
     guides(fill = guide_legend(keywidth = 1.5, keyheight = 1)) + 
@@ -570,37 +566,37 @@ Cairo::Cairo(file=imgName, unit="in",width=w, height=h, type=format, bg="white",
   }else{
    Cairo::Cairo(file=imgName, unit="in",width=h, height=w/1.5, type=format, bg="white",dpi=dpi);
   
-   dt = abundances(data.core)
-  prev = apply(dt,1,function(x) sum(x>detection)/length(x))
-  dt = data.frame(feat = rownames(dt),prev = prev,stringsAsFactors = F) 
-  dt <- dt[order(-dt$prev), ]
-     if(palette=="gbr"){
-    colors <- grDevices::colorRampPalette(c("green", "black", "red"), space="rgb")(nrow(dt));
-  }else if(palette == "heat"){
-    colors <- heat.colors(nrow(dt));
-  }else if(palette == "topo"){
-    colors <- topo.colors(nrow(dt));
-  }else if(palette == "gray"){
-    colors <- grDevices::colorRampPalette(c("grey90", "grey10"), space="rgb")(nrow(dt));
-  }else if(palette == "viridis") {
-    colors <- rev(viridis::viridis(nrow(dt)))
-  }else if(palette == "plasma") {
-    colors <- rev(viridis::plasma(nrow(dt)))
-  }else {
-    load_rcolorbrewer();
-    colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdBu"))(nrow(dt)));
-  }
-    
-  p <- ggplot(dt, aes(x = reorder(feat, -prev), y = prev, fill = reorder(feat, -prev))) +
-    geom_bar(stat = "identity", color = "black") +
-      scale_fill_manual(values = colors)  +
-      ylab(paste0("\n", "Prevalence")) +   xlab(paste0("\n", taxrank)) + 
-      guides(fill = "none") + 
-      theme_bw()+
-      theme(axis.text=element_text(size=10), 
-        axis.title=element_text(size=11.5), 
-        axis.text.x = element_text(angle = 45, hjust = 1))
+    dt = abundances(data.core)
+    prev = apply(dt,1,function(x) sum(x>detection)/length(x))
+    dt = data.frame(feat = rownames(dt),prev = prev,stringsAsFactors = F) 
+    dt <- dt[order(-dt$prev), ];
 
+    if(palette=="gbr"){
+        colors <- grDevices::colorRampPalette(c("green", "black", "red"), space="rgb")(nrow(dt));
+    }else if(palette == "heat"){
+        colors <- heat.colors(nrow(dt));
+    }else if(palette == "topo"){
+        colors <- topo.colors(nrow(dt));
+    }else if(palette == "gray"){
+        colors <- grDevices::colorRampPalette(c("grey90", "grey10"), space="rgb")(nrow(dt));
+    }else if(palette == "viridis") {
+        colors <- rev(viridis::viridis(nrow(dt)))
+    }else if(palette == "plasma") {
+        colors <- rev(viridis::plasma(nrow(dt)))
+    }else {
+        load_rcolorbrewer();
+        colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdBu"))(nrow(dt)));
+    }
+    
+    p <- ggplot(dt, aes(x = reorder(feat, -prev), y = prev, fill = reorder(feat, -prev))) +
+        geom_bar(stat = "identity", color = "black") +
+        scale_fill_manual(values = colors)  +
+        ylab(paste0("\n", "Prevalence")) +   xlab(paste0("\n", taxrank)) + 
+        guides(fill = "none") + 
+        theme_bw()+
+        theme(axis.text=element_text(size=10), 
+            axis.title=element_text(size=11.5), 
+            axis.text.x = element_text(angle = 45, hjust = 1))
   }
 
   print(p);
@@ -928,7 +924,8 @@ core_heatmap<-function(x, dets, cols, min.prev, taxa.order){
   
   df <- as.data.frame(prev,check.names=FALSE)
   df$ID <- rownames(prev)
-  df <- data.table::melt(df, "ID");
+
+  df <- data.table::melt(as.data.table(df), "ID");
   names(df) <- c("Taxa", "DetectionThreshold", "Prevalence")
   df$DetectionThreshold <- as.numeric(as.character(df$DetectionThreshold))
   df$Prevalence <- as.numeric(as.character(df$Prevalence))
