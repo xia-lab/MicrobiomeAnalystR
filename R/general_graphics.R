@@ -888,94 +888,109 @@ GetColorSchemaFromFactor <- function(my.grps) {
   return(colors)
 }
 
+PlotCovariateMap <- function(mbSetObj,
+                             thresh      = "0.05",
+                             theme       = "default",
+                             imgName     = "NA",
+                             format      = "png",
+                             dpi         = 72,
+                             interactive = TRUE){
 
-PlotCovariateMap<- function(mbSetObj, thresh = "0.05", theme="default", imgName="NA", format="png", dpi=72, interactive=T){
+  ## ── prepare data ───────────────────────────────────────────────────
+  thresh    <- as.numeric(thresh)                  # p.lvl
+  mbSetObj  <- .get.mbSetObj(mbSetObj)
+  both.mat  <- mbSetObj$analSet$cov.mat
+  both.mat  <- both.mat[order(-both.mat[, "pval.adj"]), ]
 
-  thresh <- as.numeric(thresh);
-  mbSetObj <- .get.mbSetObj(mbSetObj); 
-  both.mat <- mbSetObj$analSet$cov.mat;
-  both.mat <- both.mat[order(-both.mat[,"pval.adj"]),];
-  logp_val <- -log10(thresh);
-  load_ggplot();
-  library(ggrepel);
-  topFeature <- 5;
+  ## flag significance
+  both.mat$sig <- 10^(-both.mat$pval.adj) <= thresh     # TRUE / FALSE
 
-  if (nrow(both.mat) < topFeature) {
-    topFeature <- nrow(both.mat)
-  }
+  ## tooltip
+
+  both.mat$tooltip <- with(both.mat, sprintf(
+  paste0("Feature: %s",
+         "<br>-log10(FDR – no cov): %.2f",
+         "<br>Adj‑P (no cov): %.3g",
+         "<br>-log10(FDR – cov): %.2f",
+         "<br>Adj‑P (cov): %.3g",
+         "<br>Significant: %s"),
+  Row.names,
+  fdr.no,  10^(-fdr.no),      # 10^(–log10) gives the original Adj‑P
+  fdr.adj, 10^(-fdr.adj),
+  ifelse(sig, "Yes", "No")))
+
+  logp_val  <- -log10(thresh)
+  load_ggplot()
+  library(ggrepel)
+
+  topFeature   <- min(5, nrow(both.mat))
+  base_aes     <- aes(x = fdr.no, y = fdr.adj,
+                      size = pval.adj,
+                      shape = sig,        # open vs filled
+                      color = sig,        # grey vs blue/black
+                      text  = tooltip)    # shown only by plotly
+
+  ## colours: non‑sig always grey; sig blue only if interactive
+  col_vals <- if (interactive)
+                c(`FALSE` = "grey", `TRUE` = "blue")
+              else
+                c(`FALSE` = "grey", `TRUE` = "black")
+
+  ## point layer (colour defined via scale below)
+  point_layer <- geom_point(alpha = 0.75, size = 2.5)
+
+  ## build ggplot object (no diagonal line)
+  p <- ggplot(both.mat, base_aes) +
+       point_layer +
+       scale_shape_manual(values = c(`FALSE` = 1,  `TRUE` = 16)) +
+       scale_color_manual(values = col_vals, guide = "none") +
+       xlab("-log10(Adj. P): no covariate adjustment") +
+       ylab("-log10(Adj. P): covariate adjustment") +
+       geom_text_repel(data = both.mat[seq_len(topFeature), ],
+                       aes(label = Row.names), size = 3) +
+       guides(size = "none")
+
+  ## optional quadrant colouring
   if (theme == "default") {
-    p <- ggplot(both.mat, mapping = aes(x = fdr.no, y = fdr.adj, label = Row.names)) +
-      geom_rect(
-        mapping = aes(
-          xmin = logp_val, xmax = Inf,
-          ymin = logp_val, ymax = Inf
-        ),
-        fill = "#6699CC"
-      ) +
-      geom_rect(
-        mapping = aes(
-          xmin = -Inf, xmax = logp_val,
-          ymin = -Inf, ymax = logp_val
-        ),
-        fill = "grey"
-      ) +
-      geom_rect(
-        mapping = aes(
-          xmin = logp_val, xmax = Inf,
-          ymin = -Inf, ymax = logp_val
-        ),
-        fill = "#E2808A"
-      ) +
-      geom_rect(
-        mapping = aes(
-          xmin = -Inf, xmax = logp_val,
-          ymin = logp_val, ymax = Inf
-        ),
-        fill = "#94C973"
-      ) +
-      guides(size = "none") +
-      geom_point(aes(size = pval.adj), alpha = 0.5) +
-      geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red", size = 1) +
-      xlab("-log10(Adj. P-value): no covariate adjustment") +
-      ylab("-log10(Adj. P-value): covariate adjustment") +
-      geom_text_repel(
-        data = both.mat[c(1:topFeature), ],
-        aes(x = pval.no, y = pval.adj, label = Row.names)
-      ) +
+    p <- p +
+      geom_rect(aes(xmin =  logp_val, xmax =  Inf,
+                    ymin =  logp_val, ymax =  Inf), fill = "#6699CC") +
+      geom_rect(aes(xmin = -Inf,      xmax =  logp_val,
+                    ymin = -Inf,      ymax =  logp_val), fill = "grey") +
+      geom_rect(aes(xmin =  logp_val, xmax =  Inf,
+                    ymin = -Inf,      ymax =  logp_val), fill = "#E2808A") +
+      geom_rect(aes(xmin = -Inf,      xmax =  logp_val,
+                    ymin =  logp_val, ymax =  Inf), fill = "#94C973") +
       theme_bw()
   } else {
-    p <- ggplot(both.mat, mapping = aes(x = fdr.no, y = fdr.adj, label = Row.names)) +
-      guides(size = "none") +
-      geom_point(aes(size = pval.adj), alpha = 0.5) +
-      geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red", size = 1) +
+    p <- p +
       geom_vline(xintercept = logp_val) +
-      geom_hline(yintercept = logp_val) +
-      xlab("-log10(Adj. P-value): no covariate adjustment") +
-      ylab("-log10(Adj. P-value): covariate adjustment") +
-      geom_text_repel(
-        data = both.mat[c(1:topFeature), ],
-        aes(x = pval.no, y = pval.adj, label = Row.names)
-      )
+      geom_hline(yintercept = logp_val)
   }
-  fileName <- paste0(imgName, ".", format);
-  mbSetObj$imgSet$covAdj <- fileName;
 
-  width <- 8;
-  height <- 8.18;
+  ## ── static export ─────────────────────────────────────────────────
+  fileName <- paste0(imgName, ".", format)
+  mbSetObj$imgSet$covAdj <- fileName
+  Cairo::Cairo(file = fileName, unit = "in", dpi = dpi,
+               width = 8, height = 8.18, type = format)
+  print(p); dev.off()
 
-    Cairo::Cairo(file = fileName, unit="in", dpi=dpi, width=width, height=height, type=format);    
-    print(p)
-    dev.off()
-
-  if(interactive){
-    library(plotly);
-    ggp_build <- layout(ggplotly(p,width = 800, height = 600, tooltip = c("text")), autosize = FALSE, margin = mbSetObj$imgSet$margin.config)
+  ## ── interactive export ────────────────────────────────────────────
+  if (interactive) {
+    library(plotly)
+    p <- p + theme(legend.position = "none")
+    ggp_build <- layout(
+      ggplotly(p, width = 800, height = 600, tooltip = "text"),
+      autosize = FALSE,
+      margin   = mbSetObj$imgSet$margin.config
+    )
     .set.mbSetObj(mbSetObj)
-    return(ggp_build);
-  }else{
-    return(.set.mbSetObj(mbSetObj));
+    return(ggp_build)
+  } else {
+    return(.set.mbSetObj(mbSetObj))
   }
 }
+
 
 CreateStaticHeatmap <- function(data1sc, fzAnno, colors, nrows, x_start, y_start, x_spacing, annotation, sz, bf, showColnm, showRownm, doclust, smplDist, clstDist, fzCol, fzRow) {
   library(pheatmap);

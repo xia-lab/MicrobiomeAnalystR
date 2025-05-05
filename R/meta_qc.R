@@ -12,8 +12,8 @@ PlotMetaPCA <- function(imgNm, dpi, format,factor="NA"){
   microbiome.meta <- qs::qread("microbiome_meta.qs");
   x <- microbiome.meta[["data"]];
   dpi <- as.numeric(dpi);
-  imgNm <- paste(imgNm, "_dpi", dpi, ".", format, sep="");
-  #imgNm <- paste(imgNm, ".", format, sep="");
+  #imgNm <- paste(imgNm, "_dpi", dpi, ".", format, sep="");
+  imgNm <- paste(imgNm, ".", format, sep="");
   require('lattice');
   require('ggplot2');
   pca <- prcomp(t(na.omit(x)));
@@ -62,8 +62,8 @@ PlotMetaDensity<- function(imgNm, dpi=72, format="png", factor=""){
   require("ggplot2")
   microbiome.meta <- qs::qread("microbiome_meta.qs");
   dat <- microbiome.meta$data;
-  imgNm <- paste(imgNm, "_dpi", dpi, ".", format, sep="");
-  #imgNm <- paste(imgNm, ".", format, sep="");
+  #imgNm <- paste(imgNm, "_dpi", dpi, ".", format, sep="");
+  imgNm <- paste(imgNm, ".", format, sep="");
   dpi <- as.numeric(dpi);
   
   df <- data.frame(microbiome.meta$data, stringsAsFactors = FALSE);

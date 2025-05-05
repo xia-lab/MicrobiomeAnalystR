@@ -1260,7 +1260,6 @@ SetCurrentResTable <- function(mbSetObj = NA, type) {
     mbSetObj$analSet$resTable <- signif(mbSetObj$analSet$rf.sigmat, 5);
   }else if (type %in% c("mmp_ko", "mmp_metabolite", "mmp_otu", "mmp")) {
     mbSetObj$analSet$resTable <- signif(mbSetObj$imgSet$enrTables[[type]]$table, 5);
-    print(head(mbSetObj$analSet$resTable));
   } else {
     stop("Invalid type provided")
   }
@@ -1352,6 +1351,7 @@ PopulateRawOutput <- function(mbSetObj = NA, dataName = "microbiomeAnalyst_16s_a
 doGene2KONameMapping <- function(enIDs) {
 library(RSQLite)
 
+  obtainSqlitePath();
 
   # Establish connection to the SQLite database
   db_path <- paste0(sqlite.path, "/ko_genes.sqlite")
@@ -1377,6 +1377,27 @@ library(RSQLite)
   # Assign original KO IDs to unmapped entries
   na.inx <- is.na(kos)
   kos[na.inx] <- enIDs[na.inx]
-
+  print(head(kos));
   return(kos)
+}
+
+obtainSqlitePath <- function(){
+  if(file.exists("/data/sqlite/")){ #vip server
+    sqlite.path <<- "/data/sqlite/";
+  }else if(file.exists("/home/zgy/sqlite/")){
+    sqlite.path <<-"/home/zgy/sqlite/"; #zgy local)
+  }else if(file.exists("/home/glassfish/sqlite/")){ #.on.public.web
+    sqlite.path <<- "/home/glassfish/sqlite/";
+  }else if(file.exists("/Users/xialab/Dropbox/sqlite/")){ # xia local
+    sqlite.path<<- "/Users/xialab/Dropbox/sqlite/";
+  }else if(file.exists("/Users/xia/Dropbox/sqlite/")){ # xia local
+    sqlite.path <<- "/Users/jeffxia/Dropbox/sqlite/";
+  }else if(file.exists("/Users/jeffxia/Dropbox/sqlite/")){ # xia local2
+    sqlite.path <<- "/Users/jeffxia/Dropbox/sqlite/";
+  }else if(file.exists("/home/qiang/Music/")){# qiang local
+    sqlite.path <<-"/home/qiang/sqlite/";
+  }else{
+    #url.pre <<- paste0(dirname(system.file("database", "sqlite/GeneID_25Species_JE/ath_genes.sqlite", package="MetaboAnalystR")), "/")
+    sqlite.path <<- "";
+  }
 }

@@ -23,7 +23,6 @@
 #'License: GNU GPL (>= 2)
 #'@export
 SanityCheckData <- function(mbSetObj, filetype, preFilter = "sample", rmConstant = TRUE){
-
   mbSetObj <- .get.mbSetObj(mbSetObj);
   dataName <- mbSetObj$dataSet$name;
   module.type <- mbSetObj$module.type;
