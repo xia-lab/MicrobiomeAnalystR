@@ -131,16 +131,18 @@ SanityCheckData <- function(mbSetObj, filetype, preFilter = "sample", rmConstant
     mbSetObj$dataSet$sample_data[, num_vars] <- sapply(mbSetObj$dataSet$sample_data[, num_vars],as.factor);
   }
   
-  if(file.exists("tree.qs")){
-    tree_exist <- 1
-    tree<-qs::qread("tree.qs")  
-    
-    if(length(intersect(rownames(data.proc),tree$tip.label))==nrow(data.proc)){
+  if(mbSetObj$tree.uploaded){
+    tree_exist <- 1;
+    tree<-qs::qread("tree.qs");
+
+    if(identical(rownames(data.proc),tree$tip.label)){
       tree_tip <- 1
     }else{
-      tree_tip <- 0
-      AddErrMsg("The tip labels of the tree are not matched with your feature names in the abundance table!");
-      
+      tree_tip <- 0;
+      my.diff <- setdiff(rownames(data.proc),tree$tip.label);
+      my.msg <- paste0("Feature names in the abundance table are not identical to the tip labels of the tree! Diff size: ", length(my.diff),
+                        " You can still proceed, but will not be able to use UniFrac distance in beta diversity analysis.");
+      AddErrMsg(my.msg);
     }
   } else {
     tree_exist <- 0
@@ -172,8 +174,9 @@ SanityCheckData <- function(mbSetObj, filetype, preFilter = "sample", rmConstant
   saveDataQs(data.proc,"data.proc", module.type, dataName);
   saveDataQs(mbSetObj$dataSet$sample_data, "data.sample_data", module.type, dataName);
   
-  mbSetObj$dataSet$tree <- tree_exist
-  
+  mbSetObj$dataSet$tree <- tree_exist;
+  mbSetObj$dataSet$tree_tip <- tree_tip;
+
   vari_no <- ncol(mbSetObj$dataSet$sample_data);
   disc_no <- sum(mbSetObj$dataSet$meta_info$disc.inx);
   cont_no <- sum(mbSetObj$dataSet$meta_info$cont.inx);
@@ -1670,7 +1673,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
           if(length(na.nms)>10){
             na.nms <- na.nms[1:10];
           }
-          AddErrMsg(paste("The following names cannot be found in your taxanomy table (showing 10 max):", paste(na.nms, collapse="; ")));
+          AddErrMsg(paste("The following names cannot be found in your taxonomy table (showing 10 max):", paste(na.nms, collapse="; ")));
           return(0);
         }
         
@@ -1687,7 +1690,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
           rownames(taxa_table) <- new.nms[rownames(taxa_table)];
           
           # update tree file if uploaded
-          if(mbSetObj$tree.uploaded){
+          if(mbSetObj$tree.uploaded & mbSetObj$dataSet$tree_tip==1){
             pg_tree <- qs::qread("tree.qs");
             pg_tree$tip.label <- new.nms[pg_tree$tip.label];
             qs::qsave(pg_tree, "tree.qs");

@@ -309,6 +309,7 @@ ReadTreeFile <- function(mbSetObj, fileName, dataName="",module.type) {
     mbSetObj$tree.uploaded <- TRUE;
     return(.set.mbSetObj(mbSetObj));
   }else{
+    mbSetObj$tree.uploaded <- FALSE;
     AddErrMsg("Failed to parse tree file data!")
     return(0)
   }
