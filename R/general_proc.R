@@ -135,12 +135,19 @@ SanityCheckData <- function(mbSetObj, filetype, preFilter = "sample", rmConstant
     tree_exist <- 1;
     tree<-qs::qread("tree.qs");
 
-    if(identical(rownames(data.proc),tree$tip.label)){
+   # if(identical(rownames(data.proc),tree$tip.label)){
+    # no need to be identical, as long as tree can be superset of feature names
+
+    my.diff <- setdiff(rownames(data.proc),tree$tip.label);
+    if(length(my.diff) == 0){
       tree_tip <- 1
     }else{
       tree_tip <- 0;
-      my.diff <- setdiff(rownames(data.proc),tree$tip.label);
-      my.msg <- paste0("Feature names in the abundance table are not identical to the tip labels of the tree! Diff size: ", length(my.diff),
+      if(length(my.diff) > 10){
+        show.num <- 10;
+      }
+      my.msg <- paste0("A total of ",  length(my.diff), " feature names in the abundance table are not found in the tip labels of the tree! Top ", 
+                        show.num, " features are shown here: ", paste(my.diff[1:show.num], collapse="; "), 
                         " You can still proceed, but will not be able to use UniFrac distance in beta diversity analysis.");
       AddErrMsg(my.msg);
     }
