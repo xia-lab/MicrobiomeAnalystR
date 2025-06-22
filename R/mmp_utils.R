@@ -398,7 +398,7 @@ CompareMic <- function(mbSetObj, taxalvl,initDE=1,
       micdat.de <- doMaAslin(micdat,plvl)
     }
     
-  }
+  } 
   return(micdat.de) 
 }
 
@@ -425,8 +425,8 @@ CompareMet <- function(mbSetObj, analysisVar,alg="limma",plvl=0.05,ref, compr, s
   fast.write(metdat.de, file="limma_output.csv");
   current.proc$met$res_deAnal <<- metdat.de
   mbSetObj$dataSet$metabolomics$resTable <- metdat.de
-  
-  sigfeat <- rownames(metdat.de)[metdat.de$FDR < plvl];
+  print(colnames(metdat.de))
+  sigfeat <- rownames(metdat.de)[metdat.de$P_value < plvl];
   sig.count <- length(sigfeat);
   if(sig.count == 0){
     current.msg <<- "No significant metabolomic features were identified using the given p value cutoff.";
@@ -442,7 +442,7 @@ CompareMet <- function(mbSetObj, analysisVar,alg="limma",plvl=0.05,ref, compr, s
   mbSetObj$dataSet$metabolomics$sigfeat <- sigfeat
   mbSetObj$dataSet$metabolomics$sig.count <- sig.count
   current.proc$met$sigfeat <<- sigfeat 
-  resMsg<<- paste(resMsg,current.msg)
+  resMsg<<- paste(resMsg,current.msg) 
   return(.set.mbSetObj(mbSetObj))
   
 }
@@ -740,13 +740,14 @@ ProcessMaaslinRes <- function(mbSetObj,taxalvl,analysis.var,thresh){
   fast.write(res, file = fileName);
   
   plvl<- current.proc$mic$plvl
+ 
   if(micDataType=="ko"){
     current.proc$mic$res_deAnal <<- res
-    current.proc$mic$sigfeat <<-  rownames(current.proc$mic$res_deAnal)[current.proc$mic$res_deAnal$FDR< plvl]
+    current.proc$mic$sigfeat <<-  rownames(current.proc$mic$res_deAnal)[current.proc$mic$res_deAnal$P_value< plvl]
   }else{ 
     phyloseq_objs <- qs::qread("phyloseq_objs.qs")
     phyloseq_objs$res_deAnal[[taxalvl]] <- res
-    phyloseq_objs$sigfeat[[taxalvl]] <- rownames(phyloseq_objs$res_deAnal[[taxalvl]])[phyloseq_objs$res_deAnal[[taxalvl]]$FDR< plvl]
+    phyloseq_objs$sigfeat[[taxalvl]] <- rownames(phyloseq_objs$res_deAnal[[taxalvl]])[phyloseq_objs$res_deAnal[[taxalvl]]$P_value< plvl]
     qs::qsave(phyloseq_objs,"phyloseq_objs.qs")
     
   }
@@ -1172,12 +1173,11 @@ DoM2Mcorr <- function(mic.sig,met.sig,cor.method="univariate",cor.stat="pearson"
 performeCorrelation <- function(mbSetObj,taxalvl,initDE,cor.method="univariate",cor.stat="pearson",sign, cor.thresh=0.5,
                                 corp.thresh=0.05){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
+ 
   if(!exists("phyloseq_objs")){
     phyloseq_objs <- qs::qread("phyloseq_objs.qs")
   }
-  
-  micdat <- phyloseq_objs$count_tables[[taxalvl]]
+    micdat <- phyloseq_objs$count_tables[[taxalvl]]
   metdat <- current.proc$met$data.proc
   if(micDataType=="ko"){
     lbl.mic <-current.proc$mic$sigfeat
@@ -1185,6 +1185,7 @@ performeCorrelation <- function(mbSetObj,taxalvl,initDE,cor.method="univariate",
     lbl.mic <- phyloseq_objs$sigfeat[[taxalvl]] 
   }
   lbl.met <- current.proc$met$sigfeat
+
   if(length(lbl.mic) >100){lbl.mic= lbl.mic[1:100]}
   if(length(lbl.met) >100){lbl.met= lbl.met[1:100]}
   
