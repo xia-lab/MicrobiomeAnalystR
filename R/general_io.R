@@ -35,26 +35,6 @@
 #'License: GNU GPL (>= 2)
 #'@export
 Init.mbSetObj <- function(){
-  if(file.exists("/data/sqlite/")){ #vip server
-    sqlite.path <<- "/data/sqlite/";
-  }else if(file.exists("/home/glassfish/sqlite/")){ #.on.public.web
-    sqlite.path <<- "/home/glassfish/sqlite/";
-  }else if(file.exists("/Users/xialab/Dropbox/sqlite/")){ # xia local
-    sqlite.path<<- "/Users/xialab/Dropbox/sqlite/";
-  }else if(file.exists("/Users/xia/Dropbox/sqlite/")){ # xia local
-    sqlite.path <<- "/Users/jeffxia/Dropbox/sqlite/";
-  }else if(file.exists("/Users/jeffxia/Dropbox/sqlite/")){ # xia local2
-    sqlite.path <<- "/Users/jeffxia/Dropbox/sqlite/";
-  }else if(file.exists("/media/zzggyy/disk/sqlite/")){
-    sqlite.path <<-"/media/zzggyy/disk/sqlite/"; #zgy local)
-  }else if(file.exists("/home/zgy/sqlite/")){
-    sqlite.path <<-"/home/zgy/sqlite/"; #zgy local)
-  }else if(file.exists("/home/qiang/Music/")){# qiang local
-    sqlite.path <<-"/home/qiang/sqlite/";
-  }else{
-    #url.pre <<- paste0(dirname(system.file("database", "sqlite/GeneID_25Species_JE/ath_genes.sqlite", package="MetaboAnalystR")), "/")
-    url.pre <<- "";
-  }
 
   rm(list = ls(all.names = TRUE))
   dataSet <- list();
@@ -329,6 +309,7 @@ ReadTreeFile <- function(mbSetObj, fileName, dataName="",module.type) {
     mbSetObj$tree.uploaded <- TRUE;
     return(.set.mbSetObj(mbSetObj));
   }else{
+    mbSetObj$tree.uploaded <- FALSE;
     AddErrMsg("Failed to parse tree file data!")
     return(0)
   }

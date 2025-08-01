@@ -2532,14 +2532,19 @@ don$color[don$FDR > sigLevel] <- "#808080"
   sink()
   
    # Generate a descriptive text summarizing the analysis
+  #analysis_description <- paste0(
+  #  "A comparative statistical analysis was performed using the '", type, 
+  #  "' method to identify differentially abundant features at the '", taxlvl, 
+  #  "' taxonomic level. The significance threshold was set at a p-value of ", 
+  #  sigLevel, " with an adjusted false discovery rate (FDR) cutoff. ",
+  #  "Additionally, a fold change threshold of ", fcLevel, 
+  #  " was applied to filter features based on their relative abundance differences."
+  #)
+
   analysis_description <- paste0(
-    "A comparative statistical analysis was performed using the '", type, 
-    "' method to identify differentially abundant features at the '", taxlvl, 
-    "' taxonomic level. The significance threshold was set at a p-value of ", 
-    sigLevel, " with an adjusted false discovery rate (FDR) cutoff. ",
-    "Additionally, a fold change threshold of ", fcLevel, 
-    " was applied to filter features based on their relative abundance differences."
-  )
+   "Differentially abundant features identified by <b>", type, "</b> method at the <b>", taxlvl, 
+                    "</b> taxonomic level using adjusted p-value cutoff: <b>", 
+                    sigLevel, "</b> and fold change cutoff: <b>", fcLevel, "</b>.");
 
   # Store the description in mbSetObj for later reference
   mbSetObj$analSet$comp.desc <- analysis_description

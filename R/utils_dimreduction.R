@@ -204,7 +204,7 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
     qs::qsave(diablo.res,"diablo.res.qs")
     
   }
-  reductionOptGlobal <<- reductionOpt
+  reductionOptGlobal <<- reductionOpt;
   
   mbSetObj$analSet$dimrdc<-reductionOpt;
   

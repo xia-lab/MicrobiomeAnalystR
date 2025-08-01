@@ -9,7 +9,7 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
                                       corr.net.name, plotNet = FALSE, netType="static", netLayout="kk",
                                       netTextSize = 2.5){
 
-  save.image("mycorr.RData");
+  #save.image("mycorr.RData");
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   mbSetObj$dataSet$cor.method <- cor.method;
@@ -202,7 +202,7 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
     
     if(length(mbSetObj$dataSet$comparison) > 2){ # only calculate mdi for 2 groups
       
-      mbSetObj$analSet$mdi <- ""
+      mbSetObj$analSet$mdi <- "MD-index: NA (only defined for two-group comparison)";
       
     }else{ # for only 2 groups
       if(length(unique(fc.filt$tax_name)) < length(fc.filt$tax_name)){
@@ -220,8 +220,10 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
       inc <- which(log2fc > 0) # total abundance increased in X
       dec <- which(log2fc < 0) # total abundance decreased in X
       
-      if(length(inc)==0 | length(dec)==0){
-        mbSetObj$analSet$mdi <- "MD-index could not be calculated."
+      if(length(inc)==0){
+        mbSetObj$analSet$mdi <- "MD-index could not be calculated - no enriched taxa were increased.";
+      }else if(length(dec)==0){
+        mbSetObj$analSet$mdi <- "MD-index could not be calculated - no depleted taxa were detected."
       }else{
         abund <- c(sum(abund_data.filt[inc,]), sum(abund_data.filt[dec,]))
         abund[abund==0] <- 0.1

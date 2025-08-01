@@ -366,7 +366,7 @@ validate_fastq <- function(file){
   bool1 <- bool2 <- bool3 <- bool4 <- FALSE;
   con <- file(file,"r")
   lines <- readLines(con,n=4)
-  bool1 <- grepl("^@[A-Za-z]+", lines[1]);
+  bool1 <- grepl("^@", lines[1]);
   bool2 <- grepl("^[A T C G N]*$", lines[2]);
   bool3 <- grepl("\\+", lines[3])
   bool4 <- grepl("[A-Za-z 0-9]+", lines[4])
