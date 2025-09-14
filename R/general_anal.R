@@ -86,7 +86,7 @@ RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank){
   data.impfeat <<- data1;
   cls <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   variable <<- variable;
-  rf_out <- randomForest(data1,cls, ntree = treeNum, mtry = tryNum, importance = TRUE, proximity = TRUE);
+  rf_out <- randomForest(data1, cls, ntree = treeNum, mtry = tryNum, importance = TRUE, proximity = TRUE);
   # set up named sig table for display
   impmat <- rf_out$importance;
   impmat <- impmat[rev(order(impmat[,"MeanDecreaseAccuracy"])),]
@@ -94,6 +94,11 @@ RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank){
   sigmat <- signif(sigmat, 5);
   fast.write(sigmat,file="randomforests_sigfeatures.csv");
   
+  box_data <- as.data.frame(data1,check.names=FALSE);
+  box_data$class <- cls;
+  
+  mbSetObj$analSet$boxdata <- box_data;
+
   mbSetObj$analSet$cls <- cls;
   mbSetObj$analSet$rf <- rf_out;
   mbSetObj$analSet$rf.sigmat <- sigmat;

@@ -240,8 +240,8 @@ PlotBoxData <- function(mbSetObj, boxplotName, feat, plotType, format = "png", d
   load_gridExtra()
   load_phyloseq()
 
-  print(paste("plottype==", plotType))
-  print(feat)
+  #print(paste("plottype==", plotType))
+  #print(feat)
   variable <- mbSetObj$analSet$var.type
 
   sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL = TRUE)
