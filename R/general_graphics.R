@@ -899,7 +899,7 @@ PlotCovariateMap <- function(mbSetObj,
   ## ── prepare data ───────────────────────────────────────────────────
   thresh    <- as.numeric(thresh)                  # p.lvl
   mbSetObj  <- .get.mbSetObj(mbSetObj)
-  both.mat  <- mbSetObj$analSet$cov.mat
+  both.mat  <- mbSetObj$analSet$cov.mat;
   both.mat  <- both.mat[order(-both.mat[, "pval.adj"]), ]
 
   ## flag significance
