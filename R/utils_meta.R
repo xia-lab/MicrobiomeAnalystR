@@ -324,9 +324,8 @@ setIncludeMeta <- function(metaBool){
     saveSet(paramSet, "paramSet");
 }
 PlotSelectedFeature<-function(mbSetObj, imgName, feat.id, format="png", sel.meta="", dpi=72){
-  load_ggplot();
-  load_grid();
-  load_gridExtra();
+  suppressMessages(library(grid));
+  suppressMessages(library(gridExtra));
 
   imgName <- paste(imgName,".", format, sep="");
   singleCol <- F;

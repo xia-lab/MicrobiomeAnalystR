@@ -59,7 +59,6 @@ PerformRefDataMapping <- function(mbSetObj, refdataNm, taxo_type, sample_var, bi
   # create phyloseq or phyloslim object
   
   if(.on.public.web){
-    load_phyloseq();
     OTU <- otu_table(current.refset.otu, taxa_are_rows = TRUE)
     TAX <- tax_table(current.refset.tax)
     current.refset <- phyloseq(OTU, TAX)
@@ -204,9 +203,7 @@ PCoA3DAnal.16SRef <- function(mbSetObj, barplotNm, ordMeth, distName, taxrank, m
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
-  if(.on.public.web){
-     load_vegan();
-  }
+  suppressMessages(library(vegan));
 
   data <- userrefdata;
 

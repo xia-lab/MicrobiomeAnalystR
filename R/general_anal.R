@@ -27,8 +27,7 @@
 #'@import randomForest
 RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank){
 
-  load_randomforest();
-  load_phyloseq();
+  suppressMessages(library(randomForest));
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -178,7 +177,6 @@ PlotRF.Classify<-function(mbSetObj, feature, imgName, format="png", dpi=72, widt
 #'@export
 PlotRF.VIP<-function(mbSetObj, feature, imgName, format="png", dpi=72, width=NA){
 
-  load_phyloseq();
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   imgName = paste(imgName, ".", format, sep="");
@@ -266,8 +264,6 @@ PlotImpVar <- function(mbSetObj, imp.vec, xlbl, feature, color.BW=FALSE){
   y <- 1:feat.num;
   par(xpd=T);
   
-  load_rcolorbrewer();
-  
   nc <- ncol(mns);
   
   # modified for B/W color
@@ -336,7 +332,6 @@ PlotImpVar <- function(mbSetObj, imp.vec, xlbl, feature, color.BW=FALSE){
 #'@import MASS
 
 PerformUnivarTest <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, taxrank, statOpt,comp1,comp2, fc.thresh=0){
-  load_phyloseq();
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -528,10 +523,9 @@ PerformUnivarTest <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, t
 #'@import metagenomeSeq
 
 PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank, model,comp1,comp2, fc.thresh=0){
-  load_phyloseq();
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  load_metagenomeseq();
+  suppressMessages(library(metagenomeSeq));
   current.msg<<-"null"
  
   sample_table <- sample_data(mbSetObj$dataSet$norm.phyobj, errorIfNULL=TRUE);
@@ -770,8 +764,7 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
 PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, isfunc, shotgunid, taxrank){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  load_MASS();
-  load_phyloseq();
+  suppressMessages(library(MASS));
 
   claslbl <<- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
 
@@ -930,8 +923,6 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
 #'License: GNU GPL (>= 2)
 #'@export
 PlotLEfSeSummary <- function(mbSetObj, ldaFeature, layoutOptlf, imgName, format="png", width = NA, dpi=72, colOpt="default") {
-
-  load_phyloseq();
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   set.seed(280561493);
@@ -1025,8 +1016,6 @@ PlotLEfSeSummary <- function(mbSetObj, ldaFeature, layoutOptlf, imgName, format=
 #'@export
 
 PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="default", color.BW=FALSE){
-
-  load_phyloseq();
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   if(layoutOptlf == "dot") {
@@ -1071,8 +1060,6 @@ PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="defaul
     x <- rep(lgd.x, feat.num);
     y <- 1:feat.num;
     par(xpd=T);
-    
-    load_rcolorbrewer();
     
     nc <- ncol(mns);
     
@@ -1162,7 +1149,6 @@ PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="defaul
 #'@import DESeq2
 
 PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, fc.thresh=0, comp1=1, comp2=2){
-  load_phyloseq();
 
   if(opts=="DESeq2"){
     .prepare.deseq(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, fc.thresh, comp1, comp2);
@@ -1275,8 +1261,6 @@ return(1)
 }
 
 .prepare_rnaseq<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, fc.thresh=0, comp1=1, comp2=2){
-
-  load_phyloseq();
 
   mbSetObj <-.get.mbSetObj(mbSetObj);
 
@@ -1490,8 +1474,6 @@ return(1)
 #'@export
 
 FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, feat){
-
-  load_phyloseq();
    
   mbSetObj <- .get.mbSetObj(mbSetObj);
  
@@ -1615,8 +1597,6 @@ FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, feat){
 #'License: GNU GPL (>= 2)
 #'@export
 PlotCorr <- function(mbSetObj, imgName, format="png", dpi=72,appendnm, width=NA){
-
-  load_phyloseq();
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -1736,8 +1716,6 @@ PlotCorr <- function(mbSetObj, imgName, format="png", dpi=72,appendnm, width=NA)
   x <- rep(lgd.x, feat.num);
   y <- 1:feat.num;
   par(xpd=T);
-  
-  load_rcolorbrewer();
   nc <- ncol(mns);
   
   col <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdYlBu"))(nc); # set colors for each class
@@ -1804,7 +1782,7 @@ PlotCorr <- function(mbSetObj, imgName, format="png", dpi=72,appendnm, width=NA)
 
 
 Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, variable, appendname){
-  load_phyloseq();
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
   if(pattern %in% names(mbSetObj$dataSet$sample_data)){
@@ -2117,7 +2095,7 @@ KendallCorrFunc <- function(var1, var2, data){
 #'@export
 
 GenerateTemplates <- function(mbSetObj, variable){
-  load_phyloseq();
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
   print(variable)
   clslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
@@ -2153,8 +2131,7 @@ gm_mean = function(x, na.rm=TRUE){
 # helper function
 phyloseq_to_edgeR = function(physeq, group, method="RLE", ...){
   
-  load_edgeR();
-  load_phyloseq();
+  suppressMessages(library(edgeR));
   
   # Enforce orientation.
   if( !taxa_are_rows(physeq) ){ physeq <- t(physeq) }
@@ -2275,14 +2252,14 @@ GetSigTable.LEFSE<-function(mbSetObj){
 
 GetRFConf.Table<-function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);  
-  load_xtable();
+  suppressMessages(library(xtable));
   print(xtable::xtable(mbSetObj$analSet$rf$confusion, caption="Random Forest Classification Performance"), size="\\scriptsize");
 }
 
 
 GetMapTable<-function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);  
-  load_xtable();
+  suppressMessages(library(xtable));
   print(xtable::xtable(mbSetObj$analSet$mapTable, caption="Result from Taxa Name Mapping"),
         tabular.environment = "longtable", caption.placement="top", size="\\scriptsize");
 }
@@ -2343,7 +2320,7 @@ GetSigTable.MMPMet<-function(mbSetObj){
 
 GetMMPMicTable<-function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);  
-  load_xtable();
+  suppressMessages(library(xtable));
   print(xtable::xtable(mbSetObj$analSet$mic.map, caption="Result from Taxa Name Mapping"),
         tabular.environment = "longtable", caption.placement="top", size="\\scriptsize");
 }
@@ -2351,7 +2328,7 @@ GetMMPMicTable<-function(mbSetObj){
 
 GetMMPMetTable<-function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);  
-  load_xtable();
+  suppressMessages(library(xtable));
   print(xtable::xtable(mbSetObj$analSet$met.map, caption="Result from Metabolite Name Mapping"),
         tabular.environment = "longtable", caption.placement="top", size="\\scriptsize");
 }

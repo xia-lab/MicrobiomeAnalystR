@@ -134,9 +134,7 @@ ReadShotgunBiomData <- function(mbSetObj, dataName, geneidtype, module.type, ism
   #to support biom file produced by picrust, (read_biom:phyloseq) function doesn't work
   msg <- NULL;
     
-  if(on.public.web){
-    load_biomformat();
-  }
+  suppressMessages(library(biomformat));
   
   #reading .biom file using phyloseq
   mydata <- biomformat::read_biom(dataName);
@@ -191,10 +189,9 @@ ReadShotgunBiomData <- function(mbSetObj, dataName, geneidtype, module.type, ism
 #'@import ggfortify
 PreparePCA4Shotgun <- function(mbSetObj, imgName,imgName2, format="json", inx1, inx2, inx3,
                               variable, showlabel, format2d="png", dpi=72){
-  load_phyloseq();
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  load_ggfortify();
+  suppressMessages(library(ggfortify));
   
   imgName2 = paste(imgName2, ".", format2d, sep="");
   mbSetObj$imgSet$pca<-imgName2;
@@ -278,7 +275,6 @@ PlotFunctionStack <-function(mbSetObj, summaryplot, functionlvl, abundcal, genei
                             colpalopt, format="png", dpi=72){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  load_phyloseq();
 
   # record parameters
   mbSetObj$paramSet$stack <- list(
@@ -295,9 +291,6 @@ PlotFunctionStack <-function(mbSetObj, summaryplot, functionlvl, abundcal, genei
   jsonName = paste(summaryplot, ".json", sep="");
   rdaName = paste(summaryplot, ".rda", sep="");
   summaryplot <- paste(summaryplot, ".", format, sep="");
-
-
-  load_reshape();
 
   data <- mbSetObj$dataSet$proc.phyobj;
   smpl_nm <- sample_names(data);
@@ -639,7 +632,6 @@ PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",fi
 }
 
 .prepare.global<-function(mbSetObj, category,contain ,file.nm){
-  load_phyloseq();
   LoadKEGGKO_lib(category,contain);
   mbSetObj <- .get.mbSetObj(mbSetObj);
   print(c(category,contain,file.nm))

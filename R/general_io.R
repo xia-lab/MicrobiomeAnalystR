@@ -70,8 +70,12 @@ Init.mbSetObj <- function(){
   }
   
   # preload some general package
-  load_cairo();
-  load_ggplot();
+  suppressMessages(library(Cairo));
+  suppressMessages(library(RColorBrewer));
+  suppressMessages(library(phyloseq));
+  suppressMessages(library(ggplot2));
+  suppressMessages(library(reshape));
+
   Cairo::CairoFonts("Arial:style=Regular","Arial:style=Bold","Arial:style=Italic","Helvetica","Symbol")
   print("Init MicrobiomeAnalyst!");
   return(.set.mbSetObj(mbSetObj))
@@ -192,10 +196,9 @@ SetModuleType <- function(mbSetObj, nm){
 #'License: GNU GPL (>= 2)
 #'@export
 ReadSampleTable <- function(mbSetObj, fileName) {
-  load_stringr();
+  suppressMessages(library(stringr));
   mbSetObj <- .get.mbSetObj(mbSetObj);
   module.type <- mbSetObj$module.type;
-  load_phyloseq();
   mydata <- .readDataTable(fileName);
   mydata[is.na(mydata)] <- "Not Available";
   if(any(c(any(is.na(mydata)), class(mydata) == "try-error"))){
@@ -300,7 +303,6 @@ mydata <- sapply(mydata[,-1,drop=F], format, trim = TRUE)
 ReadTreeFile <- function(mbSetObj, fileName, dataName="",module.type) {
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  load_phyloseq();
   tree <- tryCatch({
     read_tree(fileName);
   })  
@@ -514,7 +516,6 @@ GetLowerTaxaLvlNm<- function(mbSetObj, taxrank){
 }
 
 GetHighTaxaLvlNm<- function(mbSetObj, taxrank){
-  load_phyloseq();
   mbSetObj <- .get.mbSetObj(mbSetObj);
   if(taxrank=="OTU"){
     nms = colnames(tax_table(mbSetObj$dataSet$proc.phyobj))[!is.na(colnames(tax_table(mbSetObj$dataSet$proc.phyobj)))]

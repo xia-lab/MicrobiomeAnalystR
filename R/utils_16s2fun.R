@@ -61,7 +61,6 @@ my.16sfun.anot<-function(mbSetObj, type, pipeline,ggversion) {
         func.meth<-"Tax4Fun";
         folderReferenceData <- get.fun.lib.path(func.meth);
 
-        #load_tax4fun();
         if(pipeline=="qi_silva"){
             ModSilvaIds <- gsub("uncultured archaeon","",rownames(merge.otu));
             ModSilvaIds <- gsub("uncultured organism","",ModSilvaIds);

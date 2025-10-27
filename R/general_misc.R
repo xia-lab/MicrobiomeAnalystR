@@ -159,7 +159,6 @@ GetExtendRange<-function(vec, unit=10){
 
 ComputeColorGradient <- function(nd.vec, centered=TRUE){
   
-  load_rcolorbrewer();
   if(sum(nd.vec<0, na.rm=TRUE) > 0){
     centered <- T;
   }else{
@@ -404,11 +403,9 @@ gm_mean <- function(x, na.rm=TRUE){
 #'@import xtable
 GetSigTable<-function(mat, method){
   
-  load_xtable();
-
   if(!isEmptyMatrix(mat)){ # test if empty
     cap<-"Important features identified by";
-        
+    suppressMessages(library(xtable));      
     if(nrow(mat)>50){
       smat<-as.matrix(mat[1:50,]); # only print top 50 if too many
       colnames(smat)<-colnames(mat); # make sure column names are also copied
@@ -472,7 +469,6 @@ col_vector<-c("#7FC97F","#BEAED4","#FDC086","#FFFF99","#386CB0","#F0027F","#BF5B
 
 ComputeColorGradientCorr <- function(nd.vec, centered=TRUE){
   
-  load_rcolorbrewer();
   if(sum(nd.vec<0, na.rm=TRUE) > 0){
     centered <- T;
   }else{

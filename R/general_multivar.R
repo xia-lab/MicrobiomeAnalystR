@@ -15,8 +15,8 @@ PerformPartialCorr <- function(mbSetObj, taxa.lvl="Phylum", variable=NA, alg = "
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  load_ppcor()
-  load_viridis()
+  suppressMessages(library(ppcor));
+  suppressMessages(library(viridis));
   
   # retrieve sample info
   metadata <- data.frame(sample_data(mbSet$dataSet$proc.phyobj), check.names=F, stringsAsFactors = FALSE,check.names=FALSE);
@@ -151,8 +151,8 @@ PerformMantelTest <- function(mbSet, taxrank = "OTU", microDist = "bray",
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  load_datatable();
-  load_viridis();
+  suppressMessages(library(data.table));
+  suppressMessages(library(viridis));
   
   metadata <- metadata;
   

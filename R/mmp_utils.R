@@ -644,7 +644,6 @@ doMaAslin <- function(input.data,thresh = 0.05,adj.bool=F){
 
 
 PrepareResTable <- function(mbSetObj,micDataType,taxalvl,is.norm=F){
-  load_phyloseq();
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   mbSetObj$analSet$maaslin$taxalvl <- taxalvl;
@@ -839,7 +838,7 @@ MetaboIDmap <- function(netModel,predDB,IDtype,met.vec=NA){
 
 
 MicIDmap <- function(netModel,predDB,taxalvl="all"){
-  load_stringr();
+  suppressMessages(library(stringr));
   
   if(!exists("phyloseq_objs")){
     phyloseq_objs <- qs::qread("phyloseq_objs.qs")
@@ -1268,9 +1267,8 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
                           var.inx=NA, border=T, width=NA, dpi=72){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  load_iheatmapr();
-  load_rcolorbrewer();
-  load_viridis();
+  suppressMessages(library(iheatmapr));
+  suppressMessages(library(viridis));
   current.msg<<- NULL
   set.seed(2805614);
 
@@ -1685,7 +1683,6 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
 
 .prepare.global.tune<-function(mbSetObj, dataType,category, file.nm,contain){
   
-  load_phyloseq();
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   phenotype <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[selected.meta.data]]);
@@ -2805,10 +2802,8 @@ CreatM2MHeatmapList<-function(mbSetObj, plotNm,  format="png",
                               var.inx=NA, border=T, width=NA, dpi=72){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
-  load_iheatmapr();
-  load_rcolorbrewer();
-  load_viridis();
+  suppressMessages(library(iheatmapr));
+  suppressMessages(library(viridis));
   current.msg<<- NULL
   set.seed(2805614);
   #used for color pallete

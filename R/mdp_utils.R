@@ -170,9 +170,8 @@ PlotBoxDataCorr<-function(mbSetObj, boxplotName, feat, format="png", sel.meta=""
   mbSetObj <- .get.mbSetObj(mbSetObj);
   colorPal <- "dark";
   
-  load_ggplot();
-  load_grid();
-  load_gridExtra();
+  suppressMessages(library(grid));
+  suppressMessages(library(gridExtra));
   if(mbSetObj$module.type == "meta"){
     merged <- qs::qread("merged.data.qs");
     merged <- subsetPhyloseqByDataset(mbSetObj, merged);
@@ -251,10 +250,9 @@ PerformLayOut <- function(g){
 }
 
 PrepareCorrExpValues <- function(mbSetObj, meta, taxalvl, color, layoutOpt, comparison, wilcox.cutoff){
-  load_phyloseq();
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  load_metacoder();
+  suppressMessages(library(metacoder)) # required for some diff computing
 
   tax_o <- taxalvl;
   dm <- mbSetObj$dataSet$proc.phyobj;
@@ -348,8 +346,6 @@ PrepareCorrExpValues <- function(mbSetObj, meta, taxalvl, color, layoutOpt, comp
 
 PrepareBoxPlot <- function(mbSetObj, taxrank, variable){
 
-  load_phyloseq();
-  
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   selSamples <- mbSetObj$dataSet$selected.grps
@@ -554,7 +550,6 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
     }else if(palette == "plasma") {
         colors <- rev(viridis::plasma(10))
     }else {
-        load_rcolorbrewer();
         colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdBu"))(10));
     }
     p <- plot_core(data.core, plot.type=viewOpt, colours = colors, prevalences = seq(.05, 1, .05), 
@@ -584,7 +579,6 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
     }else if(palette == "plasma") {
         colors <- rev(viridis::plasma(nrow(dt)))
     }else {
-        load_rcolorbrewer();
         colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdBu"))(nrow(dt)));
     }
     
@@ -691,7 +685,6 @@ core_comp_grp <- function(mbSetObj,imgName, preval, detection, taxrank,
   }else if(palette == "plasma") {
     colors <- rev(viridis::plasma(10))
   }else {
-    load_rcolorbrewer();
     colors <- rev(grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, "RdBu"))(10));
   }
   library(gridExtra)
@@ -904,7 +897,7 @@ plot_core<-function(x, prevalences=seq(.1, 1, 0.1), detections=20,
 #'@import data.table
 core_heatmap<-function(x, dets, cols, min.prev, taxa.order){
   
-  load_datatable();
+  suppressMessages(library(data.table));
   
   data <- x;
   
@@ -1020,9 +1013,6 @@ PlotOverallPieGraph<-function(mbSetObj, taxalvl, feat_cnt, calcmeth,
                               toptaxapie, pietoptaxaopt){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
-  load_reshape();
-  load_phyloseq();
 
   set.seed(28053448);
   
@@ -1160,10 +1150,6 @@ PlotOverallPieGraph<-function(mbSetObj, taxalvl, feat_cnt, calcmeth,
 PlotGroupPieGraph <- function(mbSetObj, taxalvl, metadata, clslevel,
                               feat_cnt, calcmeth, toptaxapie, pietoptaxaopt){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
-  load_reshape();
-  load_phyloseq();
-  
   set.seed(28053443);
   
   #using filtered data
@@ -1291,8 +1277,6 @@ PlotGroupPieGraph <- function(mbSetObj, taxalvl, metadata, clslevel,
 PlotSamplePieGraph<-function(mbSetObj, taxalvl, smplnm, feat_cnt, toptaxapie, pietoptaxaopt){
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
-  load_reshape();
-  load_phyloseq();
   set.seed(28053443);
 
   #using filtered data
@@ -1417,8 +1401,7 @@ PlotDataPieFromPie<-function(mbSetObj, taxalvl, metadata, clslevel,
                              taxaposn, lowtaxa){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
-  load_reshape();
+
   set.seed(280534431);
   high_taxa <<- as.character(piedata$variable[taxaposn]);
   
@@ -1479,9 +1462,7 @@ PlotDataPieFromPie<-function(mbSetObj, taxalvl, metadata, clslevel,
 UpdatePieData<-function(mbSetObj, lowtaxa){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
-  load_reshape();
-  
+
   set.seed(280534432);
   
   data <- datapietaxa;
@@ -1666,8 +1647,6 @@ PlotPiechart <- function(mbSetObj, rel_perct, pieName, format="png", dpi=72) {
 PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName, metadata, 
                         taxrank, colors = "default", format="png", dpi=72, interactive = FALSE){
 
-  load_phyloseq();
-
   mbSetObj <- .get.mbSetObj(mbSetObj);  
   set.seed(13133);
   
@@ -1772,10 +1751,6 @@ PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
                                     appendnm, format="png", dpi=72){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(.on.public.web){
-    load_reshape();
-    load_phyloseq();
-  }
   if(mbSetObj$module.type == "meta"){
     merged <- qs::qread("merged.data.qs");
     data <- subsetPhyloseqByDataset(mbSetObj, merged);
@@ -1997,7 +1972,7 @@ sink();
   PlotAlphaBoxData<-function(mbSetObj, boxplotName, distName, metadata, 
                              colors="default", format="png", dpi=72){
     mbSetObj <- .get.mbSetObj(mbSetObj);
-    load_viridis();
+    suppressMessages(library(viridis));
     
     set.seed(1313397);
     data <- mbSetObj$analSet$alpha;
@@ -2109,10 +2084,8 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
   combined <- F;
   mbSetObj <- .get.mbSetObj(mbSetObj);
   module.type <- mbSetObj$module.type;
-  load_ggplot()
-  load_datatable();
-  load_viridis();
-  load_phyloseq();
+  suppressMessages(library(data.table));
+  suppressMessages(library(viridis));
   err.vec <<- ""
   set.seed(13134);
   if(all(c(module.type == "meta", !combined))){
@@ -2222,7 +2195,7 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
     }
     if(distName=="wunifrac"){
       
-      load_ape();
+      suppressMessages(library(ape));
       pg_tree <- qs::qread("tree.qs");
       pg_tb <- tax_table(data);
       pg_ot <- otu_table(data);
@@ -2245,7 +2218,7 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
       }
     } else if (distName=="unifrac") {
       
-      load_ape();      
+      suppressMessages(library(ape));      
       pg_tree <- qs::qread("tree.qs");
       pg_tb <- tax_table(data);
       pg_ot <- otu_table(data);
@@ -2496,9 +2469,7 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
                                 appendnm=FALSE, format="png", dpi=72){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  load_reshape();
-  load_viridis();
-  load_phyloseq();
+  suppressMessages(library(viridis));
   
   if(mbSetObj$module.type == "meta"){
     if(viewOpt=="smpl_grp"){
@@ -2809,10 +2780,8 @@ sink();
 PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, imgOpt, 
                               feat_cnt, colpalopt, calcmeth, toptaxa, abunTopTaxaOpt, 
                               appendnm, format="png", dpi=72, interactive = FALSE){
-  load_reshape();
-  load_ggplot();
-  load_viridis();
-  load_phyloseq(); 
+
+  suppressMessages(library(viridis));
   #save.image("tax.RData");
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -3120,7 +3089,7 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pai
                                 covariates = FALSE, cov.vec = NA, model.additive = TRUE){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  load_vegan();
+  suppressMessages(library(vegan));
 
   if(distnm %in% c("wunifrac", "unifrac")) {
     data <- qs::qread("data_unifra.qs");
@@ -3237,14 +3206,10 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pai
 PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, facet2, imgOpt,
                                      feat_cnt, colpalopt, calcmeth, toptaxa,abunTopTaxaOpt, 
                                      appendnm, format="png", dpi=80, interactive = FALSE){
-  load_phyloseq();
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  if(.on.public.web){
-    load_reshape();
-    load_viridis();
-  }
+  suppressMessages(library(viridis));
   
   if(mbSetObj$module.type == "meta"){
     data1 <- qs::qread("merged.data.raw.qs");
@@ -3559,7 +3524,6 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
 PlotRarefactionCurve <- function(mbSetObj, data.src, linecolor, linetype, facet, step=5, 
                                  imgName, format="png", dpi=72, interactive = FALSE){
 
-  load_phyloseq();
  current.msg<<-"";
   mbSetObj <- .get.mbSetObj(mbSetObj);
   # should use unfiltered data
@@ -3651,7 +3615,6 @@ PlotRarefactionCurve <- function(mbSetObj, data.src, linecolor, linetype, facet,
 #'@export
 PlotPhylogeneticTree <-function(mbSetObj, color, shape, taxa, treeshape, imgName, format="png", dpi=72){
 
-  load_phyloseq();
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -3736,7 +3699,6 @@ PlotPhylogeneticTree <-function(mbSetObj, color, shape, taxa, treeshape, imgName
 #########################
 
 GetHtGroupItems <- function(mbSetObj, meta){
-  load_phyloseq();
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   dm <- mbSetObj$dataSet$proc.phyobj;  
@@ -3760,7 +3722,6 @@ SetGroupItems <- function(mbSetObj, groups){
 }
 
 GetHtMetaCpInfo <- function(mbSetObj, meta){
-  load_phyloseq();
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   dm <- mbSetObj$dataSet$proc.phyobj;  
@@ -3808,8 +3769,7 @@ GetHtMetaCpInfo <- function(mbSetObj, meta){
 #'@import metacoder
 PrepareHeatTreePlot <- function(mbSetObj, meta, taxalvl, color, layoutOpt, comparison, 
                                 wilcox.cutoff, switchCmpDirection, colorMode, showLabels, imgName, format="png", dpi=72){
-  load_metacoder();
-  load_phyloseq();
+ suppressMessages(library(metacoder))
 
   mbSetObj <- .get.mbSetObj(mbSetObj);  
   tax_o <- taxalvl;
@@ -3977,7 +3937,7 @@ PrepareHeatTreePlotDataParse_cmf_diff_table <- function(PrepareHeatTreePlotDataP
 PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, comparison, wilcox.cutoff, colorMode, showLabels, imgName, format, dpi=72){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  load_viridis();
+  suppressMessages(library(viridis));
   
   dm_obj_cmf = PrepareHeatTreePlotDataParse_cmf_res;
   if(color == "ggr"){
@@ -4083,8 +4043,7 @@ if(layoutOpt == "reda"){# two layouts are provided
 
 PlotGroupDataHeattree <- function(mbSetObj, meta, comparison, taxalvl, color, layoutOpt, 
                                   showLabels,imgName, format="png", dpi=72){
-  load_metacoder();
-  load_phyloseq();
+  suppressMessages(library(metacoder))
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   tax_o <- taxalvl;
@@ -4121,9 +4080,7 @@ PlotGroupDataHeattree <- function(mbSetObj, meta, comparison, taxalvl, color, la
 
 PlotSampleDataHeattree <- function(mbSetObj,comparison, taxalvl, color, layoutOpt, 
                                   showLabels, imgName, format="png", dpi=72){
-  load_metacoder();
-  load_phyloseq();
-
+  suppressMessages(library(metacoder))
   mbSetObj <- .get.mbSetObj(mbSetObj);
   tax_o <- taxalvl;
   
@@ -4160,8 +4117,7 @@ PlotSampleDataHeattree <- function(mbSetObj,comparison, taxalvl, color, layoutOp
 
 PlotOverviewDataHeattree <- function(mbSetObj, taxalvl, color, layoutOpt, 
                                     showLabels, imgName, format="png", dpi=72){
-  load_metacoder();
-  load_phyloseq();
+  suppressMessages(library(metacoder))
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   tax_o <- taxalvl;

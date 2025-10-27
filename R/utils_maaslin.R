@@ -874,7 +874,6 @@ paras = paras[!paras$feature %in% nafeat,]
 
 PostProcessMaaslin <- function(mbSetObj,analysis.var,comp=NULL, thresh = 0.05,taxrank,is.norm,imgNm){
 
-    load_phyloseq();
     mbSetObj <- .get.mbSetObj(mbSetObj);
     input.data<-maaslin.para$input_data
     res <- mbSetObj$analSet$maaslin$results
