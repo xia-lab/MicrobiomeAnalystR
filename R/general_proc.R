@@ -538,7 +538,6 @@ ApplyMetaboFilter <- function(mbSetObj=NA, filter,  rsd){
 #'@export
 UpdateSampleItems <- function(mbSetObj){
   
-  load_phyloseq();
   mbSetObj <- .get.mbSetObj(mbSetObj);
   dataName <- mbSetObj$dataSet$name;
   module.type <- mbSetObj$module.type;
@@ -678,14 +677,14 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
           msg <- c(msg, paste("Performed ```total sum scaling``` normalization."));
         }
       }else if(scale.opt=="upperquartile"){
-        load_edgeR();
+        suppressMessages(library(edgeR));
         otuUQ <- edgeRnorm(data,method="upperquartile");
         data <- as.matrix(otuUQ$counts);
         if(i==1){
           msg <- c(msg, paste("Performed ```upper quartile``` normalization"));
         }
       }else if(scale.opt=="CSS"){
-        load_metagenomeseq();
+        suppressMessages(library(metagenomeSeq));
         #biom and mothur data also has to be in class(matrix only not in phyloseq:otu_table)
         data1 <- as(data,"matrix");
         dataMR <- newMRexperiment(data1);
@@ -707,14 +706,14 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
     
     if(transform.opt != "none"){
       if(transform.opt=="rle"){
-        load_edgeR();            
+        suppressMessages(library(edgeR));            
         otuRLE <- edgeRnorm(data,method="RLE");
         data <- as.matrix(otuRLE$counts);
         if(i==1){        
           msg <- c(msg, paste("Performed ```RLE``` Normalization"));
         }
       }else if(transform.opt=="TMM"){
-        load_edgeR();   
+        suppressMessages(library(edgeR));   
         otuTMM <- edgeRnorm(data,method="TMM");
         data <- as.matrix(otuTMM$counts);
         if(i==1){        
@@ -1072,7 +1071,7 @@ PlotRareCurve <- function(mbSetObj, graphName, variable){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   set.seed(13789);
-  load_vegan();
+  suppressMessages(library(vegan));
   
   data <- data.matrix(mbSetObj$dataSet$filt.data);
   rarefaction_curve_data<-as.matrix(otu_table(data));
@@ -1149,11 +1148,10 @@ PlotRareCurve <- function(mbSetObj, graphName, variable){
 #'License: GNU GPL (>= 2)
 #'@export
 PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataName="", interactive=F){
-  load_phyloseq();
+
   mbSetObj <- .get.mbSetObj(mbSetObj)
   library(ggplot2)
   library(dplyr)
-  library(Cairo)
   
   if(dataName != ""){
     ind <- TRUE
@@ -1515,8 +1513,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   dataName <- mbSetObj$dataSet$name;
   module.type <- mbSetObj$module.type;
-  load_phyloseq();
-  load_splitstackshape();
+  suppressMessages(library(splitstackshape));
    data.proc <- readDataQs("data.proc", module.type, dataName);
    # do some sanity check here on sample and feature names
   smpl.nms <- colnames(data.proc);
@@ -1585,7 +1582,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
           
           if(taxa_type=="SILVA"){
             
-            load_splitstackshape();
+            suppressMessages(library(splitstackshape));
             feat_nm<-data.frame(mbSetObj$dataSet$feat_nm,check.names=FALSE);
             names(feat_nm)<-"Rank";
             taxonomy<-splitstackshape::cSplit(feat_nm,"Rank",";");
@@ -1622,7 +1619,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
             print("here")
 
             # need to parse Taxonomy still!
-            load_splitstackshape();               
+            suppressMessages(library(splitstackshape));               
             
             feat_nm <- data.frame(mbSetObj$dataSet$feat_nm,check.names=FALSE);
             feat_nm <- data.frame(apply(feat_nm, 1, function(x) gsub(";\\s;", ";", x)),check.names=FALSE) # remove empty taxa

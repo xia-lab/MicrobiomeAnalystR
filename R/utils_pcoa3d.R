@@ -7,8 +7,7 @@
 my.pcoa.3d <- function(mbSetObj, ordMeth, distName, taxrank, colopt, variable, taxa, alphaopt, jsonNm){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  load_phyloseq();
-  load_vegan();
+  suppressMessages(library(vegan));
   
   variable <<- variable;
 

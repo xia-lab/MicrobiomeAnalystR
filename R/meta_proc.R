@@ -487,7 +487,6 @@ Read16STaxaTableMeta <- function(mbSetObj, dataName, fileName) {
 ReadSampleTableMeta <- function(mbSetObj, fileName) {
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  load_phyloseq();
   mydata <- .readDataTable(fileName);
 
   mydata[is.na(mydata)] <- "NA";
@@ -608,7 +607,6 @@ GetMetaInfoMeta <- function(mbSetObj, dataName, type="disc"){
 #'@export
 
 CheckMetaDataIntegrity <- function(mbSetObj, taxo_type="OTU", sample_var="NA"){
-  load_phyloseq();
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   paramSet <- readSet(paramSet, "paramSet");
@@ -881,7 +879,6 @@ CheckMetaDataIntegrity <- function(mbSetObj, taxo_type="OTU", sample_var="NA"){
 #'License: GNU GPL (>= 2)
 #'@export
 MergeDatasets <- function(mbSetObj, taxo_type, sample_var){
-  load_phyloseq();
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   if(sample_var == "null"){
@@ -958,7 +955,6 @@ MergeDatasets <- function(mbSetObj, taxo_type, sample_var){
 PerformDataMerging <- function(mbSetObj, data1, data2, taxo_type, sample_var, init=T, type="proc"){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   sel.nms <- names(mbSetObj$dataSets);
-  load_phyloseq();
   #reading user data
   if(type == "proc"){
   data <- data1$proc.phyobj;

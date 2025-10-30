@@ -69,9 +69,8 @@ PCoA3D.Anal <- function(mbSetObj, ordMeth, distName, taxrank, colopt, variable, 
 PlotTreeGraph <- function(mbSetObj, plotNm, distnm, clstDist, metadata,
                           taxrank, colorOpts, format = "png", dpi = 72, width = NA,
                           plotType = "rectangle") {
-  load_ape()
-  load_viridis()
-  load_phyloseq();
+  suppressMessages(library(ape));
+  suppressMessages(library(viridis));
 
   mbSetObj <- .get.mbSetObj(mbSetObj)
 
@@ -235,13 +234,11 @@ PlotTreeGraph <- function(mbSetObj, plotNm, distnm, clstDist, metadata,
 PlotBoxData <- function(mbSetObj, boxplotName, feat, plotType, format = "png", dpi = 72) {
   mbSetObj <- .get.mbSetObj(mbSetObj)
 
-  load_ggplot()
-  load_grid()
-  load_gridExtra()
-  load_phyloseq()
+  suppressMessages(library(grid));
+  suppressMessages(library(gridExtra));
 
-  print(paste("plottype==", plotType))
-  print(feat)
+  #print(paste("plottype==", plotType))
+  #print(feat)
   variable <- mbSetObj$analSet$var.type
 
   sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL = TRUE)
@@ -304,10 +301,8 @@ PlotBoxData <- function(mbSetObj, boxplotName, feat, plotType, format = "png", d
 PlotBoxMultiData <- function(mbSetObj, boxplotName, analysis.var, feat, plotType, format = "png", dpi = 72) {
   mbSetObj <- .get.mbSetObj(mbSetObj)
 
-  load_ggplot()
-  load_grid()
-  load_gridExtra()
-  load_phyloseq()
+  suppressMessages(library(grid));
+  suppressMessages(library(gridExtra));
 
   variable <- analysis.var
   var.type <- mbSetObj$dataSet$meta.types[names(mbSetObj$dataSet$meta.types) == variable]
@@ -386,10 +381,8 @@ PlotBoxMultiData <- function(mbSetObj, boxplotName, analysis.var, feat, plotType
 PlotBoxMultiMetabo <- function(mbSetObj, boxplotName, analysis.var, feat,plotType, format = "png", dpi = 72) {
   mbSetObj <- .get.mbSetObj(mbSetObj)
 
-  load_ggplot()
-  load_grid()
-  load_gridExtra()
-  load_phyloseq()
+  suppressMessages(library(grid));
+  suppressMessages(library(gridExtra));
 
   variable <- analysis.var
   var.type <- mbSetObj$dataSet$meta.types[names(mbSetObj$dataSet$meta.types) == variable]
@@ -521,10 +514,8 @@ PlotHeatmap <- function(mbSetObj, plotNm, dataOpt = "norm",
                         appendnm = "F",ifgrp="F",grpSel, rowV = F, colV = T, 
                         var.inx = NA, border = T, width = NA, dpi = 72) {
   mbSetObj <- .get.mbSetObj(mbSetObj)
-  load_iheatmapr()
-  load_rcolorbrewer()
-  load_viridis()
-  load_phyloseq() 
+  suppressMessages(library(iheatmapr));
+  suppressMessages(library(viridis));
   set.seed(2805614)
   # used for color pallete
   variable <<- metadata
@@ -805,7 +796,6 @@ as_list <- to_plotly_list(p)
 #' @export
 GetColorSchema <- function(mbSetObj, grayscale = F) {
   mbSetObj <- .get.mbSetObj(mbSetObj)
-  load_phyloseq();
 
   # test if total group number is over 9
   claslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]])
@@ -899,7 +889,7 @@ PlotCovariateMap <- function(mbSetObj,
   ## ── prepare data ───────────────────────────────────────────────────
   thresh    <- as.numeric(thresh)                  # p.lvl
   mbSetObj  <- .get.mbSetObj(mbSetObj)
-  both.mat  <- mbSetObj$analSet$cov.mat
+  both.mat  <- mbSetObj$analSet$cov.mat;
   both.mat  <- both.mat[order(-both.mat[, "pval.adj"]), ]
 
   ## flag significance
@@ -920,7 +910,6 @@ PlotCovariateMap <- function(mbSetObj,
   ifelse(sig, "Yes", "No")))
 
   logp_val  <- -log10(thresh)
-  load_ggplot()
   library(ggrepel)
 
   topFeature   <- min(5, nrow(both.mat))

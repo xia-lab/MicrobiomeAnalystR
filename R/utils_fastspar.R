@@ -30,9 +30,7 @@ my.fast.spar <- function(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, out
 system(my.cmd);
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  if(.on.public.web){
-    load_igraph();
-  }
+  suppressMessages(library(igraph));
   
   if(opt == "pattern"){
     data1 <- qs::qread("pattern_data.qs")

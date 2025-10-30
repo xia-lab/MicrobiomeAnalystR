@@ -45,7 +45,7 @@ Setup.MapData<-function(mbSetObj, qvec){
 #'@import xtable
 GetORATable<-function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);  
-  load_xtable();   
+  suppressMessages(library(xtable));   
   res <- mbSetObj$analSet$ora.mat;
   print(xtable::xtable(res, caption="Result from Over Representation Analysis"),
         tabular.environment = "longtable", caption.placement="top", size="\\scriptsize");
@@ -400,8 +400,7 @@ SetTaxonSetLib <- function(mbSetObj, tset.type){
 #'@import reshape
 PlotEnrichNet.Overview<-function(hits, pvals){
   
-  load_igraph();
-  load_reshape();
+  suppressMessages(library(igraph));
 
   # due to space limitation, plot top 50 if more than 50 were given
   title <- "Taxon Set Enrichment Network Overview";

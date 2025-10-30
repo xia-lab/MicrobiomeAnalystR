@@ -20,7 +20,7 @@ SetCurrentSelectedTaxLevel<-function(taxLvl){
 #'@export
 #'@import phyloseq
 Read16SAbundData <- function(mbSetObj, dataName, format, taxa_type, ismetafile, is.normalized) {
-  load_phyloseq();
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(format=="text"){
@@ -158,8 +158,7 @@ Read16SBiomData <- function(mbSetObj, dataName, taxa_type, ismetadata){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  load_phyloseq();
-  load_biomformat();
+  suppressMessages(library(biomformat));
 
   msg <- NULL;
 
@@ -324,8 +323,7 @@ ReadMothurData<-function(mbSetObj, dataName, taxdataNm, taxa_type){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
-  load_phyloseq();
-  load_datatable();
+  suppressMessages(library(data.table));
   
   msg <- NULL;
 
@@ -644,8 +642,6 @@ return(.set.mbSetObj(mbSetObj));
 PlotSelectedSample <-function(mbSetObj, imgNm, smplID, OtuIdType, rel_perct, format="png", dpi=72){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
-  load_reshape();
 
   if(current.selected.tax == "NA"){
     txlvl <- "Phylum";
@@ -730,7 +726,7 @@ GetDataForPie<-function(data_n, datataxa, txlvl, OtuIdType, feat_cnt){
     
   if(OtuIdType=="GreengenesID"){
     
-    load_stringr();
+    suppressMessages(library(stringr));
     
     nm<-c("k__","p__","c__","o__","f__","g__","s__");
     first.10 <- substr(taxa_nm[,1], start=1, stop=3);

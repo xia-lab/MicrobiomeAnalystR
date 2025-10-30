@@ -1,6 +1,6 @@
 
 my.sparcc.net <- function(mbSetObj=NULL, corr.net.name, networkType="static", netLayout="kk", netTextSize){
-  load_igraph()
+  suppressMessages(library(igraph));
   mbSetObj <- .get.mbSetObj(mbSetObj);
   abundOpt <- mbSetObj$analSet$abund.opt;
   edge.list <- mbSetObj$analSet$network_cor;
@@ -210,7 +210,7 @@ my.sparcc.net <- function(mbSetObj=NULL, corr.net.name, networkType="static", ne
     if(networkType == "static"){
       
       # static plot
-      load_ggraph()
+      suppressMessages(library(ggraph));
       
       p <- ggraph(g, layout = netLayout) + theme_void() +
         geom_edge_fan(color="gray20", width=0.5, alpha=0.5) +
@@ -226,7 +226,7 @@ my.sparcc.net <- function(mbSetObj=NULL, corr.net.name, networkType="static", ne
     }else{ 
       
       # interactive plot
-      load_visNetwork()
+      suppressMessages(library(visNetwork));
       
       data <- toVisNetworkData(g)
       data[["nodes"]]$color <- topo.colsb

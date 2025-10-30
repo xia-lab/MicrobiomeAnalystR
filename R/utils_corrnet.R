@@ -15,11 +15,10 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
   mbSetObj$dataSet$cor.method <- cor.method;
   mbSetObj$analSet$abund.opt <- abundOpt;
   current.msg <<- ""; 
-  if(.on.public.web){
-    load_ppcor();
-    load_igraph();
-  }
- 
+
+  suppressMessages(library(ppcor));
+  suppressMessages(library(igraph));
+  
   if(cor.method == "sparcc"){
     if(.on.public.web){
       sparcc_results <- RunFastSpar_mem(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, "network")

@@ -873,7 +873,7 @@ paras = paras[!paras$feature %in% nafeat,]
 }
 
 PostProcessMaaslin <- function(mbSetObj,analysis.var,comp=NULL, thresh = 0.05,taxrank,is.norm,imgNm){
-    load_phyloseq();
+
     mbSetObj <- .get.mbSetObj(mbSetObj);
     input.data<-maaslin.para$input_data
     res <- mbSetObj$analSet$maaslin$results
@@ -974,63 +974,3 @@ PostProcessMaaslin <- function(mbSetObj,analysis.var,comp=NULL, thresh = 0.05,ta
     return(.set.mbSetObj(mbSetObj))
 }
 
-
-PlotCovariateMapMas <- function(mbSetObj, theme="default", imgName="NA", format="png", dpi=72, interactive=F){
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  both.mat <- mbSetObj$analSet$cov.mat
-  both.mat <- both.mat[order(-both.mat[,"pval.adj"]),]
-  logp_val <- -log10(mbSetObj$paramSet$cov$p.lvl)
-  topFeature <- 5;
-  if(nrow(both.mat) < topFeature){
-    topFeature <- nrow(both.mat);
-  }
-  
-  fileName <- paste0(imgName, ".", format);
-  mbSetObj$imgSet$covAdj <- fileName;
-  
-  width <- 8;
-  height <- 8.18;
-  
-  library(plotly)
-  threshold <- logp_val               
-  
-  both.mat$category <- with(both.mat, case_when(
-    pval.no > threshold & pval.adj > threshold ~ "Significant in both",
-    pval.no > threshold & pval.adj <= threshold ~ "Significant in pval.no only",
-    pval.adj > threshold & pval.no <= threshold ~ "Significant in pval.adj only",
-    TRUE ~ "Non-significant"
-  ))
-  
-  # Define a list or data frame mapping categories to properties
-  category_properties <- data.frame(
-    category = c("Significant in both", "Significant in pval.no only", 
-                 "Significant in pval.adj only", "Non-significant"),
-    color = c('#6699CC', '#94C973', '#E2808A', 'grey'),
-    name = c("Significant", "Non-Sig. after adjustment", 
-             "Sig. after adjustment", "Non-Significant")
-  )
-  
-  p <- ggplot(both.mat, aes(x = pval.no, y = pval.adj, color = category, text = paste("Feature:", Row.names, 
-                                                                                               "<br>Adjusted Pval:", signif(10^(-pval.adj), 4), 
-                                                                                               "<br>Non-adjusted Pval:", signif(10^(-pval.no), 4)))) +
-    geom_point(alpha = 0.5) +
-    scale_color_manual(values = setNames(category_properties$color, category_properties$category), name="") +
-    labs(x = "-log10(P-value): no covariate adjustment", y = "-log10(P-value): adjusted") +
-    theme_minimal() +
-    theme(legend.title = element_blank())
-  
-
-    Cairo::Cairo(file = fileName, unit="in", dpi=dpi, width=width, height=height, type=format);    
-    print(p)
-    dev.off()
-  
-
-  if(interactive){
-    library(plotly);
-    ggp_build <- layout(ggplotly(p,width = 800, height = 600, tooltip = c("text")), autosize = FALSE, margin = mbSetObj$imgSet$margin.config)
-    .set.mbSetObj(mbSetObj)
-    return(ggp_build);
-  }else{
-    return(.set.mbSetObj(mbSetObj));
-  }
-}

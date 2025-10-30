@@ -15,7 +15,7 @@
 #'@export
 #'
 PerformMetaEffectSize <- function(mbSetObj=NA, imgName="", taxrank="OTU", selMeta, BHth=0.05, de.method="LM", ef.method="REML", format="png", dpi=100){
-  load_phyloseq();
+
   if(exists('cov.meta.eff')){
     cov <- cov.meta.eff;
   }
