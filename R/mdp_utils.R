@@ -3040,7 +3040,7 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
     box <- box + theme(strip.text.x = element_blank())
   }
     box <- box + theme( text = element_text(size = 14), axis.text.x = element_text(size = 9))
-
+    box <- box + theme(plot.margin = margin(5.5, 5.5, 5.5, 5.5, unit = "pt"))
   save(box,file=rdaName);
   print(box)
   dev.off();
