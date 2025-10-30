@@ -468,7 +468,7 @@ PlotFunctionStack <-function(mbSetObj, summaryplot, functionlvl, abundcal, genei
   dev.off();
  # for plotly
   save(box,file=rdaName);
-    p <- ggplotly_modified(box, tempfile_path = paste0(getwd(), "/temp_file4plotly"));
+    p <- plotly::ggplotly(box, tempfile_path = paste0(getwd(), "/temp_file4plotly"));
 
    narm <- p[["x"]][["data"]]
    for(i in 1:length(narm)){
