@@ -230,6 +230,12 @@ SetupMetaStats <- function(BHth, paramSet,analSet){
 #'@export
 CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank="Family", view.mode="ratio", format="png", dpi=100) {
   #save.image("alpha.RData");
+
+cat("R version  :", R.version.string,                "\n")
+cat("tidyverse  :", as.character(packageVersion("tidyverse")), "\n")
+cat("broom      :", as.character(packageVersion("broom")),     "\n")
+cat("Cairo OK?  :", capabilities("cairo"),           "\n")
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
   mdata.all <- mbSetObj$mdata.all;
   sel.nms <- names(mdata.all)[mdata.all==1];
@@ -366,6 +372,9 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
       CI_high=cf[paste0("study_condition", non_control_level),2]
     ))
   }
+
+  cat("levels(study_condition) =", paste(levels(mod$study_condition), collapse = ", "), "\n")
+
   
   NSamples<-
     lapply(names(res.list), function(x) tibble(dataset=x, Nsamples=length(unique(res.list[[x]]$AlphaDiversity$sample_id)))) %>% 

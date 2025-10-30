@@ -1001,11 +1001,10 @@ AutoScale <- function(data){apply(data, 2, function(x){
 GetKeggProjectionType <- function(mbSetObj=NA){
     mbSetObj <- .get.mbSetObj(mbSetObj);
     if(is.null(mbSetObj$paramSet$koProj.type)){
-        res <- "";
+        res <- "global";
     }else{
         res <- mbSetObj$paramSet$koProj.type;
     }
-    print("projtype=====")
     print(res);
     return(res);
 }
@@ -1400,4 +1399,8 @@ obtainSqlitePath <- function(){
     #url.pre <<- paste0(dirname(system.file("database", "sqlite/GeneID_25Species_JE/ath_genes.sqlite", package="MetaboAnalystR")), "/")
     sqlite.path <<- "";
   }
+}
+
+setKeggEnrOpt <- function(mbSetObj = NA, type){
+
 }
