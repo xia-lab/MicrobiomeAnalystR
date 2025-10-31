@@ -2134,7 +2134,6 @@ GetSamplNames<-function(dataName, module.type){
 }
 
 GetSampleNamesaftNorm<-function(mbSetObj, dataName){
-  load_phyloseq();
   mbSetObj <- .get.mbSetObj(mbSetObj);
   if(mbSetObj$module.type == "meta"){
     if(dataName != ""){
