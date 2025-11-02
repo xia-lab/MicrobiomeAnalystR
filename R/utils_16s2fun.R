@@ -859,24 +859,17 @@ get.fun.lib.path <- function(type){
     }else{
         return("/home/glassfish/resources/MicrobiomeAnalyst/picrust13");
     }
-  }
-  # xia laptop
-  if(file.exists("/Users/jeffxia/Dropbox/resources")){
+  }else if(file.exists("/Users/xialab/Dropbox/resources")){   # xia laptop
     if(type == "tax4fun"){
-        return("/Users/jeffxia/Dropbox/resources/MicrobiomeAnalyst/tax4fun/SILVA123");
+        return("/Users/xialab/Dropbox/resources/MicrobiomeAnalyst/tax4fun/SILVA123");
     }else if(type == "tax4fun2"){
-        return("/Users/jeffxia/Dropbox/resources/MicrobiomeAnalyst/tax4fun2");
+        return("/Users/xialab/Dropbox/resources/MicrobiomeAnalyst/tax4fun2");
     }else if(type == "picrust12"){
-        return("/Users/jeffxia/Dropbox/resources/MicrobiomeAnalyst/picrust12");
+        return("/Users/xialab/Dropbox/resources/MicrobiomeAnalyst/picrust12");
     }else{
-        return("/Users/jeffxia/Dropbox/resources/MicrobiomeAnalyst/picrust13");
+        return("/Users/xialab/Dropbox/resources/MicrobiomeAnalyst/picrust13");
     }
-  }
-
-  # add your path here
-
-  # yao laptop
-  if(file.exists("/Users/lzy/Documents")){
+  }else if(file.exists("/Users/lzy/Documents")){   # yao laptop
     if(type == "tax4fun"){
         return("/Users/lzy/Documents/MicrobiomeAnalyst/function_database/SILVA123");
     }else if(type == "tax4fun2"){
@@ -886,9 +879,7 @@ get.fun.lib.path <- function(type){
     }else{
         return("/Users/lzy/Documents/MicrobiomeAnalystR-master/function_database/picrust13");
     }
-  }
-
-  if(file.exists("/home/zgy/MicrobiomeAnalystDB/")){
+  }else if(file.exists("/home/zgy/MicrobiomeAnalystDB/")){ # gyz
     if(type == "tax4fun"){
         return("/home/zgy/MicrobiomeAnalystDB/tax4fun/SILVA123");
     }else if(type == "tax4fun2"){
@@ -898,6 +889,8 @@ get.fun.lib.path <- function(type){
     }else{
         return("/home/zgy/MicrobiomeAnalystDB/picrust13");
     }
+  }else{
+     # add your path here
   }
 
 }
