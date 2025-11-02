@@ -1923,17 +1923,23 @@ PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
   mbSetObj$imgSet$stackType <- "sample";
   
   Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
-  box <- ggplot(data, aes(x=reorder(variable,value),y=value))+geom_bar(stat="identity",width=0.6,fill="steelblue")+theme_bw()+
-    theme(axis.text.x = element_text(angle = 0,vjust=0.5))+
-    labs(y=yLbl,x="",fill=taxalvl)+coord_flip()+
-    theme(panel.background = element_blank(),
-          panel.grid.major = element_blank(), panel.grid.minor = element_blank(),legend.position="none");
+box <- ggplot(data, aes(x = reorder(variable, value), y = value)) +
+  geom_bar(stat = "identity", width = 0.6, fill = "steelblue") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 0, vjust = 0.5)) +
+  labs(y = yLbl, x = "") +                 # <- remove labs(fill = ...)
+  coord_flip() +
+  theme(panel.background = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.position = "none")
   print(box);
   dev.off();
 
   save(box,file=rdaName);
-  
-    p <- plotly::ggplotly(box, tempfile_path = paste0(getwd(), "/temp_file4plotly"));
+      box <- box + theme(plot.margin = margin(5.5, 5.5, 5.5, 5.5, unit = "pt"))
+
+    p <- ggplotly_modified(box, tempfile_path = paste0(getwd(), "/temp_file4plotly"));
 
 jsonlist <- RJSONIO::toJSON(p, pretty = T,force = TRUE,.na = "null");
 sink(jsonName);
@@ -2719,8 +2725,10 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
   print(box);
   dev.off();
   # for plotly
+    box <- box + theme(plot.margin = margin(5.5, 5.5, 5.5, 5.5, unit = "pt"))
+
   save(box,file=rdaName);
-    p <- plotly::ggplotly(box, tempfile_path = paste0(getwd(), "/temp_file4plotly"));
+    p <- ggplotly_modified(box, tempfile_path = paste0(getwd(), "/temp_file4plotly"));
 
  narm <- p[["x"]][["data"]]
    for(i in 1:length(narm)){
@@ -3040,11 +3048,11 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
     box <- box + theme(strip.text.x = element_blank())
   }
     box <- box + theme( text = element_text(size = 14), axis.text.x = element_text(size = 9))
-
+    box <- box + theme(plot.margin = margin(5.5, 5.5, 5.5, 5.5, unit = "pt"))
   save(box,file=rdaName);
   print(box)
   dev.off();
-  p <- plotly::ggplotly(box, tempfile_path = paste0(getwd(), "/temp_file4plotly"));
+  p <- ggplotly_modified(box, tempfile_path = paste0(getwd(), "/temp_file4plotly"));
   
   jsonlist <- RJSONIO::toJSON(p, pretty = T,force = TRUE,.na = "null");
   sink(jsonName);
@@ -3484,8 +3492,9 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
   save(box,file=rdaName);
   print(box+guides(fill=guide_legend(ncol=3)));
   dev.off();
-  
-  p <- plotly::ggplotly(box, tempfile_path = paste0(getwd(), "/temp_file4plotly"));
+      box <- box + theme(plot.margin = margin(5.5, 5.5, 5.5, 5.5, unit = "pt"))
+
+  p <- ggplotly_modified(box, tempfile_path = paste0(getwd(), "/temp_file4plotly"));
   
   jsonlist <- RJSONIO::toJSON(p, pretty = T,force = TRUE,.na = "null");
   sink(jsonName);
