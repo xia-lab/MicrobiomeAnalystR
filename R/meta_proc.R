@@ -982,9 +982,9 @@ current.sample <- current.refset@sam_data
     #taxonomy mapping file
     
     if(.on.public.web){
-      otu.dic <<- qs::qread(paste0(rpath, "lib/picrust/greengenes_taxmap.qs"));
+      otu.dic <<- qs::qread(paste0(rpath, "libs/picrust/greengenes_taxmap.qs"));
     }else{
-      otu.dic <<- readRDS("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/picrust/greengenes_taxmap.rds");
+      otu.dic <<- readRDS("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/picrust/greengenes_taxmap.rds");
     }
     
     #returns a vector of the positions of (first) matches of its first argument in user data(second argument).

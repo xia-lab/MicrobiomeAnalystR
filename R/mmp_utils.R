@@ -762,7 +762,7 @@ ProcessMaaslinRes <- function(mbSetObj,taxalvl,analysis.var,thresh){
 
 
 #####lib path
-lib.path.mmp <<- paste0(rpath, "lib/mmp/");
+lib.path.mmp <<- paste0(rpath, "libs/mmp/");
   
 
 MetaboIDmap <- function(netModel,predDB,IDtype,met.vec=NA){
@@ -1737,7 +1737,7 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
       current.set <- qs::qread(paste0(lib.path.mmp,"ko_set_bac.qs"))
     }
     
-    set2nm <-  qs::qread(paste0(rpath, "lib/mmp/set2nm.qs")[["pathway"]]);
+    set2nm <-  qs::qread(paste0(rpath, "libs/mmp/set2nm.qs")[["pathway"]]);
     set.ids <- names(current.set);
     names(set.ids) <- names(current.set)<-  set2nm[set.ids];
     

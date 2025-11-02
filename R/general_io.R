@@ -93,9 +93,9 @@ Init.mbSetObj <- function(){
   
   if(.on.public.web){
     if(is.null(sub.dir)){
-      lib.path <- paste(rpath, "lib/", filenm, sep="");
+      lib.path <- paste(rpath, "libs/", filenm, sep="");
     }else{
-      lib.path <- paste(rpath, "lib/", sub.dir, "/", filenm,  sep="");
+      lib.path <- paste(rpath, "libs/", sub.dir, "/", filenm,  sep="");
     }
     return(readRDS(lib.path));
   }else{
@@ -113,13 +113,13 @@ Init.mbSetObj <- function(){
     # Deal with curl issues
     if(lib.download){
       if(sub.dir == "tsea"){
-        lib.url <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/tsea/", filenm, sep="");
+        lib.url <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/tsea/", filenm, sep="");
       }else if(sub.dir == "picrust"){
-        lib.url <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/picrust/", filenm, sep="");
+        lib.url <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/picrust/", filenm, sep="");
       }else if(sub.dir == "ppd"){
-        lib.url <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/ppd", filenm, sep = "");
+        lib.url <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/ppd", filenm, sep = "");
       }else{
-        lib.url <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/", filenm, sep="");
+        lib.url <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/", filenm, sep="");
       }
       tryCatch(
         {
@@ -146,13 +146,13 @@ Init.mbSetObj <- function(){
     tryCatch(
       {
         if(sub.dir == "tsea"){
-          lib.url <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/tsea/", filenm, sep="");
+          lib.url <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/tsea/", filenm, sep="");
         }else if(sub.dir == "picrust"){
-          lib.url <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/picrust/", filenm, sep="");
+          lib.url <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/picrust/", filenm, sep="");
         }else if(sub.dir == "ppd"){
-          lib.url <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/ppd", filenm, sep = "");
+          lib.url <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/ppd", filenm, sep = "");
         }else{
-          lib.url <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/", filenm, sep="");
+          lib.url <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/", filenm, sep="");
         }
         
         download.file(lib.url, destfile=file_name, method="curl")
