@@ -72,9 +72,9 @@ PerformRefDataMapping <- function(mbSetObj, refdataNm, taxo_type, sample_var, bi
   refsmpldataNm <- paste("/", refdataNm, "/", refdataNm ,"_sampledata.csv", sep="");
   
   if(.on.public.web){
-    refsmpldataloc <- paste(rpath, "lib/ppd",refsmpldataNm,sep="");
+    refsmpldataloc <- paste(rpath, "libs/ppd",refsmpldataNm,sep="");
   }else{
-    refsmpldataloc <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/ppd", refsmpldataNm, sep="");
+    refsmpldataloc <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/ppd", refsmpldataNm, sep="");
   }
   
   current.sample <- read.csv(refsmpldataloc,sep = "\t",header = T,row.names = 1);
@@ -99,7 +99,7 @@ PerformRefDataMapping <- function(mbSetObj, refdataNm, taxo_type, sample_var, bi
       lib.path <- get.fun.lib.path("picrust12");
       otu.dic <<- qs::qread(paste0(picrust_path, "/greengenes_taxmap.qs"));
     }else{
-      otu.dic <<- readRDS("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/picrust/greengenes_taxmap.rds");
+      otu.dic <<- readRDS("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/picrust/greengenes_taxmap.rds");
     }
     
     #returns a vector of the positions of (first) matches of its first argument in user data(second argument).

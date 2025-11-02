@@ -325,57 +325,57 @@ SetTaxonSetLib <- function(mbSetObj, tset.type){
   
   if(.on.public.web){
     if(tset.type=="host_int"){
-      libPath <- paste0(rpath, "lib/tsea/tsea_host_int.csv");
+      libPath <- paste0(rpath, "libs/tsea/tsea_host_int.csv");
     }else if(tset.type=="host_ext"){
-      libPath <- paste0(rpath, "lib/tsea/tsea_host_ext.csv");
+      libPath <- paste0(rpath, "libs/tsea/tsea_host_ext.csv");
     }else if(tset.type=="env"){
-      libPath <- paste0(rpath, "lib/tsea/tsea_environment.csv");
+      libPath <- paste0(rpath, "libs/tsea/tsea_environment.csv");
     }else if(tset.type=="mic_int"){
-      libPath <- paste0(rpath, "lib/tsea/tsea_microbiome_int.csv");
+      libPath <- paste0(rpath, "libs/tsea/tsea_microbiome_int.csv");
     }else if(tset.type=="gene"){
-      libPath <- paste0(rpath, "lib/tsea/tsea_host_snps_new.csv");
+      libPath <- paste0(rpath, "libs/tsea/tsea_host_snps_new.csv");
     }else if(tset.type=="host_int_species") {
-      libPath <- paste0(rpath, "lib/tsea/tsea_host_int_species.csv");
+      libPath <- paste0(rpath, "libs/tsea/tsea_host_int_species.csv");
     }else if(tset.type=="env_species"){
-      libPath <- paste0(rpath, "lib/tsea/tsea_environment_species.csv");
+      libPath <- paste0(rpath, "libs/tsea/tsea_environment_species.csv");
     }else if(tset.type=="host_ext_species"){
-      libPath <- paste0(rpath, "lib/tsea/tsea_host_ext_species.csv");
+      libPath <- paste0(rpath, "libs/tsea/tsea_host_ext_species.csv");
     }else if(tset.type=="host_int_strain"){
-      libPath <- paste0(rpath, "lib/tsea/tsea_host_int_strain.csv");
+      libPath <- paste0(rpath, "libs/tsea/tsea_host_int_strain.csv");
     }else if(tset.type=="host_diet"){
-      libPath <- paste0(rpath, "lib/tsea/tsea_host_diet_lifestyle.csv");
+      libPath <- paste0(rpath, "libs/tsea/tsea_host_diet_lifestyle.csv");
     }else if(tset.type=="host_drug"){
-      libPath <- paste0(rpath, "lib/tsea/tsea_host_medication.csv");
+      libPath <- paste0(rpath, "libs/tsea/tsea_host_medication.csv");
     }else if(tset.type=="mic_met"){
-      libPath <- paste0(rpath, "lib/tsea/taxon_metabolite_tsea.csv");
+      libPath <- paste0(rpath, "libs/tsea/taxon_metabolite_tsea.csv");
     }else if(tset.type=="host_diet_species"){
-      libPath <- paste0(rpath, "lib/tsea/tsea_host_diet_lifestyle_species.csv");
+      libPath <- paste0(rpath, "libs/tsea/tsea_host_diet_lifestyle_species.csv");
     }else if(tset.type=="host_drug_species"){
-      libPath <- paste0(rpath, "lib/tsea/tsea_host_medication_species.csv");
+      libPath <- paste0(rpath, "libs/tsea/tsea_host_medication_species.csv");
     }
   }else{
     if(tset.type=="host_int"){
-      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/tsea/tsea_host_int.csv";
+      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/tsea/tsea_host_int.csv";
     }else if(tset.type=="host_ext"){
-      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/tsea/tsea_host_ext.csv";
+      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/tsea/tsea_host_ext.csv";
     }else if(tset.type=="env"){
-      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/tsea/tsea_environment.csv";
+      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/tsea/tsea_environment.csv";
     }else if(tset.type=="mic_int"){
-      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/tsea/tsea_microbiome_int.csv";
+      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/tsea/tsea_microbiome_int.csv";
     }else if(tset.type=="gene"){
-      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/tsea/tsea_host_snps_new.csv";
+      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/tsea/tsea_host_snps_new.csv";
     }else if(tset.type=="host_int_species") {
-      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/tsea/tsea_host_int_species.csv";
+      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/tsea/tsea_host_int_species.csv";
     }else if(tset.type=="env_species"){
-      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/tsea/tsea_environment_species.csv";
+      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/tsea/tsea_environment_species.csv";
     }else if(tset.type=="host_ext_species"){
-      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/tsea/tsea_host_ext_species.csv";
+      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/tsea/tsea_host_ext_species.csv";
     }else if(tset.type=="host_int_strain"){
-      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/tsea/tsea_host_int_strain.csv";
+      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/tsea/tsea_host_int_strain.csv";
     }else if(tset.type=="env_strain"){
-      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/tsea/tsea_environment_strain.csv";
+      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/tsea/tsea_environment_strain.csv";
     }else{
-      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/lib/tsea/tsea_microbiome_int_strain.csv";
+      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/tsea/tsea_microbiome_int_strain.csv";
     }
   }
       
