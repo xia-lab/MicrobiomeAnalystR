@@ -817,14 +817,16 @@ PerformMetaboNormalization <- function(mbSetObj, rowNorm, transNorm, scaleNorm,i
     }
     rownm<-"Quantile Normalization";
   }else if(rowNorm=="SumNorm"){
-    data<-t(apply(data, 1, function(x){
-      1000*x/sum(x, na.rm=T);
-    }));
+    # OPTIMIZED: Vectorized row normalization instead of t(apply())
+    # Avoid double transpose and apply() overhead
+    row_sums <- rowSums(data, na.rm=T);
+    data <- 1000 * data / row_sums;
     rownm<-"Normalization to constant sum";
   }else if(rowNorm=="MedianNorm"){
-    data<-t(apply(data, 1, function(x){
-      x/median(x, na.rm=T);
-    }));
+    # OPTIMIZED: Vectorized row normalization instead of t(apply())
+    # Use sweep() for efficient row-wise division
+    row_medians <- apply(data, 1, median, na.rm=T);
+    data <- sweep(data, 1, row_medians, FUN="/");
     rownm<-"Normalization to sample median";
   }else{
     # nothing to do

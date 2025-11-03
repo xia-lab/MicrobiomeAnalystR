@@ -417,11 +417,25 @@ PlotEnrichNet.Overview<-function(hits, pvals){
   w <- matrix(NA, nrow=n, ncol=n);
   colnames(w) <- rownames(w) <- id;
 
-  for (i in 1:n) {
-    for (j in i:n) {
-      w[i,j] = overlap_ratio(geneSets[id[i]], geneSets[id[j]])
-    }
-  }
+  # OPTIMIZED: Vectorized computation of overlap matrix
+  # Instead of nested loops, compute upper triangle indices and vectorize
+  upper_tri_indices <- which(upper.tri(w, diag = TRUE), arr.ind = TRUE);
+
+  # Vectorized computation using mapply
+  overlap_values <- mapply(
+    function(i_idx, j_idx) {
+      overlap_ratio(geneSets[id[i_idx]], geneSets[id[j_idx]])
+    },
+    upper_tri_indices[, 1],
+    upper_tri_indices[, 2],
+    SIMPLIFY = TRUE
+  );
+
+  # Fill upper triangle with computed values
+  w[upper_tri_indices] <- overlap_values;
+
+  # Mirror to lower triangle (overlap is symmetric)
+  w[lower.tri(w)] <- t(w)[lower.tri(w)];
 
   wd <- melt(w);
   wd <- wd[wd[,1] != wd[,2],];

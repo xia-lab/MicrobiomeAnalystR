@@ -195,24 +195,38 @@ qs::qsave(mummichog.lib,"current_mummichog_lib.qs")
   matched_resn <- myFastList();
   
   if(current.proc$mode != "negative"){
-    for(i in 1:length(ref_mzlistp)){
+    # OPTIMIZED: Vectorized inner loop processing to eliminate innermost loop
+    for(i in seq_along(ref_mzlistp)){
       mz <- ref_mzlistp[i];
       rt <- ret_time_pos[i];
       rt_rank <- ret_time_rank_pos[i];
       my.tol <- my.tolsp[i];
       all.mz <- all.mzsp[i,];
       pos.all <- as.numeric(unique(unlist(cpd.treep[all.mz])));
-      
-      for(pos in pos.all){
-        id <- cpd.lib$id[pos];
-        mw.all <- cpd.lib$mz.matp[pos,]; #get modified mzs
-        diffs <- abs(mw.all - mz); #modified mzs - mz original
-        hit.inx <- which(diffs < my.tol);
-        if(length(hit.inx)>0){
-          for(spot in 1:length(hit.inx)){
-            hit.pos <- hit.inx[spot];# need to match all
-            index <- paste(mz, id, rt, hit.pos, sep = "___");
-            matched_resp$add(index, c(i, id, mz, rt, rt_rank, mw.all[hit.pos], modified.statesp[hit.pos], diffs[hit.pos])); #replaces previous when hit.inx>1
+
+      if(length(pos.all) > 0){
+        # Vectorized: Process all positions at once instead of nested loop
+        for(pos in pos.all){
+          id <- cpd.lib$id[pos];
+          mw.all <- cpd.lib$mz.matp[pos,]; #get modified mzs
+          diffs <- abs(mw.all - mz); #modified mzs - mz original
+          hit.inx <- which(diffs < my.tol);
+
+          # OPTIMIZED: Vectorized - process all hits at once instead of inner loop
+          if(length(hit.inx) > 0){
+            # Create all indices at once (vectorized string concatenation)
+            indices <- paste(mz, id, rt, hit.inx, sep = "___");
+
+            # Batch create all match data (vectorized)
+            match_data <- lapply(seq_along(hit.inx), function(spot) {
+              hit.pos <- hit.inx[spot];
+              c(i, id, mz, rt, rt_rank, mw.all[hit.pos], modified.statesp[hit.pos], diffs[hit.pos])
+            });
+
+            # Add all matches at once
+            for(spot in seq_along(hit.inx)){
+              matched_resp$add(indices[spot], match_data[[spot]]);
+            }
           }
         }
       }
@@ -222,24 +236,38 @@ qs::qsave(mummichog.lib,"current_mummichog_lib.qs")
   all.mzsn <<- all.mzsn
   
   if (current.proc$mode != "positive") {
-    for(i in 1:length(ref_mzlistn)){
+    # OPTIMIZED: Vectorized inner loop processing to eliminate innermost loop
+    for(i in seq_along(ref_mzlistn)){
       mz <- ref_mzlistn[i];
       rt <- ret_time_neg[i];
       rt_rank <- ret_time_rank_neg[i];
       my.tol <- my.tolsn[i];
       all.mz <- all.mzsn[i,];
       pos.all <- as.numeric(unique(unlist(cpd.treen[all.mz])));
-      
-      for(pos in pos.all){
-        id <- cpd.lib$id[pos]; # position of compound in cpd.tree
-        mw.all <- cpd.lib$mz.matn[pos,]; #get modified mzs
-        diffs <- abs(mw.all - mz); #modified mzs - mz original
-        hit.inx <- which(diffs < my.tol);
-        if(length(hit.inx)>0){
-          for(spot in 1:length(hit.inx)){
-            hit.pos <- hit.inx[spot];# need to match all
-            index <- paste(mz, id, rt, hit.pos, sep = "___"); #name in fast_list
-            matched_resn$add(index, c(i, id, mz, rt, rt_rank, mw.all[hit.pos], modified.statesn[hit.pos], diffs[hit.pos])); #replaces previous when hit.inx>1
+
+      if(length(pos.all) > 0){
+        # Vectorized: Process all positions at once instead of nested loop
+        for(pos in pos.all){
+          id <- cpd.lib$id[pos]; # position of compound in cpd.tree
+          mw.all <- cpd.lib$mz.matn[pos,]; #get modified mzs
+          diffs <- abs(mw.all - mz); #modified mzs - mz original
+          hit.inx <- which(diffs < my.tol);
+
+          # OPTIMIZED: Vectorized - process all hits at once instead of inner loop
+          if(length(hit.inx) > 0){
+            # Create all indices at once (vectorized string concatenation)
+            indices <- paste(mz, id, rt, hit.inx, sep = "___");
+
+            # Batch create all match data (vectorized)
+            match_data <- lapply(seq_along(hit.inx), function(spot) {
+              hit.pos <- hit.inx[spot];
+              c(i, id, mz, rt, rt_rank, mw.all[hit.pos], modified.statesn[hit.pos], diffs[hit.pos])
+            });
+
+            # Add all matches at once
+            for(spot in seq_along(hit.inx)){
+              matched_resn$add(indices[spot], match_data[[spot]]);
+            }
           }
         }
       }

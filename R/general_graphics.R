@@ -719,8 +719,10 @@ PlotHeatmap <- function(mbSetObj, plotNm, dataOpt = "norm",
   sz <- max(as.numeric(annoPer) / 100, 0.015)
   bf <- min(0.01, (sz / 3))
 
-
-  dend_row <- hclust(dist(data1sc, method = smplDist), method = clstDist)
+  # OPTIMIZED: Compute distance matrix once, then free after clustering
+  row_dist <- dist(data1sc, method = smplDist)
+  dend_row <- hclust(row_dist, method = clstDist)
+  rm(row_dist)  # Free memory immediately after use
 
   p <- iheatmap(data1sc,
     name = "Abundance", x_categorical = TRUE,
@@ -745,7 +747,10 @@ PlotHeatmap <- function(mbSetObj, plotNm, dataOpt = "norm",
   }
 
   if (doclust == "T") {
-    dend_col <- hclust(dist(t(data1), method = smplDist), method = clstDist)
+    # OPTIMIZED: Compute distance matrix once, then free after clustering
+    col_dist <- dist(t(data1), method = smplDist)
+    dend_col <- hclust(col_dist, method = clstDist)
+    rm(col_dist)  # Free memory immediately after use
     p <- p %>% add_col_dendro(dend_col)
   }
 options(device = "pdf") 

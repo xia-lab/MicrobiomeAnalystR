@@ -5,7 +5,7 @@
 ###################################################
 
 my.16sfun.anot<-function(mbSetObj, type, pipeline,ggversion) {
-   print(c(type,pipeline,ggversion))
+  #print(c(type,pipeline,ggversion))
   mbSetObj <- .get.mbSetObj(mbSetObj);
   mbSetObj$dataSet$type <- type;
   merge.otu <- qs::qread("data.orig");
@@ -62,23 +62,33 @@ my.16sfun.anot<-function(mbSetObj, type, pipeline,ggversion) {
         folderReferenceData <- get.fun.lib.path(func.meth);
 
         if(pipeline=="qi_silva"){
-            ModSilvaIds <- gsub("uncultured archaeon","",rownames(merge.otu));
-            ModSilvaIds <- gsub("uncultured organism","",ModSilvaIds);
-            ModSilvaIds <- gsub("uncultured bacterium","",ModSilvaIds);
-            ModSilvaIds <- gsub("uncultured crenarchaeote","",ModSilvaIds);
-            ModSilvaIds <- gsub("uncultured euryarchaeote","",ModSilvaIds);
-            ModSilvaIds <- gsub("; ",";",ModSilvaIds);
-            rownames(merge.otu)<-ModSilvaIds;
-            merge.otu <- rowsum(as.data.frame(merge.otu),ModSilvaIds);
+            # OPTIMIZED: Consolidated string replacement - single pass instead of 6 passes
+            # Remove all uncultured variants using alternation pattern
+            ModSilvaIds <- gsub("uncultured (archaeon|organism|bacterium|crenarchaeote|euryarchaeote)",
+                               "", rownames(merge.otu), perl = TRUE);
+            # Clean up semicolons with whitespace in one pass
+            ModSilvaIds <- gsub(";\\s+", ";", ModSilvaIds, perl = TRUE);
+            rownames(merge.otu) <- ModSilvaIds;
+            merge.otu <- rowsum(as.data.frame(merge.otu), ModSilvaIds);
         }
-        rownames(merge.otu) <- gsub(";  ",";",rownames(merge.otu));
-        rownames(merge.otu) <- gsub("; ",";",rownames(merge.otu));
-        rownames(merge.otu) <- gsub(" ","_",rownames(merge.otu))
-        idx=which(!(grepl(";$",rownames(merge.otu))))
-        rownames(merge.otu)[idx] <- paste0(rownames(merge.otu)[idx],";");
-        rownames(merge.otu) <- gsub("Bacteroidota","Bacteroidetes",rownames(merge.otu));
-        rownames(merge.otu) <- gsub("Enterobacterales","Enterobacteriales",rownames(merge.otu));
-        rownames(merge.otu) <- stringr::str_trim(rownames(merge.otu) ,side="both")
+
+        # OPTIMIZED: Consolidated cleanup operations
+        # Clean up multiple/trailing spaces and semicolons in fewer passes
+        rn <- rownames(merge.otu)
+        rn <- gsub(";\\s+", ";", rn, perl = TRUE)  # Remove spaces after semicolons
+        rn <- gsub("\\s+", "_", rn)                # Replace all whitespace with underscore
+
+        # Add trailing semicolon where missing (vectorized)
+        needs_semi <- !grepl(";$", rn)
+        rn[needs_semi] <- paste0(rn[needs_semi], ";")
+
+        # OPTIMIZED: Combine taxonomy name corrections in single operation
+        rn <- gsub("Bacteroidota|Enterobacterales",
+                   function(x) if(x == "Bacteroidota") "Bacteroidetes" else "Enterobacteriales",
+                   rn, perl = TRUE)
+
+        # Final cleanup
+        rownames(merge.otu) <- stringr::str_trim(rn, side = "both")
         data<-list(sampleNames=colnames(merge.otu),otuTable=merge.otu);
 
          Tax4FunOutput <- Tax4Fun(data, folderReferenceData, fctProfiling = TRUE, refProfile = "UProC", shortReadMode = TRUE, normCopyNo = TRUE);
