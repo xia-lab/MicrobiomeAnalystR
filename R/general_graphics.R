@@ -579,8 +579,8 @@ PlotHeatmap <- function(mbSetObj, plotNm, dataOpt = "norm",
     }
 
     rownames(data1) <- nm
-    # all NA club together - optimized with rowsum (20-50x faster)
-    data1 <- rowsum(data1, rownames(data1))
+    # all NA club together
+    data1 <- rowsum(as.matrix(data1), rownames(data1));
     nm <- rownames(data1)
   }
 

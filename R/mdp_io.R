@@ -475,14 +475,7 @@ if("Species" %in% colnames( mydata)){# for mapping to the database in mmp module
   
 }
 
- # Vectorized string concatenation - 50-100x faster than apply
- # Replace NA with empty string, then paste, then clean up extra semicolons
- mydata_clean <- mydata
- mydata_clean[is.na(mydata_clean)] <- ""
- mbSetObj$dataSet$comp_taxnm <- do.call(paste, c(as.data.frame(mydata_clean), sep = ";"))
- # Remove leading/trailing semicolons and collapse multiple semicolons
- mbSetObj$dataSet$comp_taxnm <- gsub("^;+|;+$", "", mbSetObj$dataSet$comp_taxnm)
- mbSetObj$dataSet$comp_taxnm <- gsub(";{2,}", ";", mbSetObj$dataSet$comp_taxnm)
+ mbSetObj$dataSet$comp_taxnm <- apply(mydata,1,function(x) paste(x[!is.na(x)],collapse = ";"))
   mbSetObj$dataSet$taxa_table <- mydata;
 
   return(.set.mbSetObj(mbSetObj));

@@ -285,13 +285,10 @@ PrepareCorrExpValues <- function(mbSetObj, meta, taxalvl, color, layoutOpt, comp
   rank_dm <- c("r", "p", "c", "o", "f", "g", "s");
   names(tax_dm) <- rank_dm[1:depth];
 
-  # Vectorized approach - 10-20x faster than nested loops
-  tax_dm[] <- lapply(seq_along(tax_dm), function(i) {
-    col <- tax_dm[[i]]
-    col[is.na(col)] <- ""
-    col[col != ""] <- paste0(names(tax_dm)[i], "__", col[col != ""])
-    col
-  }) #add __ to tax table
+  for (i in 1:ncol(tax_dm)){
+    tax_dm[,i] <- ifelse(is.na(tax_dm[,i]), "",
+                         paste(names(tax_dm)[i], tax_dm[,i], sep = "__"))
+  } #add __ to tax table
   
   if(taxalvl == "Phylum"){
     tax <- "p";
@@ -308,8 +305,7 @@ PrepareCorrExpValues <- function(mbSetObj, meta, taxalvl, color, layoutOpt, comp
   }; # get tax rank for heat tree
   tax_dm <- tax_dm[, 1:which(names(tax_dm) == tax)]; #subset tax table
   rank_dm_new <- rank_dm[1:which(rank_dm == tax)];
-  # Vectorized string concatenation - 50-100x faster than apply
-  tax_dm$lineage <- do.call(paste, c(as.data.frame(tax_dm[, rank_dm_new]), sep = ";")); #collapse all tax ranks
+  tax_dm$lineage <- apply(tax_dm[, rank_dm_new], 1, paste, collapse = ";"); #collapse all tax ranks
   dm_otu <- cbind.data.frame("otu_id" = row.names(tax_dm),
                              "lineage" = tax_dm$lineage,
                              otu_dm); #make new otu table
@@ -385,8 +381,8 @@ PrepareBoxPlot <- function(mbSetObj, taxrank, variable){
     data1_boxplot <- as.matrix(otu_table(data_boxplot));
     rownames(data1_boxplot) <- nm_boxplot;
 
-    #all NA club together - optimized with rowsum (20-50x faster)
-    data1_boxplot <- rowsum(data1_boxplot, rownames(data1_boxplot));
+    #all NA club together
+    data1_boxplot <- rowsum(as.matrix(data1_boxplot), rownames(data1_boxplot));
     data1_boxplot <- otu_table(data1_boxplot,taxa_are_rows=T);
     data_boxplot <- merge_phyloseq(data1_boxplot, sample_data(data_boxplot));
   }
@@ -485,8 +481,8 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
         nm[y] <- "Not_Assigned";
         data1 <- as.matrix(otu_table(data));
         rownames(data1) <- nm;
-        #all NA club together - optimized with rowsum (20-50x faster)
-        data1 <- rowsum(data1, rownames(data1));
+        #all NA club together
+        data1 <- rowsum(as.matrix(data1), rownames(data1));
         data <- otu_table(data1, taxa_are_rows=T);
     }
  
@@ -740,7 +736,6 @@ dev.off()
   }else{
   
   dtls = lapply(data.core, abundances)
-  # Vectorized prevalence calculation - 10-20x faster than nested apply
   prev = lapply(dtls, function(dt) rowSums(dt > detection) / ncol(dt))
   dtls= lapply(prev,function(dt) data.frame(feat = names(dt),prev = dt,stringsAsFactors = F) )
   dtls <- lapply(dtls,function(dt) dt[order(-dt$prev), ])
@@ -2140,8 +2135,8 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
         nm[is.na(nm)] <- "Not_Assigned";
         data1 <- as.matrix(otu_table(data));
         rownames(data1) <- nm;
-        #all NA club together - optimized with rowsum (20-50x faster)
-        data1 <- rowsum(data1, rownames(data1));
+        #all NA club together
+        data1 <- rowsum(as.matrix(data1), rownames(data1));
         feat_data <- data1[taxa,];
       }
       sample_data(data)$taxa <- feat_data;
@@ -3797,13 +3792,10 @@ PrepareHeatTreePlot <- function(mbSetObj, meta, taxalvl, color, layoutOpt, compa
   rank_dm <- c("r", "p", "c", "o", "f", "g", "s");
   names(tax_dm) <- rank_dm[1:depth];
 
-  # Vectorized approach - 10-20x faster than nested loops
-  tax_dm[] <- lapply(seq_along(tax_dm), function(i) {
-    col <- tax_dm[[i]]
-    col[is.na(col)] <- ""
-    col[col != ""] <- paste0(names(tax_dm)[i], "__", col[col != ""])
-    col
-  }) #add __ to tax table
+  for (i in 1:ncol(tax_dm)){
+    tax_dm[,i] <- ifelse(is.na(tax_dm[,i]), "",
+                         paste(names(tax_dm)[i], tax_dm[,i], sep = "__"))
+  } #add __ to tax table
   
   if(taxalvl == "Phylum"){
     tax <- "p";
@@ -3821,8 +3813,7 @@ PrepareHeatTreePlot <- function(mbSetObj, meta, taxalvl, color, layoutOpt, compa
   
   tax_dm <- tax_dm[, 1:which(names(tax_dm) == tax)]; #subset tax table
   rank_dm_new <- rank_dm[1:which(rank_dm == tax)];
-  # Vectorized string concatenation - 50-100x faster than apply
-  tax_dm$lineage <- do.call(paste, c(as.data.frame(tax_dm[, rank_dm_new]), sep = ";")); #collapse all tax ranks
+  tax_dm$lineage <- apply(tax_dm[, rank_dm_new], 1, paste, collapse = ";"); #collapse all tax ranks
   dm_otu <- cbind.data.frame("otu_id" = row.names(tax_dm),
                              "lineage" = tax_dm$lineage,
                              otu_dm); #make new otu table
@@ -4162,13 +4153,10 @@ PrepareHeatTreePlotAbR <- function(dm = dm, tax_dm = tax_dm, taxalvl = taxalvl, 
   rank_dm <- c("r", "p", "c", "o", "f", "g", "s");
   names(tax_dm) <- rank_dm[1:depth];
 
-  # Vectorized approach - 10-20x faster than nested loops
-  tax_dm[] <- lapply(seq_along(tax_dm), function(i) {
-    col <- tax_dm[[i]]
-    col[is.na(col)] <- ""
-    col[col != ""] <- paste0(names(tax_dm)[i], "__", col[col != ""])
-    col
-  }) #add __ to tax table
+  for (i in 1:ncol(tax_dm)){
+    tax_dm[,i] <- ifelse(is.na(tax_dm[,i]), "",
+                         paste(names(tax_dm)[i], tax_dm[,i], sep = "__"))
+  } #add __ to tax table
   
   if(taxalvl == "Phylum"){
     tax <- "p";
@@ -4186,8 +4174,7 @@ PrepareHeatTreePlotAbR <- function(dm = dm, tax_dm = tax_dm, taxalvl = taxalvl, 
   
   tax_dm <- tax_dm[, 1:which(names(tax_dm) == tax)]; #subset tax table
   rank_dm_new <- rank_dm[1:which(rank_dm == tax)];
-  # Vectorized string concatenation - 50-100x faster than apply
-  tax_dm$lineage <- do.call(paste, c(as.data.frame(tax_dm[, rank_dm_new]), sep = ";")); #collapse all tax ranks
+  tax_dm$lineage <- apply(tax_dm[, rank_dm_new], 1, paste, collapse = ";"); #collapse all tax ranks
   dm_otu <- cbind.data.frame("otu_id" = row.names(tax_dm),
                              "lineage" = tax_dm$lineage,
                              otu_dm); #make new otu table

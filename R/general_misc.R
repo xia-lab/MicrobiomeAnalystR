@@ -281,8 +281,7 @@ fast_tax_glom_first <- function(physeq, taxrank){
       return(NULL);
   }
   tax <- as(access(physeq, "tax_table"), "matrix")[, 1:CN, drop=FALSE];
-  # Vectorized string concatenation - 50-100x faster than apply
-  tax <- do.call(paste, c(as.data.frame(tax), sep = ";_;"));
+  tax <- apply(tax, 1, function(i){paste(i, sep=";_;", collapse=";_;")});
   # using Map-Reduce/vectorized
   otab2 <- data.frame(otu_table(physeq),check.names=FALSE);
   taxdf <- data.frame(tax,check.names=FALSE);

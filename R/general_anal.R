@@ -460,9 +460,9 @@ PerformUnivarTest <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, t
     nm_boxplot[is.na(nm_boxplot)] <- "Not_Assigned";
     data1_boxplot <- as.matrix(otu_table(data_boxplot));
     rownames(data1_boxplot) <- nm_boxplot;
-    
-    #all NA club together - optimized with rowsum (20-50x faster)
-    data1_boxplot <- rowsum(data1_boxplot, rownames(data1_boxplot));
+
+    #all NA club together
+    data1_boxplot <- rowsum(as.matrix(data1_boxplot), rownames(data1_boxplot));
     data1_boxplot <- otu_table(data1_boxplot,taxa_are_rows=T);
     data_boxplot <- merge_phyloseq(data1_boxplot, sample_data(data_boxplot));
   }
@@ -565,8 +565,8 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
     nm[is.na(nm)] <- "Not_Assigned";
     data1 <- as.matrix(otu_table(data));
     rownames(data1) <- nm;
-    #all NA club together - optimized with rowsum (20-50x faster)
-    data1 <- rowsum(data1, rownames(data1));
+    #all NA club together
+    data1 <- rowsum(as.matrix(data1), rownames(data1));
     data1 <- otu_table(data1, taxa_are_rows=T);
     data <- merge_phyloseq(data1, sample_data(data));
     nm <- taxa_names(data);
@@ -1303,8 +1303,8 @@ return(1)
     data1 <- as.matrix(otu_table(data));
     rownames(data1) <- nm;
 
-    #all NA club together - optimized with rowsum (20-50x faster)
-    data1 <- rowsum(data1, rownames(data1));
+    #all NA club together
+    data1 <- rowsum(as.matrix(data1), rownames(data1));
     data1 <- otu_table(data1,taxa_are_rows=T);
     data <- merge_phyloseq(data1, sample_data(data));
     nm <- taxa_names(data);

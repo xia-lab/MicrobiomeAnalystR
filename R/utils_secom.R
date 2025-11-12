@@ -22,6 +22,11 @@ my.secom.anal<-function(mbSetObj,taxrank,R,corr_cut, max_p,mode,method='pearson'
 
   abn_list = abn_est(feature_table,meta_data, taxrank, pseudo=0,tax_keep=NULL)
 
+  # Check if abn_est returned NULL due to filtering
+  if(is.null(abn_list)){
+    return(0);
+  }
+
   s_diff_hat = abn_list$s_diff_hat
   y_hat = abn_list$y_hat
   
@@ -54,9 +59,8 @@ my.secom.anal<-function(mbSetObj,taxrank,R,corr_cut, max_p,mode,method='pearson'
       res_corr = sparse_linear(mat = t(y_hat), wins_quant=c(0.05, 0.95), method, soft= FALSE,
                                thresh_len = 100, n_cv = 10, thresh_hard=0, max_p=max_p)
     } else {
-      stop_txt = paste0("The correlation coefficien should be one of ",
-                        "'pearson', 'kendall', 'spearman'")
-      stop(stop_txt, call. = FALSE)
+      AddErrMsg("The correlation coefficient should be one of 'pearson', 'kendall', 'spearman'");
+      return(0);
     }
     
     parallel::stopCluster(cl)
@@ -106,10 +110,23 @@ abn_est = function(feature_table,meta_data, tax_level, pseudo, prv_cut = 0.5, li
   # Sampling fraction difference estimation
 
   O1 = feature_table
-  if(nrow(feature_table)<50){
-    curret.msg<<- paste0("The number of taxa used for estimating sample-specific biases is  ",nrow(feature_table),"  A large number of taxa (> 50) is required for the statistical consistency!")
+  # Validate input and use NROW which handles NULL safely
+  if(is.null(feature_table) || (!is.matrix(feature_table) && !is.data.frame(feature_table))){
+    AddErrMsg("Invalid feature table for abundance estimation.");
+    return(NULL);
+  }
+  if(NROW(feature_table) == 0 || NCOL(feature_table) == 0){
+    AddErrMsg("Feature table has zero dimensions. No taxa or samples available for analysis.");
+    return(NULL);
+  }
+  if(NROW(feature_table)<50){
+    curret.msg<<- paste0("The number of taxa used for estimating sample-specific biases is  ",NROW(feature_table),"  A large number of taxa (> 50) is required for the statistical consistency!")
   }
   s_diff_hat = s_diff_est(O1)
+  # Check if s_diff_est failed
+  if(is.null(s_diff_hat)){
+    return(NULL);
+  }
   samp_keep = names(s_diff_hat)
   # Discard taxa with prevalences < prv_cut
   
@@ -121,7 +138,8 @@ abn_est = function(feature_table,meta_data, tax_level, pseudo, prv_cut = 0.5, li
   if (length(tax_keep) > 0) {
     feature_table = feature_table[tax_keep, , drop = FALSE]
   } else {
-    stop("No taxa remain under the current cutoff", call. = FALSE)
+    AddErrMsg("No taxa remain under the current prevalence cutoff. Please adjust your filtering parameters.");
+    return(NULL);
   }
   # Discard samples with library sizes < lib_cut
   if (is.null(samp_keep)) {
@@ -132,7 +150,8 @@ abn_est = function(feature_table,meta_data, tax_level, pseudo, prv_cut = 0.5, li
     feature_table = feature_table[, samp_keep, drop = FALSE]
     meta_data = meta_data[samp_keep, , drop = FALSE]
   } else {
-    stop("No samples remain under the current cutoff", call. = FALSE)
+    AddErrMsg("No samples remain under the current library size cutoff. Please adjust your filtering parameters.");
+    return(NULL);
   }
   
  
@@ -153,9 +172,20 @@ abn_est = function(feature_table,meta_data, tax_level, pseudo, prv_cut = 0.5, li
 
 # Sampling fraction difference estimation
 s_diff_est = function(feature_table) {
-  if (nrow(feature_table) < 50) {
+  # Validate input
+  if(is.null(feature_table) || (!is.matrix(feature_table) && !is.data.frame(feature_table))){
+    AddErrMsg("Invalid feature table for sampling fraction estimation.");
+    return(NULL);
+  }
+  if(NROW(feature_table) == 0 || NCOL(feature_table) == 0){
+    AddErrMsg("Feature table has zero dimensions for sampling fraction estimation.");
+    return(NULL);
+  }
+
+  n_taxa = NROW(feature_table)
+  if (n_taxa < 50) {
     warn_txt = sprintf(paste("The number of taxa used for estimating sample-specific biases is: ",
-                             nrow(feature_table),
+                             n_taxa,
                              "A large number of taxa (> 50) is required for the statistical consistency",
                              sep = "\n"))
     warning(warn_txt, call. = FALSE)
@@ -214,10 +244,24 @@ sparse_linear = function(mat, wins_quant = c(0.05, 0.95), method, soft=FALSE, th
     return(mat_filter)
   }
   
+  # Validate input matrix before sorting
+  if(is.null(mat) || NROW(mat) == 0 || NCOL(mat) == 0){
+    AddErrMsg("Input matrix has zero dimensions. No taxa or samples available for correlation analysis.");
+    return(list(corr = matrix(nrow=0, ncol=0), corr_th = matrix(nrow=0, ncol=0),
+                corr_fl = matrix(nrow=0, ncol=0), corr_p = matrix(nrow=0, ncol=0)));
+  }
+
   # Sort taxa
   sort_taxa = sort(colnames(mat))
   mat = mat[, sort_taxa]
-  
+
+  # Validate matrix dimensions after sorting and before Winsorization
+  if(is.null(mat) || NROW(mat) == 0 || NCOL(mat) == 0){
+    AddErrMsg("Matrix has zero dimensions after sorting. No taxa remain for correlation analysis. Please adjust your filtering parameters.");
+    return(list(corr = matrix(nrow=0, ncol=0), corr_th = matrix(nrow=0, ncol=0),
+                corr_fl = matrix(nrow=0, ncol=0), corr_p = matrix(nrow=0, ncol=0)));
+  }
+
   # Winsorization
   mat = apply(mat, 2, function(x)
     DescTools::Winsorize(x, val = quantile(x, probs = c(0.05, 0.95), na.rm = TRUE)))
@@ -325,9 +369,23 @@ sparse_dist = function(mat, wins_quant= c(0.05, 0.95), R, thresh_hard = 0, max_p
         return(mat_filter)
     }
 
+    # Validate input matrix before sorting
+    if(is.null(mat) || NROW(mat) == 0 || NCOL(mat) == 0){
+        AddErrMsg("Input matrix has zero dimensions. No taxa or samples available for distance correlation analysis.");
+        return(list(dcorr = matrix(nrow=0, ncol=0), dcorr_fl = matrix(nrow=0, ncol=0),
+                    dcorr_p = matrix(nrow=0, ncol=0)));
+    }
+
     # Sort taxa
     sort_taxa = sort(colnames(mat))
     mat = mat[, sort_taxa]
+
+    # Validate matrix dimensions after sorting and before Winsorization
+    if(is.null(mat) || NROW(mat) == 0 || NCOL(mat) == 0){
+        AddErrMsg("Matrix has zero dimensions after sorting. No taxa remain for distance correlation analysis. Please adjust your filtering parameters.");
+        return(list(dcorr = matrix(nrow=0, ncol=0), dcorr_fl = matrix(nrow=0, ncol=0),
+                    dcorr_p = matrix(nrow=0, ncol=0)));
+    }
 
     # Winsorization
     mat = apply(mat, 2, function(x)

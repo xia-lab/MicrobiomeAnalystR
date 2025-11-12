@@ -31,8 +31,8 @@ my.pcoa.3d <- function(mbSetObj, ordMeth, distName, taxrank, colopt, variable, t
       nm[is.na(nm)] <- "Not_Assigned";
       data1 <- as.matrix(otu_table(data));
       rownames(data1) <- nm;
-      #all NA club together - optimized with rowsum (20-50x faster)
-      data1 <- rowsum(data1, rownames(data1));
+      #all NA club together
+      data1 <- rowsum(as.matrix(data1), rownames(data1));
       feat_data <- data1[taxa,];
     }
     sample_data(data)$taxa <- feat_data;

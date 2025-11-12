@@ -39,8 +39,11 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
   }
  
    secomp1_results <- my.secom.anal(mbSetObj,taxrank,permNum,corrCutoff, pvalCutoff,"secomp1")
-    if(nrow(secomp1_results)==0){
-      AddErrMsg("No correlations meet the p-value and correlation thresholds!")
+    # Check if analysis failed (returns 0) or has no results
+    if(!is.data.frame(secomp1_results) || nrow(secomp1_results)==0){
+      if(is.data.frame(secomp1_results)){
+        AddErrMsg("No correlations meet the p-value and correlation thresholds!")
+      }
       return(0)
     }else{
       mbSetObj$analSet$network_cor <- secomp1_results
@@ -53,8 +56,11 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
   }
 
    secomp2_results <- my.secom.anal(mbSetObj,taxrank,permNum,corrCutoff, pvalCutoff,"secomp2")
-   if(nrow(secomp2_results)==0){
-      AddErrMsg("No correlations meet the p-value and correlation thresholds!")
+   # Check if analysis failed (returns 0) or has no results
+   if(!is.data.frame(secomp2_results) || nrow(secomp2_results)==0){
+      if(is.data.frame(secomp2_results)){
+        AddErrMsg("No correlations meet the p-value and correlation thresholds!")
+      }
       return(0)
     }else{
       mbSetObj$analSet$network_cor <- secomp2_results
@@ -67,8 +73,11 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
   }
 
    secomdis_results <- my.secom.anal(mbSetObj,taxrank,permNum,corrCutoff, pvalCutoff,"secomdis")
-   if(nrow(secomdis_results)==0){
-      AddErrMsg("No correlations meet the p-value and correlation thresholds!")
+   # Check if analysis failed (returns 0) or has no results
+   if(!is.data.frame(secomdis_results) || nrow(secomdis_results)==0){
+      if(is.data.frame(secomdis_results)){
+        AddErrMsg("No correlations meet the p-value and correlation thresholds!")
+      }
       return(0)
     }else{
       mbSetObj$analSet$network_cor <- secomdis_results

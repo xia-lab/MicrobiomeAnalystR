@@ -222,8 +222,8 @@ PCoA3DAnal.16SRef <- function(mbSetObj, barplotNm, ordMeth, distName, taxrank, m
     nm[is.na(nm)] <- "Not_Assigned";
     data1 <- as.matrix(otu_table(data));
     rownames(data1) <- nm;
-    #all NA club together - optimized with rowsum (20-50x faster)
-    data1 <- rowsum(data1, rownames(data1));
+    #all NA club together
+    data1 <- rowsum(as.matrix(data1), rownames(data1));
   }
   
   GP.ord <- ordinate(data, ordMeth, distName);

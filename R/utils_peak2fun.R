@@ -289,15 +289,13 @@ qs::qsave(mummichog.lib,"current_mummichog_lib.qs")
     }
     
     if(neg_matches){
-      # Optimized: do.call(rbind) is 2-3x faster than unlist→matrix→data.frame
-      matched_resn <- do.call(rbind, matched_resn);
-      matched_resn <- as.data.frame(matched_resn, stringsAsFactors = FALSE);
+      matched_resn <- data.frame(matrix(unlist(matched_resn), nrow=length(matched_resn), byrow=T),
+                                stringsAsFactors = FALSE);
     }
-    
+
     if(pos_matches){
-      # Optimized: do.call(rbind) is 2-3x faster than unlist→matrix→data.frame
-      matched_resp <- do.call(rbind, matched_resp);
-      matched_resp <- as.data.frame(matched_resp, stringsAsFactors = FALSE);
+      matched_resp <- data.frame(matrix(unlist(matched_resp), nrow=length(matched_resp), byrow=T),
+                                stringsAsFactors = FALSE);
     }
     
     if(neg_matches & pos_matches){ # both w. matches
@@ -316,9 +314,8 @@ qs::qsave(mummichog.lib,"current_mummichog_lib.qs")
       return(0)
     }
 
-    # Optimized: do.call(rbind) is 2-3x faster than unlist→matrix→data.frame
-    matched_resp <- do.call(rbind, matched_resp);
-    matched_resp <- as.data.frame(matched_resp, stringsAsFactors = FALSE);
+    matched_resp <- data.frame(matrix(unlist(matched_resp), nrow=length(matched_resp), byrow=T),
+                              stringsAsFactors = FALSE);
     matched_res <- matched_resp;
     
   } else {
@@ -328,9 +325,8 @@ qs::qsave(mummichog.lib,"current_mummichog_lib.qs")
       return(0)
     }
 
-    # Optimized: do.call(rbind) is 2-3x faster than unlist→matrix→data.frame
-    matched_resn <- do.call(rbind, matched_resn);
-    matched_resn <- as.data.frame(matched_resn, stringsAsFactors = FALSE);
+    matched_resn <- data.frame(matrix(unlist(matched_resn), nrow=length(matched_resn), byrow=T),
+                              stringsAsFactors = FALSE);
     matched_res <- matched_resn
   }
   
