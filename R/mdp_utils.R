@@ -1017,12 +1017,12 @@ PlotOverallPieGraph<-function(mbSetObj, taxalvl, feat_cnt, calcmeth,
   }
   
   sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
-  datapie <<- merge_phyloseq(data, tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
-  
+  mbSetObj$temp$pie$datapie <- merge_phyloseq(data, tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
+
   #using reduce names
-  data <- otu_table(datapie);
+  data <- otu_table(mbSetObj$temp$pie$datapie);
   data <- data.frame(data,check.names=FALSE);
-  data_tax <- tax_table(datapie);
+  data_tax <- tax_table(mbSetObj$temp$pie$datapie);
   
   #reshaping data
   data <- t(data);
@@ -1118,9 +1118,9 @@ PlotOverallPieGraph<-function(mbSetObj, taxalvl, feat_cnt, calcmeth,
   piedata_write$percentage <- round((piedata_write$value / sum(piedata_write$value) * 100), digits = 2)
   colnames(piedata_write) <- c("Taxa", "Abundance", "Percentage")
   fast.write(piedata_write, "piechart_abundances.csv");
-  
-  piedata <<- piedata;
-  
+
+  mbSetObj$temp$pie$piedata <- piedata;
+
   return(.set.mbSetObj(mbSetObj));
 }
 
@@ -1157,11 +1157,11 @@ PlotGroupPieGraph <- function(mbSetObj, taxalvl, metadata, clslevel,
   data <- prune_samples(sample_names(smpl1), data);
   data <- merge_phyloseq(data, smpl1);
   mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
-  datapie <<- merge_phyloseq(data, mbSetObj$dataSet$taxa_table);
-  
+  mbSetObj$temp$pie$datapie <- merge_phyloseq(data, mbSetObj$dataSet$taxa_table);
+
   #using reduce names
-  data <- t(data.frame(otu_table(datapie),check.names=FALSE));
-  data_tax <- tax_table(datapie);
+  data <- t(data.frame(otu_table(mbSetObj$temp$pie$datapie),check.names=FALSE));
+  data_tax <- tax_table(mbSetObj$temp$pie$datapie);
   
   if(taxalvl=="OTU"){
     taxa_nm <- as.matrix(colnames(data));
@@ -1251,7 +1251,7 @@ PlotGroupPieGraph <- function(mbSetObj, taxalvl, metadata, clslevel,
   piedata_write$percentage <- round((piedata_write$value / sum(piedata_write$value) * 100), digits = 2)
   colnames(piedata_write) <- c("Taxa", "Abundance", "Percentage")
   fast.write(piedata_write, "piechart_abundances.csv");
-  piedata <<- piedata;
+  mbSetObj$temp$pie$piedata <- piedata;
   return(.set.mbSetObj(mbSetObj));
 }
 
@@ -1283,24 +1283,24 @@ PlotSamplePieGraph<-function(mbSetObj, taxalvl, smplnm, feat_cnt, toptaxapie, pi
   data <- merge_phyloseq(data, tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
   data <- prune_samples(smplnm, data);
   mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj);
-  #datapie <<- merge_phyloseq(data, mbSetObj$dataSet$taxa_table)
+  #mbSetObj$temp$pie$datapie <- merge_phyloseq(data, mbSetObj$dataSet$taxa_table)
   pie_try <- try(merge_phyloseq(data, mbSetObj$dataSet$taxa_table));
   if(class(pie_try) == "try-error"){
-    datapie <<- data;
+    mbSetObj$temp$pie$datapie <- data;
   } else {
-    datapie <<- merge_phyloseq(data, mbSetObj$dataSet$taxa_table);
+    mbSetObj$temp$pie$datapie <- merge_phyloseq(data, mbSetObj$dataSet$taxa_table);
   }
-  
+
   #using reduce names
-  data <- otu_table(datapie);
+  data <- otu_table(mbSetObj$temp$pie$datapie);
   data <- data.frame(data,check.names=FALSE);
   zero_row <- which(data[[1]] != 0);
   data_tmp <- as.data.frame(data[zero_row, ],check.names=FALSE)
   row.names(data_tmp) <- row.names(data)[zero_row];
   names(data_tmp) <- smplnm;
   data <- data_tmp;
-  
-  data_tax <- tax_table(datapie);
+
+  data_tax <- tax_table(mbSetObj$temp$pie$datapie);
   data_tax <- data_tax[zero_row, ]
   
   #reshaping data
@@ -1375,7 +1375,7 @@ PlotSamplePieGraph<-function(mbSetObj, taxalvl, smplnm, feat_cnt, toptaxapie, pi
       }
     }
   }
-  piedata <<- piedata;
+  mbSetObj$temp$pie$piedata <- piedata;
   return(.set.mbSetObj(mbSetObj));
 }
 
@@ -1396,49 +1396,49 @@ PlotDataPieFromPie<-function(mbSetObj, taxalvl, metadata, clslevel,
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
   set.seed(280534431);
-  high_taxa <<- as.character(piedata$variable[taxaposn]);
-  
-  if(high_taxa=="Not_Assigned"){
+  mbSetObj$temp$pie$high_taxa <- as.character(mbSetObj$temp$pie$piedata$variable[taxaposn]);
+
+  if(mbSetObj$temp$pie$high_taxa=="Not_Assigned"){
     AddErrMsg("Cannot map to Not_Assigned level!");
     return(0);
   }
-  
-  lowlvl_nm <<- lowtaxa;
-  
-  datataxa <- as.matrix(tax_table(datapie));
-  subsettax_table <- tax_table(subset(datataxa,datataxa[,taxalvl]==high_taxa));
-  data1 <- prune_taxa(taxa_names(subsettax_table),datapie);
-  datapietaxatab <<- data_tax <- tax_table(data1);
-  datapietaxa <<- data <- t(data.frame(otu_table(data1),check.names=FALSE));
-  taxa_nm <- data.matrix(data_tax[,lowlvl_nm]);
-  
+
+  mbSetObj$temp$pie$lowlvl_nm <- lowtaxa;
+
+  datataxa <- as.matrix(tax_table(mbSetObj$temp$pie$datapie));
+  subsettax_table <- tax_table(subset(datataxa,datataxa[,taxalvl]==mbSetObj$temp$pie$high_taxa));
+  data1 <- prune_taxa(taxa_names(subsettax_table),mbSetObj$temp$pie$datapie);
+  mbSetObj$temp$pie$datapietaxatab <- data_tax <- tax_table(data1);
+  mbSetObj$temp$pie$datapietaxa <- data <- t(data.frame(otu_table(data1),check.names=FALSE));
+  taxa_nm <- data.matrix(data_tax[,mbSetObj$temp$pie$lowlvl_nm]);
+
   #converting NA values to unassigned
   y <- which(is.na(taxa_nm)==TRUE);
   taxa_nm[y] <- "Not_Assigned";
   colnames(data) <- taxa_nm[,1];
   nms <- colnames(data);
   data <- data.frame(data %*% sapply(unique(nms),"==",nms),check.names=FALSE);
-  
+
   if(length(nms)==1){
     colnames(data)<-nms;
   }
-  
+
   colnames(data) <- gsub("\\."," ",colnames(data));
   data$step <- factor(rownames(data));
   data <- melt(data,id='step');
   data$step <- as.numeric(data$step);
-  
+
   fact <- factor(data$variable)
   levels(fact) <- sub("^X", "", levels(fact))
-  
+
   color_var <- levels(fact);
   x <- length(color_var);
-  x.colors <<- rep(col_vector,length.out=x);
-  
+  mbSetObj$temp$pie$x.colors <- rep(col_vector,length.out=x);
+
   piedata2 <- aggregate(. ~variable , data=data[-1], FUN=sum);
   # order by abundance
   ord.inx <- order(piedata2$value, decreasing = TRUE);
-  piedata2 <<- piedata2[ord.inx,];
+  mbSetObj$temp$pie$piedata2 <- piedata2[ord.inx,];
   
   return(.set.mbSetObj(mbSetObj));
   
@@ -1457,12 +1457,12 @@ UpdatePieData<-function(mbSetObj, lowtaxa){
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
   set.seed(280534432);
-  
-  data <- datapietaxa;
-  data_tax <- datapietaxatab;
-  high_taxa <- high_taxa;
-  lowlvl_nm <<- lowtaxa;
-  taxa_nm <- as.data.frame(data_tax[,lowlvl_nm],check.names=FALSE);
+
+  data <- mbSetObj$temp$pie$datapietaxa;
+  data_tax <- mbSetObj$temp$pie$datapietaxatab;
+  high_taxa <- mbSetObj$temp$pie$high_taxa;
+  mbSetObj$temp$pie$lowlvl_nm <- lowtaxa;
+  taxa_nm <- as.data.frame(data_tax[,mbSetObj$temp$pie$lowlvl_nm],check.names=FALSE);
   taxa_nm <- as.matrix(taxa_nm);
   y <- which(is.na(taxa_nm)==TRUE);
   
@@ -1483,9 +1483,9 @@ UpdatePieData<-function(mbSetObj, lowtaxa){
   data$step <- as.numeric(data$step);
   color_var <- levels(factor(data$variable));
   x <- length(color_var);
-  x.colors <<- rep(col_vector,length.out=x);
+  mbSetObj$temp$pie$x.colors <- rep(col_vector,length.out=x);
   # piedatas is two column stats (variable and value)
-  piedata2 <<- aggregate(. ~variable , data=data[-1], FUN=sum);
+  mbSetObj$temp$pie$piedata2 <- aggregate(. ~variable , data=data[-1], FUN=sum);
   
   return(.set.mbSetObj(mbSetObj));
   
@@ -1510,8 +1510,8 @@ SavePiechartImg <- function(mbSetObj, taxalvl, pieName="", format="png", dpi=72,
   mbSetObj <- .get.mbSetObj(mbSetObj);
   set.seed(280);
   pieName = paste(pieName,".", format, sep="");
-  orig.piedata <- piedata;
-  piedata <- transform(transform(piedata, value=value/sum(value)));
+  orig.piedata <- mbSetObj$temp$pie$piedata;
+  piedata <- transform(transform(mbSetObj$temp$pie$piedata, value=value/sum(value)));
   
   #rownames are still arranged by decending order
   piedataimg <- piedata;
@@ -1566,10 +1566,10 @@ SavePiechartImg <- function(mbSetObj, taxalvl, pieName="", format="png", dpi=72,
 PlotPiechart <- function(mbSetObj, rel_perct, pieName, format="png", dpi=72) {
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
-  set.seed(28056188); 
+
+  set.seed(28056188);
   pieName = paste(pieName,".", format, sep="");
-  piedata2 <- transform(transform(piedata2, value=value/sum(value)));
+  piedata2 <- transform(transform(mbSetObj$temp$pie$piedata2, value=value/sum(value)));
   ind <- which(piedata2[,"value"]>rel_perct);
   ind1 <- which(piedata2[,"value"]<rel_perct);
   
@@ -1593,10 +1593,10 @@ PlotPiechart <- function(mbSetObj, rel_perct, pieName, format="png", dpi=72) {
   
   box=ggplot(piedata2, aes(x="", y = value, fill=variable)) +
     geom_bar(width = 1, stat = "identity") + theme_bw() +
-    coord_polar(theta = "y") + scale_fill_manual(values=c(x.colors))+
+    coord_polar(theta = "y") + scale_fill_manual(values=c(mbSetObj$temp$pie$x.colors))+
     geom_text(aes(x=1.7, label = scales::percent(value)), check_overlap = T,size=3, position = position_stack(vjust = 0.5)) +
     theme(legend.position="bottom",axis.text = element_blank(),axis.ticks = element_blank(),panel.grid  = element_blank(), plot.title = element_text(hjust=0.5, face="bold")) +
-    labs(x="", y="",fill =lowlvl_nm) + ggtitle(high_taxa);
+    labs(x="", y="",fill =mbSetObj$temp$pie$lowlvl_nm) + ggtitle(mbSetObj$temp$pie$high_taxa);
   print(box);
   
   dev.off();
@@ -4335,14 +4335,32 @@ GetStressNMDS<-function(mbSetObj){
 }
 
 # getter
-GetPieTaxaNames<- function(){
-  res<-as.character(piedata$variable);
+GetPieTaxaNames<- function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  # Check if piedata exists in new location
+  if(!is.null(mbSetObj$temp$pie$piedata)){
+    res<-as.character(mbSetObj$temp$pie$piedata$variable);
+  } else if(exists("piedata", envir = .GlobalEnv)){
+    # Fallback to global for backward compatibility
+    res<-as.character(piedata$variable);
+  } else {
+    stop("piedata not found in mbSetObj$temp$pie or global environment");
+  }
   return(res);
 }
 
 # getter
-GetPieTaxaAbund<- function(){
-  return(piedata$value);
+GetPieTaxaAbund<- function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  # Check if piedata exists in new location
+  if(!is.null(mbSetObj$temp$pie$piedata)){
+    return(mbSetObj$temp$pie$piedata$value);
+  } else if(exists("piedata", envir = .GlobalEnv)){
+    # Fallback to global for backward compatibility
+    return(piedata$value);
+  } else {
+    stop("piedata not found in mbSetObj$temp$pie or global environment");
+  }
 }
 
 

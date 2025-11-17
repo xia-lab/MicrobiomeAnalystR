@@ -333,13 +333,25 @@ condenseOTUs <- function(otutable, splitcol) {
 
 # need to return consistent color assignments for the same taxa
 #'@export
-GetSeriesColors <- function(taxa=NULL){
+GetSeriesColors <- function(taxa=NULL, mbSetObj=NULL){
   if(!exists("pie.cols")){
     InitPieColors();
   }
-    
+
   if(is.null(taxa)){
-    taxa <- as.character(piedata$variable);
+    # If mbSetObj not provided, retrieve it from session
+    if(is.null(mbSetObj)){
+      mbSetObj <- .get.mbSetObj(NA);
+    } else {
+      mbSetObj <- .get.mbSetObj(mbSetObj);
+    }
+
+    # Try to get taxa from mbSetObj
+    if(!is.null(mbSetObj$temp$pie$piedata)){
+      taxa <- as.character(mbSetObj$temp$pie$piedata$variable);
+    } else {
+      stop("piedata not found in mbSetObj$temp$pie or global environment.");
+    }
   }
 
   col.len <- length(pie.cols);
