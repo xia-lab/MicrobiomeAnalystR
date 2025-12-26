@@ -333,15 +333,15 @@ RecordRCommand <- function(mbSetObj=NA, cmd){
   return(.set.mbSetObj(mbSetObj));
 }
 
-RecordRCommand <- function(mSetObj=NA, cmd){
-  mSetObj <- .get.mSetObj(mSetObj); 
-  mSetObj$cmdSet <- c(mSetObj$cmdSet, cmd);
-  return(.set.mSet(mSetObj));
+RecordRCommand <- function(mbSetObj=NA, cmd){
+  mbSetObj <- .get.mbSetObj(mbSetObj); 
+  mbSetObj$cmdSet <- c(mbSetObj$cmdSet, cmd);
+  return(.set.mbSetObj(mbSetObj));
 }
 
-SaveRCommands <- function(mSetObj=NA){
-  mSetObj <- .get.mSetObj(mSetObj);  
-  cmds <- paste(mSetObj$cmdSet, collapse="\n");
+SaveRCommands <- function(mbSetObj=NA){
+  mbSetObj <- .get.mbSetObj(mbSetObj);  
+  cmds <- paste(mbSetObj$cmdSet, collapse="\n");
   pid.info <- paste0("# PID of current job: ", Sys.getpid());
   cmds <- c(pid.info, cmds);
   write(cmds, file = "Rhistory.R", append = FALSE);
