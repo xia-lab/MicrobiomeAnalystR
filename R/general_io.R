@@ -327,10 +327,24 @@ IsTreeUploaded <- function(mbSetObj) {
 }
 
 RecordRCommand <- function(mbSetObj=NA, cmd){
-  write(cmd, file = "Rhistory.R", append = TRUE);
+  #write(cmd, file = "Rhistory.R", append = TRUE);
   mbSetObj <- .get.mbSetObj(mbSetObj); 
   mbSetObj$cmdSet <- c(mbSetObj$cmdSet, cmd);
   return(.set.mbSetObj(mbSetObj));
+}
+
+RecordRCommand <- function(mSetObj=NA, cmd){
+  mSetObj <- .get.mSet(mSetObj); 
+  mSetObj$cmdSet <- c(mSetObj$cmdSet, cmd);
+  return(.set.mSet(mSetObj));
+}
+
+SaveRCommands <- function(mSetObj=NA){
+  mSetObj <- .get.mSet(mSetObj);  
+  cmds <- paste(mSetObj$cmdSet, collapse="\n");
+  pid.info <- paste0("# PID of current job: ", Sys.getpid());
+  cmds <- c(pid.info, cmds);
+  write(cmds, file = "Rhistory.R", append = FALSE);
 }
 
 GetRCommandHistory <- function(mbSetObj=NA){
