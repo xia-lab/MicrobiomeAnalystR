@@ -437,7 +437,7 @@ PlotEnrichNet.Overview<-function(hits, pvals){
   # Mirror to lower triangle (overlap is symmetric)
   w[lower.tri(w)] <- t(w)[lower.tri(w)];
 
-  wd <- melt(w);
+  wd <- reshape2::melt(w);
   wd <- wd[wd[,1] != wd[,2],];
   wd <- wd[!is.na(wd[,3]),];
   g <- graph.data.frame(wd[,-3], directed=F);

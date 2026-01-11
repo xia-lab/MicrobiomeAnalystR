@@ -750,7 +750,7 @@ GetDataForPie<-function(data_n, datataxa, txlvl, OtuIdType, feat_cnt){
   data_new<-data_new %*% sapply(unique(nms),"==",nms);
   data_new<-data.frame(data_new,check.names=FALSE);
   data_new$step<-factor(rownames(data_new));
-  data_new<-melt(data_new,id='step');
+  data_new<-reshape2::melt(data_new,id='step');
   data_new$step<-as.numeric(data_new$step);
   piedata_new<-data_new[-1];
   piedata_new<-aggregate(. ~variable , data=piedata_new, FUN=sum);

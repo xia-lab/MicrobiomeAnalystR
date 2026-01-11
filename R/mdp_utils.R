@@ -1064,7 +1064,7 @@ PlotOverallPieGraph<-function(mbSetObj, taxalvl, feat_cnt, calcmeth,
     }
     
     data$step <- factor(rownames(data));
-    data <- melt(data,id='step');
+    data <- reshape2::melt(data,id='step');
     data$step <- as.numeric(data$step);
     piedata <- aggregate(. ~variable , data=data[-1], FUN=sum);
     
@@ -1198,7 +1198,7 @@ PlotGroupPieGraph <- function(mbSetObj, taxalvl, metadata, clslevel,
     }
     
     data$step <- factor(rownames(data));
-    data <- melt(data,id='step');
+    data <- reshape2::melt(data,id='step');
     data$step <- as.numeric(data$step);
     piedata <- aggregate(. ~variable , data=data[-1], FUN=sum);
     
@@ -1337,7 +1337,7 @@ PlotSamplePieGraph<-function(mbSetObj, taxalvl, smplnm, feat_cnt, toptaxapie, pi
     }
     
     data$step <- factor(rownames(data));
-    data <- melt(data,id='step');
+    data <- reshape2::melt(data,id='step');
     data$step <- as.numeric(data$step);
     piedata <- aggregate(. ~variable , data=data[-1], FUN=sum);
     
@@ -1425,7 +1425,7 @@ PlotDataPieFromPie<-function(mbSetObj, taxalvl, metadata, clslevel,
 
   colnames(data) <- gsub("\\."," ",colnames(data));
   data$step <- factor(rownames(data));
-  data <- melt(data,id='step');
+  data <- reshape2::melt(data,id='step');
   data$step <- as.numeric(data$step);
 
   fact <- factor(data$variable)
@@ -1479,7 +1479,7 @@ UpdatePieData<-function(mbSetObj, lowtaxa){
   
   colnames(data) <- gsub("\\."," ",colnames(data));
   data$step <- factor(rownames(data));
-  data <- melt(data,id='step');
+  data <- reshape2::melt(data,id='step');
   data$step <- as.numeric(data$step);
   color_var <- levels(factor(data$variable));
   x <- length(color_var);
@@ -1836,7 +1836,7 @@ PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
     feat_no<-ncol(data);
     fast.write(t(data), file="taxa_abund.csv");
     data$step <- factor(rownames(data));
-    data <- melt(data,id='step');
+    data <- reshape2::melt(data,id='step');
     data$step <- as.numeric(data$step);
     data <- data[order(data[,2]),];
     data <- data[,-1];
@@ -1849,7 +1849,7 @@ PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
     
     fast.write(t(data), file="taxa_abund.csv");
     data$step <- factor(rownames(data));
-    data <- melt(data,id='step');
+    data <- reshape2::melt(data,id='step');
     data$step <- as.numeric(data$step);
     data <- data[order(data[,2]),];
     data <- data[,-1];
@@ -2631,7 +2631,7 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
   fast.write(t(data), file="taxa_abund.csv");
   data$facetOpt <- as.character(clsLbl);
   data$step <- factor(rownames(data), levels = rownames(data));
-  data <- melt(data,id=c('step', 'facetOpt'));
+  data <- reshape2::melt(data,id=c('step', 'facetOpt'));
   data$step <- as.numeric(data$step);
   # data$sample <- data$step;
   data <- data[order(data[,3]),];
@@ -2942,7 +2942,7 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
   data[[get("facet")]] <- metalp[[get("facet")]]
   data$sample <- row.names(data);
   fast.write(t(data), file="taxa_abund.csv");
-  data <- melt(data, id = c("sample", get("facet")))
+  data <- reshape2::melt(data, id = c("sample", get("facet")))
   tmp_df <- aggregate(data$value, by=list(data$variable), FUN=mean)
   var_level <- tmp_df[order(tmp_df$x, decreasing = TRUE), ][[1]]
   
@@ -3380,7 +3380,7 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
   fast.write(t(data), file="taxa_abund.csv");
   data$step <- factor(rownames(data), levels = rownames(data));
   gp_nm <- data$step
-  data <- melt(data,id='step');
+  data <- reshape2::melt(data,id='step');
   data$step <- as.numeric(data$step);
   data <- data[order(data[,2]),];
   data <- data[,-1];
