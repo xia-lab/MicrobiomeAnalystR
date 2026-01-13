@@ -341,7 +341,12 @@ ApplyAbundanceFilter <- function(mbSetObj, filt.opt, count, smpl.perc){
   }
   
   if(sum(kept.inx)==0){
-    AddErrMsg(paste0("No samples have counts less than ", count, "! If your data has already been normalized, please turn off count filter (0)."))
+  AddErrMsg(
+    paste0(
+      "Filtering removed all features (threshold=", count,
+      "). If your data is already normalized, set the count filter to 0."
+    )
+  )
     return(0)
   }
   

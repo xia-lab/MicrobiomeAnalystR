@@ -499,7 +499,7 @@ PlotBoxMultiMetabo <- function(mbSetObj, boxplotName, analysis.var, feat,plotTyp
 #' @param width Numeric, input the width of the plot. By
 #' default it is set to NA.
 #' @param dpi Numeric, input the dots per inch. By default
-#' it is set to 72.
+#' it is set to 150.
 #' @author Jeff Xia \email{jeff.xia@mcgill.ca}
 #' McGill University, Canada
 #' License: GNU GPL (>= 2)
@@ -512,7 +512,7 @@ PlotHeatmap <- function(mbSetObj, plotNm, dataOpt = "norm",
                         taxrank, viewOpt, doclust, format = "png", showColnm, showRownm,
                         unitCol, unitRow, fzCol, fzRow, annoPer, fzAnno,
                         appendnm = "F",ifgrp="F",grpSel, rowV = F, colV = T, 
-                        var.inx = NA, border = T, width = NA, dpi = 72) {
+                        var.inx = NA, border = T, width = NA, dpi = 150) {
   mbSetObj <- .get.mbSetObj(mbSetObj)
   suppressMessages(library(iheatmapr));
   suppressMessages(library(viridis));
@@ -774,11 +774,23 @@ as_list <- to_plotly_list(p)
   mbSetObj$imgSet$heatmap_int <- plotwidget
   save(p, file=plotwidget);
 
-  #pstatic <- CreateStaticHeatmap(data1sc, fzAnno, colors, nrows, x_start, y_start, x_spacing, annotation, sz, bf, showColnm, showRownm, doclust, smplDist, clstDist, fzCol, fzRow)
+  pstatic <- CreateStaticHeatmap(data1sc, fzAnno, colors, nrows, x_start, y_start, x_spacing, annotation, sz, bf, showColnm, showRownm, doclust, smplDist, clstDist, fzCol, fzRow)
 
-  #Cairo::Cairo(file = paste0(plotNm, ".png"), unit="px", dpi=72, width=w, height=h, type="png");    
-  #print(pstatic)
-  #dev.off()
+  # DPI-aware width and height scaling
+  # Base DPI is 150 (the default), scale dimensions proportionally to maintain physical size
+  dpi_scale <- dpi / 150
+  w_scaled <- w * dpi_scale
+  h_scaled <- h * dpi_scale
+
+  imgFile <- paste0(plotNm, "_dpi", dpi, ".", format)
+  Cairo::Cairo(file = imgFile, unit="px", dpi=dpi, width=w_scaled, height=h_scaled, type=format, bg="white");
+  print(pstatic)
+  dev.off()
+
+  # Store the static heatmap path for report generation
+  mbSetObj$imgSet$heatmap <- imgFile
+  print(paste("DEBUG PlotHeatmap: Stored heatmap image path:", imgFile))
+  print(paste("DEBUG PlotHeatmap: File exists:", file.exists(imgFile)))
 
   return(.set.mbSetObj(mbSetObj))
 }
@@ -930,12 +942,30 @@ PlotCovariateMap <- function(mbSetObj,
               else
                 c(`FALSE` = "grey", `TRUE` = "black")
 
-  ## point layer (colour defined via scale below)
-  point_layer <- geom_point(alpha = 0.75, size = 2.5)
+  ## point layer (scale size/alpha for dense plots)
+  n_points <- nrow(both.mat)
+  point_size <- if (n_points > 2000) {
+    0.8
+  } else if (n_points > 1000) {
+    1.0
+  } else if (n_points > 300) {
+    1.5
+  } else {
+    2.5
+  }
+  point_alpha <- if (n_points > 2000) {
+    0.25
+  } else if (n_points > 1000) {
+    0.35
+  } else if (n_points > 300) {
+    0.5
+  } else {
+    0.8
+  }
+  point_layer <- geom_point(alpha = point_alpha, size = point_size)
 
   ## build ggplot object (no diagonal line)
   p <- ggplot(both.mat, base_aes) +
-       point_layer +
        scale_shape_manual(values = c(`FALSE` = 1,  `TRUE` = 16)) +
        scale_color_manual(values = col_vals, guide = "none") +
        xlab("-log10(Adj. P): no covariate adjustment") +
@@ -948,18 +978,20 @@ PlotCovariateMap <- function(mbSetObj,
   if (theme == "default") {
     p <- p +
       geom_rect(aes(xmin =  logp_val, xmax =  Inf,
-                    ymin =  logp_val, ymax =  Inf), fill = "#6699CC") +
+                    ymin =  logp_val, ymax =  Inf), fill = "#6699CC", alpha = 0.2, color = NA) +
       geom_rect(aes(xmin = -Inf,      xmax =  logp_val,
-                    ymin = -Inf,      ymax =  logp_val), fill = "grey") +
+                    ymin = -Inf,      ymax =  logp_val), fill = "grey", alpha = 0.2, color = NA) +
       geom_rect(aes(xmin =  logp_val, xmax =  Inf,
-                    ymin = -Inf,      ymax =  logp_val), fill = "#E2808A") +
+                    ymin = -Inf,      ymax =  logp_val), fill = "#E2808A", alpha = 0.2, color = NA) +
       geom_rect(aes(xmin = -Inf,      xmax =  logp_val,
-                    ymin =  logp_val, ymax =  Inf), fill = "#94C973") +
+                    ymin =  logp_val, ymax =  Inf), fill = "#94C973", alpha = 0.2, color = NA) +
+      point_layer +
       theme_bw()
   } else {
     p <- p +
       geom_vline(xintercept = logp_val) +
-      geom_hline(yintercept = logp_val)
+      geom_hline(yintercept = logp_val) +
+      point_layer
   }
 
   ## ── static export ─────────────────────────────────────────────────
@@ -990,15 +1022,20 @@ CreateStaticHeatmap <- function(data1sc, fzAnno, colors, nrows, x_start, y_start
   library(pheatmap);
   # Note: In pheatmap, annotations are usually a data frame where each column is a different annotation
   # You might need to adjust this part based on your actual data structure for annotations
-  
-  # Prepare the color mapping
-  color_breaks <- seq(min(data1sc), max(data1sc), length.out = length(colors) + 1)
-  color_mapping <- colorRampPalette(colors)(length(colors))
+
+  # Prepare the color mapping to match iheatmapr behavior
+  # Use a larger number of color steps for smoother gradients
+  n_colors <- 256
+  color_mapping <- colorRampPalette(colors)(n_colors)
+
+  # Create symmetric breaks around 0 to match standard heatmap scaling
+  max_abs <- max(abs(range(data1sc, na.rm = TRUE)))
+  color_breaks <- seq(-max_abs, max_abs, length.out = n_colors + 1)
 
   # Prepare clustering if needed
   clustering_distance_rows <- if(doclust == "T") smplDist else "none"
   clustering_distance_cols <- if(doclust == "T") clstDist else "none"
-  
+
   # Create the heatmap
   p <- pheatmap(data1sc,
            color = color_mapping,
@@ -1012,7 +1049,8 @@ CreateStaticHeatmap <- function(data1sc, fzAnno, colors, nrows, x_start, y_start
            fontsize_col = fzCol,
            show_rownames = F,
            show_colnames = T,
-           annotation = annotation
+           annotation_col = annotation,
+           border_color = NA
   )
 
   return(p)
