@@ -499,7 +499,7 @@ PlotBoxMultiMetabo <- function(mbSetObj, boxplotName, analysis.var, feat,plotTyp
 #' @param width Numeric, input the width of the plot. By
 #' default it is set to NA.
 #' @param dpi Numeric, input the dots per inch. By default
-#' it is set to 72.
+#' it is set to 150.
 #' @author Jeff Xia \email{jeff.xia@mcgill.ca}
 #' McGill University, Canada
 #' License: GNU GPL (>= 2)
@@ -512,7 +512,7 @@ PlotHeatmap <- function(mbSetObj, plotNm, dataOpt = "norm",
                         taxrank, viewOpt, doclust, format = "png", showColnm, showRownm,
                         unitCol, unitRow, fzCol, fzRow, annoPer, fzAnno,
                         appendnm = "F",ifgrp="F",grpSel, rowV = F, colV = T, 
-                        var.inx = NA, border = T, width = NA, dpi = 72) {
+                        var.inx = NA, border = T, width = NA, dpi = 150) {
   mbSetObj <- .get.mbSetObj(mbSetObj)
   suppressMessages(library(iheatmapr));
   suppressMessages(library(viridis));
@@ -774,11 +774,23 @@ as_list <- to_plotly_list(p)
   mbSetObj$imgSet$heatmap_int <- plotwidget
   save(p, file=plotwidget);
 
-  #pstatic <- CreateStaticHeatmap(data1sc, fzAnno, colors, nrows, x_start, y_start, x_spacing, annotation, sz, bf, showColnm, showRownm, doclust, smplDist, clstDist, fzCol, fzRow)
+  pstatic <- CreateStaticHeatmap(data1sc, fzAnno, colors, nrows, x_start, y_start, x_spacing, annotation, sz, bf, showColnm, showRownm, doclust, smplDist, clstDist, fzCol, fzRow)
 
-  #Cairo::Cairo(file = paste0(plotNm, ".png"), unit="px", dpi=72, width=w, height=h, type="png");    
-  #print(pstatic)
-  #dev.off()
+  # DPI-aware width and height scaling
+  # Base DPI is 150 (the default), scale dimensions proportionally to maintain physical size
+  dpi_scale <- dpi / 150
+  w_scaled <- w * dpi_scale
+  h_scaled <- h * dpi_scale
+
+  imgFile <- paste0(plotNm, "_dpi", dpi, ".", format)
+  Cairo::Cairo(file = imgFile, unit="px", dpi=dpi, width=w_scaled, height=h_scaled, type=format, bg="white");
+  print(pstatic)
+  dev.off()
+
+  # Store the static heatmap path for report generation
+  mbSetObj$imgSet$heatmap <- imgFile
+  print(paste("DEBUG PlotHeatmap: Stored heatmap image path:", imgFile))
+  print(paste("DEBUG PlotHeatmap: File exists:", file.exists(imgFile)))
 
   return(.set.mbSetObj(mbSetObj))
 }
@@ -983,7 +995,8 @@ PlotCovariateMap <- function(mbSetObj,
   } else {
     p <- p +
       geom_vline(xintercept = logp_val) +
-      geom_hline(yintercept = logp_val)
+      geom_hline(yintercept = logp_val) +
+      point_layer
   }
 
   ## ── static export ─────────────────────────────────────────────────
@@ -1020,15 +1033,20 @@ CreateStaticHeatmap <- function(data1sc, fzAnno, colors, nrows, x_start, y_start
   library(pheatmap);
   # Note: In pheatmap, annotations are usually a data frame where each column is a different annotation
   # You might need to adjust this part based on your actual data structure for annotations
-  
-  # Prepare the color mapping
-  color_breaks <- seq(min(data1sc), max(data1sc), length.out = length(colors) + 1)
-  color_mapping <- colorRampPalette(colors)(length(colors))
+
+  # Prepare the color mapping to match iheatmapr behavior
+  # Use a larger number of color steps for smoother gradients
+  n_colors <- 256
+  color_mapping <- colorRampPalette(colors)(n_colors)
+
+  # Create symmetric breaks around 0 to match standard heatmap scaling
+  max_abs <- max(abs(range(data1sc, na.rm = TRUE)))
+  color_breaks <- seq(-max_abs, max_abs, length.out = n_colors + 1)
 
   # Prepare clustering if needed
   clustering_distance_rows <- if(doclust == "T") smplDist else "none"
   clustering_distance_cols <- if(doclust == "T") clstDist else "none"
-  
+
   # Create the heatmap
   p <- pheatmap(data1sc,
            color = color_mapping,
@@ -1042,7 +1060,8 @@ CreateStaticHeatmap <- function(data1sc, fzAnno, colors, nrows, x_start, y_start
            fontsize_col = fzCol,
            show_rownames = F,
            show_colnames = T,
-           annotation = annotation
+           annotation_col = annotation,
+           border_color = NA
   )
 
   return(p)
