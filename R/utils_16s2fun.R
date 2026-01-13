@@ -627,10 +627,12 @@ functional_prediction_final$description <- functional_prediction_final$KO<-NULL
   if(ncol(pathway_prediction) >= 3){
     col_sums = colSums(pathway_prediction[,-1])
     col_sums[col_sums == 0] = 1
-    pathway_prediction[,-1] = t(t(pathway_prediction[,-1]) / col_sums)
+    # OPTIMIZED: Use sweep for column-wise division instead of t(t()) (more efficient, avoids double transpose)
+    pathway_prediction[,-1] = sweep(pathway_prediction[,-1], 2, col_sums, "/")
     keep = which(rowSums(pathway_prediction[,-1]) > 0)
   } else {
-    pathway_prediction[,-1] = t(t(pathway_prediction[,-1]) / sum(pathway_prediction[,-1]))
+    # OPTIMIZED: Use sweep for column-wise division instead of t(t())
+    pathway_prediction[,-1] = sweep(pathway_prediction[,-1], 2, sum(pathway_prediction[,-1]), "/")
     keep = which(pathway_prediction[,2] > 0)
   }
   if(sum(pathway_prediction[,-1]) == 0) stop("Conversion to pathway failed!")

@@ -411,7 +411,7 @@ PlotFunctionStack <-function(mbSetObj, summaryplot, functionlvl, abundcal, genei
 
   data$facetOpt <- as.character(clsLbl_new);
   data$step <- factor(rownames(data), levels = rownames(data));
-  data <- melt(data,id=c('step', 'facetOpt'));
+  data <- reshape2::melt(data,id=c('step', 'facetOpt'));
 
 
   data$step <- as.numeric(data$step);

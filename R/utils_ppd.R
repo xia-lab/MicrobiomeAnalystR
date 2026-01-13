@@ -223,7 +223,7 @@ PCoA3DAnal.16SRef <- function(mbSetObj, barplotNm, ordMeth, distName, taxrank, m
     data1 <- as.matrix(otu_table(data));
     rownames(data1) <- nm;
     #all NA club together
-    data1 <- as.matrix(t(sapply(by(data1, rownames(data1), colSums), identity)));
+    data1 <- rowsum(as.matrix(data1), rownames(data1));
   }
   
   GP.ord <- ordinate(data, ordMeth, distName);

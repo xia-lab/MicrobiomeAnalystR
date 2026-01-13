@@ -580,7 +580,7 @@ PlotHeatmap <- function(mbSetObj, plotNm, dataOpt = "norm",
 
     rownames(data1) <- nm
     # all NA club together
-    data1 <- (t(sapply(by(data1, rownames(data1), colSums), identity)))
+    data1 <- rowsum(as.matrix(data1), rownames(data1));
     nm <- rownames(data1)
   }
 
@@ -900,8 +900,8 @@ PlotCovariateMap <- function(mbSetObj,
                              theme       = "default",
                              imgName     = "NA",
                              format      = "png",
-                             dpi         = 72,
-                             interactive = TRUE){
+                             dpi         = 96,
+                             interactive = FALSE){
 
   ## ── prepare data ───────────────────────────────────────────────────
   thresh    <- as.numeric(thresh)                  # p.lvl
@@ -912,29 +912,43 @@ PlotCovariateMap <- function(mbSetObj,
   ## flag significance
   both.mat$sig <- 10^(-both.mat$pval.adj) <= thresh     # TRUE / FALSE
 
-  ## tooltip
-
-  both.mat$tooltip <- with(both.mat, sprintf(
-  paste0("Feature: %s",
-         "<br>-log10(FDR – no cov): %.2f",
-         "<br>Adj‑P (no cov): %.3g",
-         "<br>-log10(FDR – cov): %.2f",
-         "<br>Adj‑P (cov): %.3g",
-         "<br>Significant: %s"),
-  Row.names,
-  fdr.no,  10^(-fdr.no),      # 10^(–log10) gives the original Adj‑P
-  fdr.adj, 10^(-fdr.adj),
-  ifelse(sig, "Yes", "No")))
+  ## tooltip (only create if interactive - performance optimization)
+  if (interactive) {
+    both.mat$tooltip <- with(both.mat, sprintf(
+    paste0("Feature: %s",
+           "<br>-log10(FDR – no cov): %.2f",
+           "<br>Adj‑P (no cov): %.3g",
+           "<br>-log10(FDR – cov): %.2f",
+           "<br>Adj‑P (cov): %.3g",
+           "<br>Significant: %s"),
+    Row.names,
+    fdr.no,  10^(-fdr.no),      # 10^(–log10) gives the original Adj‑P
+    fdr.adj, 10^(-fdr.adj),
+    ifelse(sig, "Yes", "No")))
+  }
 
   logp_val  <- -log10(thresh)
-  library(ggrepel)
+
+  ## Load ggrepel only if not already loaded (performance optimization)
+  if (!("ggrepel" %in% loadedNamespaces())) {
+    library(ggrepel)
+  }
 
   topFeature   <- min(5, nrow(both.mat))
-  base_aes     <- aes(x = fdr.no, y = fdr.adj,
-                      size = pval.adj,
-                      shape = sig,        # open vs filled
-                      color = sig,        # grey vs blue/black
-                      text  = tooltip)    # shown only by plotly
+
+  ## Create base aesthetic (text only if interactive - performance fix)
+  base_aes <- if (interactive) {
+    aes(x = fdr.no, y = fdr.adj,
+        size = pval.adj,
+        shape = sig,
+        color = sig,
+        text  = tooltip)
+  } else {
+    aes(x = fdr.no, y = fdr.adj,
+        size = pval.adj,
+        shape = sig,
+        color = sig)
+  }
 
   ## colours: non‑sig always grey; sig blue only if interactive
   col_vals <- if (interactive)
@@ -942,50 +956,41 @@ PlotCovariateMap <- function(mbSetObj,
               else
                 c(`FALSE` = "grey", `TRUE` = "black")
 
-  ## point layer (scale size/alpha for dense plots)
-  n_points <- nrow(both.mat)
-  point_size <- if (n_points > 2000) {
-    0.8
-  } else if (n_points > 1000) {
-    1.0
-  } else if (n_points > 300) {
-    1.5
-  } else {
-    2.5
-  }
-  point_alpha <- if (n_points > 2000) {
-    0.25
-  } else if (n_points > 1000) {
-    0.35
-  } else if (n_points > 300) {
-    0.5
-  } else {
-    0.8
-  }
-  point_layer <- geom_point(alpha = point_alpha, size = point_size)
+  ## point layer - hollow circles with light stroke and jitter for many overlapping points
+  point_layer <- geom_point(alpha = 0.7, size = 2.5, stroke = 0.5,
+                            position = position_jitter(width = 0.03, height = 0.03, seed = 123))
 
   ## build ggplot object (no diagonal line)
   p <- ggplot(both.mat, base_aes) +
-       scale_shape_manual(values = c(`FALSE` = 1,  `TRUE` = 16)) +
+       point_layer +
+       scale_shape_manual(values = c(`FALSE` = 1,  `TRUE` = 1)) +
        scale_color_manual(values = col_vals, guide = "none") +
        xlab("-log10(Adj. P): no covariate adjustment") +
        ylab("-log10(Adj. P): covariate adjustment") +
        geom_text_repel(data = both.mat[seq_len(topFeature), ],
-                       aes(label = Row.names), size = 3) +
+                       aes(label = Row.names), size = 3,
+                       max.overlaps = 10,
+                       max.iter = 100,
+                       max.time = 0.5) +
        guides(size = "none")
 
-  ## optional quadrant colouring
+  ## optional quadrant colouring (optimized with annotate for better performance)
   if (theme == "default") {
+    ## Get axis limits for rectangles
+    x_range <- range(both.mat$fdr.no, na.rm = TRUE)
+    y_range <- range(both.mat$fdr.adj, na.rm = TRUE)
+    x_max <- max(x_range[2], logp_val + 1)
+    y_max <- max(y_range[2], logp_val + 1)
+
     p <- p +
-      geom_rect(aes(xmin =  logp_val, xmax =  Inf,
-                    ymin =  logp_val, ymax =  Inf), fill = "#6699CC", alpha = 0.2, color = NA) +
-      geom_rect(aes(xmin = -Inf,      xmax =  logp_val,
-                    ymin = -Inf,      ymax =  logp_val), fill = "grey", alpha = 0.2, color = NA) +
-      geom_rect(aes(xmin =  logp_val, xmax =  Inf,
-                    ymin = -Inf,      ymax =  logp_val), fill = "#E2808A", alpha = 0.2, color = NA) +
-      geom_rect(aes(xmin = -Inf,      xmax =  logp_val,
-                    ymin =  logp_val, ymax =  Inf), fill = "#94C973", alpha = 0.2, color = NA) +
-      point_layer +
+      annotate("rect", xmin = logp_val, xmax = x_max,
+               ymin = logp_val, ymax = y_max, fill = "#6699CC", alpha = 0.3) +
+      annotate("rect", xmin = x_range[1], xmax = logp_val,
+               ymin = y_range[1], ymax = logp_val, fill = "grey", alpha = 0.3) +
+      annotate("rect", xmin = logp_val, xmax = x_max,
+               ymin = y_range[1], ymax = logp_val, fill = "#E2808A", alpha = 0.3) +
+      annotate("rect", xmin = x_range[1], xmax = logp_val,
+               ymin = logp_val, ymax = y_max, fill = "#94C973", alpha = 0.3) +
       theme_bw()
   } else {
     p <- p +
@@ -997,8 +1002,14 @@ PlotCovariateMap <- function(mbSetObj,
   ## ── static export ─────────────────────────────────────────────────
   fileName <- paste0(imgName, ".", format)
   mbSetObj$imgSet$covAdj <- fileName
-  Cairo::Cairo(file = fileName, unit = "in", dpi = dpi,
-               width = 8, height = 8.18, type = format)
+
+  ## Ensure high quality output (8x8 inches, minimum 96 dpi)
+  plot_width <- 8
+  plot_height <- 7
+  plot_dpi <- max(dpi, 96)  # Ensure minimum 96 dpi for quality
+
+  Cairo::Cairo(file = fileName, unit = "in", dpi = plot_dpi,
+               width = plot_width, height = plot_height, type = format)
   print(p); dev.off()
 
   ## ── interactive export ────────────────────────────────────────────
@@ -1006,7 +1017,7 @@ PlotCovariateMap <- function(mbSetObj,
     library(plotly)
     p <- p + theme(legend.position = "none")
     ggp_build <- layout(
-      ggplotly(p, width = 800, height = 600, tooltip = "text"),
+      ggplotly(p, width = 800, height = 720, tooltip = "text"),
       autosize = FALSE,
       margin   = mbSetObj$imgSet$margin.config
     )

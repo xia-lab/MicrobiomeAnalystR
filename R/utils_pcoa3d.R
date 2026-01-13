@@ -32,7 +32,7 @@ my.pcoa.3d <- function(mbSetObj, ordMeth, distName, taxrank, colopt, variable, t
       data1 <- as.matrix(otu_table(data));
       rownames(data1) <- nm;
       #all NA club together
-      data1 <- as.matrix(t(sapply(by(data1,rownames(data1),colSums),identity)));
+      data1 <- rowsum(as.matrix(data1), rownames(data1));
       feat_data <- data1[taxa,];
     }
     sample_data(data)$taxa <- feat_data;

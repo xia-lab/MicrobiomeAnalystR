@@ -330,9 +330,9 @@ ApplyAbundanceFilter <- function(mbSetObj, filt.opt, count, smpl.perc){
     if(filt.opt == "prevalence"){
       rmn_feat <- nrow(data);
       minLen <- smpl.perc*ncol(data);
-      kept.inx <- apply(data, MARGIN = 1,function(x) {sum(x >= count) >= minLen});
+      kept.inx <- rowSums(data >= count) >= minLen;
     }else if (filt.opt == "mean"){
-      filter.val <- apply(data, 1, mean, na.rm=T);
+      filter.val <- rowMeans(data, na.rm=T);
       kept.inx <- filter.val >= count;
     }else if (filt.opt == "median"){
       filter.val <- apply(data, 1, median, na.rm=T);
@@ -394,6 +394,7 @@ ApplyVarianceFilter <- function(mbSetObj, filtopt, filtPerct){
     remain <- rep(TRUE, rmn_feat);
   }else{
     mbSetObj$dataSet$var.filtered <- TRUE
+
     if (filtopt == "iqr"){
       filter.val <- apply(data, 1, IQR, na.rm=T);
       nm <- "IQR";
@@ -401,8 +402,8 @@ ApplyVarianceFilter <- function(mbSetObj, filtopt, filtPerct){
       filter.val <- apply(data, 1, sd, na.rm=T);
       nm <- "standard deviation";
     }else if (filtopt == "cov"){
+      mns <- rowMeans(data, na.rm=T);
       sds <- apply(data, 1, sd, na.rm=T);
-      mns <- apply(data, 1, mean, na.rm=T);
       filter.val <- abs(sds/mns);
       nm <- "Coeffecient of variation";
     }

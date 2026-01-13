@@ -327,10 +327,24 @@ IsTreeUploaded <- function(mbSetObj) {
 }
 
 RecordRCommand <- function(mbSetObj=NA, cmd){
-  write(cmd, file = "Rhistory.R", append = TRUE);
+  #write(cmd, file = "Rhistory.R", append = TRUE);
   mbSetObj <- .get.mbSetObj(mbSetObj); 
   mbSetObj$cmdSet <- c(mbSetObj$cmdSet, cmd);
   return(.set.mbSetObj(mbSetObj));
+}
+
+RecordRCommand <- function(mbSetObj=NA, cmd){
+  mbSetObj <- .get.mbSetObj(mbSetObj); 
+  mbSetObj$cmdSet <- c(mbSetObj$cmdSet, cmd);
+  return(.set.mbSetObj(mbSetObj));
+}
+
+SaveRCommands <- function(mbSetObj=NA){
+  mbSetObj <- .get.mbSetObj(mbSetObj);  
+  cmds <- paste(mbSetObj$cmdSet, collapse="\n");
+  pid.info <- paste0("# PID of current job: ", Sys.getpid());
+  cmds <- c(pid.info, cmds);
+  write(cmds, file = "Rhistory.R", append = FALSE);
 }
 
 GetRCommandHistory <- function(mbSetObj=NA){
@@ -616,7 +630,7 @@ UtilMakeCountTables <- function(phyloseq.obj, taxrank){
     data1 <- as(otu_table(phyloseq.obj), "matrix");
     rownames(data1) <- nm;
     #all NA club together
-    data1 <- as.matrix(t(sapply(by(data1, rownames(data1), colSums), identity)));
+    data1 <- rowsum(as.matrix(data1), rownames(data1));
   }
 
   return(data1)

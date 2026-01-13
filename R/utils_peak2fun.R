@@ -289,11 +289,13 @@ qs::qsave(mummichog.lib,"current_mummichog_lib.qs")
     }
     
     if(neg_matches){
-      matched_resn <- data.frame(matrix(unlist(matched_resn), nrow=length(matched_resn), byrow=T), stringsAsFactors = FALSE);
+      matched_resn <- data.frame(matrix(unlist(matched_resn), nrow=length(matched_resn), byrow=T),
+                                stringsAsFactors = FALSE);
     }
-    
+
     if(pos_matches){
-      matched_resp <- data.frame(matrix(unlist(matched_resp), nrow=length(matched_resp), byrow=T), stringsAsFactors = FALSE);
+      matched_resp <- data.frame(matrix(unlist(matched_resp), nrow=length(matched_resp), byrow=T),
+                                stringsAsFactors = FALSE);
     }
     
     if(neg_matches & pos_matches){ # both w. matches
@@ -311,8 +313,9 @@ qs::qsave(mummichog.lib,"current_mummichog_lib.qs")
       msg.vec <<- "No compound matches from upload peak list!"
       return(0)
     }
-    
-    matched_resp <- data.frame(matrix(unlist(matched_resp), nrow=length(matched_resp), byrow=T), stringsAsFactors = FALSE);
+
+    matched_resp <- data.frame(matrix(unlist(matched_resp), nrow=length(matched_resp), byrow=T),
+                              stringsAsFactors = FALSE);
     matched_res <- matched_resp;
     
   } else {
@@ -321,8 +324,9 @@ qs::qsave(mummichog.lib,"current_mummichog_lib.qs")
       msg.vec <<- "No compound matches from upload peak list!"
       return(0)
     }
-    
-    matched_resn <- data.frame(matrix(unlist(matched_resn), nrow=length(matched_resn), byrow=T), stringsAsFactors = FALSE);
+
+    matched_resn <- data.frame(matrix(unlist(matched_resn), nrow=length(matched_resn), byrow=T),
+                              stringsAsFactors = FALSE);
     matched_res <- matched_resn
   }
   

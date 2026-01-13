@@ -282,6 +282,7 @@ fast_tax_glom_first <- function(physeq, taxrank){
   }
   tax <- as(access(physeq, "tax_table"), "matrix")[, 1:CN, drop=FALSE];
   tax <- apply(tax, 1, function(i){paste(i, sep=";_;", collapse=";_;")});
+
   # using Map-Reduce/vectorized
   otab2 <- data.frame(otu_table(physeq),check.names=FALSE);
   taxdf <- data.frame(tax,check.names=FALSE);
@@ -328,18 +329,30 @@ condenseOTUs <- function(otutable, splitcol) {
 
   #add back rowname and remove tax column
   rownames(summeddf) <- newrownames
-  summeddf[, !colnames(summeddf) %in% c(splitcol)]
+  summeddf[, !colnames(summeddf) %in% c(splitcol), drop=FALSE]
 }
 
 # need to return consistent color assignments for the same taxa
 #'@export
-GetSeriesColors <- function(taxa=NULL){
+GetSeriesColors <- function(taxa=NULL, mbSetObj=NULL){
   if(!exists("pie.cols")){
     InitPieColors();
   }
-    
+
   if(is.null(taxa)){
-    taxa <- as.character(piedata$variable);
+    # If mbSetObj not provided, retrieve it from session
+    if(is.null(mbSetObj)){
+      mbSetObj <- .get.mbSetObj(NA);
+    } else {
+      mbSetObj <- .get.mbSetObj(mbSetObj);
+    }
+
+    # Try to get taxa from mbSetObj
+    if(!is.null(mbSetObj$temp$pie$piedata)){
+      taxa <- as.character(mbSetObj$temp$pie$piedata$variable);
+    } else {
+      stop("piedata not found in mbSetObj$temp$pie or global environment.");
+    }
   }
 
   col.len <- length(pie.cols);
