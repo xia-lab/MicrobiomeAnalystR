@@ -2402,9 +2402,16 @@ GenerateCompJson <- function(mbSetObj = NA, fileName, format,type, mode = 1, tax
       resList$param$multigroup <- TRUE
       don$shape <- "circle"
     }
-    
-    colors <- setNames(colorRampPalette(brewer.pal(8, "Set1"))(length(unique(resTable$parent))), unique(resTable$parent))
-    don$color <- unname(colors[match(don$parent, names(colors))])
+
+    # Check if there are unique parents before creating colors
+    unique_parents <- unique(resTable$parent)
+    if(length(unique_parents) > 0) {
+      colors <- setNames(colorRampPalette(brewer.pal(8, "Set1"))(length(unique_parents)), unique_parents)
+      don$color <- unname(colors[match(don$parent, names(colors))])
+    } else {
+      # If no unique parents, assign a default color
+      don$color <- "#808080"
+    }
     if("log2FC" %in% names(don)){
 don$color[don$FDR > sigLevel | abs(don$log2FC ) <fcLevel] <- "#808080"
   }else{
