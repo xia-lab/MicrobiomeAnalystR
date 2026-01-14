@@ -1115,16 +1115,23 @@ DoM2Mcorr <- function(mic.sig,met.sig,cor.method="univariate",cor.stat="pearson"
     corr.mat = res * scale
     
   }else if(cor.method=="discor"){
-    require(energy)
-    corr.mat <- matrix(data=NA,nrow=nrow(mic.sig),ncol = nrow(met.sig))
-    corr.pval <- matrix(data=NA,nrow=nrow(mic.sig),ncol = nrow(met.sig))
-    for(row in 1:nrow(mic.sig)){
-      res<-lapply(1:nrow(met.sig), function(y) {
-        corr=dcor.test(mic.sig[row,],met.sig[y,],R=100)
-        return(corr)
-      })
-      corr.mat[row,] <- unlist(lapply(res,function(z) return(z[["statistic"]])))
-      corr.pval[row,] <- unlist(lapply(res,function(z) return(z[["p.value"]])))
+    library(energy)
+    n_mic <- nrow(mic.sig)
+    n_met <- nrow(met.sig)
+    corr.mat <- matrix(data=NA, nrow=n_mic, ncol=n_met)
+    corr.pval <- matrix(data=NA, nrow=n_mic, ncol=n_met)
+
+    # Pre-transpose for faster column access
+    mic.sig.t <- t(mic.sig)
+    met.sig.t <- t(met.sig)
+
+    for(row in 1:n_mic){
+      mic_row <- mic.sig.t[, row]
+      for(col in 1:n_met){
+        corr <- energy::dcor.test(mic_row, met.sig.t[, col], R=99)
+        corr.mat[row, col] <- corr$statistic
+        corr.pval[row, col] <- corr$p.value
+      }
     }
     colnames(corr.mat) <- colnames(corr.pval) <- rownames(met.sig)
     rownames(corr.mat) <- rownames(corr.pval) <- rownames(mic.sig)   

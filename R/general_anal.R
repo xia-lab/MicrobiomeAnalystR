@@ -2494,17 +2494,31 @@ don$color[don$FDR > sigLevel] <- "#808080"
       p <- p+geom_rect(data=axisdf, aes(NULL,NULL,xmin=start,xmax=end,fill=as.factor(parent)),
                        ymin=0,ymax=Inf, colour="white", size=0, alpha=0.1)
     }
+    # Identify top 10 features with lowest p-values
+    don_sorted <- don[order(don$Pvalues), ]
+    top10_features <- don_sorted[1:min(10, nrow(don_sorted)), ]
+
     p<- p+scale_x_continuous( label = axisdf$parent, breaks= axisdf$center ) +
-      scale_y_continuous(expand = c(0, 0) ) +  
+      scale_y_continuous(expand = c(0, 0) ) +
       theme_bw() +
       theme(axis.text.x = element_text(angle=90,hjust =0.5,vjust = 0.5,size=6))+
       labs(x = "") +
-      theme( 
+      theme(
         legend.position="none",
         panel.border = element_blank(),
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank()
-      ) 
+      ) +
+      ggrepel::geom_text_repel(data = top10_features,
+                               aes(x = BPcum, y = -log10(Pvalues), label = id),
+                               size = 2.5,
+                               box.padding = 0.5,
+                               point.padding = 0.3,
+                               segment.size = 0.3,
+                               segment.color = "grey50",
+                               max.overlaps = 15,
+                               min.segment.length = 0,
+                               inherit.aes = FALSE)
     save(p,file=gsub("json","rda",fileName));
     Cairo::Cairo(file = fileName2, width = w, height = h,unit="in", type = format, bg = "white", dpi = 200)
     
@@ -2514,8 +2528,37 @@ don$color[don$FDR > sigLevel] <- "#808080"
     
   }
   
-  
-  json.obj <- rjson::toJSON(resList)
+
+  # JSON serialization with timeout protection to prevent hangs
+  json.obj <- tryCatch({
+    print("GenerateCompJson: Starting JSON serialization...");
+
+    # Check size of resList
+    resList_size_mb <- object.size(resList) / 1024^2;
+    print(paste("GenerateCompJson: resList size:", round(resList_size_mb, 2), "MB"));
+
+    if(resList_size_mb > 100) {
+      warning("GenerateCompJson: resList is very large (", round(resList_size_mb, 2), "MB). JSON serialization may be slow.");
+    }
+
+    # Set 60-second timeout for JSON serialization
+    setTimeLimit(cpu = Inf, elapsed = 60, transient = TRUE);
+
+    result <- rjson::toJSON(resList);
+    print("GenerateCompJson: JSON serialization completed successfully");
+    result
+  }, error = function(e) {
+    # Check if timeout
+    if(grepl("reached elapsed time limit", e$message, ignore.case = TRUE)) {
+      stop("GenerateCompJson: JSON serialization timed out after 60 seconds. Dataset may be too large.");
+    } else {
+      stop("GenerateCompJson: JSON serialization failed: ", e$message);
+    }
+  }, finally = {
+    # Always reset time limit
+    tryCatch(setTimeLimit(cpu = Inf, elapsed = Inf, transient = FALSE), error = function(e){});
+  });
+
   sink(fileName)
   cat(json.obj)
   sink()
@@ -2537,8 +2580,9 @@ don$color[don$FDR > sigLevel] <- "#808080"
 
   # Store the description in mbSetObj for later reference
   mbSetObj$analSet$comp.desc <- analysis_description
-  
-  return(.set.mbSetObj(mbSetObj))
+
+  .set.mbSetObj(mbSetObj)
+  return(1);  # Return success for Java
 }
 
 
@@ -2689,22 +2733,50 @@ PlotCompRes <- function(mbSetObj = NA, type = "", imgName = "") {
   # Define color and size mapping based on your getColor and getSizeForPValue functions
   raw_data$color <- mapply(getColor, raw_data$FDR, raw_data$log2FC, MoreArgs = list(p.lvl, fc.thresh))
   raw_data$size <- mapply(getSizeForPValue, raw_data$FDR, MoreArgs = list(p.lvl))
-  
+
+  # Identify top 10 features with lowest p-values for labeling
+  raw_data_sorted <- raw_data[order(raw_data$Pvalues), ]
+  top10_features <- raw_data_sorted[1:min(10, nrow(raw_data_sorted)), ]
+
   # Create the ggplot object based on the type of data
   if ("log2FC" %in% names(raw_data)) {
     p <- ggplot(raw_data, aes(x = log2FC, y = -log10(Pvalues), color = color, size = size)) +
       geom_point(alpha = 0.6) +
       scale_size_continuous(range = c(1, 10)) +
       scale_color_identity() +
-      labs(x = "log2FC", y = "-log10(P-value)", title = "Volcano Plot") +
-      theme_minimal()
+      labs(x = "log2FC", y = "-log10(P-value)") +
+      theme_minimal() +
+      theme(axis.title = element_text(size = 14),
+            axis.text = element_text(size = 12)) +
+      ggrepel::geom_text_repel(data = top10_features,
+                               aes(x = log2FC, y = -log10(Pvalues), label = id),
+                               size = 4,
+                               box.padding = 0.5,
+                               point.padding = 0.3,
+                               segment.size = 0.3,
+                               segment.color = "grey50",
+                               max.overlaps = 15,
+                               min.segment.length = 0,
+                               inherit.aes = FALSE)
   } else {
     p <- ggplot(raw_data, aes(x = seq_along(id), y = -log10(FDR), color = color, size = size)) +
       geom_point(alpha = 0.6) +
       scale_size_continuous(range = c(1, 10)) +
       scale_color_identity() +
-      labs(x = "Feature Index", y = "-log10(FDR)", title = "Feature Plot") +
-      theme_minimal()
+      labs(x = "Feature Index", y = "-log10(FDR)") +
+      theme_minimal() +
+      theme(axis.title = element_text(size = 14),
+            axis.text = element_text(size = 12)) +
+      ggrepel::geom_text_repel(data = top10_features,
+                               aes(x = match(id, raw_data$id), y = -log10(FDR), label = id),
+                               size = 4,
+                               box.padding = 0.5,
+                               point.padding = 0.3,
+                               segment.size = 0.3,
+                               segment.color = "grey50",
+                               max.overlaps = 15,
+                               min.segment.length = 0,
+                               inherit.aes = FALSE)
   }
   
   # Save the plot using Cairo for high quality output

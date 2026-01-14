@@ -436,7 +436,7 @@ sparse_dist = function(mat, wins_quant= c(0.05, 0.95), R, thresh_hard = 0, max_p
                                        function(y) {
                                            z = x[!is.na(y)]
                                            y = y[!is.na(y)]
-                                           dcor(z, y, index = 1.0)
+                                           energy::dcor(z, y, index = 1.0)
                                            })
 
         # P-values
@@ -444,7 +444,7 @@ sparse_dist = function(mat, wins_quant= c(0.05, 0.95), R, thresh_hard = 0, max_p
                                        function(y) {
                                            z = x[!is.na(y)]
                                            y = y[!is.na(y)]
-                                           dcor.test(z, y, index = 1.0, R = R)$p.value
+                                           energy::dcor.test(z, y, index = 1.0, R = R)$p.value
                                            })
 
         list(dcorr_idx, p_val_idx)
