@@ -1608,6 +1608,13 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
   mbSetObj$analSet$integration$sign <- sign
   mbSetObj$imgSet$heatmap_cormmp <- plotwidget
 
+  # Store image in reportSet for slide generation based on htMode
+  if(htMode == "corrht"){
+    mbSetObj$imgSet$reportSet$corrht <- plotNm
+  }else if(htMode == "predht"){
+    mbSetObj$imgSet$reportSet$predht <- plotNm
+  }
+
   message("heatmap done")
   .set.mbSetObj(mbSetObj)
   return(overlyNum)
@@ -2942,6 +2949,10 @@ CreatM2MHeatmapList<-function(mbSetObj, plotNm,  format="png",
   mbSetObj$analSet$integration$htMode <- "prediction"
   mbSetObj$analSet$integration$potential <- potential.thresh;
   mbSetObj$imgSet$heatmap_predmmp <- plotwidget;
+
+  # Store image in reportSet for slide generation (list input uses predht mode)
+  mbSetObj$imgSet$reportSet$predht <- plotNm
+
   message("heatmap done")
   return(.set.mbSetObj(mbSetObj))
 }
