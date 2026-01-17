@@ -509,7 +509,9 @@ sweaveBash4execPro <- function(users.path, isfromGoogle = FALSE, source_path){
 
   ## Prepare Configuration script for slurm running
   conf_inf <- paste0("#!/bin/bash\n#\n#SBATCH --job-name=16S_Processing\n#\n#SBATCH --ntasks=2\n#SBATCH --time=600:00\n#SBATCH --mem-per-cpu=5G\n#SBATCH --cpus-per-task=2\n#SBATCH --output=", users.path, "/seq_process_details.txt\n")
-  
+  if(file.exists("/docker_marker")){
+      conf_inf <- paste0("#!/bin/bash\n#\n#SBATCH --job-name=16S_Processing\n#\n#SBATCH --ntasks=2\n#SBATCH --time=3600:00\n#SBATCH --output=", users.path, "/seq_process_details.txt\n")  
+  }
   ## to check if need to download files from google drive at the begining
   if(isfromGoogle){
     download_script <- paste0("Rscript --vanilla ", source_path, "/XiaLabPro/R/download_googledrive.R ", users.path)
