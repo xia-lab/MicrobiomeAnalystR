@@ -637,9 +637,11 @@ UtilMakeCountTables <- function(phyloseq.obj, taxrank){
 }
 
 saveSet <- function(obj=NA, set="", output=1){
-  
-  if(globalConfig$anal.mode == "api"){ 
+
+  if(globalConfig$anal.mode == "api"){
     qs:::qsave(obj, paste0(set, ".qs"));
+    # CRITICAL: Prevent race condition - allow file system to sync before Java reads
+    Sys.sleep(0.15);
     return(output)
   }else{
     if(set == "dataSet"){
