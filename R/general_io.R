@@ -407,12 +407,34 @@ IsPoorReplicate <- function(mbSetObj){
 }
 
 GetResMat <- function(mbSetObj){
-  mbSetObj <- .get.mbSetObj(mbSetObj); 
-  return(as.matrix(signif(mbSetObj$analSet$resTable),5));
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  res_mat <- as.matrix(signif(mbSetObj$analSet$resTable, 5));
+
+  # Save as Arrow for zero-copy Java access
+  tryCatch({
+    res_df <- as.data.frame(res_mat);
+    res_df$rownames <- rownames(res_mat);
+    arrow::write_feather(res_df, "res_mat.arrow", compression = "uncompressed");
+  }, error = function(e) {
+    warning(paste("Arrow save failed for res_mat:", e$message));
+  });
+
+  return(res_mat);
 }
 
 GetResMetabo <- function(){
-  return(as.matrix(current.proc$met$res_deAnal));
+  res_mat <- as.matrix(current.proc$met$res_deAnal);
+
+  # Save as Arrow for zero-copy Java access
+  tryCatch({
+    res_df <- as.data.frame(res_mat);
+    res_df$rownames <- rownames(res_mat);
+    arrow::write_feather(res_df, "res_metabo.arrow", compression = "uncompressed");
+  }, error = function(e) {
+    warning(paste("Arrow save failed for res_metabo:", e$message));
+  });
+
+  return(res_mat);
 }
 
 # type can be all, discrete or continuous

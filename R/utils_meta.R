@@ -288,11 +288,19 @@ GetMetaResultMatrix<-function(single.type="fc"){
   }
 
   meta.mat2 <-signif(as.matrix(meta.mat2), 5);
-  #print(head(meta.mat2));
-  #print("head(meta.mat2)");
+
+  # Save as Arrow for zero-copy Java access
+  tryCatch({
+    arrow_file <- paste0("meta_res_mat_", single.type, ".arrow");
+    meta_df <- as.data.frame(meta.mat2);
+    meta_df$rownames <- rownames(meta.mat2);
+    arrow::write_feather(meta_df, arrow_file, compression = "uncompressed");
+  }, error = function(e) {
+    warning(paste("Arrow save failed for meta_res_mat:", e$message));
+  });
 
   return(meta.mat2);
-  
+
 }
 
 GetMetaStat<-function(){
@@ -456,11 +464,21 @@ GetResMatrix<- function(mbSetObj, type="alpha"){
         df <- mbSetObj$analSet$beta.summary
         # Subset only numeric columns
         df <- df[, -c((ncol(df)-1):ncol(df))]
-
-
     }
 
-    return(signif(as.matrix(df), 5))
+    result_mat <- signif(as.matrix(df), 5);
+
+    # Save as Arrow for zero-copy Java access
+    tryCatch({
+        arrow_file <- paste0("res_mat_", type, ".arrow");
+        result_df <- as.data.frame(result_mat);
+        result_df$rownames <- rownames(result_mat);
+        arrow::write_feather(result_df, arrow_file, compression = "uncompressed");
+    }, error = function(e) {
+        warning(paste("Arrow save failed for res_mat:", e$message));
+    });
+
+    return(result_mat);
 }
 
 GetResMetric<- function(mbSetObj, type="alpha"){

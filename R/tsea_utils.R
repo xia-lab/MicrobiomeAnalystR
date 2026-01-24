@@ -246,6 +246,15 @@ CalculateHyperScore <- function(mbSetObj){
   mbSetObj$analSet$ora.hits = hits;
   fast.write(mbSetObj$analSet$ora.mat, file="tsea_ora_result.csv");
 
+  # Save as Arrow for zero-copy Java access
+  tryCatch({
+    ora_df <- as.data.frame(mbSetObj$analSet$ora.mat);
+    ora_df$rownames <- rownames(mbSetObj$analSet$ora.mat);
+    arrow::write_feather(ora_df, "ora_mat.arrow", compression = "uncompressed");
+  }, error = function(e) {
+    warning(paste("Arrow save failed for ora_mat:", e$message));
+  });
+
   return(.set.mbSetObj(mbSetObj));
   
 }
