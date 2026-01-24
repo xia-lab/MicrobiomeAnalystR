@@ -511,7 +511,18 @@ GetORA.rowNames<-function(mbSetObj){
 # Getter
 GetORA.mat<-function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  return(mbSetObj$analSet$ora.mat);
+  ora_mat <- mbSetObj$analSet$ora.mat;
+
+  # Save as Arrow for zero-copy Java access
+  tryCatch({
+    ora_df <- as.data.frame(ora_mat);
+    ora_df$rownames <- rownames(ora_mat);
+    arrow::write_feather(ora_df, "ora_mat.arrow", compression = "uncompressed");
+  }, error = function(e) {
+    warning(paste("Arrow save failed for ora_mat:", e$message));
+  });
+
+  return(ora_mat);
 }
 
 # Getter

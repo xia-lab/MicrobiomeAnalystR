@@ -2317,7 +2317,18 @@ GetRFSigColNames<-function(mbSetObj){
 # return double[][] confusion matrix
 GetRFConfMat<-function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  return(signif(mbSetObj$analSet$rf$confusion,3));
+  conf_mat <- signif(mbSetObj$analSet$rf$confusion, 3);
+
+  # Save as Arrow for zero-copy Java access
+  tryCatch({
+    conf_df <- as.data.frame(conf_mat);
+    conf_df$rownames <- rownames(conf_mat);
+    arrow::write_feather(conf_df, "rf_confusion_mat.arrow", compression = "uncompressed");
+  }, error = function(e) {
+    warning(paste("Arrow save failed for rf_confusion_mat:", e$message));
+  });
+
+  return(conf_mat);
 }
 
 GetRFConfRowNames<-function(mbSetObj){
