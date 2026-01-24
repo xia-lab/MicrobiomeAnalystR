@@ -1014,7 +1014,7 @@ GetKeggProjectionType <- function(mbSetObj=NA){
     }else{
         res <- mbSetObj$paramSet$koProj.type;
     }
-    print(res);
+    #print(res);
     return(res);
 }
 
@@ -1030,8 +1030,8 @@ recordEnrTable <- function(mbSetObj, vis.type, dataTable, library, algo, mset=NA
         if(is.null(mbSetObj$imgSet$enrTables)){
             mbSetObj$imgSet$enrTables <- list();
         }
-        print("recordEnr");
-        print(vis.type);
+        #print("recordEnr");
+        #print(vis.type);
         mbSetObj$imgSet$enrTables[[vis.type]] <- list();
         mbSetObj$imgSet$enrTables[[vis.type]]$table <- dataTable;
         mbSetObj$imgSet$enrTables[[vis.type]]$library <- library;
@@ -1385,7 +1385,7 @@ library(RSQLite)
   # Assign original KO IDs to unmapped entries
   na.inx <- is.na(kos)
   kos[na.inx] <- enIDs[na.inx]
-  print(head(kos));
+  #print(head(kos));
   return(kos)
 }
 

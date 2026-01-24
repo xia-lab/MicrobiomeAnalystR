@@ -1624,7 +1624,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
             }
             taxa_names(taxa_table)<-c(1:nrow(taxa_table));
           }else if(any(c(taxa_type=="GreengenesID", taxa_type=="Others/Not_specific"))){
-            print("here")
+            #print("here")
 
             # need to parse Taxonomy still!
             suppressMessages(library(splitstackshape));               

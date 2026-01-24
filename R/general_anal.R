@@ -2097,7 +2097,7 @@ KendallCorrFunc <- function(var1, var2, data){
 GenerateTemplates <- function(mbSetObj, variable){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  print(variable)
+  #print(variable)
   clslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   level.len <- length(levels(clslbl));
   # only specify 4: increasing, decreasing, mid high, mid low, constant
@@ -2393,7 +2393,7 @@ GenerateCompJson <- function(mbSetObj = NA, fileName, format,type, mode = 1, tax
                         left_join(resTable, ., by = c("parent" = "parent")) %>%
                         arrange(parent, len) %>%
                         mutate(BPcum = len + tot))
-    print(type)
+    #print(type)
     if (type %in% c("EdgeR", "DESeq2","ffm")) {
       don$shape <- ifelse(don$log2FC > 0, "triangle-up", "triangle-down")
       don$shape[don$FDR > sigLevel | abs(don$log2FC) < fcLevel] <- "circle"

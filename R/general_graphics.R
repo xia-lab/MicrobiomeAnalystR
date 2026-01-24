@@ -789,8 +789,8 @@ as_list <- to_plotly_list(p)
 
   # Store the static heatmap path for report generation
   mbSetObj$imgSet$heatmap <- imgFile
-  print(paste("DEBUG PlotHeatmap: Stored heatmap image path:", imgFile))
-  print(paste("DEBUG PlotHeatmap: File exists:", file.exists(imgFile)))
+  #print(paste("DEBUG PlotHeatmap: Stored heatmap image path:", imgFile))
+  #print(paste("DEBUG PlotHeatmap: File exists:", file.exists(imgFile)))
 
   return(.set.mbSetObj(mbSetObj))
 }

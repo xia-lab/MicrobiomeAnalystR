@@ -425,7 +425,7 @@ CompareMet <- function(mbSetObj, analysisVar,alg="limma",plvl=0.05,ref, compr, s
   fast.write(metdat.de, file="limma_output.csv");
   current.proc$met$res_deAnal <<- metdat.de
   mbSetObj$dataSet$metabolomics$resTable <- metdat.de
-  print(colnames(metdat.de))
+  #print(colnames(metdat.de))
   sigfeat <- rownames(metdat.de)[metdat.de$P_value < plvl];
   sig.count <- length(sigfeat);
   if(sig.count == 0){

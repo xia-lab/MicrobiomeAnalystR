@@ -24,7 +24,7 @@ PerformAlphaDiversityComp <- function(mbSetObj, opt, metadata, pair.wise = "fals
   cls <- as.factor(data[,metadata]);
   x <- data$value;
   stat.info <- NULL;
-  print(c("cls",cls))
+  #print(c("cls",cls))
   if(length(levels(cls)) > 2){
     if(opt=="nonpar"){
       res <- kruskal.test(x ~ cls);

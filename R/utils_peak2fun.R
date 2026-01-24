@@ -155,7 +155,7 @@ shadow_save(mummichog.lib,"current_mummichog_lib.qs")
   
   
   ref_mzlist <- as.numeric(current.proc$ref_mz);
-  print(paste0("Got ", length(ref_mzlist), " mass features."))
+  #print(paste0("Got ", length(ref_mzlist), " mass features."))
   pos_inx <- current.proc$pos_inx;
   ref_mzlistp <- ref_mzlist[pos_inx];
   ref_mzlistn <- ref_mzlist[!pos_inx];

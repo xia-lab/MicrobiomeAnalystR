@@ -320,7 +320,7 @@ GetMetaDataGroups <- function(mbSetObj=NA, dataName){
   }
   colnms = colnames(mbSetObj$dataSet$sample_data)
 
-  print(head(mbSetObj$dataSet$sample_data))
+  #print(head(mbSetObj$dataSet$sample_data))
   return(colnms[colnms!="sample_id"]);
   
 }

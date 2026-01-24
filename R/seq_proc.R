@@ -658,7 +658,7 @@ exportSampleNMs <- function(mbSetObj = NA){
     .set.mbSetObj(mbSetObj)
     return(dataObj[["sample.names"]]);
   } else {
-    print(dataObj[["sample.names"]]);
+    #print(dataObj[["sample.names"]]);
     return(.set.mbSetObj(mbSetObj))
   }
 }
@@ -676,7 +676,7 @@ exportSampleTrackTable <- function(mbSetObj = NA){
     .set.mbSetObj(mbSetObj)
     return(dataObj[["res"]][["track"]]);
   } else {
-    print(dataObj[["res"]][["track"]]);
+    #print(dataObj[["res"]][["track"]]);
     return(.set.mbSetObj(mbSetObj))
   }
   
@@ -716,7 +716,7 @@ exportOTUtaxaInfo <- function(mbSetObj = NA, taxaLevel = 1){
     .set.mbSetObj(mbSetObj)
     return(resv);
   } else {
-    print(resv);
+    #print(resv);
     return(.set.mbSetObj(mbSetObj))
   }
 }

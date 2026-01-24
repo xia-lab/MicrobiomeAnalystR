@@ -288,10 +288,10 @@ GetMetaResultMatrix<-function(single.type="fc"){
   }
 
   meta.mat2 <-signif(as.matrix(meta.mat2), 5);
-  print(head(meta.mat2));
-  print("head(meta.mat2)");
+  #print(head(meta.mat2));
+  #print("head(meta.mat2)");
 
-  meta.mat2;
+  return(meta.mat2);
   
 }
 
