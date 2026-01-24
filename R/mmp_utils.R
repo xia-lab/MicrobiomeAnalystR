@@ -47,7 +47,7 @@ CreateMMPFakeFile <- function(mbSetObj,isNormalized="true",isNormalizedMet="true
       data.list$count_tables[[i]] <- count.table
     }
     
-    qs::qsave(data.list,"prescale.phyobj.qs")
+    shadow_save(data.list,"prescale.phyobj.qs")
     current.proc$mic$data.proc<<- data.list$count_tables[["OTU"]]
     
     saveDataQs(data.list, "phyloseq_prenorm_objs.qs",module.type, mbSetObj$dataSet$name);  
@@ -59,7 +59,7 @@ CreateMMPFakeFile <- function(mbSetObj,isNormalized="true",isNormalizedMet="true
     
     mbSetObj$dataSet$metabolomics$filt.data <- mbSetObj$dataSet$metabolomics$norm.data <- mbSetObj$dataSet$metabolomics$data.orig; ## feature in row and sample in column
     
-    qs::qsave( mbSetObj$dataSet$metabolomics$norm.data, file="metabo.complete.norm.qs");
+    shadow_save( mbSetObj$dataSet$metabolomics$norm.data, file="metabo.complete.norm.qs");
     
     current.proc$met$data.proc<<-mbSetObj$dataSet$metabolomics$data.orig
     
@@ -132,7 +132,7 @@ PerformDEAnalyse<- function(mbSetObj, taxalvl="Genus",netType="gem",overlay,init
           m2m_for_de <- m2m_for_de %>% filter(pair %in% tokeep$Group.1)
           m2m_pair_dat <- reshape2::dcast(m2m_for_de,pair~sample,value.var = "value")
           pred.dat[[taxalvl2]] <- m2m_pair_dat
-          #qs::qsave(list(m2m_for_de=m2m_for_de,m2m_pair_dat=m2m_pair_dat),"m2m_pair_pred.qs")
+          #shadow_save(list(m2m_for_de=m2m_for_de,m2m_pair_dat=m2m_pair_dat),"m2m_pair_pred.qs")
           rownames(m2m_pair_dat) <- m2m_pair_dat$pair
           m2m_pair_dat$pair <- NULL
           m2m_pair_de <- performLimma(m2m_pair_dat,sample_data,sample_type,analysisVar)
@@ -142,7 +142,7 @@ PerformDEAnalyse<- function(mbSetObj, taxalvl="Genus",netType="gem",overlay,init
           
         }
         
-        qs::qsave(list(pred.dat=pred.dat,predDE=predDE),"m2m_pair_de.qs")
+        shadow_save(list(pred.dat=pred.dat,predDE=predDE),"m2m_pair_de.qs")
       }
       
     }else if(netType=="kegg"){
@@ -169,7 +169,7 @@ PerformDEAnalyse<- function(mbSetObj, taxalvl="Genus",netType="gem",overlay,init
         tokeep <- aggregate(m2m_for_de$value,list(m2m_for_de$pair),sum) %>% filter(x!=0)
         m2m_for_de <- m2m_for_de %>% filter(pair %in% tokeep$Group.1)
         m2m_pair_dat <- reshape2::dcast(m2m_for_de,pair~sample,value.var = "value")
-        qs::qsave(list(m2m_for_de=m2m_for_de,m2m_pair_dat=m2m_pair_dat),"m2m_pair_pred.qs")
+        shadow_save(list(m2m_for_de=m2m_for_de,m2m_pair_dat=m2m_pair_dat),"m2m_pair_pred.qs")
         rownames(m2m_pair_dat) <- m2m_pair_dat$pair
         m2m_pair_dat$pair <- NULL
         m2m_pair_de <- performLimma(m2m_pair_dat,sample_data,sample_type,analysisVar)
@@ -177,7 +177,7 @@ PerformDEAnalyse<- function(mbSetObj, taxalvl="Genus",netType="gem",overlay,init
         m2m_pair_de$met <- m2m_for_de$Var2[match(rownames(m2m_pair_de),m2m_for_de$pair)]
         
         mbSetObj$analSet$m2m_pair_de <- m2m_pair_de
-        qs::qsave(m2m_pair_de,"m2m_pair_de.qs")
+        shadow_save(m2m_pair_de,"m2m_pair_de.qs")
       }
       
     }
@@ -187,7 +187,7 @@ PerformDEAnalyse<- function(mbSetObj, taxalvl="Genus",netType="gem",overlay,init
   
   phyloseq_objs$res_deAnal <- micdat.de
   mbSetObj$dataSet$metabolomics$res_deAnal <- metdat.de
-  qs::qsave(phyloseq_objs,"phyloseq_objs.qs")
+  shadow_save(phyloseq_objs,"phyloseq_objs.qs")
   return(.set.mbSetObj(mbSetObj))
 }
 
@@ -258,7 +258,7 @@ PerformPairDEAnalyse <- function(mbSetObj, taxalvl, analysisVar,alg="limma",plvl
         m2m_pair_de <- list()
         m2m_pair_de$pred.dat <- pred.dat
         m2m_pair_de$predDE <- predDE
-        qs::qsave(m2m_pair_de,"m2m_pair_de.qs")
+        shadow_save(m2m_pair_de,"m2m_pair_de.qs")
         
         
       }else{
@@ -747,7 +747,7 @@ ProcessMaaslinRes <- function(mbSetObj,taxalvl,analysis.var,thresh){
     phyloseq_objs <- qs::qread("phyloseq_objs.qs")
     phyloseq_objs$res_deAnal[[taxalvl]] <- res
     phyloseq_objs$sigfeat[[taxalvl]] <- rownames(phyloseq_objs$res_deAnal[[taxalvl]])[phyloseq_objs$res_deAnal[[taxalvl]]$P_value< plvl]
-    qs::qsave(phyloseq_objs,"phyloseq_objs.qs")
+    shadow_save(phyloseq_objs,"phyloseq_objs.qs")
     
   }
    mbSetObj$analSet$maaslin$taxalvl <- "OTU"
@@ -824,7 +824,7 @@ MetaboIDmap <- function(netModel,predDB,IDtype,met.vec=NA){
   
   
   if(inputType=="table"){
-    qs::qsave(met.map,paste0(netModel,".met.map.qs"))
+    shadow_save(met.map,paste0(netModel,".met.map.qs"))
     
     current.proc[[netModel]]<<-met.map
     fast.write(met.map, file=paste0(netModel,"_metabo_match_result.csv"))
@@ -902,7 +902,7 @@ MicIDmap <- function(netModel,predDB,taxalvl="all"){
   }
   
   
-  qs::qsave(mic.map,paste0(netModel,".mic.map.qs"))
+  shadow_save(mic.map,paste0(netModel,".mic.map.qs"))
   return(1)
 }
 
@@ -971,7 +971,7 @@ CreatPathwayLib <- function(contain){
   
   includeInfo$edges = edges
   
-  qs::qsave(current.lib,paste0(taxalvl,".current.lib.qs"))
+  shadow_save(current.lib,paste0(taxalvl,".current.lib.qs"))
   
   json.mat <- rjson::toJSON(includeInfo);
   sink(paste0(includeInfoNm, ".json"));
@@ -1020,7 +1020,7 @@ M2Mprediction<- function(model,predDB,taxalvl,psc=0.5,metType="metabolite"){
   # mbSetObj$analSet$m2m.pred <- predres
   #mbSetObj$imgSet$m2m.pred <- imgName;
   
-  qs::qsave(predres,paste0("m2m_pred_",predDB,".qs"))
+  shadow_save(predres,paste0("m2m_pred_",predDB,".qs"))
   
   message("Prediction completed!")
   return(1)
@@ -1725,7 +1725,7 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
     met.map <-  qs::qread("keggNet.met.map.qs")
     met.map <- met.map[!(is.na(met.map$Node)),]
     met.map$include = ifelse(met.map$Match %in% unique(unlist(current.set)),T,F)
-    qs::qsave(met.map,"keggNet.met.map.qs")
+    shadow_save(met.map,"keggNet.met.map.qs")
     colnames(metmat) <- met.map$Match[match(colnames(metmat),met.map$Query)]
     datmat <- metmat[,which(colnames(metmat)!='')]
     
@@ -1795,7 +1795,7 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
   
   dat.in <- list(cls=phenotype, data=datmat, subsets=hits, set.num=set.num, filenm=file.nm , my.fun=my.fun);
   
-  qs::qsave(dat.in, file="dat.in.qs");
+  shadow_save(dat.in, file="dat.in.qs");
   return(1);
 }
 
@@ -2799,7 +2799,7 @@ M2MPredictionList<- function(mbSetObj,model,predDB,psc=0.5,metType="metabolite",
   
   
   mbSetObj$analSet$predres<-m2m_ls
-  qs::qsave(m2m_ls,paste0("m2m_pred_",predDB,".qs"))
+  shadow_save(m2m_ls,paste0("m2m_pred_",predDB,".qs"))
   mbSetObj$analSet$integration$db <- predDB;
   message("Prediction completed!")
   return(.set.mbSetObj(mbSetObj));

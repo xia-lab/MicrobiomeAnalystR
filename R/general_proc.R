@@ -280,8 +280,8 @@ SanityCheckMetData <- function(mbSetObj,isNormMetInput, disableFilter = FALSE){
   mbSetObj$dataSet$metabolomics$isNormInput <- isNormMetInput;
   samname_same_number <- sum(row.names(mbSetObj$dataSet$sample_data) %in% colnames(data.proc));
   # now store data.orig to RDS
-  qs::qsave(mbSetObj$dataSet$metabolomics$data.orig, file="metabo.data.orig.qs");
-  qs::qsave(int.mat, file="metabo.data.init.qs");
+  shadow_save(mbSetObj$dataSet$metabolomics$data.orig, file="metabo.data.orig.qs");
+  shadow_save(int.mat, file="metabo.data.init.qs");
   current.proc$met$data.proc<<-int.mat
   
   if(.on.public.web){
@@ -359,7 +359,7 @@ ApplyAbundanceFilter <- function(mbSetObj, filt.opt, count, smpl.perc){
   }
   
   saveDataQs(mbSetObj$dataSet$filt.data, "filt.data.orig", module.type, dataName);
-  #qs::qsave(mbSetObj$dataSet$filt.data, file="filt.data.orig"); # save an copy
+  #shadow_save(mbSetObj$dataSet$filt.data, file="filt.data.orig"); # save an copy
   current.msg <<- paste("A total of ", sum(!kept.inx), " low abundance features were removed based on ", filt.opt, ".", sep="");
   
   return(.set.mbSetObj(mbSetObj));
@@ -425,7 +425,7 @@ ApplyVarianceFilter <- function(mbSetObj, filtopt, filtPerct){
     current.proc$mic$data.proc<<-data
   }
   
-  #qs::qsave(mbSetObj$dataSet$filt.data, file="filt.data.orig"); # save an copy
+  #shadow_save(mbSetObj$dataSet$filt.data, file="filt.data.orig"); # save an copy
   saveDataQs(mbSetObj$dataSet$filt.data, "filt.data.orig", module.type, dataName);
 
   rm.msg1 <- paste0("A total of ", sum(!remain), " low variance features were removed based on ", filtopt);
@@ -526,7 +526,7 @@ ApplyMetaboFilter <- function(mbSetObj=NA, filter,  rsd){
   filt.res=int.mat[, remain]
   mbSetObj$dataSet$metabolomics$filt.data <- t(filt.res); 
   current.proc$met$data.proc<<-t(filt.res)
-  qs::qsave(mbSetObj$dataSet$metabolomics$filt.data, file="metabo.filt.data"); # save an copy
+  shadow_save(mbSetObj$dataSet$metabolomics$filt.data, file="metabo.filt.data"); # save an copy
   current.msg <<- msg
   mbSetObj$dataSet$metabolomics$filt.msg <- current.msg;
   return(.set.mbSetObj(mbSetObj));
@@ -574,7 +574,7 @@ UpdateSampleItems <- function(mbSetObj){
   mbSetObj$dataSet$remsam <- allnm[unmhit.indx];
  
   mbSetObj$dataSet$proc.phyobj <- prune_samples(colnames(prefilt.data),proc.phyobj.orig);
-  qs::qsave(prefilt.data, file="data.prefilt")
+  shadow_save(prefilt.data, file="data.prefilt")
   current.msg <<- "Successfully updated the sample items!";
   
   # need to update metadata info after removing samples
@@ -763,7 +763,7 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
   
   ### prepare for mmp module
   if(exists("current.proc")){
-    qs::qsave(data.list,"prescale.phyobj.qs")
+    shadow_save(data.list,"prescale.phyobj.qs")
     if(isAutoScale=="true" | scale.opt == "auto"){
       data.list$count_tables <- lapply(data.list$count_tables,function(df) t(AutoScale(t(df))))
     }  
@@ -849,7 +849,7 @@ PerformMetaboNormalization <- function(mbSetObj, rowNorm, transNorm, scaleNorm,i
   
   # record row-normed data for fold change analysis (b/c not applicable for mean-centered data)
   row.norm <- as.data.frame(CleanData(data, T, T)); #moved below ratio 
-  qs::qsave(row.norm, file="metabo.row.norm.qs");
+  shadow_save(row.norm, file="metabo.row.norm.qs");
   # transformation
   # may not be able to deal with 0 or negative values
   if(transNorm=='LogNorm'){
@@ -916,7 +916,7 @@ PerformMetaboNormalization <- function(mbSetObj, rowNorm, transNorm, scaleNorm,i
   
   mbSetObj$dataSet$metabolomics$norm.data <- t(as.data.frame(data)); ## feature in row and sample in column
   
-  qs::qsave( mbSetObj$dataSet$metabolomics$norm.data, file="metabo.complete.norm.qs");
+  shadow_save( mbSetObj$dataSet$metabolomics$norm.data, file="metabo.complete.norm.qs");
   
   current.proc$met$data.proc<<-t(as.data.frame(data))
   
@@ -1432,7 +1432,7 @@ PlotPCAView <- function(imgName, format="png", dpi=72,init){
     pct[[nm]] <- unname(round(imp.pca[2,],3))[c(1:3)]*100;
   }
   pca.list$pct2 <- pct;
-  qs::qsave(pca.list, file="pca.scatter.qs");
+  shadow_save(pca.list, file="pca.scatter.qs");
   
   h<-6*round(length(fig.list)/2)
   Cairo::Cairo(file=imgName, width=14, height=h, type=format, bg="white", unit="in", dpi=dpi);
@@ -1705,7 +1705,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
           if(mbSetObj$tree.uploaded & mbSetObj$dataSet$tree_tip==1){
             pg_tree <- qs::qread("tree.qs");
             pg_tree$tip.label <- new.nms[pg_tree$tip.label];
-            qs::qsave(pg_tree, "tree.qs");
+            shadow_save(pg_tree, "tree.qs");
           }
         }
         nm<-colnames(taxa_table);
@@ -1976,7 +1976,7 @@ CreateFakeFile <- function(mbSetObj,isNormalized="true",isNormalizedMet,module.t
   }
   
   if(exists("current.proc")){
-    qs::qsave(data.list,"prescale.phyobj.qs")
+    shadow_save(data.list,"prescale.phyobj.qs")
     
     current.proc$mic$data.proc<<- data.list$count_tables[["OTU"]]
     

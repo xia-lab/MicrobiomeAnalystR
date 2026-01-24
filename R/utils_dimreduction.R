@@ -159,8 +159,8 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
     procrustes.res$pos.xyz = lapply(pos.xyz,function(x) unitAutoScale(x))
     procrustes.res$newmeta = newmeta
     combined.res$meta = newmeta
-    qs::qsave(combined.res,"combined.res.qs")
-    qs::qsave(procrustes.res,"procrustes.res.qs")
+    shadow_save(combined.res,"combined.res.qs")
+    shadow_save(procrustes.res,"procrustes.res.qs")
   }
 
     pos.xyz <- lapply(pos.xyz,function(x) as.data.frame(x)[,c(1:3)]);
@@ -200,8 +200,8 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
     diablo.res$loadingNames <- loadingNames
     diablo.res$loading.enrich = loadingSymbols
     diablo.res$newmeta=newmeta
-    qs::qsave(combined.res,"combined.res.qs")
-    qs::qsave(diablo.res,"diablo.res.qs")
+    shadow_save(combined.res,"combined.res.qs")
+    shadow_save(diablo.res,"diablo.res.qs")
     
   }
   reductionOptGlobal <<- reductionOpt;

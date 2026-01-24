@@ -54,7 +54,7 @@ system(my.cmd);
   }
   
   if(opt=="corr"){
-    qs::qsave(data1, "sparcc_full_data.qs")  
+    shadow_save(data1, "sparcc_full_data.qs")  
   }
   
   if(!is.null(mbSetObj$dataSet$selected.grps) & opt == "corr"){
@@ -117,7 +117,7 @@ system(my.cmd);
   rownames(zero.output) <- rownames(data1)
   
   if(opt=="corr"){
-    qs::qsave(zero.output, "sparcc_data.qs")
+    shadow_save(zero.output, "sparcc_data.qs")
   }
   
   # add header
@@ -165,7 +165,7 @@ system(my.cmd);
     
     sparcc_combo <- cbind(sparcc_corr, sparcc_pvals[,3])
     colnames(sparcc_combo) <- c("Taxon1", "Taxon2", "Correlation", "P.Value")
-    qs::qsave(sparcc_combo, "network_correlation.qs")
+    shadow_save(sparcc_combo, "network_correlation.qs")
     
     sparcc_combo <- sparcc_combo[(abs(sparcc_combo[,3]) > corrCutoff & sparcc_combo[,4] < pvalCutoff),]
     fast.write(sparcc_combo, "correlation_table.csv", row.names = FALSE)

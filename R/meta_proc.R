@@ -579,7 +579,7 @@ ReadSampleTableMeta <- function(mbSetObj, fileName) {
 
   mbSetObj$dataSets[[i]] <- dataSet; 
   .set.mbSetObj(mbSetObj);
-  qs::qsave(dataSet$sample_data, paste0("sampleData",i, ".qs"));
+  shadow_save(dataSet$sample_data, paste0("sampleData",i, ".qs"));
   }
 
   mdata.all <- list();
@@ -748,7 +748,7 @@ CheckMetaDataIntegrity <- function(mbSetObj, taxo_type="OTU", sample_var="NA"){
     samdata$dataset <- rep(mbSetObj$dataSet$name,nrow(sample_data(mbSetObj$dataSet$proc.phyobj)));
     sample_data(mbSetObj$dataSet$proc.phyobj) <- samdata;
     merged.data <- mbSetObj$dataSet$proc.phyobj;
-    qs::qsave(merged.data, "merged.data.raw.qs");
+    shadow_save(merged.data, "merged.data.raw.qs");
 
   }
   .set.mbSetObj(mbSetObj);
@@ -774,7 +774,7 @@ CheckMetaDataIntegrity <- function(mbSetObj, taxo_type="OTU", sample_var="NA"){
   cls.lbl <- sam_data[,1];
   
   
-  #qs::qsave(merged.data, "merged.data.raw.qs");
+  #shadow_save(merged.data, "merged.data.raw.qs");
   # if entrez, get symbols for display
   shared.nms <- rownames(common.matrix);
   symbols <- shared.nms;
@@ -858,7 +858,7 @@ CheckMetaDataIntegrity <- function(mbSetObj, taxo_type="OTU", sample_var="NA"){
                           meta.types=meta.types,
                           data.lbl=data.lbl);
   
-  qs::qsave(microbiome.meta, "microbiome_meta.qs");
+  shadow_save(microbiome.meta, "microbiome_meta.qs");
   paramSet$smps.vec <- colnames(common.matrix);
   
   # setup common stats gene number, smpl number, grp info
@@ -914,7 +914,7 @@ MergeDatasets <- function(mbSetObj, taxo_type, sample_var){
     phyobj <- qs::qread("merged.data.norm.qs");
     microbiome.meta <- qs::qread("microbiome_meta.qs");
     microbiome.meta$data <- as.data.frame(otu_table(phyobj));
-    qs::qsave(microbiome.meta, "microbiome_meta.qs");
+    shadow_save(microbiome.meta, "microbiome_meta.qs");
 
     .set.mbSetObj(mbSetObj);
   }else{
@@ -923,7 +923,7 @@ MergeDatasets <- function(mbSetObj, taxo_type, sample_var){
     samdata$dataset <- rep(mbSetObj$dataSet$name,nrow(sample_data(mbSetObj$dataSet$proc.phyobj)));
     sample_data(mbSetObj$dataSet$proc.phyobj) <- samdata;
     merged.data <- mbSetObj$dataSet$proc.phyobj;
-    qs::qsave(merged.data, "merged.data.raw.qs");
+    shadow_save(merged.data, "merged.data.raw.qs");
     .set.mbSetObj(mbSetObj);
   }
   
@@ -944,9 +944,9 @@ MergeDatasets <- function(mbSetObj, taxo_type, sample_var){
   sam_data <- as.data.frame(as.matrix(merged.data@sam_data));
   rownames(sam_data) <- rownames(sample_data(merged.data));
   cls.lbl <- sam_data[,1];
-  qs::qsave(merged.data, "merged.data.raw.qs");
+  shadow_save(merged.data, "merged.data.raw.qs");
   norm.data <- transform_sample_counts(merged.data, function(x) x / sum(x) );
-  qs::qsave(norm.data, "merged.data.qs");
+  shadow_save(norm.data, "merged.data.qs");
 
 
   return(1);
@@ -1054,17 +1054,17 @@ current.sample <- current.refset@sam_data
   #change column name to dataset due to issue in plotting later
 
   if(type == "proc"){
-  qs::qsave(merged.data, "merged.data.raw.qs");
+  shadow_save(merged.data, "merged.data.raw.qs");
   }else if(type == "filt"){
-  qs::qsave(merged.data, "merged.data.filt.qs");
+  shadow_save(merged.data, "merged.data.filt.qs");
   }else{
-  qs::qsave(merged.data, "merged.data.norm.qs");
+  shadow_save(merged.data, "merged.data.norm.qs");
   }
   
   #data filteration and transformation
   merged.data <- transform_sample_counts(merged.data, function(x) x / sum(x) );
   
-  qs::qsave(merged.data, "merged.data.qs");
+  shadow_save(merged.data, "merged.data.qs");
   #current.msg <<- paste(msg, collapse=".");
   mbSetObj$dataSet$lib.msg <- current.msg;
   

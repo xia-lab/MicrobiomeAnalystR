@@ -131,7 +131,7 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
       
       procrustes.res$misc[[tax]]$pct2 <- pca.scatter$pct2
       netData[[tax]][["misc"]] <- procrustes.res$misc[[tax]]
-      qs::qsave(procrustes.res,"procrustes.res.qs")
+      shadow_save(procrustes.res,"procrustes.res.qs")
       
     }else if(reductionOptGlobal == "diablo"){
       
@@ -311,7 +311,7 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
       
       diablo.res$misc[[tax]]$pct2 <- c( diablo.res$misc[[tax]]$pct2, pca.scatter$pct2);
       netData[[tax]][["misc"]] <- diablo.res$misc[[tax]];
-      qs::qsave(diablo.res,"diablo.res.qs")
+      shadow_save(diablo.res,"diablo.res.qs")
     }
     
   }

@@ -1194,7 +1194,7 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, f
       return(resTable);
     }
     dat.in <- list(data=data, variable=variable, my.fun=my.fun);
-    qs::qsave(dat.in, file="dat.in.qs");
+    shadow_save(dat.in, file="dat.in.qs");
     return(1)
   }
 return(1)
@@ -1519,7 +1519,7 @@ FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, feat){
   }
   
   data1 <- t(data1);
-  qs::qsave(data1, "match_data.qs")
+  shadow_save(data1, "match_data.qs")
   #making boxplot data
   
   sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
@@ -1877,7 +1877,7 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, 
   }
 
   data <- t(data);
-  qs::qsave(data, "match_data.qs")
+  shadow_save(data, "match_data.qs")
  
   clslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   boxdata <- as.data.frame(data,check.names=FALSE);
@@ -1887,7 +1887,7 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, 
   if(dist.name == "sparcc"){
     
     pattern.data <- cbind(data, new.template)
-    qs::qsave(t(pattern.data), "pattern_data.qs")
+    shadow_save(t(pattern.data), "pattern_data.qs")
     permNum <- 100
     pvalCutoff <- 1 
     corrCutoff <- 0

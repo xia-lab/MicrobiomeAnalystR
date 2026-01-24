@@ -194,7 +194,7 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
                     axisLoading=res2$axis, 
                     metaCol = legendData);
     #res2$pos.xyz <- load.xyz;
-    #qs::qsave(res2, "pca3d_loadings.qs");
+    #shadow_save(res2, "pca3d_loadings.qs");
   }
   
   if("facB" %in% names(res)){
@@ -203,7 +203,7 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
   
   rownames(pos.xyz) <- res$name;
   mbSetObj$analSet$pos.xyz <- pos.xyz;
-  qs::qsave(pos.xyz,"pos.xyz.qs");
+  shadow_save(pos.xyz,"pos.xyz.qs");
   
   
   sink(filenm);

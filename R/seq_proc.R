@@ -24,7 +24,7 @@ PerformSeqCheck <- function(home_dir = ""){
   } else {
     p1 <- plotQualityProfile(fnFs[1:2])
   }
-  qs::qsave(p1, "diagnotics_plot_src.qs");
+  shadow_save(p1, "diagnotics_plot_src.qs");
   Cairo::Cairo(1600, 1250,file = paste0("diagnotics.png"),dpi = 180,bg = "white")
   print(p1)
   dev.off()
@@ -575,7 +575,7 @@ ReadRawMeta<-function(fileName){
   
   meta_df <- data.frame(fileNms = rawFileNms,
                         class = rawClassNms);
-  qs::qsave(meta_df, file = "meta_info.qs");
+  shadow_save(meta_df, file = "meta_info.qs");
 
   rawFileNms<<-rawFileNms;
   rawClassNms<<-rawClassNms;

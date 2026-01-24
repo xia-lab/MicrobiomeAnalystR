@@ -668,7 +668,7 @@ PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",fi
         return(res.mat);
     }
     dat.in <- list(cls=phenotype, data=genemat, subsets=hits, set.num=set.num, filenm=file.nm , my.fun=my.fun, curr.mset=current.mset);
-    qs::qsave(dat.in, file="dat.in.qs");
+    shadow_save(dat.in, file="dat.in.qs");
     return(1);
 }
 

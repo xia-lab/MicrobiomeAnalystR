@@ -773,7 +773,7 @@ assert_equal_type <- function(
 .perform.computing <- function(){
     dat.in <- qs::qread("dat.in.qs"); 
     dat.in$my.res <- dat.in$my.fun();
-    qs::qsave(dat.in, file="dat.in.qs");    
+    shadow_save(dat.in, file="dat.in.qs");    
 }
 
 
