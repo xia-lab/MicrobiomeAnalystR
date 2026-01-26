@@ -410,11 +410,9 @@ GetResMat <- function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   res_mat <- as.matrix(signif(mbSetObj$analSet$resTable, 5));
 
-  # Save as Arrow for zero-copy Java access
+  # Safe-Handshake: Arrow save with verification
   tryCatch({
-    res_df <- as.data.frame(res_mat);
-    res_df$rownames <- rownames(res_mat);
-    arrow::write_feather(res_df, "res_mat.arrow", compression = "uncompressed");
+    arrow_save(res_mat, "res_mat.arrow");
   }, error = function(e) {
     warning(paste("Arrow save failed for res_mat:", e$message));
   });
@@ -425,11 +423,9 @@ GetResMat <- function(mbSetObj){
 GetResMetabo <- function(){
   res_mat <- as.matrix(current.proc$met$res_deAnal);
 
-  # Save as Arrow for zero-copy Java access
+  # Safe-Handshake: Arrow save with verification
   tryCatch({
-    res_df <- as.data.frame(res_mat);
-    res_df$rownames <- rownames(res_mat);
-    arrow::write_feather(res_df, "res_metabo.arrow", compression = "uncompressed");
+    arrow_save(res_mat, "res_metabo.arrow");
   }, error = function(e) {
     warning(paste("Arrow save failed for res_metabo:", e$message));
   });

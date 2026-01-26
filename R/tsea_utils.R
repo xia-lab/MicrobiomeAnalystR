@@ -246,11 +246,9 @@ CalculateHyperScore <- function(mbSetObj){
   mbSetObj$analSet$ora.hits = hits;
   fast.write(mbSetObj$analSet$ora.mat, file="tsea_ora_result.csv");
 
-  # Save as Arrow for zero-copy Java access
+  # Safe-Handshake: Arrow save with verification
   tryCatch({
-    ora_df <- as.data.frame(mbSetObj$analSet$ora.mat);
-    ora_df$rownames <- rownames(mbSetObj$analSet$ora.mat);
-    arrow::write_feather(ora_df, "ora_mat.arrow", compression = "uncompressed");
+    arrow_save(mbSetObj$analSet$ora.mat, "ora_mat.arrow");
   }, error = function(e) {
     warning(paste("Arrow save failed for ora_mat:", e$message));
   });
@@ -513,11 +511,9 @@ GetORA.mat<-function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   ora_mat <- mbSetObj$analSet$ora.mat;
 
-  # Save as Arrow for zero-copy Java access
+  # Safe-Handshake: Arrow save with verification
   tryCatch({
-    ora_df <- as.data.frame(ora_mat);
-    ora_df$rownames <- rownames(ora_mat);
-    arrow::write_feather(ora_df, "ora_mat.arrow", compression = "uncompressed");
+    arrow_save(ora_mat, "ora_mat.arrow");
   }, error = function(e) {
     warning(paste("Arrow save failed for ora_mat:", e$message));
   });

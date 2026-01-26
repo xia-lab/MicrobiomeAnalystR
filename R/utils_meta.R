@@ -289,12 +289,10 @@ GetMetaResultMatrix<-function(single.type="fc"){
 
   meta.mat2 <-signif(as.matrix(meta.mat2), 5);
 
-  # Save as Arrow for zero-copy Java access
+  # Safe-Handshake: Arrow save with verification
   tryCatch({
     arrow_file <- paste0("meta_res_mat_", single.type, ".arrow");
-    meta_df <- as.data.frame(meta.mat2);
-    meta_df$rownames <- rownames(meta.mat2);
-    arrow::write_feather(meta_df, arrow_file, compression = "uncompressed");
+    arrow_save(meta.mat2, arrow_file);
   }, error = function(e) {
     warning(paste("Arrow save failed for meta_res_mat:", e$message));
   });
@@ -468,12 +466,10 @@ GetResMatrix<- function(mbSetObj, type="alpha"){
 
     result_mat <- signif(as.matrix(df), 5);
 
-    # Save as Arrow for zero-copy Java access
+    # Safe-Handshake: Arrow save with verification
     tryCatch({
         arrow_file <- paste0("res_mat_", type, ".arrow");
-        result_df <- as.data.frame(result_mat);
-        result_df$rownames <- rownames(result_mat);
-        arrow::write_feather(result_df, arrow_file, compression = "uncompressed");
+        arrow_save(result_mat, arrow_file);
     }, error = function(e) {
         warning(paste("Arrow save failed for res_mat:", e$message));
     });

@@ -102,12 +102,10 @@ RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank){
   mbSetObj$analSet$rf <- rf_out;
   mbSetObj$analSet$rf.sigmat <- sigmat;
 
-  # Save RF confusion matrix as Arrow for zero-copy Java access
+  # Safe-Handshake: Arrow save with verification
   tryCatch({
     conf_mat <- signif(rf_out$confusion, 3);
-    conf_df <- as.data.frame(conf_mat);
-    conf_df$rownames <- rownames(conf_mat);
-    arrow::write_feather(conf_df, "rf_confusion_mat.arrow", compression = "uncompressed");
+    arrow_save(conf_mat, "rf_confusion_mat.arrow");
   }, error = function(e) {
     warning(paste("Arrow save failed for rf_confusion_mat:", e$message));
   });
@@ -2292,11 +2290,9 @@ GetRFSigMat<-function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   sig_mat <- CleanNumber(mbSetObj$analSet$rf.sigmat);
 
-  # Save as Arrow for zero-copy Java access
+  # Safe-Handshake: Arrow save with verification
   tryCatch({
-    sig_df <- as.data.frame(sig_mat);
-    sig_df$rownames <- rownames(sig_mat);
-    arrow::write_feather(sig_df, "rf_sig_mat.arrow", compression = "uncompressed");
+    arrow_save(sig_mat, "rf_sig_mat.arrow");
   }, error = function(e) {
     warning(paste("Arrow save failed for rf_sig_mat:", e$message));
   });
@@ -2319,11 +2315,9 @@ GetRFConfMat<-function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   conf_mat <- signif(mbSetObj$analSet$rf$confusion, 3);
 
-  # Save as Arrow for zero-copy Java access
+  # Safe-Handshake: Arrow save with verification
   tryCatch({
-    conf_df <- as.data.frame(conf_mat);
-    conf_df$rownames <- rownames(conf_mat);
-    arrow::write_feather(conf_df, "rf_confusion_mat.arrow", compression = "uncompressed");
+    arrow_save(conf_mat, "rf_confusion_mat.arrow");
   }, error = function(e) {
     warning(paste("Arrow save failed for rf_confusion_mat:", e$message));
   });

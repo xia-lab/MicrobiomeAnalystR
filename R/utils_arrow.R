@@ -54,6 +54,12 @@ write_arrow_safe <- function(df, path, compress = "uncompressed") {
         }
     }
 
+    # CRITICAL: Remove existing file to prevent file-lock race conditions
+    if (file.exists(path)) {
+        unlink(path)
+        Sys.sleep(0.01)
+    }
+
     # Write the Arrow file
     arrow::write_feather(df, path, compression = compress)
 
@@ -161,6 +167,12 @@ shadow_save <- function(obj, file, compress = "uncompressed") {
                 }
             }
 
+            # CRITICAL: Remove existing file to prevent file-lock race conditions
+            if (file.exists(arrow_path)) {
+                unlink(arrow_path)
+                Sys.sleep(0.01)
+            }
+
             arrow::write_feather(df, arrow_path, compression = compress)
 
             # SAFE-HANDSHAKE: Brief delay then verify with normalizePath
@@ -177,6 +189,11 @@ shadow_save <- function(obj, file, compress = "uncompressed") {
                     rn <- rownames(obj[[nm]])
                     if (!is.null(rn) && length(rn) > 0) {
                         df <- cbind(row_names_id = as.character(rn), df)
+                    }
+                    # CRITICAL: Remove existing file to prevent file-lock race conditions
+                    if (file.exists(component_path)) {
+                        unlink(component_path)
+                        Sys.sleep(0.01)
                     }
                     arrow::write_feather(df, component_path, compression = compress)
                 }
@@ -223,6 +240,12 @@ shadow_save_mixed <- function(obj, file, compress = "uncompressed") {
                 df <- cbind(row_names_id = as.character(rn), df)
             }
 
+            # CRITICAL: Remove existing file to prevent file-lock race conditions
+            if (file.exists(arrow_path)) {
+                unlink(arrow_path)
+                Sys.sleep(0.01)
+            }
+
             arrow::write_feather(df, arrow_path, compression = compress)
 
             # SAFE-HANDSHAKE: Brief delay then verify with normalizePath
@@ -267,6 +290,12 @@ arrow_save <- function(obj, file) {
         if (is.factor(df[[col]])) {
           df[[col]] <- as.character(df[[col]])
         }
+      }
+
+      # CRITICAL: Remove existing file to prevent file-lock race conditions
+      if (file.exists(file)) {
+        unlink(file)
+        Sys.sleep(0.01)
       }
 
       arrow::write_feather(df, file, compression = "uncompressed")

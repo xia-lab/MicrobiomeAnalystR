@@ -676,11 +676,9 @@ exportSampleTrackTable <- function(mbSetObj = NA){
     .set.mbSetObj(mbSetObj)
     track_mat <- dataObj[["res"]][["track"]];
 
-    # Save as Arrow for zero-copy Java access
+    # Safe-Handshake: Arrow save with verification
     tryCatch({
-      track_df <- as.data.frame(track_mat);
-      track_df$rownames <- rownames(track_mat);
-      arrow::write_feather(track_df, "sample_track_mat.arrow", compression = "uncompressed");
+      arrow_save(track_mat, "sample_track_mat.arrow");
     }, error = function(e) {
       warning(paste("Arrow save failed for sample_track_mat:", e$message));
     });
