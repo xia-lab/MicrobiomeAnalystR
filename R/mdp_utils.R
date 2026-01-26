@@ -24,7 +24,7 @@ PerformAlphaDiversityComp <- function(mbSetObj, opt, metadata, pair.wise = "fals
   cls <- as.factor(data[,metadata]);
   x <- data$value;
   stat.info <- NULL;
-  print(c("cls",cls))
+  #print(c("cls",cls))
   if(length(levels(cls)) > 2){
     if(opt=="nonpar"){
       res <- kruskal.test(x ~ cls);
@@ -2207,7 +2207,7 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
         return(0)
       }
       
-      qs::qsave(data, "data_unifra.qs");
+      shadow_save(data, "data_unifra.qs");
 
 
       if(ordmeth=="PCA"){
@@ -2231,7 +2231,7 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
         return(0)
       }
       
-      qs::qsave(data, "data_unifra.qs");
+      shadow_save(data, "data_unifra.qs");
    
   if(ordmeth=="PCA"){
           ord <- prcomp(t(data@otu_table@.Data), center=TRUE, scale=F)
@@ -2419,7 +2419,7 @@ PlotFunAnotSummary<-function(mbSetObj, imgName, format="png",funanno, dpi=72){
     result <- qs::qread(func.file);
   }else{
     result <- mbSetObj$analSet[[func.file]];
-    qs::qsave(mbSetObj$analSet[[func.file]], file=func.file);
+    shadow_save(mbSetObj$analSet[[func.file]], file=func.file);
     mbSetObj$analSet[[func.file]] <- NULL;
   }
  

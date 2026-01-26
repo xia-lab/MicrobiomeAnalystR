@@ -262,7 +262,7 @@ mydata <- sapply(mydata[,-1,drop=F], format, trim = TRUE)
     mbSetObj$dataSet$sample_data <- my.meta
     mbSetObj$dataSet$meta_info$disc.inx <- 0;
     mbSetObj$dataSet$meta_info$cont.inx <- 0;
-    qs::qsave(mbSetObj$dataSet$sample_data, file = "meta_info.qs")
+    shadow_save(mbSetObj$dataSet$sample_data, file = "meta_info.qs")
     return(0);
   }else{
     
@@ -285,7 +285,7 @@ mydata <- sapply(mydata[,-1,drop=F], format, trim = TRUE)
       # make sure the discrete data is on the left side
       mbSetObj$dataSet$sample_data <- cbind(mbSetObj$dataSet$sample_data, my.meta[,cont.inx, drop=FALSE]);
     }
-    qs::qsave(mbSetObj$dataSet$sample_data, file = "meta_info.qs")
+    shadow_save(mbSetObj$dataSet$sample_data, file = "meta_info.qs")
   }
   mbSetObj$dataSet$smpl.msg <- c(na.msg,na.msg1);
   return(.set.mbSetObj(mbSetObj));
@@ -407,12 +407,30 @@ IsPoorReplicate <- function(mbSetObj){
 }
 
 GetResMat <- function(mbSetObj){
-  mbSetObj <- .get.mbSetObj(mbSetObj); 
-  return(as.matrix(signif(mbSetObj$analSet$resTable),5));
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  res_mat <- as.matrix(signif(mbSetObj$analSet$resTable, 5));
+
+  # Safe-Handshake: Arrow save with verification
+  tryCatch({
+    arrow_save(res_mat, "res_mat.arrow");
+  }, error = function(e) {
+    warning(paste("Arrow save failed for res_mat:", e$message));
+  });
+
+  return(res_mat);
 }
 
 GetResMetabo <- function(){
-  return(as.matrix(current.proc$met$res_deAnal));
+  res_mat <- as.matrix(current.proc$met$res_deAnal);
+
+  # Safe-Handshake: Arrow save with verification
+  tryCatch({
+    arrow_save(res_mat, "res_metabo.arrow");
+  }, error = function(e) {
+    warning(paste("Arrow save failed for res_metabo:", e$message));
+  });
+
+  return(res_mat);
 }
 
 # type can be all, discrete or continuous
@@ -717,9 +735,9 @@ Set.Config <-function(anal.mode="web"){
 
 saveDataQs <-function(data, name, module.nm, dataName){
   if(module.nm == "meta"){
-    qs::qsave(data, file=paste0(dataName, "_data/", name));
+    shadow_save(data, file=paste0(dataName, "_data/", name));
   }else{
-    qs::qsave(data, file=name);
+    shadow_save(data, file=name);
   }
 }
 

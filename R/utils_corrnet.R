@@ -96,7 +96,7 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
     }
   
     data <- t(data1);
-    qs::qsave(data, "network_cor_data.qs")
+    shadow_save(data, "network_cor_data.qs")
  
     data <- data[which(rownames(data) %in% mbSetObj$dataSet$selected.grps),]
    # data[data==0|is.na(data)] <- .00001
@@ -121,7 +121,7 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
       return(0)
     } 
     colnames(cor.results) <- c("Taxon1", "Taxon2", "Correlation", "P.value", "Statistic", "Method")
-    qs::qsave(cor.results, "network_correlation.qs")
+    shadow_save(cor.results, "network_correlation.qs")
     
     cor.results.filt <- cor.results[(abs(cor.results[,3]) > corrCutoff & cor.results[,4] < pvalCutoff),]
     cor.results.filt[,3] <- round(cor.results.filt[,3], digits=4)

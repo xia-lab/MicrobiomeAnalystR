@@ -101,6 +101,15 @@ RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank){
   mbSetObj$analSet$cls <- cls;
   mbSetObj$analSet$rf <- rf_out;
   mbSetObj$analSet$rf.sigmat <- sigmat;
+
+  # Safe-Handshake: Arrow save with verification
+  tryCatch({
+    conf_mat <- signif(rf_out$confusion, 3);
+    arrow_save(conf_mat, "rf_confusion_mat.arrow");
+  }, error = function(e) {
+    warning(paste("Arrow save failed for rf_confusion_mat:", e$message));
+  });
+
   return(.set.mbSetObj(mbSetObj))
 }
 
@@ -1194,7 +1203,7 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, f
       return(resTable);
     }
     dat.in <- list(data=data, variable=variable, my.fun=my.fun);
-    qs::qsave(dat.in, file="dat.in.qs");
+    shadow_save(dat.in, file="dat.in.qs");
     return(1)
   }
 return(1)
@@ -1519,7 +1528,7 @@ FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, feat){
   }
   
   data1 <- t(data1);
-  qs::qsave(data1, "match_data.qs")
+  shadow_save(data1, "match_data.qs")
   #making boxplot data
   
   sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
@@ -1877,7 +1886,7 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, 
   }
 
   data <- t(data);
-  qs::qsave(data, "match_data.qs")
+  shadow_save(data, "match_data.qs")
  
   clslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   boxdata <- as.data.frame(data,check.names=FALSE);
@@ -1887,7 +1896,7 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, 
   if(dist.name == "sparcc"){
     
     pattern.data <- cbind(data, new.template)
-    qs::qsave(t(pattern.data), "pattern_data.qs")
+    shadow_save(t(pattern.data), "pattern_data.qs")
     permNum <- 100
     pvalCutoff <- 1 
     corrCutoff <- 0
@@ -2097,7 +2106,7 @@ KendallCorrFunc <- function(var1, var2, data){
 GenerateTemplates <- function(mbSetObj, variable){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  print(variable)
+  #print(variable)
   clslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   level.len <- length(levels(clslbl));
   # only specify 4: increasing, decreasing, mid high, mid low, constant
@@ -2279,7 +2288,16 @@ GetRFOOB<-function(mbSetObj){
 # significance measure, double[][]
 GetRFSigMat<-function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  return(CleanNumber(mbSetObj$analSet$rf.sigmat))
+  sig_mat <- CleanNumber(mbSetObj$analSet$rf.sigmat);
+
+  # Safe-Handshake: Arrow save with verification
+  tryCatch({
+    arrow_save(sig_mat, "rf_sig_mat.arrow");
+  }, error = function(e) {
+    warning(paste("Arrow save failed for rf_sig_mat:", e$message));
+  });
+
+  return(sig_mat);
 }
 
 GetRFSigRowNames<-function(mbSetObj){
@@ -2295,7 +2313,16 @@ GetRFSigColNames<-function(mbSetObj){
 # return double[][] confusion matrix
 GetRFConfMat<-function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  return(signif(mbSetObj$analSet$rf$confusion,3));
+  conf_mat <- signif(mbSetObj$analSet$rf$confusion, 3);
+
+  # Safe-Handshake: Arrow save with verification
+  tryCatch({
+    arrow_save(conf_mat, "rf_confusion_mat.arrow");
+  }, error = function(e) {
+    warning(paste("Arrow save failed for rf_confusion_mat:", e$message));
+  });
+
+  return(conf_mat);
 }
 
 GetRFConfRowNames<-function(mbSetObj){
@@ -2393,7 +2420,7 @@ GenerateCompJson <- function(mbSetObj = NA, fileName, format,type, mode = 1, tax
                         left_join(resTable, ., by = c("parent" = "parent")) %>%
                         arrange(parent, len) %>%
                         mutate(BPcum = len + tot))
-    print(type)
+    #print(type)
     if (type %in% c("EdgeR", "DESeq2","ffm")) {
       don$shape <- ifelse(don$log2FC > 0, "triangle-up", "triangle-down")
       don$shape[don$FDR > sigLevel | abs(don$log2FC) < fcLevel] <- "circle"

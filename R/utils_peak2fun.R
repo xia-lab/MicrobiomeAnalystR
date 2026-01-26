@@ -60,7 +60,7 @@ mummichog.lib$pathways$cpds <- pathways
 mummichog.lib$pathways$name <- names(pathways)
 mummichog.lib$cpd.tree <- lib$cpd.tree
 mummichog.lib$cpd.lib <- lib$cpd.lib
-qs::qsave(mummichog.lib,"current_mummichog_lib.qs")
+shadow_save(mummichog.lib,"current_mummichog_lib.qs")
 
 }else{
 
@@ -155,7 +155,7 @@ qs::qsave(mummichog.lib,"current_mummichog_lib.qs")
   
   
   ref_mzlist <- as.numeric(current.proc$ref_mz);
-  print(paste0("Got ", length(ref_mzlist), " mass features."))
+  #print(paste0("Got ", length(ref_mzlist), " mass features."))
   pos_inx <- current.proc$pos_inx;
   ref_mzlistp <- ref_mzlist[pos_inx];
   ref_mzlistn <- ref_mzlist[!pos_inx];
@@ -398,7 +398,7 @@ qs::qsave(mummichog.lib,"current_mummichog_lib.qs")
     info <- strsplit(as.character(try2.df[,1]), split=";")
     df_ecs <- data.frame(ec=as.character(try2.df[,2]), mz=sapply(info, `[[`, 1), form=sapply(info, `[[`, 2), rt = sapply(info, `[[`, 3), cpd = sapply(info, `[[`, 4), stringsAsFactors = F)
     df_ecs$str_row_inx <- paste(df_ecs$mz, df_ecs$form, df_ecs$rt, sep = "___")
-    qs::qsave(df_ecs, "initial_ecs.qs")
+    shadow_save(df_ecs, "initial_ecs.qs")
     merged_ecs <- aggregate(. ~ str_row_inx, df_ecs, paste, collapse=";")
     
     # cleaning the df
@@ -511,7 +511,7 @@ qs::qsave(mummichog.lib,"current_mummichog_lib.qs")
   
   #matched_res <- matched_res[which(matched_res$Matched.Form %in% primary_ions),]
   fast.write(matched_res, file="mummichog_matched_compound_all.csv", row.names=FALSE);
-  qs::qsave(matched_res, "mum_res.qs");
+  shadow_save(matched_res, "mum_res.qs");
   
   # now update expr. profile
   matched_mz <- matched_res[,1];
@@ -1132,7 +1132,7 @@ create.adducts <- function(cpd.lib){
   message("Library of CMN compound universe created!")
   file_name <- "cmn_compound_lib.qs"
   
-  qs::qsave(mummichog.lib, file=file_name);
+  shadow_save(mummichog.lib, file=file_name);
 }
 
 Compound_function_mzlist <- function(ms_mode, mw){

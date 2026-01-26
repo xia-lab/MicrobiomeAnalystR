@@ -1,5 +1,5 @@
 ##################################################
-## R script for MicrobiomeAnalyst Pro
+## R script for MicrobiomeAnalyst
 ## Description: Arrow utilities for zero-copy data exchange with Java
 ## Author: MicrobiomeAnalyst Team
 ## Part of the Rserve/qs to Apache Arrow migration

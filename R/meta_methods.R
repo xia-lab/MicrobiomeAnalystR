@@ -65,7 +65,7 @@ PerformMetaEffectSize <- function(mbSetObj=NA, imgName="", taxrank="OTU", selMet
   paramSet$inmex.method <- "effectsize";
   analSet$meta.mat <- meta.stat <<- NULL;
   
-  qs::qsave(dat, "metaanal_phyobj.qs");
+  shadow_save(dat, "metaanal_phyobj.qs");
   #meta.obj <- qs::qread("microbiome_meta.qs");
   
   #if(taxrank=="OTU"){     
