@@ -105,7 +105,7 @@ RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank){
   # Safe-Handshake: Arrow save with verification
   tryCatch({
     conf_mat <- signif(rf_out$confusion, 3);
-    arrow_save(conf_mat, "rf_confusion_mat.arrow");
+    ExportResultMatArrow(conf_mat, "rf_confusion_mat");
   }, error = function(e) {
     warning(paste("Arrow save failed for rf_confusion_mat:", e$message));
   });
@@ -1420,40 +1420,35 @@ return(1)
 ###########)Permanova_Pairwise##########################
 ########################################################
 ###adopted from ecole package https://rdrr.io/github/phytomosaic/ecole/
+### NOTE: Uses permanova_pairwise_isolated() to run ALL comparisons in SINGLE callr
 .permanova_pairwise <- function(x,
                                  grp,
                                  permutations = 999,
                                  method = 'bray',
                                  padj = 'fdr', ...) {
-  f     <- grp
+  f <- grp
   if (!all(table(f) > 1)) warning('factor has singletons! perhaps lump them?')
-  co    <- combn(unique(as.character(f)),2)
-  nco   <- NCOL(co)
-  out   <- data.frame(matrix(NA, nrow=nco, ncol=5))
-  dimnames(out)[[2]] <- c('pairs', 'SumOfSqs', 'F.Model', 'R2', 'pval')
-  if (!inherits(x, 'dist')) {
-    D <- vegan::vegdist(x, method=method)
-  } else {
-    D <- x
-  }
-  #cat('Now performing', nco, 'pairwise comparisons. Percent progress:\n')
-  for(j in 1:nco) {
-    cat(round(j/nco*100,0),'...  ')
-    ij  <- f %in% c(co[1,j],co[2,j])
-    Dij <- as.dist(as.matrix(D)[ij,ij])
-    fij <- data.frame(fij = f[ij])
-    a   <- vegan::adonis2(Dij ~ fij, data=fij, permutations = permutations, ...);
-    out[j,1] <- paste(co[1,j], 'vs', co[2,j])
-    out[j,2] <- a$SumOfSqs[1]
-    out[j,3] <- a$F[1]
-    out[j,4] <- a$R2[1]
-    out[j,5] <- a$`Pr(>F)`[1]
-  }
-  #cat('\n')
-  out$p.adj <- p.adjust(out$pval, method=padj)
-  out$SumOfSqs <-NULL
-  #attr(out, 'p.adjust.method') <- padj
-  #cat('\np-adjust method:', padj, '\n\n');
+
+  # Run all pairwise PERMANOVA comparisons in a SINGLE callr subprocess
+  # This replaces N+1 individual callr calls (1 vegdist + N adonis2) with just 1
+  result <- permanova_pairwise_isolated(
+    x = x,
+    group = f,
+    method = method,
+    permutations = permutations,
+    ...
+  )
+
+  # Build output in expected format
+  out <- data.frame(
+    pairs = result$pairs,
+    F.Model = result$F.Model,
+    R2 = result$R2,
+    pval = result$p.value,
+    stringsAsFactors = FALSE
+  )
+
+  out$p.adj <- p.adjust(out$pval, method = padj)
   return(out)
 }
 
@@ -2022,8 +2017,9 @@ TSSnorm = function(features) {
   dd <- colnames(features_norm)
   
   # TSS Normalizing the Data
+  # NOTE: decostand is shadowed by pro_wrappers.R callr isolation
   features_TSS <-
-    vegan::decostand(
+    decostand(
       features_norm,
       method = "total",
       MARGIN = 1,
@@ -2150,7 +2146,8 @@ phyloseq_to_edgeR = function(physeq, group, method="RLE", ...){
   # Check `group` argument
   if( identical(all.equal(length(group), 1), TRUE) & nsamples(physeq) > 1 ){
     # Assume that group was a sample variable name (must be categorical)
-    group = phyloseq::get_variable(physeq, group)
+    # BINARY-BLIND: Use embedded get_variable (no phyloseq:: namespace)
+    group = get_variable(physeq, group)
   }
   # Define gene annotations (`genes`) as tax_table
   taxonomy = tax_table(physeq, errorIfNULL=FALSE)
@@ -2292,7 +2289,7 @@ GetRFSigMat<-function(mbSetObj){
 
   # Safe-Handshake: Arrow save with verification
   tryCatch({
-    arrow_save(sig_mat, "rf_sig_mat.arrow");
+    ExportResultMatArrow(sig_mat, "rf_sig_mat");
   }, error = function(e) {
     warning(paste("Arrow save failed for rf_sig_mat:", e$message));
   });
@@ -2317,7 +2314,7 @@ GetRFConfMat<-function(mbSetObj){
 
   # Safe-Handshake: Arrow save with verification
   tryCatch({
-    arrow_save(conf_mat, "rf_confusion_mat.arrow");
+    ExportResultMatArrow(conf_mat, "rf_confusion_mat");
   }, error = function(e) {
     warning(paste("Arrow save failed for rf_confusion_mat:", e$message));
   });

@@ -179,13 +179,23 @@ PlotBoxDataCorr<-function(mbSetObj, boxplotName, feat, format="png", sel.meta=""
     data <- as.data.frame(data);
     variable <- sel.meta;
     data$class <- as.vector(as.matrix(sample_data(merged))[,sel.meta])
-    
-    a <- as.numeric(data[,feat]);
   }else{
     variable <- mbSetObj$analSet$var.typecor;
     data <- mbSetObj$analSet$boxdatacor;
-    a <- as.numeric(data[,feat]);
   }
+
+  # Defensive: Handle empty or invalid feature name
+  available_features <- setdiff(colnames(data), c("class", "log_feat"))
+  if (is.null(feat) || feat == "" || !(feat %in% available_features)) {
+    if (length(available_features) > 0) {
+      feat <- available_features[1]
+      warning(paste("PlotBoxDataCorr: Invalid feature name, using first available:", feat))
+    } else {
+      stop("PlotBoxDataCorr: No valid features available in data")
+    }
+  }
+
+  a <- as.numeric(data[,feat]);
   min.val <- min(abs(a[a!=0]))/5;
   data$log_feat <- log2((a + sqrt(a^2 + min.val))/2);
   boxplotName = paste(boxplotName,".",format, sep="");
@@ -452,10 +462,12 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
    
   }else{
     if(analOpt == "smpl_grp"){
-        data <- eval(parse(text = paste("phyloseq:::subset_samples(data,", expFact, "==", "\"", group, "\"", ")", sep="")));
+        # BINARY-BLIND: Use embedded subset_samples (no phyloseq::: namespace)
+        data <- eval(parse(text = paste("subset_samples(data,", expFact, "==", "\"", group, "\"", ")", sep="")));
     }else if(analOpt == "smpl_grp_all"){
         grp <- as.character(mbSetObj[["dataSet"]][["sample_data"]][[expFact2]])
-        data <- eval(parse(text = paste("phyloseq:::subset_samples(data,", expFact2, "%in%", "\"", grp, "\"", ")", sep="")))
+        # BINARY-BLIND: Use embedded subset_samples (no phyloseq::: namespace)
+        data <- eval(parse(text = paste("subset_samples(data,", expFact2, "%in%", "\"", grp, "\"", ")", sep="")))
  }
 
     # check min 2 reps 
@@ -621,7 +633,8 @@ core_comp_grp <- function(mbSetObj,imgName, preval, detection, taxrank,
   
   data <- mbSetObj$dataSet$proc.phyobj;
   grp <- unique(as.character(mbSetObj[["dataSet"]][["sample_data"]][[expFact2]]))
-  dt <- lapply(grp,function(group) eval(parse(text = paste("phyloseq:::subset_samples(data,", expFact2, "==", "\"", group, "\"", ")", sep=""))))
+  # BINARY-BLIND: Use embedded subset_samples (no phyloseq::: namespace)
+  dt <- lapply(grp,function(group) eval(parse(text = paste("subset_samples(data,", expFact2, "==", "\"", group, "\"", ")", sep=""))))
   names(dt) <- grp 
   dt <-lapply(dt,function(data){
     if(taxrank=="OTU"){
@@ -832,10 +845,11 @@ abundances<-function(x, transform="identity") {
     # Pick OTU matrix
     otu <- get_taxa(x)
     # Ensure that taxa are on the rows
-    if (all(c(!taxa_are_rows(x), phyloseq::ntaxa(x) > 1, nsamples(x) > 1))) {
+    # BINARY-BLIND: Use embedded ntaxa (no phyloseq:: namespace)
+    if (all(c(!taxa_are_rows(x), ntaxa(x) > 1, nsamples(x) > 1))) {
       otu <- t(otu)
     }
-    if (phyloseq::ntaxa(x) == 1) {
+    if (ntaxa(x) == 1) {
       otu <- matrix(otu, nrow=1)
       rownames(otu) <- taxa(x)
       colnames(otu) <- sample_names(x)
@@ -2161,19 +2175,20 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
       colnames(sample_data(data))[indx] <- alphaopt;
     }else if(colopt=="continuous") {
       require("MMUPHin");
-      require("vegan");
-      
+      # NOTE: vegan NOT loaded - use distance_isolated() instead
+
       proc.phyobj <- qs::qread("merged.data.raw.qs");
       data1 <- proc.phyobj;
-      
+
       #sub_sam_data <- sam_data[which(sam_data[,metadata] == meta.grp), ]
       #sub_data <- data@otu_table[, rownames(sub_sam_data)];
-      sub_sam_data <- sample_data(data1); 
-      
-      #sub_data <- as.matrix(otu_table(data1)); 
+      sub_sam_data <- sample_data(data1);
+
+      #sub_data <- as.matrix(otu_table(data1));
       sub_data <- data1@otu_table[, rownames(sub_sam_data)];
       sub_data <- apply(sub_data, 2, function(x) x / sum(x))
-      dist.data <- vegdist(t(sub_data));
+      # Use callr-isolated vegdist (keeps vegan out of Master)
+      dist.data <- distance_isolated(t(sub_data), "bray", list());
       
       fit_continuous <- continuous_discover(feature_abd = sub_data,
                                             batch = "dataset",
@@ -2265,13 +2280,33 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
       colnames(ord$vectors)[1] <- alphaopt
       
     }
+    # OPTIMIZED: Use category_comp_single_isolated instead of PerformCategoryComp
+    # This ensures all vegan operations for this dataset happen in ONE callr subprocess
+    # (PerformCategoryComp calls distance + adonis2/anosim/betadisper separately)
+    otu_mat <- as.matrix(otu_table(data))
+    sampledf <- data.frame(sample_data(data), check.names = FALSE)
+
+    comp_result <- category_comp_single_isolated(
+      otu_mat = otu_mat,
+      sampledf = sampledf,
+      dist_method = distName,
+      variable = metadata,
+      method = comp.method,
+      pairwise = (pairwise != "false")
+    )
+
+    mbSetObj$analSet$stat.info <- comp_result$stat.info
+    mbSetObj$analSet$stat.info.vec <- comp_result$stat.info.vec
+    if (!is.null(comp_result$pairwise.res)) {
+      mbSetObj$analSet$beta.stat.pair <- mbSetObj$analSet$resTable <- signif(comp_result$pairwise.res, 5)
+      fast.write(mbSetObj$analSet$resTable, file = "pairwise_permanova.csv")
+    }
     .set.mbSetObj(mbSetObj);
-    PerformCategoryComp(mbSetObj, taxrank, comp.method,distName, metadata,pairwise);
-    mbSetObj <- .get.mbSetObj(mbSetObj);
-    ord$stat.info <- mbSetObj$analSet$stat.info;
-    
+
+    ord$stat.info <- comp_result$stat.info;
+
     ord.list[[dataName]] <- ord;
-    
+
   }
   plotNm = paste(plotNm, ".", format, sep="");
   mbSetObj$imgSet$beta2d<-plotNm;
@@ -3088,9 +3123,9 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
 #'@import vegan
 PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pairwise=FALSE,
                                 covariates = FALSE, cov.vec = NA, model.additive = TRUE){
-  
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  suppressMessages(library(vegan));
+  # NOTE: vegan NOT loaded - Pro version shadows this with callr isolation
 
   if(distnm %in% c("wunifrac", "unifrac")) {
     data <- qs::qread("data_unifra.qs");
@@ -3108,8 +3143,10 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pai
   
   data <- transform_sample_counts(data, function(x) x/sum(x));
 
-  data.dist <- phyloseq::distance(data, method=distnm);
-  group <- phyloseq::get_variable(data,variable);
+  # BINARY-BLIND: Use embedded distance wrapper (calls callr-isolated version)
+  data.dist <- distance(data, method=distnm);
+  # BINARY-BLIND: Use embedded get_variable (no phyloseq:: namespace)
+  group <- get_variable(data, variable);
   stat.info <- "";
   resTab <- list();
  
@@ -4383,42 +4420,33 @@ ComputeGoods <-function(physeq_object){
 }
 
 # Utility function that performs rarefaction
+# NOTE: Uses rarefaction_curve_isolated() to compute ALL samples in SINGLE callr
 ggrare2 <- function(physeq_object, data.src, label = NULL, color = NULL, plot = TRUE, linetype = NULL, se = FALSE, step=5) {
-  
-  x <- methods::as(otu_table(physeq_object), "matrix")
-  
-  if (taxa_are_rows(physeq_object)) { x <- t(x) }
-  
-  ## This script is adapted from vegan `rarecurve` function
-  tot <- rowSums(x)
-  S <- rowSums(x > 0)
-  nr <- nrow(x)
-  step_new = floor(max(tot)/as.integer(step))
-  rarefun <- function(i) {
-    #cat(paste("rarefying sample", rownames(x)[i]), sep = "\n")
-    n <- seq(1, tot[i], by = step_new)
-    if (n[length(n)] != tot[i]) {
-      n <- c(n, tot[i])
-    }
 
-    y <- vegan::rarefy(x[i, ,drop = FALSE], n, se = se)
-    
-if(length(y)==1){
- current.msg <<- paste0("All the feature counts in sample ",rownames(x)[i]," is less than 5 which is necessary for rarefy. Please check the data or change the method for filteration.")
- return(0)
-}
-    if (nrow(y) != 1) {
-      rownames(y) <- c(".S", ".se")
-      return(data.frame(t(y), Size = n, Sample = rownames(x)[i],check.names=FALSE));
-    } else {
-      return(data.frame(.S = y[1, ], Size = n, Sample = rownames(x)[i],check.names=FALSE));
-    }
+  x <- methods::as(otu_table(physeq_object), "matrix")
+
+  if (taxa_are_rows(physeq_object)) { x <- t(x) }
+
+  ## Run ALL rarefaction curves in a SINGLE callr subprocess
+  ## This replaces N individual vegan::rarefy calls with just 1
+  rare_result <- rarefaction_curve_isolated(x, step = step, se = se)
+
+  # Extract results
+  df <- rare_result$data
+  tot <- rare_result$tot
+  S <- rare_result$S
+
+  # Handle any error messages
+  if (length(rare_result$error_msgs) > 0) {
+    current.msg <<- paste(rare_result$error_msgs, collapse = " ")
   }
-  
+
+  if (is.null(df)) {
+    current.msg <<- "Rarefaction failed for all samples. Please check the data or change the method for filteration."
+    return(NULL)
+  }
+
   f_n <- paste(data.src, step, "rds", sep = ".");
-  print(nr)
-  out <- lapply(seq_len(nr), rarefun)
-  df <- do.call(rbind, out);
   
   # Get sample data
   if (!is.null(sample_data(physeq_object, FALSE))) {

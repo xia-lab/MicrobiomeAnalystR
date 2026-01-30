@@ -291,8 +291,7 @@ GetMetaResultMatrix<-function(single.type="fc"){
 
   # Safe-Handshake: Arrow save with verification
   tryCatch({
-    arrow_file <- paste0("meta_res_mat_", single.type, ".arrow");
-    arrow_save(meta.mat2, arrow_file);
+    ExportResultMatArrow(meta.mat2, paste0("meta_res_mat_", single.type));
   }, error = function(e) {
     warning(paste("Arrow save failed for meta_res_mat:", e$message));
   });
@@ -468,8 +467,7 @@ GetResMatrix<- function(mbSetObj, type="alpha"){
 
     # Safe-Handshake: Arrow save with verification
     tryCatch({
-        arrow_file <- paste0("res_mat_", type, ".arrow");
-        arrow_save(result_mat, arrow_file);
+        ExportResultMatArrow(result_mat, paste0("res_mat_", type));
     }, error = function(e) {
         warning(paste("Arrow save failed for res_mat:", e$message));
     });

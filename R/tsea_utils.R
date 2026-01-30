@@ -248,7 +248,7 @@ CalculateHyperScore <- function(mbSetObj){
 
   # Safe-Handshake: Arrow save with verification
   tryCatch({
-    arrow_save(mbSetObj$analSet$ora.mat, "ora_mat.arrow");
+    ExportResultMatArrow(mbSetObj$analSet$ora.mat, "ora_mat");
   }, error = function(e) {
     warning(paste("Arrow save failed for ora_mat:", e$message));
   });
@@ -513,7 +513,7 @@ GetORA.mat<-function(mbSetObj){
 
   # Safe-Handshake: Arrow save with verification
   tryCatch({
-    arrow_save(ora_mat, "ora_mat.arrow");
+    ExportResultMatArrow(ora_mat, "ora_mat");
   }, error = function(e) {
     warning(paste("Arrow save failed for ora_mat:", e$message));
   });

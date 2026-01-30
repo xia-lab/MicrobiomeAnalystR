@@ -5,9 +5,9 @@
 ##################################################
 
 my.pcoa.3d <- function(mbSetObj, ordMeth, distName, taxrank, colopt, variable, taxa, alphaopt, jsonNm){
-  
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  suppressMessages(library(vegan));
+  # NOTE: vegan NOT loaded - Pro version shadows this with callr isolation
   
   variable <<- variable;
 
@@ -59,25 +59,13 @@ my.pcoa.3d <- function(mbSetObj, ordMeth, distName, taxrank, colopt, variable, t
     pg_sd <- sample_data(data);
     pg_tree <- prune_taxa(taxa_names(pg_ot), pg_tree);
     data <- merge_phyloseq(pg_tb, pg_ot, pg_sd, pg_tree);
-    
-    if(!is.rooted(phy_tree(data))){
-      pick_new_outgroup <- function(tree.unrooted){
-        treeDT <- cbind(cbind(data.table(tree.unrooted$edge),data.table(length = tree.unrooted$edge.length))[1:Ntip(tree.unrooted)],
-                        data.table(id = tree.unrooted$tip.label));
-        new.outgroup <- treeDT[which.max(treeDT$length), ]$id
-        return(new.outgroup);
-      }
-      new.outgroup <- pick_new_outgroup(phy_tree(data));
-      phy_tree(data) <- ape::root(phy_tree(data),
-                                  outgroup = new.outgroup,
-                                  resolve.root=TRUE)
-    }
+    # NOTE: Tree rooting is handled by ordinate_isolated/UniFrac_isolated in callr subprocess
+    # No need to call ape::root here - avoids loading ape in Master
     if(ordMeth=="PCA"){
-             GP.ord  <- prcomp(t(data@otu_table@.Data), center=TRUE, scale=F)
-      }else{
-       
-    GP.ord <-ordinate(data,ordMeth,"unifrac",weighted=TRUE);
-      }
+      GP.ord <- prcomp(t(data@otu_table@.Data), center=TRUE, scale=F)
+    } else {
+      GP.ord <- ordinate(data, ordMeth, "unifrac", weighted=TRUE);
+    }
   } else if (distName=="unifrac"){
     pg_tree <- qs::qread("tree.qs");
     pg_tb <- tax_table(data);
@@ -85,27 +73,14 @@ my.pcoa.3d <- function(mbSetObj, ordMeth, distName, taxrank, colopt, variable, t
     pg_sd <- sample_data(data);
     pg_tree <- prune_taxa(taxa_names(pg_ot), pg_tree);
     data <- merge_phyloseq(pg_tb, pg_ot, pg_sd, pg_tree);
-    
-    if(!is.rooted(phy_tree(data))){
-      pick_new_outgroup <- function(tree.unrooted){
-        treeDT <- cbind(cbind(data.table(tree.unrooted$edge),data.table(length = tree.unrooted$edge.length))[1:Ntip(tree.unrooted)],
-                        data.table(id = tree.unrooted$tip.label));
-        new.outgroup <- treeDT[which.max(treeDT$length), ]$id
-        return(new.outgroup);
-      }
-      new.outgroup <- pick_new_outgroup(phy_tree(data));
-      phy_tree(data) <- ape::root(phy_tree(data),
-                                  outgroup = new.outgroup,
-                                  resolve.root=TRUE)
+    # NOTE: Tree rooting is handled by ordinate_isolated/UniFrac_isolated in callr subprocess
+    # No need to call ape::root here - avoids loading ape in Master
+    if(ordMeth=="PCA"){
+      GP.ord <- prcomp(t(data@otu_table@.Data), center=TRUE, scale=F)
+    } else {
+      GP.ord <- ordinate(data, ordMeth, "unifrac", weighted=FALSE);
     }
-   
- if(ordMeth=="PCA"){
-       GP.ord  <- prcomp(t(data@otu_table@.Data), center=TRUE, scale=F)
-      }else{
-       
-       GP.ord <-ordinate(data,ordMeth,"unifrac",weighted=FALSE);
-      }
-  }else{
+  } else {
  
     
       if(ordMeth=="PCA"){

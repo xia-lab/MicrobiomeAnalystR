@@ -59,8 +59,11 @@ Init.mbSetObj <- function(){
   enrich.type <<- "hyper";
   
   # to control parallel computing for some packages
-  BiocParallel::register(BiocParallel::SerialParam());
-  Sys.setenv("OMP_NUM_THREADS" = 2); 
+  # PRO: Skip BiocParallel registration when phyloseq is not loaded (callr isolation)
+  if (!isFALSE(get0(".LOAD_PHYLOSEQ", envir = .GlobalEnv))) {
+    BiocParallel::register(BiocParallel::SerialParam());
+  }
+  Sys.setenv("OMP_NUM_THREADS" = 2);
   Sys.setenv("OPENBLAS_NUM_THREADS" = 2);
 
   if(.on.public.web){ 
@@ -72,7 +75,10 @@ Init.mbSetObj <- function(){
   # preload some general package
   suppressMessages(library(Cairo));
   suppressMessages(library(RColorBrewer));
-  suppressMessages(library(phyloseq));
+  # .LOAD_PHYLOSEQ: TRUE (default/public) = load package, FALSE (Pro) = skip
+  if (!isFALSE(get0(".LOAD_PHYLOSEQ", envir = .GlobalEnv))) {
+    suppressMessages(library(phyloseq));
+  }
   suppressMessages(library(ggplot2));
   suppressMessages(library(reshape));
 
@@ -412,7 +418,7 @@ GetResMat <- function(mbSetObj){
 
   # Safe-Handshake: Arrow save with verification
   tryCatch({
-    arrow_save(res_mat, "res_mat.arrow");
+    ExportResultMatArrow(res_mat, "res_mat");
   }, error = function(e) {
     warning(paste("Arrow save failed for res_mat:", e$message));
   });
@@ -425,7 +431,7 @@ GetResMetabo <- function(){
 
   # Safe-Handshake: Arrow save with verification
   tryCatch({
-    arrow_save(res_mat, "res_metabo.arrow");
+    ExportResultMatArrow(res_mat, "res_metabo");
   }, error = function(e) {
     warning(paste("Arrow save failed for res_metabo:", e$message));
   });
@@ -493,18 +499,19 @@ GetMetaTaxaInfo <- function(mbSetObj){
 
 GetSampleGrpInfo <- function(mbSetObj, clsLbl){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  return(levels(factor(phyloseq::get_variable(mbSetObj$dataSet$norm.phyobj, clsLbl))));
+  # BINARY-BLIND: Use embedded get_variable (no phyloseq:: namespace)
+  return(levels(factor(get_variable(mbSetObj$dataSet$norm.phyobj, clsLbl))));
 }
 
 GetSampleGrpNo <- function(mbSetObj, clsLbl){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   #Issue with phyloslim (after merging into phyloslim object the sample variable are converted to numeric again rather than factor)
-  return(length(levels(factor(phyloseq::get_variable(mbSetObj$dataSet$norm.phyobj, clsLbl)))));
+  # BINARY-BLIND: Use embedded get_variable (no phyloseq:: namespace)
+  return(length(levels(factor(get_variable(mbSetObj$dataSet$norm.phyobj, clsLbl)))));
 }
 
 GetTaxaNames<- function(mbSetObj, taxlvl){
-
-    require("phyloseq")
+    # BINARY-BLIND: Removed require("phyloseq") - embedded scripts already loaded
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -734,10 +741,12 @@ Set.Config <-function(anal.mode="web"){
 }
 
 saveDataQs <-function(data, name, module.nm, dataName){
+  # Use qs::qsave directly for internal R workflow files
+  # (shadow_save with Arrow is only needed for R-Java data exchange)
   if(module.nm == "meta"){
-    shadow_save(data, file=paste0(dataName, "_data/", name));
+    qs::qsave(data, file=paste0(dataName, "_data/", name));
   }else{
-    shadow_save(data, file=name);
+    qs::qsave(data, file=name);
   }
 }
 

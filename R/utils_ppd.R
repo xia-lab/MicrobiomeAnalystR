@@ -200,10 +200,10 @@ PerformRefDataMapping <- function(mbSetObj, refdataNm, taxo_type, sample_var, bi
 #'@export
 #'@import vegan
 PCoA3DAnal.16SRef <- function(mbSetObj, barplotNm, ordMeth, distName, taxrank, metadata, format="png", dpi=72){
-  
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
-  suppressMessages(library(vegan));
+  # NOTE: vegan NOT loaded in Master - ordinate() uses callr internally
 
   data <- userrefdata;
 

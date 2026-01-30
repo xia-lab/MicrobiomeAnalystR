@@ -3318,7 +3318,7 @@ PlotDiagnostic <- function(imgName, dpi=72, format="png",alg, taxrank="OTU"){
       theme(axis.text.x=element_blank(),
             axis.ticks.x=element_blank(),
             text = element_text(size = 16)) +
-      geom_text_repel(
+      ggrepel::geom_text_repel(
         data = subsetdf,
         aes(label = Samples),
         size = 5,
@@ -3329,14 +3329,33 @@ PlotDiagnostic <- function(imgName, dpi=72, format="png",alg, taxrank="OTU"){
     print(p)
     mbSetObj$imgSet$procrustes$diagnostic <- imgNm
   }else if(alg == "diablo"){
-    require(mixOmics)
     diablo.res <- qs::qread("diablo.res.qs")
     res <- diablo.res$dim.res[[length(diablo.res$dim.res)]]
-    set.seed(123) # for reproducibility, only when the `cpus' argument is not used
-    # this code takes a couple of min to run
-    perf.res <- mixOmics:::perf(res, validation = 'Mfold', folds = 10, nrepeat = 1, dist="max.dist",near.zero.var=T)
-    diablo.comp <<- median(perf.res$choice.ncomp$WeightedVote)
-    plot(perf.res) 
+
+    # Run mixOmics::perf in callr subprocess (Pro) or directly (Public)
+    if (exists("diablo_perf_isolated", mode = "function")) {
+      perf_result <- diablo_perf_isolated(res)
+      perf.res <- perf_result$perf.res
+      diablo.comp <<- perf_result$diablo.comp
+    } else {
+      require(mixOmics)
+      set.seed(123)
+      perf.res <- mixOmics:::perf(res, validation = 'Mfold', folds = 10, nrepeat = 1, dist="max.dist", near.zero.var=T)
+      diablo.comp <<- median(perf.res$choice.ncomp$WeightedVote)
+    }
+
+    # Plot requires mixOmics - run in callr if Pro
+    if (exists("callr_isolated_exec", mode = "function")) {
+      # Generate plot in callr subprocess
+      callr::r(function(perf_res, img_file) {
+        library(mixOmics)
+        png(img_file, width = 10, height = 8, units = "in", res = 72)
+        plot(perf_res)
+        dev.off()
+      }, args = list(perf_res = perf.res, img_file = imgNm), timeout = 120)
+    } else {
+      plot(perf.res)
+    }
     mbSetObj$imgSet$diablo$diagnostic <- imgNm
   }
   dev.off();

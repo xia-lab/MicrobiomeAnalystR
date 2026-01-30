@@ -133,7 +133,7 @@ SanityCheckData <- function(mbSetObj, filetype, preFilter = "sample", rmConstant
   
   if(mbSetObj$tree.uploaded){
     tree_exist <- 1;
-    tree<-qs::qread("tree.qs");
+    tree <- qs::qread("tree.qs");
 
    # if(identical(rownames(data.proc),tree$tip.label)){
     # no need to be identical, as long as tree can be superset of feature names
@@ -1076,10 +1076,10 @@ PerformRarefaction <- function(mbSetObj, data, rare.opt,rareDepth=NULL){
 #'@import vegan
 
 PlotRareCurve <- function(mbSetObj, graphName, variable){
-  
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
   set.seed(13789);
-  suppressMessages(library(vegan));
+  # NOTE: vegan NOT loaded - Pro version shadows this with callr isolation
   
   data <- data.matrix(mbSetObj$dataSet$filt.data);
   rarefaction_curve_data<-as.matrix(otu_table(data));
@@ -1193,7 +1193,29 @@ PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataN
     smpl.sums <- colSums(data_bef)
     names(smpl.sums) <- colnames(data_bef)
     smpl.sums <- sort(smpl.sums)
-    col.vec <- as.vector(mbSetObj$dataSet$sample_data[match(names(smpl.sums),rownames(mbSetObj$dataSet$sample_data)),1]);
+
+    # Defensive handling of sample_data which may be S4 class or data.frame
+    sample_df <- mbSetObj$dataSet$sample_data
+    if (!is.data.frame(sample_df)) {
+      # Convert S4 or other class to data.frame
+      sample_df <- tryCatch({
+        as.data.frame(sample_df, stringsAsFactors = FALSE)
+      }, error = function(e) {
+        # If conversion fails, create a fallback with sample names
+        data.frame(Group = rep("Sample", length(smpl.sums)), row.names = names(smpl.sums))
+      })
+    }
+
+    # Safe subsetting with defensive checks
+    matched_idx <- match(names(smpl.sums), rownames(sample_df))
+    if (any(is.na(matched_idx))) {
+      # Fallback if rownames don't match
+      col.vec <- rep("Sample", length(smpl.sums))
+    } else if (ncol(sample_df) >= 1) {
+      col.vec <- as.vector(sample_df[matched_idx, 1])
+    } else {
+      col.vec <- rep("Sample", length(smpl.sums))
+    }
     colLegendNm = "Group";
   
   }

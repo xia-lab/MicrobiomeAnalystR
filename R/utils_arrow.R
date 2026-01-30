@@ -145,8 +145,12 @@ shadow_save <- function(obj, file, compress = "uncompressed") {
     # Always save to qs for R compatibility
     qs::qsave(obj, file)
 
-    # Generate Arrow path
-    arrow_path <- sub("\\.qs$", ".arrow", file)
+    # Generate Arrow path - handle files with or without .qs extension
+    if (grepl("\\.qs$", file)) {
+        arrow_path <- sub("\\.qs$", ".arrow", file)
+    } else {
+        arrow_path <- paste0(file, ".arrow")
+    }
 
     tryCatch({
         if (is.matrix(obj) || is.data.frame(obj)) {
@@ -201,8 +205,12 @@ shadow_save_mixed <- function(obj, file, compress = "uncompressed") {
     # Always save qs format for backward compatibility
     qs::qsave(obj, file)
 
-    # Derive Arrow path
-    arrow_path <- sub("\\.qs$", ".arrow", file)
+    # Derive Arrow path - handle files with or without .qs extension
+    if (grepl("\\.qs$", file)) {
+        arrow_path <- sub("\\.qs$", ".arrow", file)
+    } else {
+        arrow_path <- paste0(file, ".arrow")
+    }
 
     tryCatch({
         if (is.matrix(obj) || is.data.frame(obj)) {

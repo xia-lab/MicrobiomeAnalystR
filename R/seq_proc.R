@@ -678,7 +678,7 @@ exportSampleTrackTable <- function(mbSetObj = NA){
 
     # Safe-Handshake: Arrow save with verification
     tryCatch({
-      arrow_save(track_mat, "sample_track_mat.arrow");
+      ExportResultMatArrow(track_mat, "sample_track_mat");
     }, error = function(e) {
       warning(paste("Arrow save failed for sample_track_mat:", e$message));
     });

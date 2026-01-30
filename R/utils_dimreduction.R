@@ -58,17 +58,17 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
   combined.res$comp.res.inx = comp.res.inx1
   combined.res$meta = newmeta
   if(reductionOpt == "diablo"){
-    library(mixOmics)
+    # NOTE: Run DIABLO analysis in callr subprocess (mixOmics isolated)
     diablo.meta.type <- mbSetObj$dataSet$meta.types[analysisVar]
-    diabloPar <- as.numeric(diabloPar); #default diabloPar was 0.2   
+    diabloPar <- as.numeric(diabloPar); #default diabloPar was 0.2
     diablo.res <- list()
     dats <- vector("list",length=length(d.list$mic$data.proc))
     names(dats) <- names(d.list$mic$data.proc)
-    
+
     res <- pos.xyz <- pos.xyz2 <- misc <- loading.pos.xyz <- loadingNames <- vector("list",length=length(d.list$mic$data.proc))
-    names(res) <- names(pos.xyz) <- names(pos.xyz2) <- names(misc) <- 
+    names(res) <- names(pos.xyz) <- names(pos.xyz2) <- names(misc) <-
       names(loading.pos.xyz) <- names(loadingNames) <- names(d.list$mic$data.proc)
-    
+
     for(l in 1:length(dats)){
 
       dats[[l]][["mic"]] <- d.list$mic$data.proc[[l]]
@@ -78,83 +78,96 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
         x <- t(x);
       })
       ncomp = min(ncol(dats[[l]]$mic),dimn)
+
+      # Prepare Y and design
       if(diablo.meta.type == "disc"){
         Y <-  current.proc$meta_para$sample_data[,analysisVar];
-        design = matrix(diabloPar, ncol = length(dats[[l]]), nrow = length(dats[[l]]), 
-                        dimnames = list(names(dats[[l]]), names(dats[[l]])));
-        
-        diag(design) = 0;
-          res[[l]] = block.splsda(X = dats[[l]], Y = Y, ncomp = ncomp, design = design,near.zero.var = T)
       } else {
         meta.var <- current.proc$meta_para$sample_data[,analysisVar];
         Y <- matrix(as.numeric(as.character(meta.var)));
         rownames(Y) <- rownames(current.proc$meta_para$sample_data);
-        design = matrix(diabloPar, ncol = length(dats[[l]]), nrow = length(dats[[l]]), 
-                        dimnames = list(names(dats[[l]]), names(dats[[l]])));
-        diag(design) = 0;
-        res[[l]] = block.splsda(X = data.list, Y = Y, ncomp = ncomps, design = design, mode = "regression", near.zero.var = T)
+      }
+      design = matrix(diabloPar, ncol = length(dats[[l]]), nrow = length(dats[[l]]),
+                      dimnames = list(names(dats[[l]]), names(dats[[l]])));
+      diag(design) = 0;
+
+      # Run DIABLO in callr subprocess (mixOmics isolated)
+      if (exists("diablo_analysis_isolated", mode = "function")) {
+        diablo_result <- diablo_analysis_isolated(
+          dats = dats[[l]],
+          Y = Y,
+          ncomp = ncomp,
+          design = design,
+          diablo.meta.type = diablo.meta.type
+        )
+        res[[l]] <- diablo_result$model
+        pos.xyz[[l]] <- diablo_result$pos.xyz
+        pos.xyz2[[l]] <- diablo_result$pos.xyz2
+        loading.pos.xyz[[l]] <- diablo_result$loading.pos.xyz
+        var.vec <- diablo_result$var.vec
+      } else {
+        # Fallback to direct call (for non-Pro)
+        library(mixOmics)
+        if(diablo.meta.type == "disc"){
+          res[[l]] = block.splsda(X = dats[[l]], Y = Y, ncomp = ncomp, design = design, near.zero.var = T)
+        } else {
+          res[[l]] = block.spls(X = dats[[l]], Y = Y, ncomp = ncomp, design = design, mode = "regression", near.zero.var = T)
+        }
+        pos.xyz[[l]] <- res[[l]]$variates[[1]]
+        pos.xyz2[[l]] <- res[[l]]$variates[[2]]
+
+        for(i in 1:length(res[[l]]$loadings)){
+          pos = as.data.frame(res[[l]]$loadings[[i]])
+          rn <- rownames(res[[l]]$loadings[[i]])
+          pos <- unitAutoScale(pos);
+          res[[l]]$loadings[[i]] <- pos
+          rownames(res[[l]]$loadings[[i]]) <- rn
+        }
+        loading.pos.xyz[[l]] <- rbind(res[[l]]$loadings[[1]], res[[l]]$loadings[[2]])
+
+        if("prop_expl_var" %in% names(res[[l]])){
+          var.vec <- res[[l]]$prop_expl_var
+        }else if("explained_variance" %in% names(res[[l]])){
+          var.vec <- res[[l]]$explained_variance
+        }else{
+          var.vec <- list(mic = 0, met = 0);
+        }
       }
 
-      pos.xyz[[l]] <- res[[l]]$variates[[1]]
-      pos.xyz2[[l]] <- res[[l]]$variates[[2]]
-      
-      for(i in 1:length(res[[l]]$loadings)){
-        pos = as.data.frame(res[[l]]$loadings[[i]])
-        rn <- rownames(res[[l]]$loadings[[i]])
-        pos <- unitAutoScale(pos);
-        res[[l]]$loadings[[i]] <- pos
-        rownames(res[[l]]$loadings[[i]]) <- rn
-      }
-
-      loading.pos.xyz[[l]] <- rbind(res[[l]]$loadings[[1]], res[[l]]$loadings[[2]])
-      #rownames(loading.pos.xyz[[l]]) = c(rownames(d.list$mic$data.proc[[l]]), rownames(d.list$met$data.proc))
       loadingNames[[l]]=rownames(loading.pos.xyz[[l]])
       names = lapply(pos.xyz, function(x) rownames(x))
       newmeta = current.proc$meta_para$sample_data
 
-      if("prop_expl_var" %in% names(res[[l]])){
-        var.vec <- res[[l]]$prop_expl_var
-      }else if("explained_variance" %in% names(res[[l]])){
-        var.vec <- res[[l]]$explained_variance
-      }else{
-        var.vec <- 0;
-      }
-
       misc[[l]]$pct2[["microbiome"]] = unname(signif(as.numeric(var.vec[['mic']],4)))*100
       misc[[l]]$pct2[["metabolomics"]] = unname(signif(as.numeric(var.vec[['met']],4)))*100
-      
+
     }
-    
+
   }else if(reductionOpt == "procrustes"){
-    library(vegan)
-    ndat1 <- lapply(d.list$mic$data.proc,function(x) decostand(t(x), method = "standardize"))
-    pca.dat1 <- lapply(ndat1,function(x) rda(x))
-    ndat2 <- decostand(t(d.list$met$data.proc), method = "standardize")
-    pca.dat2 <- rda(ndat2)
-    
-    choicesVec = c(1,2,3)
-    res= lapply(pca.dat1,function(x) procrustes(x, pca.dat2, choices=choicesVec, symmetric = T, scale = TRUE))
-    res2= lapply(pca.dat1,function(x) protest(X = x, Y = pca.dat2, scores = "sites", permutations = 999) )
-    
-    misc <- list(`Sum of Squares`=lapply(res2,function(x) x$ss),
-                 Significance = lapply(res2,function(x) x$signif),
-                 Correlation =lapply(res2,function(x) x$scale))
-    
-    
-    pos.xyz = lapply(res,function(x) rbind(x$X, x$Yrot))
+    # NOTE: Run entire procrustes workflow in SINGLE callr subprocess
+    # This replaces 4N+2 individual callr calls with just 1
+    proc_result <- procrustes_analysis_isolated(
+      mic_data_list = d.list$mic$data.proc,
+      met_data = d.list$met$data.proc,
+      choices = c(1,2,3),
+      permutations = 999
+    )
+
+    # Unpack results from isolated execution
+    res <- proc_result$proc_res
+    res2 <- proc_result$prot_res
+    misc <- proc_result$misc
+    pos.xyz <- proc_result$pos.xyz
+
     names = lapply(pos.xyz,function(x) make.unique(as.character(rownames(x))))
     newmeta$omics[c(1:(length(names[[1]])/2))] = "microbiome"
     newmeta$omics[c( ((length(names[[1]])/2)+1) : (length(names[[1]])))] = "metabolomics"
-    dim.res <-  misc <- vector("list",length=length(res))
+    dim.res <- vector("list",length=length(res))
     names(dim.res) <- names(misc) <- names(res)
     for(i in 1:length(dim.res)){
       dim.res[[i]] <- list(res[[i]],res2[[i]])
-      misc[[i]] <- list(`Sum of Squares`=res2[[i]]$ss,
-                        Significance =  res2[[i]]$signif,
-                        Correlation =res2[[i]]$scale)
-      
     }
-    
+
     procrustes.res <- list(misc=misc,dim.res=dim.res)
     procrustes.res$pos.xyz = lapply(pos.xyz,function(x) unitAutoScale(x))
     procrustes.res$newmeta = newmeta
