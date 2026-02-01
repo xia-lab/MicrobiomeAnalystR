@@ -59,8 +59,11 @@ Init.mbSetObj <- function(){
   enrich.type <<- "hyper";
   
   # to control parallel computing for some packages
-  BiocParallel::register(BiocParallel::SerialParam());
-  Sys.setenv("OMP_NUM_THREADS" = 2); 
+  # PRO: Skip BiocParallel registration when phyloseq is not loaded (callr isolation)
+  if (!isFALSE(get0(".LOAD_PHYLOSEQ", envir = .GlobalEnv))) {
+    BiocParallel::register(BiocParallel::SerialParam());
+  }
+  Sys.setenv("OMP_NUM_THREADS" = 2);
   Sys.setenv("OPENBLAS_NUM_THREADS" = 2);
 
   if(.on.public.web){ 
@@ -72,7 +75,10 @@ Init.mbSetObj <- function(){
   # preload some general package
   suppressMessages(library(Cairo));
   suppressMessages(library(RColorBrewer));
-  suppressMessages(library(phyloseq));
+  # .LOAD_PHYLOSEQ: TRUE (default/public) = load package, FALSE (Pro) = skip
+  if (!isFALSE(get0(".LOAD_PHYLOSEQ", envir = .GlobalEnv))) {
+    suppressMessages(library(phyloseq));
+  }
   suppressMessages(library(ggplot2));
   suppressMessages(library(reshape));
 
@@ -262,7 +268,7 @@ mydata <- sapply(mydata[,-1,drop=F], format, trim = TRUE)
     mbSetObj$dataSet$sample_data <- my.meta
     mbSetObj$dataSet$meta_info$disc.inx <- 0;
     mbSetObj$dataSet$meta_info$cont.inx <- 0;
-    qs::qsave(mbSetObj$dataSet$sample_data, file = "meta_info.qs")
+    shadow_save(mbSetObj$dataSet$sample_data, file = "meta_info.qs")
     return(0);
   }else{
     
@@ -285,7 +291,7 @@ mydata <- sapply(mydata[,-1,drop=F], format, trim = TRUE)
       # make sure the discrete data is on the left side
       mbSetObj$dataSet$sample_data <- cbind(mbSetObj$dataSet$sample_data, my.meta[,cont.inx, drop=FALSE]);
     }
-    qs::qsave(mbSetObj$dataSet$sample_data, file = "meta_info.qs")
+    shadow_save(mbSetObj$dataSet$sample_data, file = "meta_info.qs")
   }
   mbSetObj$dataSet$smpl.msg <- c(na.msg,na.msg1);
   return(.set.mbSetObj(mbSetObj));
@@ -407,12 +413,30 @@ IsPoorReplicate <- function(mbSetObj){
 }
 
 GetResMat <- function(mbSetObj){
-  mbSetObj <- .get.mbSetObj(mbSetObj); 
-  return(as.matrix(signif(mbSetObj$analSet$resTable),5));
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  res_mat <- as.matrix(signif(mbSetObj$analSet$resTable, 5));
+
+  # Safe-Handshake: Arrow save with verification
+  tryCatch({
+    ExportResultMatArrow(res_mat, "res_mat");
+  }, error = function(e) {
+    warning(paste("Arrow save failed for res_mat:", e$message));
+  });
+
+  return(res_mat);
 }
 
 GetResMetabo <- function(){
-  return(as.matrix(current.proc$met$res_deAnal));
+  res_mat <- as.matrix(current.proc$met$res_deAnal);
+
+  # Safe-Handshake: Arrow save with verification
+  tryCatch({
+    ExportResultMatArrow(res_mat, "res_metabo");
+  }, error = function(e) {
+    warning(paste("Arrow save failed for res_metabo:", e$message));
+  });
+
+  return(res_mat);
 }
 
 # type can be all, discrete or continuous
@@ -475,18 +499,19 @@ GetMetaTaxaInfo <- function(mbSetObj){
 
 GetSampleGrpInfo <- function(mbSetObj, clsLbl){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  return(levels(factor(phyloseq::get_variable(mbSetObj$dataSet$norm.phyobj, clsLbl))));
+  # BINARY-BLIND: Use embedded get_variable (no phyloseq:: namespace)
+  return(levels(factor(get_variable(mbSetObj$dataSet$norm.phyobj, clsLbl))));
 }
 
 GetSampleGrpNo <- function(mbSetObj, clsLbl){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   #Issue with phyloslim (after merging into phyloslim object the sample variable are converted to numeric again rather than factor)
-  return(length(levels(factor(phyloseq::get_variable(mbSetObj$dataSet$norm.phyobj, clsLbl)))));
+  # BINARY-BLIND: Use embedded get_variable (no phyloseq:: namespace)
+  return(length(levels(factor(get_variable(mbSetObj$dataSet$norm.phyobj, clsLbl)))));
 }
 
 GetTaxaNames<- function(mbSetObj, taxlvl){
-
-    require("phyloseq")
+    # BINARY-BLIND: Removed require("phyloseq") - embedded scripts already loaded
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -637,9 +662,11 @@ UtilMakeCountTables <- function(phyloseq.obj, taxrank){
 }
 
 saveSet <- function(obj=NA, set="", output=1){
-  
-  if(globalConfig$anal.mode == "api"){ 
+
+  if(globalConfig$anal.mode == "api"){
     qs:::qsave(obj, paste0(set, ".qs"));
+    # CRITICAL: Prevent race condition - allow file system to sync before Java reads
+    Sys.sleep(0.15);
     return(output)
   }else{
     if(set == "dataSet"){
@@ -714,6 +741,8 @@ Set.Config <-function(anal.mode="web"){
 }
 
 saveDataQs <-function(data, name, module.nm, dataName){
+  # Use qs::qsave directly for internal R workflow files
+  # (shadow_save with Arrow is only needed for R-Java data exchange)
   if(module.nm == "meta"){
     qs::qsave(data, file=paste0(dataName, "_data/", name));
   }else{

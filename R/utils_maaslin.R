@@ -829,7 +829,7 @@ paras = paras[!paras$feature %in% nafeat,]
                  cores=cores,
                  my.fun=my.fun,
                 filtered_data_norm=filtered_data_norm);
-  qs::qsave(dat.in, file="dat.in.qs");
+  shadow_save(dat.in, file="dat.in.qs");
   return(1);
 }
 

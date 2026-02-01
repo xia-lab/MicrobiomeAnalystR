@@ -51,7 +51,7 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
   numeric_levels <- as.numeric(levels(meta.vec))
 
  if(any(!is.na(numeric_levels))) {
-    print("numeric");
+    #print("numeric");
     sorted_unique_meta_vec <- sort(unique(as.numeric(levels(meta.vec))))
     col.s <- generateColorGradient(sorted_unique_meta_vec)
     # Create a named vector where names are sorted unique meta.vec values and values are corresponding colors
@@ -194,7 +194,7 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
                     axisLoading=res2$axis, 
                     metaCol = legendData);
     #res2$pos.xyz <- load.xyz;
-    #qs::qsave(res2, "pca3d_loadings.qs");
+    #shadow_save(res2, "pca3d_loadings.qs");
   }
   
   if("facB" %in% names(res)){
@@ -203,7 +203,7 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
   
   rownames(pos.xyz) <- res$name;
   mbSetObj$analSet$pos.xyz <- pos.xyz;
-  qs::qsave(pos.xyz,"pos.xyz.qs");
+  shadow_save(pos.xyz,"pos.xyz.qs");
   
   
   sink(filenm);

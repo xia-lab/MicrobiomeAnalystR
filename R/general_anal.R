@@ -101,6 +101,15 @@ RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank){
   mbSetObj$analSet$cls <- cls;
   mbSetObj$analSet$rf <- rf_out;
   mbSetObj$analSet$rf.sigmat <- sigmat;
+
+  # Safe-Handshake: Arrow save with verification
+  tryCatch({
+    conf_mat <- signif(rf_out$confusion, 3);
+    ExportResultMatArrow(conf_mat, "rf_confusion_mat");
+  }, error = function(e) {
+    warning(paste("Arrow save failed for rf_confusion_mat:", e$message));
+  });
+
   return(.set.mbSetObj(mbSetObj))
 }
 
@@ -1194,7 +1203,7 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, f
       return(resTable);
     }
     dat.in <- list(data=data, variable=variable, my.fun=my.fun);
-    qs::qsave(dat.in, file="dat.in.qs");
+    shadow_save(dat.in, file="dat.in.qs");
     return(1)
   }
 return(1)
@@ -1411,40 +1420,35 @@ return(1)
 ###########)Permanova_Pairwise##########################
 ########################################################
 ###adopted from ecole package https://rdrr.io/github/phytomosaic/ecole/
+### NOTE: Uses permanova_pairwise_isolated() to run ALL comparisons in SINGLE callr
 .permanova_pairwise <- function(x,
                                  grp,
                                  permutations = 999,
                                  method = 'bray',
                                  padj = 'fdr', ...) {
-  f     <- grp
+  f <- grp
   if (!all(table(f) > 1)) warning('factor has singletons! perhaps lump them?')
-  co    <- combn(unique(as.character(f)),2)
-  nco   <- NCOL(co)
-  out   <- data.frame(matrix(NA, nrow=nco, ncol=5))
-  dimnames(out)[[2]] <- c('pairs', 'SumOfSqs', 'F.Model', 'R2', 'pval')
-  if (!inherits(x, 'dist')) {
-    D <- vegan::vegdist(x, method=method)
-  } else {
-    D <- x
-  }
-  #cat('Now performing', nco, 'pairwise comparisons. Percent progress:\n')
-  for(j in 1:nco) {
-    cat(round(j/nco*100,0),'...  ')
-    ij  <- f %in% c(co[1,j],co[2,j])
-    Dij <- as.dist(as.matrix(D)[ij,ij])
-    fij <- data.frame(fij = f[ij])
-    a   <- vegan::adonis2(Dij ~ fij, data=fij, permutations = permutations, ...);
-    out[j,1] <- paste(co[1,j], 'vs', co[2,j])
-    out[j,2] <- a$SumOfSqs[1]
-    out[j,3] <- a$F[1]
-    out[j,4] <- a$R2[1]
-    out[j,5] <- a$`Pr(>F)`[1]
-  }
-  #cat('\n')
-  out$p.adj <- p.adjust(out$pval, method=padj)
-  out$SumOfSqs <-NULL
-  #attr(out, 'p.adjust.method') <- padj
-  #cat('\np-adjust method:', padj, '\n\n');
+
+  # Run all pairwise PERMANOVA comparisons in a SINGLE callr subprocess
+  # This replaces N+1 individual callr calls (1 vegdist + N adonis2) with just 1
+  result <- permanova_pairwise_isolated(
+    x = x,
+    group = f,
+    method = method,
+    permutations = permutations,
+    ...
+  )
+
+  # Build output in expected format
+  out <- data.frame(
+    pairs = result$pairs,
+    F.Model = result$F.Model,
+    R2 = result$R2,
+    pval = result$p.value,
+    stringsAsFactors = FALSE
+  )
+
+  out$p.adj <- p.adjust(out$pval, method = padj)
   return(out)
 }
 
@@ -1519,7 +1523,7 @@ FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, feat){
   }
   
   data1 <- t(data1);
-  qs::qsave(data1, "match_data.qs")
+  shadow_save(data1, "match_data.qs")
   #making boxplot data
   
   sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
@@ -1877,7 +1881,7 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, 
   }
 
   data <- t(data);
-  qs::qsave(data, "match_data.qs")
+  shadow_save(data, "match_data.qs")
  
   clslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   boxdata <- as.data.frame(data,check.names=FALSE);
@@ -1887,7 +1891,7 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, 
   if(dist.name == "sparcc"){
     
     pattern.data <- cbind(data, new.template)
-    qs::qsave(t(pattern.data), "pattern_data.qs")
+    shadow_save(t(pattern.data), "pattern_data.qs")
     permNum <- 100
     pvalCutoff <- 1 
     corrCutoff <- 0
@@ -2013,8 +2017,9 @@ TSSnorm = function(features) {
   dd <- colnames(features_norm)
   
   # TSS Normalizing the Data
+  # NOTE: decostand is shadowed by pro_wrappers.R callr isolation
   features_TSS <-
-    vegan::decostand(
+    decostand(
       features_norm,
       method = "total",
       MARGIN = 1,
@@ -2097,7 +2102,7 @@ KendallCorrFunc <- function(var1, var2, data){
 GenerateTemplates <- function(mbSetObj, variable){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  print(variable)
+  #print(variable)
   clslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   level.len <- length(levels(clslbl));
   # only specify 4: increasing, decreasing, mid high, mid low, constant
@@ -2141,7 +2146,8 @@ phyloseq_to_edgeR = function(physeq, group, method="RLE", ...){
   # Check `group` argument
   if( identical(all.equal(length(group), 1), TRUE) & nsamples(physeq) > 1 ){
     # Assume that group was a sample variable name (must be categorical)
-    group = phyloseq::get_variable(physeq, group)
+    # BINARY-BLIND: Use embedded get_variable (no phyloseq:: namespace)
+    group = get_variable(physeq, group)
   }
   # Define gene annotations (`genes`) as tax_table
   taxonomy = tax_table(physeq, errorIfNULL=FALSE)
@@ -2279,7 +2285,16 @@ GetRFOOB<-function(mbSetObj){
 # significance measure, double[][]
 GetRFSigMat<-function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  return(CleanNumber(mbSetObj$analSet$rf.sigmat))
+  sig_mat <- CleanNumber(mbSetObj$analSet$rf.sigmat);
+
+  # Safe-Handshake: Arrow save with verification
+  tryCatch({
+    ExportResultMatArrow(sig_mat, "rf_sig_mat");
+  }, error = function(e) {
+    warning(paste("Arrow save failed for rf_sig_mat:", e$message));
+  });
+
+  return(sig_mat);
 }
 
 GetRFSigRowNames<-function(mbSetObj){
@@ -2295,7 +2310,16 @@ GetRFSigColNames<-function(mbSetObj){
 # return double[][] confusion matrix
 GetRFConfMat<-function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  return(signif(mbSetObj$analSet$rf$confusion,3));
+  conf_mat <- signif(mbSetObj$analSet$rf$confusion, 3);
+
+  # Safe-Handshake: Arrow save with verification
+  tryCatch({
+    ExportResultMatArrow(conf_mat, "rf_confusion_mat");
+  }, error = function(e) {
+    warning(paste("Arrow save failed for rf_confusion_mat:", e$message));
+  });
+
+  return(conf_mat);
 }
 
 GetRFConfRowNames<-function(mbSetObj){
@@ -2393,7 +2417,7 @@ GenerateCompJson <- function(mbSetObj = NA, fileName, format,type, mode = 1, tax
                         left_join(resTable, ., by = c("parent" = "parent")) %>%
                         arrange(parent, len) %>%
                         mutate(BPcum = len + tot))
-    print(type)
+    #print(type)
     if (type %in% c("EdgeR", "DESeq2","ffm")) {
       don$shape <- ifelse(don$log2FC > 0, "triangle-up", "triangle-down")
       don$shape[don$FDR > sigLevel | abs(don$log2FC) < fcLevel] <- "circle"

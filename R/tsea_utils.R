@@ -246,6 +246,13 @@ CalculateHyperScore <- function(mbSetObj){
   mbSetObj$analSet$ora.hits = hits;
   fast.write(mbSetObj$analSet$ora.mat, file="tsea_ora_result.csv");
 
+  # Safe-Handshake: Arrow save with verification
+  tryCatch({
+    ExportResultMatArrow(mbSetObj$analSet$ora.mat, "ora_mat");
+  }, error = function(e) {
+    warning(paste("Arrow save failed for ora_mat:", e$message));
+  });
+
   return(.set.mbSetObj(mbSetObj));
   
 }
@@ -440,9 +447,9 @@ PlotEnrichNet.Overview<-function(hits, pvals){
   wd <- reshape2::melt(w);
   wd <- wd[wd[,1] != wd[,2],];
   wd <- wd[!is.na(wd[,3]),];
-  g <- graph.data.frame(wd[,-3], directed=F);
+  g <- graph_from_data_frame(wd[,-3], directed=F);
   E(g)$width <- sqrt(wd[,3]*20);
-  g <- delete.edges(g, E(g)[wd[,3] < 0.2]);
+  g <- delete_edges(g, E(g)[wd[,3] < 0.2]);
   idx <- unlist(sapply(V(g)$name, function(x) match(x,id)));
   pvalue <- pvalue[idx]
   cols <- color_scale("red", "#E5C494");
@@ -455,7 +462,7 @@ PlotEnrichNet.Overview<-function(hits, pvals){
   #V(g)$size <- cnt2/sum(cnt2) * 10;
     
   # layout
-  pos.xy <- layout.fruchterman.reingold(g);
+  pos.xy <- layout_with_fr(g);
 
   # now create the json object
   nodes <- vector(mode="list");
@@ -472,7 +479,7 @@ PlotEnrichNet.Overview<-function(hits, pvals){
                   y = pos.xy[i,2]);
   }
     
-  edge.mat <- get.edgelist(g);
+  edge.mat <- as_edgelist(g);
   edge.mat <- cbind(id=1:nrow(edge.mat), source=edge.mat[,1], target=edge.mat[,2]);
 
   # covert to json
@@ -502,7 +509,16 @@ GetORA.rowNames<-function(mbSetObj){
 # Getter
 GetORA.mat<-function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  return(mbSetObj$analSet$ora.mat);
+  ora_mat <- mbSetObj$analSet$ora.mat;
+
+  # Safe-Handshake: Arrow save with verification
+  tryCatch({
+    ExportResultMatArrow(ora_mat, "ora_mat");
+  }, error = function(e) {
+    warning(paste("Arrow save failed for ora_mat:", e$message));
+  });
+
+  return(ora_mat);
 }
 
 # Getter

@@ -24,7 +24,7 @@ PerformSeqCheck <- function(home_dir = ""){
   } else {
     p1 <- plotQualityProfile(fnFs[1:2])
   }
-  qs::qsave(p1, "diagnotics_plot_src.qs");
+  shadow_save(p1, "diagnotics_plot_src.qs");
   Cairo::Cairo(1600, 1250,file = paste0("diagnotics.png"),dpi = 180,bg = "white")
   print(p1)
   dev.off()
@@ -575,7 +575,7 @@ ReadRawMeta<-function(fileName){
   
   meta_df <- data.frame(fileNms = rawFileNms,
                         class = rawClassNms);
-  qs::qsave(meta_df, file = "meta_info.qs");
+  shadow_save(meta_df, file = "meta_info.qs");
 
   rawFileNms<<-rawFileNms;
   rawClassNms<<-rawClassNms;
@@ -658,7 +658,7 @@ exportSampleNMs <- function(mbSetObj = NA){
     .set.mbSetObj(mbSetObj)
     return(dataObj[["sample.names"]]);
   } else {
-    print(dataObj[["sample.names"]]);
+    #print(dataObj[["sample.names"]]);
     return(.set.mbSetObj(mbSetObj))
   }
 }
@@ -674,12 +674,21 @@ exportSampleTrackTable <- function(mbSetObj = NA){
   }
   if (.on.public.web) {
     .set.mbSetObj(mbSetObj)
-    return(dataObj[["res"]][["track"]]);
+    track_mat <- dataObj[["res"]][["track"]];
+
+    # Safe-Handshake: Arrow save with verification
+    tryCatch({
+      ExportResultMatArrow(track_mat, "sample_track_mat");
+    }, error = function(e) {
+      warning(paste("Arrow save failed for sample_track_mat:", e$message));
+    });
+
+    return(track_mat);
   } else {
-    print(dataObj[["res"]][["track"]]);
+    #print(dataObj[["res"]][["track"]]);
     return(.set.mbSetObj(mbSetObj))
   }
-  
+
 }
 
 exportOTUtaxaInfo <- function(mbSetObj = NA, taxaLevel = 1){
@@ -716,7 +725,7 @@ exportOTUtaxaInfo <- function(mbSetObj = NA, taxaLevel = 1){
     .set.mbSetObj(mbSetObj)
     return(resv);
   } else {
-    print(resv);
+    #print(resv);
     return(.set.mbSetObj(mbSetObj))
   }
 }

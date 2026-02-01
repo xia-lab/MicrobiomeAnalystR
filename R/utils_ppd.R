@@ -177,13 +177,13 @@ PerformRefDataMapping <- function(mbSetObj, refdataNm, taxo_type, sample_var, bi
   merged.data <- merge_phyloseq(current.ref_userdata,current.ref_usersamdata);
   sample_data(merged.data)$sample_id <- rownames(sample_data(merged.data));
   if(mbSetObj$module.type == "meta"){
-    qs::qsave(merged.data, "merged.data.raw.qs");
+    shadow_save(merged.data, "merged.data.raw.qs");
   }
   
   #data filteration and transformation
   merged.data <- transform_sample_counts(merged.data, function(x) x / sum(x) );
   
-  qs::qsave(merged.data, "merged.data.qs");
+  shadow_save(merged.data, "merged.data.qs");
   
   current.msg <<- paste(msg, collapse=".");
   mbSetObj$dataSet$lib.msg <- current.msg;
@@ -200,10 +200,10 @@ PerformRefDataMapping <- function(mbSetObj, refdataNm, taxo_type, sample_var, bi
 #'@export
 #'@import vegan
 PCoA3DAnal.16SRef <- function(mbSetObj, barplotNm, ordMeth, distName, taxrank, metadata, format="png", dpi=72){
-  
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
-  suppressMessages(library(vegan));
+  # NOTE: vegan NOT loaded in Master - ordinate() uses callr internally
 
   data <- userrefdata;
 
@@ -293,7 +293,7 @@ PlotUsrRefPCoA3DScore <- function(mbSetObj, imgName, format="json", inx1, inx2, 
 
   pos.xyz <- mypos;
   rownames(pos.xyz) = pca3d$score$name;
-  qs::qsave(pos.xyz, "score_pos_xyz.qs");
+  shadow_save(pos.xyz, "score_pos_xyz.qs");
 
   json.obj <- rjson::toJSON(pca3d);
   #sink(imgName);

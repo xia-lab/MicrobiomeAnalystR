@@ -65,7 +65,7 @@ PerformMetaEffectSize <- function(mbSetObj=NA, imgName="", taxrank="OTU", selMet
   paramSet$inmex.method <- "effectsize";
   analSet$meta.mat <- meta.stat <<- NULL;
   
-  qs::qsave(dat, "metaanal_phyobj.qs");
+  shadow_save(dat, "metaanal_phyobj.qs");
   #meta.obj <- qs::qread("microbiome_meta.qs");
   
   #if(taxrank=="OTU"){     
@@ -468,22 +468,22 @@ bf_ratio <- function(phylo){
     return(NULL)
   }
   
-  # Collapse on phyla
-  phyla <- phyloseq::tax_glom(physeq = phylo, taxrank = "Phylum")
-  
-  # Find relative abundances
-  phyla_rel <- phyloseq::transform_sample_counts(phyla, function(x) { x/sum(x) } )
-  
+  # Collapse on phyla (use fast_tax_glom_mem - no ape dependency)
+  phyla <- fast_tax_glom_mem(phylo, "Phylum")
+
+  # Find relative abundances (use embedded transform_sample_counts)
+  phyla_rel <- transform_sample_counts(phyla, function(x) { x/sum(x) } )
+
   # Keep B/F taxa
   tax_table(phyla_rel)
   phyla_rel_bact <- otu_table(subset_taxa(phyla_rel, grepl("Bacteroidetes", Phylum, fixed = TRUE)))
   phyla_rel_firm <- suppressWarnings(otu_table(subset_taxa(phyla_rel, grepl("Firmicutes", Phylum, fixed = TRUE))))
-  
+
   # OTU
   bf_ratio <- phyla_rel_bact /  phyla_rel_firm
-  
-  # Add to sample metadata
-  phyloseq::sample_data(phylo)$bf_ratio <- as.numeric(bf_ratio)
+
+  # Add to sample metadata (use embedded sample_data<-)
+  sample_data(phylo)$bf_ratio <- as.numeric(bf_ratio)
   
   # Return phyllseq object
   return(phylo)
@@ -506,27 +506,46 @@ PlotBetaSummary <- function(mbSetObj, plotNm,taxalvl, sel.meta, alg, format="png
   mbSetObj <- .get.mbSetObj(mbSetObj);
   data.obj <- qs::qread("merged.data.qs");
   data.obj <- subsetPhyloseqByDataset(mbSetObj, data.obj);
-  
+
   mdata.all <- mbSetObj$mdata.all;
   sel.nms <- names(mdata.all)[mdata.all==1];
-  
+
   dist.vec <- c("jaccard", "jsd", "bray");#"wunifrac", "unifrac",
-  res.list <- list();
-  # OPTIMIZED: Pre-allocate vector to avoid O(n²) c() growing in nested loop
-  data.nms.vec <- character(length(sel.nms) * length(dist.vec))
-  vec_idx <- 1
+
+  # OPTIMIZED: Batch all category comparisons in SINGLE callr subprocess
+  # This replaces N datasets × 3 distances = 3N individual callr calls with 1
+  otu_list <- list()
+  sample_data_list <- list()
+
   for(j in 1:length(sel.nms)){
     mbSetObj$dataSet <- mbSetObj$dataSets[[sel.nms[j]]];
     dataName <- mbSetObj$dataSet$name;
-    .set.mbSetObj(mbSetObj);
-    res.list[[dataName]] <- list();
 
+    phyloseq_objs <- readDataQs("phyloseq_objs.qs", mbSetObj$module.type, dataName)
+    data <- phyloseq_objs$merged_obj[[taxalvl]]
+
+    if(!is.null(data)){
+      otu_list[[dataName]] <- as.matrix(otu_table(data))
+      sample_data_list[[dataName]] <- data.frame(sample_data(data), check.names = FALSE)
+    }
+  }
+
+  # Run ALL comparisons in single callr
+  batch_results <- category_comp_batch_isolated(
+    otu_list = otu_list,
+    sample_data_list = sample_data_list,
+    dist_methods = dist.vec,
+    variable = sel.meta,
+    method = alg
+  )
+
+  # Unpack results
+  res.list <- batch_results
+  data.nms.vec <- character(length(sel.nms) * length(dist.vec))
+  vec_idx <- 1
+  for(j in 1:length(sel.nms)){
+    dataName <- names(otu_list)[j]
     for(i in 1:length(dist.vec)){
-      distName <- dist.vec[i];
-      PerformCategoryComp(mbSetObj, taxalvl, alg,distName, sel.meta);
-      mbSetObj <- .get.mbSetObj(mbSetObj);
-      res <- mbSetObj$analSet$stat.info.vec;
-      res.list[[dataName]][[dist.vec[i]]] <- res;
       data.nms.vec[vec_idx] <- dataName
       vec_idx <- vec_idx + 1
     }
@@ -566,27 +585,41 @@ p <- p + geom_point(shape=16, alpha=0.8, size=4) +
 
 PlotDiscreteDiagnostic <- function(mbSetObj, fileName, metadata, format="png", dpi=72){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
+
   mdata.all <- mbSetObj$mdata.all;
   sel.nms <- names(mdata.all)[mdata.all==1];
-  
+
   require(MMUPHin);
   require(ggpubr);
-  require(vegan);
-  
+  # NOTE: vegan NOT loaded in Master - use distance_batch_isolated() for all groups
+
   data  <- qs::qread("merged.data.raw.qs");
   data <- subsetPhyloseqByDataset(mbSetObj, data);
-  
+
   sam_data <- as.data.frame(as.matrix(sample_data(data)));
-  
+
+  # OPTIMIZED: Batch all distance calculations in SINGLE callr subprocess
+  # This replaces N metadata groups × 1 distance call = N callr calls with 1
+  meta_groups <- unique(sam_data[, metadata])
+  data_subsets <- list()
+
+  for(meta.grp in meta_groups){
+    sub_sam_data <- sam_data[which(sam_data[, metadata] == meta.grp), ]
+    sub_data <- data@otu_table[, rownames(sub_sam_data)]
+    data_subsets[[as.character(meta.grp)]] <- as.matrix(sub_data)
+  }
+
+  # Single callr for all distance calculations
+  dist_results <- distance_batch_isolated(data_subsets, method = "bray")
+
   plot.list <- list();
   i <- 1;
-  for(meta.grp in unique(sam_data[,metadata])){
-    sub_sam_data <- sam_data[which(sam_data[,metadata] == meta.grp), ]
-    sub_data <- data@otu_table[, rownames(sub_sam_data)]
-    
-    dist_data <- vegdist(t(sub_data))
-    
+  for(meta.grp in meta_groups){
+    sub_sam_data <- sam_data[which(sam_data[, metadata] == meta.grp), ]
+
+    # Use pre-computed distance from batch result
+    dist_data <- dist_results[[as.character(meta.grp)]]
+
     fit_discrete <- discrete_discover(D = dist_data,
                                       batch = "dataset",
                                       data = sub_sam_data,
@@ -594,36 +627,37 @@ PlotDiscreteDiagnostic <- function(mbSetObj, fileName, metadata, format="png", d
     nms <- sel.nms;
     res.list <- list();
     for(study_id in nms){
-    
+
     internal <- data.frame(K = 2:8,
                            statistic = fit_discrete$internal_mean,
                            se = fit_discrete$internal_se,
                            type = "internal")
-    
+
     external <- data.frame(K = 2:8,
                            statistic = fit_discrete$external_mean,
                            se = fit_discrete$external_se,
                            type = "external")
-    
+
     df <- rbind(internal, external);
     df$dataset <- rep(study_id, nrow(df));
     res.list[[paste0(metadata, meta.grp, sep="-")]] <- df;
-    }  
+    }
     res <- do.call("rbind", res.list);
-    
+
     p <- ggplot2::ggplot(res, aes(x = K, y = statistic, color = type)) +
-      geom_point(position = position_dodge(width = 0.5)) + 
+      geom_point(position = position_dodge(width = 0.5)) +
       geom_line(position = position_dodge(width = 0.5)) +
       geom_errorbar(aes(ymin = statistic - se, ymax = statistic + se),
-                    position = position_dodge(width = 0.5), width = 0.5) + 
+                    position = position_dodge(width = 0.5), width = 0.5) +
       facet_wrap(as.formula(paste0("~dataset")), scales="free", ncol= 1) +
       ggtitle(label=paste0(metadata, "-", meta.grp));
-    
+
     if(i == 1){
       p <- p + theme(legend.position = "none")
     }
-    
+
     plot.list[[meta.grp]] <- p;
+    i <- i + 1;
   }
 
   imgName = paste(fileName, ".", format, sep="");
@@ -638,31 +672,48 @@ PlotDiscreteDiagnostic <- function(mbSetObj, fileName, metadata, format="png", d
 PlotContinuousPopulation <- function(mbSetObj, loadingName, ordinationName, metadata, format="png", dpi=72){
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
-  require(vegan);
+  # NOTE: vegan NOT loaded in Master - use distance_batch_isolated() for all groups
   require(MMUPHin);
   require(tidyverse);
-  
+
   loading.list <- list();
   ordination.list <- list();
-  
+
   data <- qs::qread("merged.data.qs");
   data <- subsetPhyloseqByDataset(mbSetObj, data);
-  
+
   sam_data <- as.data.frame(as.matrix(sample_data(data)));
-  for(meta.grp in unique(sam_data[,metadata])){
-    sub_sam_data <- sam_data[which(sam_data[,metadata] == meta.grp), ]
+
+  # OPTIMIZED: Batch all distance calculations in SINGLE callr subprocess
+  # This replaces N metadata groups × 1 distance call = N callr calls with 1
+  meta_groups <- unique(sam_data[, metadata])
+  data_subsets <- list()
+
+  for(meta.grp in meta_groups){
+    sub_sam_data <- sam_data[which(sam_data[, metadata] == meta.grp), ]
+    sub_data <- data@otu_table[, rownames(sub_sam_data)]
+    data_subsets[[as.character(meta.grp)]] <- as.matrix(sub_data)
+  }
+
+  # Single callr for all distance calculations
+  dist_results <- distance_batch_isolated(data_subsets, method = "bray")
+
+  for(meta.grp in meta_groups){
+    sub_sam_data <- sam_data[which(sam_data[, metadata] == meta.grp), ]
     sub_data <- data@otu_table[, rownames(sub_sam_data)];
-    dist.data <- vegdist(t(sub_data));
-    
+
+    # Use pre-computed distance from batch result
+    dist.data <- dist_results[[as.character(meta.grp)]]
+
     fit_continuous <- continuous_discover(feature_abd = sub_data,
                                           batch = "dataset",
                                           data = sub_sam_data,
                                           control = list(var_perc_cutoff = 0.5,
                                                          verbose = FALSE));
-    
+
     loading <- data.frame(feature = rownames(fit_continuous$consensus_loadings),
                           loading1 = fit_continuous$consensus_loadings[, 1])
-    
+
     p <- loading %>%
       arrange(-abs(loading1)) %>%
       slice(1:20) %>%
@@ -672,20 +723,20 @@ PlotContinuousPopulation <- function(mbSetObj, loadingName, ordinationName, meta
       geom_bar(stat = "identity") +
       coord_flip() +
       ggtitle(label=paste0(metadata, "-", meta.grp));
-    
-    loading.list[[meta.grp]] <- p;
-    
+
+    loading.list[[as.character(meta.grp)]] <- p;
+
     mds <- cmdscale(d = dist.data)
     colnames(mds) <- c("Axis1", "Axis2");
     mds <- as.data.frame(mds);
     mds$score1 <- fit_continuous$consensus_scores[, 1];
-    
+
     p2 <- ggplot(mds, aes(x = Axis1, y = Axis2)) +
       geom_point(aes(colour = score1), size=2, shape=16) +
       scale_colour_gradient2() +
       coord_fixed()
-    
-    ordination.list[[meta.grp]] <- p2;
+
+    ordination.list[[as.character(meta.grp)]] <- p2;
   }
   
   

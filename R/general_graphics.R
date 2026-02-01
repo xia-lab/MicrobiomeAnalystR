@@ -110,26 +110,8 @@ PlotTreeGraph <- function(mbSetObj, plotNm, distnm, clstDist, metadata,
     pg_sd <- sample_data(data)
     pg_tree <- prune_taxa(taxa_names(pg_ot), pg_tree)
     data <- merge_phyloseq(pg_tb, pg_ot, pg_sd, pg_tree)
-
-    if (!is.rooted(phy_tree(data))) {
-      pick_new_outgroup <- function(tree.unrooted) {
-        treeDT <-
-          cbind(
-            cbind(
-              data.table(tree.unrooted$edge),
-              data.table(length = tree.unrooted$edge.length)
-            )[1:Ntip(tree.unrooted)],
-            data.table(id = tree.unrooted$tip.label)
-          )
-        new.outgroup <- treeDT[which.max(treeDT$length), ]$id
-        return(new.outgroup)
-      }
-      new.outgroup <- pick_new_outgroup(phy_tree(data))
-      phy_tree(data) <- ape::root(phy_tree(data),
-        outgroup = new.outgroup,
-        resolve.root = TRUE
-      )
-    }
+    # NOTE: Tree rooting is handled by UniFrac_isolated in callr subprocess
+    # No need to call ape::root here - avoids loading ape in Master
     dist.mat <- distance(data, distnm, type = "samples")
   } else {
     dist.mat <- distance(data, distnm, type = "samples")
@@ -247,6 +229,19 @@ PlotBoxData <- function(mbSetObj, boxplotName, feat, plotType, format = "png", d
     variable <- colnames(sample_table)[1]
   }
   data <- mbSetObj$analSet$boxdata
+
+  # Defensive: Handle empty or invalid feature name
+  available_features <- setdiff(colnames(data), "class")
+  if (is.null(feat) || feat == "" || !(feat %in% available_features)) {
+    if (length(available_features) > 0) {
+      # Default to first feature if none specified
+      feat <- available_features[1]
+      warning(paste("PlotBoxData: Invalid feature name, using first available:", feat))
+    } else {
+      stop("PlotBoxData: No valid features available in boxdata")
+    }
+  }
+
   a <- as.numeric(data[, feat])
   min.val <- min(abs(a[a != 0])) / 5
   data$log_feat <- log2((a + sqrt(a^2 + min.val)) / 2)
@@ -311,6 +306,18 @@ PlotBoxMultiData <- function(mbSetObj, boxplotName, analysis.var, feat, plotType
 
   data <- mbSetObj$analSet$multiboxdata
   is.norm <- unique(data[, "norm"])
+
+  # Defensive: Handle empty or invalid feature name
+  available_features <- setdiff(colnames(data), c("class", "norm", "log_feat"))
+  if (is.null(feat) || feat == "" || !(feat %in% available_features)) {
+    if (length(available_features) > 0) {
+      feat <- available_features[1]
+      warning(paste("PlotBoxMultiData: Invalid feature name, using first available:", feat))
+    } else {
+      stop("PlotBoxMultiData: No valid features available in multiboxdata")
+    }
+  }
+
   a <- as.numeric(data[, feat])
   min.val <- min(abs(a[a != 0])) / 5
   data$log_feat <- log2((a + sqrt(a^2 + min.val)) / 2)
@@ -789,8 +796,8 @@ as_list <- to_plotly_list(p)
 
   # Store the static heatmap path for report generation
   mbSetObj$imgSet$heatmap <- imgFile
-  print(paste("DEBUG PlotHeatmap: Stored heatmap image path:", imgFile))
-  print(paste("DEBUG PlotHeatmap: File exists:", file.exists(imgFile)))
+  #print(paste("DEBUG PlotHeatmap: Stored heatmap image path:", imgFile))
+  #print(paste("DEBUG PlotHeatmap: File exists:", file.exists(imgFile)))
 
   return(.set.mbSetObj(mbSetObj))
 }
@@ -973,7 +980,11 @@ PlotCovariateMap <- function(mbSetObj,
        scale_color_manual(values = col_vals, guide = "none") +
        xlab("-log10(Adj. P): no covariate adjustment") +
        ylab("-log10(Adj. P): covariate adjustment") +
-       text_layer +
+       ggrepel::geom_text_repel(data = both.mat[seq_len(topFeature), ],
+                       aes(label = Row.names), size = 3,
+                       max.overlaps = 10,
+                       max.iter = 100,
+                       max.time = 0.5) +
        guides(size = "none")
 
   ## optional quadrant colouring (optimized with annotate for better performance)

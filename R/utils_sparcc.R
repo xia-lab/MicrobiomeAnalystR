@@ -36,7 +36,7 @@ my.sparcc.net <- function(mbSetObj=NULL, corr.net.name, networkType="static", ne
   itypes <- rep("circle", length(nms));
   seeds <- rep("circle", length(nms)); 
   # get edge data
-  edge.mat <- get.edgelist(g);
+  edge.mat <- as_edgelist(g);
   edge.mat1 <- data.frame(edge.mat,check.names=FALSE);
   edge.mat1$color <- ComputeColorGradientCorr(E(g)$correlation);
   edge.mat1 <- as.matrix(edge.mat1)
@@ -51,7 +51,7 @@ my.sparcc.net <- function(mbSetObj=NULL, corr.net.name, networkType="static", ne
   node.eig <- as.numeric(node.eig$vector);
   node.tra <- transitivity(g,type=c("local"))
   node.dgr <- as.numeric(igraph::degree(g)); 
-  node.exp <- as.numeric(get.vertex.attribute(g, name="abundance", index = V(g)));
+  node.exp <- as.numeric(vertex_attr(g, name="abundance", index = V(g)));
   # node size to abundance values
   if(vcount(g)>500){
     min.size = 1;
@@ -170,7 +170,7 @@ my.sparcc.net <- function(mbSetObj=NULL, corr.net.name, networkType="static", ne
   }
   
   type <- rep(FALSE,length(node.dgr));
-  node_attr <- list.vertex.attributes(g);
+  node_attr <- vertex_attr_names(g);
   node_attr <- node_attr[which(node_attr!="names")] 
   
   # now create the json object

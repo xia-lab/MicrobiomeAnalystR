@@ -97,7 +97,7 @@ my.secom.anal<-function(mbSetObj,taxrank,R,corr_cut, max_p,mode,method='pearson'
    res[,4] <- round(res[,4], digits=4)
    secom_data <- exp(1)^y_hat
    secom_data[is.na(secom_data)] <- 0
-   qs::qsave(secom_data,"secom_data.qs")
+   shadow_save(secom_data,"secom_data.qs")
    return(res);
   
 }
