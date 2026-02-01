@@ -4523,16 +4523,24 @@ generateColorArr <- function(grp.num, filenm=NULL) {
 
 PlotlyTaxaAbundance <- function(rdaName, type){
     load(rdaName);
-    p <- plotly::ggplotly(box, width=1000, height=800);
+    p <- tryCatch(
+      plotly::ggplotly(box, width=1000, height=800),
+      error = function(e) {
+        message("PlotlyTaxaAbundance fallback to ggplot: ", conditionMessage(e))
+        box
+      }
+    )
 
-    if(type=="area"){
-       narm <- p[["x"]][["data"]]
-       for(i in 1:length(narm)){
-          narm[[i]]$y[is.na(narm[[i]]$y)]=0;
-       }
-       p[["x"]][["data"]] <- narm
+    if(inherits(p, "plotly")){
+      if(type=="area"){
+         narm <- p[["x"]][["data"]]
+         for(i in 1:length(narm)){
+            narm[[i]]$y[is.na(narm[[i]]$y)]=0;
+         }
+         p[["x"]][["data"]] <- narm
+      }
+      p <- p %>% layout(note="stack")
     }
- p <- p %>% layout(note="stack")
     return(p);
 }
 
