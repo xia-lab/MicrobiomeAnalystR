@@ -929,11 +929,6 @@ PlotCovariateMap <- function(mbSetObj,
 
   logp_val  <- -log10(thresh)
 
-  ## Load ggrepel only if not already loaded (performance optimization)
-  if (!("ggrepel" %in% loadedNamespaces())) {
-    library(ggrepel)
-  }
-
   topFeature   <- min(5, nrow(both.mat))
 
   ## Create base aesthetic (text only if interactive - performance fix)
@@ -961,17 +956,24 @@ PlotCovariateMap <- function(mbSetObj,
                             position = position_jitter(width = 0.03, height = 0.03, seed = 123))
 
   ## build ggplot object (no diagonal line)
+  text_layer <- if (requireNamespace("ggrepel", quietly = TRUE)) {
+    ggrepel::geom_text_repel(data = both.mat[seq_len(topFeature), ],
+                             aes(label = Row.names), size = 3,
+                             max.overlaps = 10,
+                             max.iter = 100,
+                             max.time = 0.5)
+  } else {
+    geom_text(data = both.mat[seq_len(topFeature), ],
+              aes(label = Row.names), size = 3)
+  }
+
   p <- ggplot(both.mat, base_aes) +
        point_layer +
        scale_shape_manual(values = c(`FALSE` = 1,  `TRUE` = 1)) +
        scale_color_manual(values = col_vals, guide = "none") +
        xlab("-log10(Adj. P): no covariate adjustment") +
        ylab("-log10(Adj. P): covariate adjustment") +
-       geom_text_repel(data = both.mat[seq_len(topFeature), ],
-                       aes(label = Row.names), size = 3,
-                       max.overlaps = 10,
-                       max.iter = 100,
-                       max.time = 0.5) +
+       text_layer +
        guides(size = "none")
 
   ## optional quadrant colouring (optimized with annotate for better performance)
