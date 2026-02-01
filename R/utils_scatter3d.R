@@ -200,12 +200,11 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
   if("facB" %in% names(res)){
     netData$metaShape <- legendData2;
   }
-  
+
   rownames(pos.xyz) <- res$name;
   mbSetObj$analSet$pos.xyz <- pos.xyz;
   shadow_save(pos.xyz,"pos.xyz.qs");
-  
-  
+
   sink(filenm);
   cat(toJSON(netData));
   sink();
@@ -249,7 +248,7 @@ scale_range <- function(x, new_min = 0, new_max = 1) {
   range <- pretty(x,10);
   old_min <- min(range);
   old_max <- max(range);
-  
+
   (x - old_min) / (old_max - old_min) * (new_max - new_min) + new_min
 }
 
