@@ -36,9 +36,7 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
   #meta <- meta ### for other methods not import here
   
   
-  Sys.setenv(RGL_USE_NULL = TRUE)
-  library(rgl)
-  library(igraph)
+  # PRO: Removed hitchhiker library(rgl) and library(igraph) - not used in this function
 
   if(reductionOptGlobal == "procrustes"){
     if(!exists("procrustes.res")){

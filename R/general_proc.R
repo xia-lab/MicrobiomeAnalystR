@@ -712,14 +712,14 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
     
     if(transform.opt != "none"){
       if(transform.opt=="rle"){
-        suppressMessages(library(edgeR));            
+        suppressMessages(library(edgeR));
         otuRLE <- edgeRnorm(data,method="RLE");
         data <- as.matrix(otuRLE$counts);
         if(i==1){        
           msg <- c(msg, paste("Performed ```RLE``` Normalization"));
         }
       }else if(transform.opt=="TMM"){
-        suppressMessages(library(edgeR));   
+        suppressMessages(library(edgeR));
         otuTMM <- edgeRnorm(data,method="TMM");
         data <- as.matrix(otuTMM$counts);
         if(i==1){        
@@ -1006,7 +1006,7 @@ PerformRarefaction <- function(mbSetObj, data, rare.opt,rareDepth=NULL){
         return(NULL)
     }
   )
-  if(is.NULL(phy.obj)){
+  if(is.null(phy.obj)){
     return(NULL)
   }else{
     msg <- c(msg, paste("Rarefy with replacement to minimum library depth."));
@@ -1025,7 +1025,7 @@ PerformRarefaction <- function(mbSetObj, data, rare.opt,rareDepth=NULL){
     return(NULL)
   }
   )
-  if(is.NULL(phy.obj)){
+  if(is.null(phy.obj)){
     return(NULL)
   }else{
     msg <- c(msg, paste("Rarefaction without replacement to minimum library depth."));
@@ -1049,7 +1049,7 @@ PerformRarefaction <- function(mbSetObj, data, rare.opt,rareDepth=NULL){
     return(NULL)
   }
   )
-  if(is.NULL(phy.obj)){
+  if(is.null(phy.obj)){
     return(NULL)
   }else{
     msg <- c(msg, paste("Rarefy with replacement to selected library depth."));
