@@ -880,7 +880,8 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
   }
   
   #visualizing top features based on LDA score
-  ldabar <<- ldabar.sub[,-4];
+  # use all features for plotting (top N), regardless of significance
+  ldabar <<- ldabar[,-4];
   
   #preparing data for indvidual box plot
   sigfeat <<- rownames(resTable);
@@ -941,9 +942,13 @@ PlotLEfSeSummary <- function(mbSetObj, ldaFeature, layoutOptlf, imgName, format=
 
   ldabar <- ldabar;
   
-  if(nrow(ldabar) == 0){
+  if (!exists("ldabar") || is.null(ldabar) || nrow(ldabar) == 0) {
+    suppressPackageStartupMessages(library(ggplot2))
     Cairo::Cairo(file = imgName, unit="in", dpi=dpi, width=7, height=7, type=format, bg="white");
-    empty <- ggplot() + theme_void()
+    empty <- ggplot() +
+      theme_void() +
+      annotate("text", x = 0, y = 0, label = "No LEfSe features passed the filters.", size = 5) +
+      xlim(-1, 1) + ylim(-1, 1)
     print(empty)
     dev.off();
     return(.set.mbSetObj(mbSetObj))

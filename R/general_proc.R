@@ -938,6 +938,9 @@ PerformMetaboNormalization <- function(mbSetObj, rowNorm, transNorm, scaleNorm,i
 
 #'Get function to obtain the library scale for rarefraction
 GetLibscale <- function(mbSetObj){
+  if (!"methods" %in% loadedNamespaces()) {
+    suppressMessages(library(methods))
+  }
   mbSetObj <- .get.mbSetObj(mbSetObj);
   dataName <- mbSetObj$dataSet$name;
   module.type <- mbSetObj$module.type;

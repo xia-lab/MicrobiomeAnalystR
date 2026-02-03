@@ -1177,7 +1177,7 @@ DoM2Mcorr <- function(mic.sig,met.sig,cor.method="univariate",cor.stat="pearson"
 }
 
 performeCorrelation <- function(mbSetObj,taxalvl,initDE,cor.method="univariate",cor.stat="pearson",sign, cor.thresh=0.5,
-                                corp.thresh=0.05){
+                                corp.thresh=0.05, topN=50){
   mbSetObj <- .get.mbSetObj(mbSetObj);
  
   if(!exists("phyloseq_objs")){
@@ -1192,8 +1192,9 @@ performeCorrelation <- function(mbSetObj,taxalvl,initDE,cor.method="univariate",
   }
   lbl.met <- current.proc$met$sigfeat
 
-  if(length(lbl.mic) >100){lbl.mic= lbl.mic[1:100]}
-  if(length(lbl.met) >100){lbl.met= lbl.met[1:100]}
+  topN <- max(1, as.integer(topN))
+  if(length(lbl.mic) > topN){lbl.mic= lbl.mic[1:topN]}
+  if(length(lbl.met) > topN){lbl.met= lbl.met[1:topN]}
   
   mic.sig <- micdat[which(rownames(micdat) %in% lbl.mic),]
   met.sig <- metdat[which(rownames(metdat) %in% lbl.met),match(colnames(mic.sig),colnames(metdat)), drop = FALSE]
@@ -1270,7 +1271,7 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
                           clustRow="T", clustCol="T", 
                           colname="T",rowname="T", fontsize_col=10, fontsize_row=10,
                           sign, cor.thresh=0.5,corp.thresh=0.05,
-                          potential.thresh=0.5,predpval.thresh=0.05,
+                          potential.thresh=0.5,predpval.thresh=0.05, topN=50,
                           var.inx=NA, border=T, width=NA, dpi=72){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -1323,14 +1324,15 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
     
     data.abd <- data.abd[order(data.abd$value,-(data.abd$var)),]
     
-    if(length(unique(data.abd$mic))>100){
-      micnms <- unique(data.abd$mic)[1:100]
+    topN <- max(1, as.integer(topN))
+    if(length(unique(data.abd$mic))>topN){
+      micnms <- unique(data.abd$mic)[1:topN]
     }else{
       micnms <- unique(data.abd$mic)
     }
     
-    if(length(unique(data.abd$met))>100){
-      metnms <- unique(data.abd$met)[1:100]
+    if(length(unique(data.abd$met))>topN){
+      metnms <- unique(data.abd$met)[1:topN]
     }else{
       metnms <- unique(data.abd$met)
     }
@@ -1379,14 +1381,14 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
               current.msg <<- paste("No statistical correlation pass the significance thresh hold using current parameters! The triangle show the ones pass the correlation thresh hold!");
               
             }else{
-              anno.mat <- unique(left_join(anno.mat,anno.pval))
+              anno.mat <- unique(dplyr::left_join(anno.mat,anno.pval))
               if(all(is.na(anno.mat$pval))){
                 anno.mat$pval<- NULL
                 current.msg <<- paste("No statistical correlation pass the significance thresh hold using current parameters! The triangle show the ones pass the correlation thresh hold!");
               }
             }          
           }
-          anno.mat <- unique(left_join(anno.mat0,anno.mat))
+          anno.mat <- unique(dplyr::left_join(anno.mat0,anno.mat))
           if(all(is.na(anno.mat$correlation))){
             anno.mat$correlation<- NULL
             current.msg <<- paste("No statistical correlation was detected using current parameters");
@@ -1436,7 +1438,7 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
         
         anno.pval <- reshape2::melt(corr.pval,value.name = "pval")
         anno.pval <- anno.pval[which(anno.pval$pval<corp.thresh),]
-        anno.mat <- unique(left_join(anno.mat0,anno.pval))
+        anno.mat <- unique(dplyr::left_join(anno.mat0,anno.pval))
         anno.mat <- anno.mat[!(is.na(anno.mat$pval)),]
         if(nrow(anno.mat)==0){
           current.msg <<- paste("No significant correlation was detected using current parameters!");          
@@ -1456,14 +1458,16 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
       names(pred.de)[1:2] <- names(anno.mat0)[1:2]
       if(exists("anno.mat")){
         if(nrow(anno.mat)>0){
-          anno.mat <- unique(left_join(anno.mat,pred.de))
+          anno.mat <- unique(dplyr::left_join(anno.mat,pred.de))
         }else{
           anno.mat <- anno.mat0
-          anno.mat <- unique(left_join(anno.mat,pred.de)) %>% filter(!(is.na(P_value)))
+          anno.mat <- unique(dplyr::left_join(anno.mat, pred.de))
+          anno.mat <- anno.mat[!(is.na(anno.mat$P_value)), ]
         }        
       }else{
         anno.mat <- anno.mat0
-        anno.mat <- unique(left_join(anno.mat,pred.de)) %>% filter(!(is.na(P_value)))        
+        anno.mat <- unique(dplyr::left_join(anno.mat, pred.de))
+        anno.mat <- anno.mat[!(is.na(anno.mat$P_value)), ]
       }
       if(nrow(anno.mat)==0){
         if(!is.null(current.msg)){

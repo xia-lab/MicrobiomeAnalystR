@@ -320,7 +320,15 @@ PrepareCorrExpValues <- function(mbSetObj, meta, taxalvl, color, layoutOpt, comp
                              "lineage" = tax_dm$lineage,
                              otu_dm); #make new otu table
   row.names(dm_otu) <- c();
-  dm_otu$lineage <- gsub(";+$", "", dm_otu$lineage); #remove empty tax names
+  dm_otu$lineage <- gsub(";+$", "", dm_otu$lineage); #remove trailing empties
+  dm_otu$lineage <- vapply(strsplit(dm_otu$lineage, ";", fixed = TRUE), function(parts) {
+    parts <- trimws(parts)
+    parts <- parts[parts != ""]
+    if (length(parts) == 0) {
+      return("r__Unclassified")
+    }
+    paste(parts, collapse = ";")
+  }, character(1))
   
   dm_otu_cmf <- dm_otu[, c("otu_id", "lineage", dm_samples_cmf$sample_id)]; #make otu table ready for heat tree  
   PrepareHeatTreePlotDataParse_cmf_res <- PrepareHeatTreePlotDataParse_cmf(dm_otu_cmf, dm_samples_cmf, meta);
@@ -3896,10 +3904,15 @@ PrepareHeatTreePlot <- function(mbSetObj, meta, taxalvl, color, layoutOpt, compa
 PrepareHeatTreePlotDataParse_cmf <- function(dm_otu_cmf,
                                              dm_samples_cmf,
                                              meta){
+  dm_otu_cmf$lineage[is.na(dm_otu_cmf$lineage) | dm_otu_cmf$lineage == ""] <- "r__Unclassified"
+  missing_sep <- !grepl("__", dm_otu_cmf$lineage)
+  if (any(missing_sep)) {
+    dm_otu_cmf$lineage[missing_sep] <- paste0("r__", dm_otu_cmf$lineage[missing_sep])
+  }
   dm_obj_cmf <- metacoder::parse_tax_data(dm_otu_cmf,
                                           class_cols = "lineage",
                                           class_sep = ";",
-                                          class_regex = "^(.+)__(.+)$",
+                                          class_regex = "^(.+)__(.*)$",
                                           class_key = c(tax_rank = "info",
                                                         tax_name = "taxon_name"));
   
@@ -4225,7 +4238,7 @@ PrepareHeatTreePlotAbR <- function(dm = dm, tax_dm = tax_dm, taxalvl = taxalvl, 
   dm_obj_cmf <- metacoder::parse_tax_data(dm_otu_cmf,
                                           class_cols = "lineage",
                                           class_sep = ";",
-                                          class_regex = "^(.+)__(.+)$",
+                                          class_regex = "^(.+)__(.*)$",
                                           class_key = c(tax_rank = "info",
                                                         tax_name = "taxon_name"));
   

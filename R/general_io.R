@@ -72,12 +72,18 @@ Init.mbSetObj <- function(){
     Set.Config("api");
   }
   
+  suppressMessages(library(methods));
   # preload some general package
   suppressMessages(library(Cairo));
   suppressMessages(library(RColorBrewer));
   # .LOAD_PHYLOSEQ: TRUE (default/public) = load package, FALSE (Pro) = skip
   if (!isFALSE(get0(".LOAD_PHYLOSEQ", envir = .GlobalEnv))) {
     suppressMessages(library(phyloseq));
+  }
+  if (!exists("asMethod", mode = "function")) {
+    try({
+      assign("asMethod", getFromNamespace("asMethod", "methods"), envir = .GlobalEnv)
+    }, silent = TRUE)
   }
   suppressMessages(library(ggplot2));
   suppressMessages(library(reshape));
