@@ -501,12 +501,22 @@ GetMetaTaxaInfo <- function(mbSetObj){
 
 
 GetSampleGrpInfo <- function(mbSetObj, clsLbl){
+  # Defensive: some execution paths can lose this unexported helper.
+  if (!exists("asMethod", mode = "function")) {
+    suppressMessages(library(methods))
+    try(assign("asMethod", getFromNamespace("asMethod", "methods"), envir = .GlobalEnv), silent = TRUE)
+  }
   mbSetObj <- .get.mbSetObj(mbSetObj);
   # BINARY-BLIND: Use embedded get_variable (no phyloseq:: namespace)
   return(levels(factor(get_variable(mbSetObj$dataSet$norm.phyobj, clsLbl))));
 }
 
 GetSampleGrpNo <- function(mbSetObj, clsLbl){
+  # Defensive: some execution paths can lose this unexported helper.
+  if (!exists("asMethod", mode = "function")) {
+    suppressMessages(library(methods))
+    try(assign("asMethod", getFromNamespace("asMethod", "methods"), envir = .GlobalEnv), silent = TRUE)
+  }
   mbSetObj <- .get.mbSetObj(mbSetObj);
   #Issue with phyloslim (after merging into phyloslim object the sample variable are converted to numeric again rather than factor)
   # BINARY-BLIND: Use embedded get_variable (no phyloseq:: namespace)
