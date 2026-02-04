@@ -1079,3 +1079,27 @@ CreateStaticHeatmap <- function(data1sc, fzAnno, colors, nrows, x_start, y_start
 
   return(p)
 }
+
+# =============================================================================
+# LAZY-LOADED PLOTLY UTILS - Load on demand to save ~30MB memory at startup
+# =============================================================================
+# ggplotly_modified is defined in plotly_utils.R which loads plotly package.
+# This placeholder loads plotly_utils only when actually needed.
+# =============================================================================
+
+ggplotly_modified <- function(p = ggplot2::last_plot(), width = NULL,
+                               height = NULL, tooltip = "all",
+                               dynamicTicks = FALSE, layerData = 1,
+                               originalData = TRUE, source = "A",
+                               tempfile_path = NULL, ...) {
+  # Load plotly_utils.Rc on first call (loads plotly package)
+  if (!exists(".plotly_utils_loaded", envir = .GlobalEnv)) {
+    .load.scripts.on.demand("plotly_utils.Rc")
+    assign(".plotly_utils_loaded", TRUE, envir = .GlobalEnv)
+  }
+  # Call the real function (now loaded)
+  .ggplotly_modified_real(p = p, width = width, height = height,
+                          tooltip = tooltip, dynamicTicks = dynamicTicks,
+                          layerData = layerData, originalData = originalData,
+                          source = source, tempfile_path = tempfile_path, ...)
+}

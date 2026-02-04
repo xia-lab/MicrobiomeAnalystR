@@ -1,6 +1,6 @@
 ##################################################
 ## R script for MicrobiomeAnalyst
-## Description:  
+## Description:
 ## Authors: Jeff Xia, jeff.xia@mcgill.ca; Yao Lu, yao.lu5@mail.mcgill.ca
 ###################################################
 

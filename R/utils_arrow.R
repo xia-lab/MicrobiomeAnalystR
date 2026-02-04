@@ -145,12 +145,8 @@ shadow_save <- function(obj, file, compress = "uncompressed") {
     # Always save to qs for R compatibility
     qs::qsave(obj, file)
 
-    # Generate Arrow path - handle files with or without .qs extension
-    if (grepl("\\.qs$", file)) {
-        arrow_path <- sub("\\.qs$", ".arrow", file)
-    } else {
-        arrow_path <- paste0(file, ".arrow")
-    }
+    # Generate Arrow path
+    arrow_path <- sub("\\.qs$", ".arrow", file)
 
     tryCatch({
         if (is.matrix(obj) || is.data.frame(obj)) {
@@ -205,12 +201,8 @@ shadow_save_mixed <- function(obj, file, compress = "uncompressed") {
     # Always save qs format for backward compatibility
     qs::qsave(obj, file)
 
-    # Derive Arrow path - handle files with or without .qs extension
-    if (grepl("\\.qs$", file)) {
-        arrow_path <- sub("\\.qs$", ".arrow", file)
-    } else {
-        arrow_path <- paste0(file, ".arrow")
-    }
+    # Derive Arrow path
+    arrow_path <- sub("\\.qs$", ".arrow", file)
 
     tryCatch({
         if (is.matrix(obj) || is.data.frame(obj)) {
@@ -378,53 +370,3 @@ ExportResultMatArrow <- function(result_mat, filename) {
     })
 }
 
-#' Export abundance/OTU data matrix to Arrow format (Safe-Handshake)
-#'
-#' For microbiome abundance data. Returns verified path.
-#'
-#' @param mSetObj mSet object
-#' @param taxa_level Taxonomic level (e.g., "OTU", "Phylum")
-#' @return The verified absolute path to the Arrow file, or NULL on failure
-#' @export
-ExportAbundanceDataArrow <- function(mSetObj = NA, taxa_level = "OTU") {
-    mSetObj <- .get.mSet(mSetObj)
-
-    tryCatch({
-        # Get the appropriate data matrix based on taxa level
-        mat <- NULL
-        if (taxa_level == "OTU") {
-            mat <- mSetObj$dataSet$norm
-        } else if (!is.null(mSetObj$dataSet$taxa.norm[[taxa_level]])) {
-            mat <- mSetObj$dataSet$taxa.norm[[taxa_level]]
-        }
-
-        if (is.null(mat)) {
-            warning(paste("No abundance data found for taxa level:", taxa_level))
-            return(NULL)
-        }
-
-        df <- as.data.frame(mat)
-        rn <- rownames(mat)
-        if (!is.null(rn)) {
-            df <- cbind(row_names_id = as.character(rn), df)
-        }
-
-        arrow_path <- paste0("abundance_", tolower(taxa_level), ".arrow")
-
-        # Remove existing file first
-        if (file.exists(arrow_path)) {
-            unlink(arrow_path)
-            Sys.sleep(0.01)
-        }
-
-        arrow::write_feather(df, arrow_path, compression = "uncompressed")
-
-        # SAFE-HANDSHAKE: Verify file is ready
-        Sys.sleep(0.02)
-        verified_path <- base::normalizePath(arrow_path, mustWork = TRUE)
-        return(verified_path)
-    }, error = function(e) {
-        warning(paste("ExportAbundanceDataArrow failed:", e$message))
-        return(NULL)
-    })
-}
