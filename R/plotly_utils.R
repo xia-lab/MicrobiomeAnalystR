@@ -1,7 +1,9 @@
 ## This script is modified from plotly to fix crash issue related to the Rserve connection
-ggplotly_modified <- function(p = ggplot2::last_plot(), width = NULL,
-                            height = NULL, tooltip = "all", dynamicTicks = FALSE,  
-                            layerData = 1, originalData = TRUE, source = "A", 
+## NOTE: Real function renamed to .ggplotly_modified_real - placeholder in general_graphics.R
+##       loads this file on demand to avoid loading plotly at startup
+.ggplotly_modified_real <- function(p = ggplot2::last_plot(), width = NULL,
+                            height = NULL, tooltip = "all", dynamicTicks = FALSE,
+                            layerData = 1, originalData = TRUE, source = "A",
                             tempfile_path,
                             ...) {
   require(plotly)

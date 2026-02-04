@@ -2017,7 +2017,6 @@ TSSnorm = function(features) {
   dd <- colnames(features_norm)
   
   # TSS Normalizing the Data
-  # NOTE: decostand is shadowed by pro_wrappers.R callr isolation
   features_TSS <-
     decostand(
       features_norm,

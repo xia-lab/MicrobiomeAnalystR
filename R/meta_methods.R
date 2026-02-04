@@ -108,7 +108,7 @@ PerformMetaEffectSize <- function(mbSetObj=NA, imgName="", taxrank="OTU", selMet
   analSet$meta.mat.all <- es.mat;
   analSet$meta.res.obj <- fit_lm_meta;
   
-  require(tidyverse);
+  require(dplyr); require(ggplot2);
   p <- res %>% 
     filter(qval.fdr < 0.05) %>% 
     arrange(coef) %>% 
@@ -229,12 +229,6 @@ SetupMetaStats <- function(BHth, paramSet,analSet){
 #'License: GNU GPL (>= 2)
 #'@export
 CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank="Family", view.mode="ratio", format="png", dpi=100) {
-  #save.image("alpha.RData");
-
-cat("R version  :", R.version.string,                "\n")
-cat("tidyverse  :", as.character(packageVersion("tidyverse")), "\n")
-cat("broom      :", as.character(packageVersion("broom")),     "\n")
-cat("Cairo OK?  :", capabilities("cairo"),           "\n")
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   mdata.all <- mbSetObj$mdata.all;
@@ -247,7 +241,7 @@ cat("Cairo OK?  :", capabilities("cairo"),           "\n")
   
   #print(summary.stat.vec);
   
-  library(tidyverse);
+  library(dplyr); library(ggplot2);
   library(phyloseq);
   res.list <- list();
   
@@ -297,7 +291,7 @@ cat("Cairo OK?  :", capabilities("cairo"),           "\n")
       select(sample_id, everything()) %>% 
       left_join(data@sam_data[, c("sample_id")]) %>%
       as_tibble() %>%
-      gather(-sample_id, key="Metric", value="Diversity") %>%
+      tidyr::gather(-sample_id, key="Metric", value="Diversity") %>%
       left_join(data@sam_data[,c("sample_id",sel.meta, "dataset")]) %>%
       dplyr::select(sample_id, dataset, matches(sel.meta), Metric, Diversity);
     
@@ -310,7 +304,7 @@ cat("Cairo OK?  :", capabilities("cairo"),           "\n")
         res %>%
           group_by(Metric, study_condition) %>%
           summarize(mean=mean(log2(Diversity))) %>%
-          spread(key=study_condition, value=mean) %>%
+          tidyr::spread(key=study_condition, value=mean) %>%
           dplyr::rename(mean_log2Control := !!quo_name(levels(res$study_condition)[1]), mean_log2Exp := !!quo_name(levels(res$study_condition)[2]))
       )  %>%
       plyr::mutate(log2FC=log2(Diversity)-mean_log2Control);
@@ -674,7 +668,7 @@ PlotContinuousPopulation <- function(mbSetObj, loadingName, ordinationName, meta
 
   # NOTE: vegan NOT loaded in Master - use distance_batch_isolated() for all groups
   require(MMUPHin);
-  require(tidyverse);
+  require(dplyr); require(ggplot2);
 
   loading.list <- list();
   ordination.list <- list();
@@ -754,29 +748,4 @@ PlotContinuousPopulation <- function(mbSetObj, loadingName, ordinationName, meta
   dev.off();
   
   return(.set.mbSetObj(mbSetObj));
-}
-
-handle_t_test <- function(data) {
-  result <- tryCatch(
-    {
-      broom::tidy(t.test(log2FC ~ study_condition, data = data, conf.int = TRUE, conf.level = 0.95))
-    },
-    error = function(e) {
-      message("Error in t.test: ", e$message)  # Print the error message
-      
-      # Return a tibble/data.frame with the same structure as broom::tidy(t.test) but with Pvalue set to 1
-      tibble::tibble(
-        estimate = NA_real_,  # NA values for estimates since the test did not properly execute
-        estimate1 = NA_real_,
-        estimate2 = NA_real_,
-        statistic = NA_real_,
-        p.value = 1,  # Set P-value to 1 indicating no significant difference
-        parameter = NA_real_,
-        conf.low = NA_real_,
-        conf.high = NA_real_,
-        conf.level = 0.95  # The confidence level you've used
-      )
-    }
-  )
-  return(result)
 }

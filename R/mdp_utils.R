@@ -3128,6 +3128,7 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pai
   # NOTE: vegan NOT loaded - Pro version shadows this with callr isolation
 
   if(distnm %in% c("wunifrac", "unifrac")) {
+    # Use qs::qread to handle both plain and S4 format
     data <- qs::qread("data_unifra.qs");
   } else {
      if(!(exists("phyloseq_objs"))){
@@ -4420,15 +4421,14 @@ ComputeGoods <-function(physeq_object){
 }
 
 # Utility function that performs rarefaction
-# NOTE: Uses rarefaction_curve_isolated() to compute ALL samples in SINGLE callr
+# NOTE: Uses rarefaction_curve_isolated() from XiaLabPro/R/pro_wrappers.R
 ggrare2 <- function(physeq_object, data.src, label = NULL, color = NULL, plot = TRUE, linetype = NULL, se = FALSE, step=5) {
 
   x <- methods::as(otu_table(physeq_object), "matrix")
 
   if (taxa_are_rows(physeq_object)) { x <- t(x) }
 
-  ## Run ALL rarefaction curves in a SINGLE callr subprocess
-  ## This replaces N individual vegan::rarefy calls with just 1
+  ## Run rarefaction curves for all samples
   rare_result <- rarefaction_curve_isolated(x, step = step, se = se)
 
   # Extract results

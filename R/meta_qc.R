@@ -93,9 +93,8 @@ PlotMetaDensity<- function(imgNm, dpi=72, format="png", factor=""){
 #'
 PerformBatchCorrection <- function(){
     .prepare.batch();
-    .perform.computing();
+    .perform.computing(heavy = TRUE);  # MMUPHin is HEAVY - uses 2 permits
     return(dataSets);
-    # no need to , already done
 }
 
 

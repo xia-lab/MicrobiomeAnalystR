@@ -14,11 +14,10 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
   mbSetObj <- .get.mbSetObj(mbSetObj);
   mbSetObj$dataSet$cor.method <- cor.method;
   mbSetObj$analSet$abund.opt <- abundOpt;
-  current.msg <<- ""; 
+  current.msg <<- "";
 
-  suppressMessages(library(ppcor));
-  suppressMessages(library(igraph));
-  
+  # NOTE: ppcor and igraph loaded lazily when needed (not at startup)
+
   if(cor.method == "sparcc"){
     if(.on.public.web){
       sparcc_results <- RunFastSpar_mem(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, "network")
@@ -109,7 +108,7 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
  
     mbSetObj$analSet$netcorr_data <- data;
     vars = data.frame(t(combn(colnames(data), 2)), stringsAsFactors = FALSE,check.names=FALSE)
-    
+
     if(cor.method == "spearman"){
       cor.results <- do.call(rbind, mapply(SpearmanCorrFunc, vars[,1], vars[,2], MoreArgs = list(data=data), SIMPLIFY = FALSE))
     }else if(cor.method == "kendall"){
@@ -135,6 +134,8 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
   #network building only needed for web
 
   if(.on.public.web || plotNet == TRUE){
+    # Lazy load igraph for network visualization
+    suppressMessages(library(igraph));
     all.taxons = unique(c(mbSetObj$analSet$network_cor[,1] , mbSetObj$analSet$network_cor[,2]))
     taxColNms = vector();
     
@@ -249,7 +250,7 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
   mbSetObj$analSet$cornet.taxa = taxrank;
 
   current.msg <<- paste(current.msg, method, "network analysis performed successfully!")
- 
+
   return(.set.mbSetObj(mbSetObj));
 }
 

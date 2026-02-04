@@ -1177,7 +1177,7 @@ DoM2Mcorr <- function(mic.sig,met.sig,cor.method="univariate",cor.stat="pearson"
 }
 
 performeCorrelation <- function(mbSetObj,taxalvl,initDE,cor.method="univariate",cor.stat="pearson",sign, cor.thresh=0.5,
-                                corp.thresh=0.05){
+                                corp.thresh=0.05, topN=100){
   mbSetObj <- .get.mbSetObj(mbSetObj);
  
   if(!exists("phyloseq_objs")){
@@ -1192,8 +1192,8 @@ performeCorrelation <- function(mbSetObj,taxalvl,initDE,cor.method="univariate",
   }
   lbl.met <- current.proc$met$sigfeat
 
-  if(length(lbl.mic) >100){lbl.mic= lbl.mic[1:100]}
-  if(length(lbl.met) >100){lbl.met= lbl.met[1:100]}
+  if(length(lbl.mic) > topN){lbl.mic= lbl.mic[1:topN]}
+  if(length(lbl.met) > topN){lbl.met= lbl.met[1:topN]}
   
   mic.sig <- micdat[which(rownames(micdat) %in% lbl.mic),]
   met.sig <- metdat[which(rownames(metdat) %in% lbl.met),match(colnames(mic.sig),colnames(metdat)), drop = FALSE]

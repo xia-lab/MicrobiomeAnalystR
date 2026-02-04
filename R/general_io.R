@@ -59,26 +59,20 @@ Init.mbSetObj <- function(){
   enrich.type <<- "hyper";
   
   # to control parallel computing for some packages
-  # PRO: Skip BiocParallel registration when phyloseq is not loaded (callr isolation)
-  if (!isFALSE(get0(".LOAD_PHYLOSEQ", envir = .GlobalEnv))) {
-    BiocParallel::register(BiocParallel::SerialParam());
-  }
+  BiocParallel::register(BiocParallel::SerialParam());
   Sys.setenv("OMP_NUM_THREADS" = 2);
   Sys.setenv("OPENBLAS_NUM_THREADS" = 2);
 
-  if(.on.public.web){ 
+  if(.on.public.web){
     Set.Config("web");
-  } else {    
+  } else {
     Set.Config("api");
   }
-  
+
   # preload some general package
   suppressMessages(library(Cairo));
   suppressMessages(library(RColorBrewer));
-  # .LOAD_PHYLOSEQ: TRUE (default/public) = load package, FALSE (Pro) = skip
-  if (!isFALSE(get0(".LOAD_PHYLOSEQ", envir = .GlobalEnv))) {
-    suppressMessages(library(phyloseq));
-  }
+  suppressMessages(library(phyloseq));
   suppressMessages(library(ggplot2));
   suppressMessages(library(reshape));
 
