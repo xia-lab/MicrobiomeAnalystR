@@ -1662,9 +1662,9 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
     if(dataType=="metabolite"){
       mbSetObj <- PerformMetListEnrichment(mbSetObj, contain, file.nm);
     }else{
-      MicrobiomeAnalystR:::LoadKEGGKO_lib(category);
+      LoadKEGGKO_lib(category);
       PerformKOEnrichAnalysis_List(mbSetObj, file.nm);
-      mbSetObj <- .get.mbSetObj(mbSet);
+      mbSetObj <- .get.mbSetObj(mbSetObj);
     }
     
   }else if(enrich.type =="global"){
