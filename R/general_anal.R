@@ -1425,34 +1425,41 @@ return(1)
 ###########)Permanova_Pairwise##########################
 ########################################################
 ###adopted from ecole package https://rdrr.io/github/phytomosaic/ecole/
-### NOTE: Uses permanova_pairwise_isolated() to run ALL comparisons in SINGLE callr
 .permanova_pairwise <- function(x,
                                  grp,
                                  permutations = 999,
                                  method = 'bray',
                                  padj = 'fdr', ...) {
+  require(vegan)
   f <- grp
   if (!all(table(f) > 1)) warning('factor has singletons! perhaps lump them?')
 
-  # Run all pairwise PERMANOVA comparisons in a SINGLE callr subprocess
-  # This replaces N+1 individual callr calls (1 vegdist + N adonis2) with just 1
-  result <- permanova_pairwise_isolated(
-    x = x,
-    group = f,
-    method = method,
-    permutations = permutations,
-    ...
-  )
+  if (!inherits(x, 'dist')) {
+    D <- vegdist(x, method = method)
+  } else {
+    D <- x
+  }
 
-  # Build output in expected format
-  out <- data.frame(
-    pairs = result$pairs,
-    F.Model = result$F.Model,
-    R2 = result$R2,
-    pval = result$p.value,
-    stringsAsFactors = FALSE
-  )
+  f <- as.factor(f)
+  co <- combn(levels(f), 2)
+  nco <- ncol(co)
+  pairs <- character(nco)
+  F.Model <- numeric(nco)
+  R2 <- numeric(nco)
+  p.value <- numeric(nco)
 
+  for (j in 1:nco) {
+    pair_idx <- which(f %in% co[, j])
+    Dij <- as.dist(as.matrix(D)[pair_idx, pair_idx])
+    fij <- data.frame(g = factor(f[pair_idx]))
+    a <- adonis2(Dij ~ g, data = fij, permutations = permutations, ...)
+    pairs[j] <- paste(co[1, j], 'vs', co[2, j])
+    F.Model[j] <- a$F[1]
+    R2[j] <- a$R2[1]
+    p.value[j] <- a$`Pr(>F)`[1]
+  }
+
+  out <- data.frame(pairs = pairs, F.Model = F.Model, R2 = R2, pval = p.value, stringsAsFactors = FALSE)
   out$p.adj <- p.adjust(out$pval, method = padj)
   return(out)
 }
@@ -2150,7 +2157,6 @@ phyloseq_to_edgeR = function(physeq, group, method="RLE", ...){
   # Check `group` argument
   if( identical(all.equal(length(group), 1), TRUE) & nsamples(physeq) > 1 ){
     # Assume that group was a sample variable name (must be categorical)
-    # BINARY-BLIND: Use embedded get_variable (no phyloseq:: namespace)
     group = get_variable(physeq, group)
   }
   # Define gene annotations (`genes`) as tax_table

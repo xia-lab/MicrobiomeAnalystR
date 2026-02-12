@@ -5,7 +5,6 @@
 ##################################################
 
 my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
-  # PRO: Removed hitchhiker library(igraph) - not used in this function
   ##
   mbSetObj <- .get.mbSetObj(mbSetObj);
   res <- mbSetObj$analSet$pca$score

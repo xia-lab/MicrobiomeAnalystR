@@ -7,8 +7,8 @@
 my.pcoa.3d <- function(mbSetObj, ordMeth, distName, taxrank, colopt, variable, taxa, alphaopt, jsonNm){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  # NOTE: vegan NOT loaded - Pro version shadows this with callr isolation
-  
+  require(vegan);
+
   variable <<- variable;
 
   if(!exists("phyloseq_objs")){
@@ -59,8 +59,6 @@ my.pcoa.3d <- function(mbSetObj, ordMeth, distName, taxrank, colopt, variable, t
     pg_sd <- sample_data(data);
     pg_tree <- prune_taxa(taxa_names(pg_ot), pg_tree);
     data <- merge_phyloseq(pg_tb, pg_ot, pg_sd, pg_tree);
-    # NOTE: Tree rooting is handled by ordinate_isolated/UniFrac_isolated in callr subprocess
-    # No need to call ape::root here - avoids loading ape in Master
     if(ordMeth=="PCA"){
       GP.ord <- prcomp(t(data@otu_table@.Data), center=TRUE, scale=F)
     } else {
@@ -73,8 +71,6 @@ my.pcoa.3d <- function(mbSetObj, ordMeth, distName, taxrank, colopt, variable, t
     pg_sd <- sample_data(data);
     pg_tree <- prune_taxa(taxa_names(pg_ot), pg_tree);
     data <- merge_phyloseq(pg_tb, pg_ot, pg_sd, pg_tree);
-    # NOTE: Tree rooting is handled by ordinate_isolated/UniFrac_isolated in callr subprocess
-    # No need to call ape::root here - avoids loading ape in Master
     if(ordMeth=="PCA"){
       GP.ord <- prcomp(t(data@otu_table@.Data), center=TRUE, scale=F)
     } else {
