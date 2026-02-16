@@ -73,7 +73,7 @@ Init.mbSetObj <- function(){
   # preload some general package
   suppressMessages(library(Cairo));
   suppressMessages(library(RColorBrewer));
-  # .LOAD_PHYLOSEQ: TRUE (default/public) = load package, FALSE (Pro) = skip
+  # .LOAD_PHYLOSEQ: TRUE (default) = load package, FALSE = skip (pre-loaded)
   if (!isFALSE(get0(".LOAD_PHYLOSEQ", envir = .GlobalEnv))) {
     suppressMessages(library(phyloseq));
   }
@@ -507,7 +507,6 @@ GetSampleGrpInfo <- function(mbSetObj, clsLbl){
     try(assign("asMethod", getFromNamespace("asMethod", "methods"), envir = .GlobalEnv), silent = TRUE)
   }
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  # BINARY-BLIND: Use embedded get_variable (no phyloseq:: namespace)
   return(levels(factor(get_variable(mbSetObj$dataSet$norm.phyobj, clsLbl))));
 }
 
@@ -518,13 +517,10 @@ GetSampleGrpNo <- function(mbSetObj, clsLbl){
     try(assign("asMethod", getFromNamespace("asMethod", "methods"), envir = .GlobalEnv), silent = TRUE)
   }
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  #Issue with phyloslim (after merging into phyloslim object the sample variable are converted to numeric again rather than factor)
-  # BINARY-BLIND: Use embedded get_variable (no phyloseq:: namespace)
   return(length(levels(factor(get_variable(mbSetObj$dataSet$norm.phyobj, clsLbl)))));
 }
 
 GetTaxaNames<- function(mbSetObj, taxlvl){
-    # BINARY-BLIND: Removed require("phyloseq") - embedded scripts already loaded
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   

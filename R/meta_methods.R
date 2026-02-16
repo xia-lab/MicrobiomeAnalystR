@@ -505,11 +505,11 @@ PlotBetaSummary <- function(mbSetObj, plotNm,taxalvl, sel.meta, alg, format="png
   sel.nms <- names(mdata.all)[mdata.all==1];
 
   dist.vec <- c("jaccard", "jsd", "bray");#"wunifrac", "unifrac",
+  require(vegan)
 
-  # OPTIMIZED: Batch all category comparisons in SINGLE callr subprocess
-  # This replaces N datasets × 3 distances = 3N individual callr calls with 1
-  otu_list <- list()
-  sample_data_list <- list()
+  res.list <- list()
+  data.nms.vec <- character(length(sel.nms) * length(dist.vec))
+  vec_idx <- 1
 
   for(j in 1:length(sel.nms)){
     mbSetObj$dataSet <- mbSetObj$dataSets[[sel.nms[j]]];
@@ -519,29 +519,47 @@ PlotBetaSummary <- function(mbSetObj, plotNm,taxalvl, sel.meta, alg, format="png
     data <- phyloseq_objs$merged_obj[[taxalvl]]
 
     if(!is.null(data)){
-      otu_list[[dataName]] <- as.matrix(otu_table(data))
-      sample_data_list[[dataName]] <- data.frame(sample_data(data), check.names = FALSE)
-    }
-  }
+      otu_mat <- as.matrix(otu_table(data))
+      sampledf <- data.frame(sample_data(data), check.names = FALSE)
 
-  # Run ALL comparisons in single callr
-  batch_results <- category_comp_batch_isolated(
-    otu_list = otu_list,
-    sample_data_list = sample_data_list,
-    dist_methods = dist.vec,
-    variable = sel.meta,
-    method = alg
-  )
+      for(i in 1:length(dist.vec)){
+        dist_method <- dist.vec[i]
+        otu_t <- t(otu_mat)
+        otu_t <- sweep(otu_t, 1, rowSums(otu_t), "/")
 
-  # Unpack results
-  res.list <- batch_results
-  data.nms.vec <- character(length(sel.nms) * length(dist.vec))
-  vec_idx <- 1
-  for(j in 1:length(sel.nms)){
-    dataName <- names(otu_list)[j]
-    for(i in 1:length(dist.vec)){
-      data.nms.vec[vec_idx] <- dataName
-      vec_idx <- vec_idx + 1
+        if (dist_method == "jsd") {
+          physeq_otu <- otu_table(t(otu_t), taxa_are_rows = TRUE)
+          data.dist <- distance(physeq_otu, method = "jsd")
+        } else if (dist_method == "jaccard") {
+          data.dist <- vegdist(otu_t, method = "jaccard", binary = TRUE)
+        } else {
+          data.dist <- vegdist(otu_t, method = dist_method)
+        }
+
+        group <- sampledf[[sel.meta]]
+        stat.info.vec <- NULL
+
+        if (alg == "adonis") {
+          f <- as.formula(paste("data.dist ~", sel.meta))
+          res <- adonis2(formula = f, data = sampledf)
+          resTab <- res[1, ]
+          stat.info.vec <- c(signif(resTab$F, 5), signif(resTab$R2, 5), signif(resTab$`Pr(>F)`, 5))
+          names(stat.info.vec) <- c("F-value", "R-squared", "p-value")
+        } else if (alg == "anosim") {
+          anosim_res <- anosim(data.dist, group = group)
+          stat.info.vec <- c(signif(anosim_res$statistic, 5), signif(anosim_res$signif, 5))
+          names(stat.info.vec) <- c("R", "p-value")
+        } else if (alg == "permdisp") {
+          beta <- betadisper(data.dist, group = group)
+          resTab <- anova(beta)
+          stat.info.vec <- c(signif(resTab$"F value"[1], 5), signif(resTab$"Pr(>F)"[1], 5))
+          names(stat.info.vec) <- c("F-value", "p-value")
+        }
+
+        res.list[[dataName]][[dist_method]] <- stat.info.vec
+        data.nms.vec[vec_idx] <- dataName
+        vec_idx <- vec_idx + 1
+      }
     }
   }
   
@@ -585,34 +603,22 @@ PlotDiscreteDiagnostic <- function(mbSetObj, fileName, metadata, format="png", d
 
   require(MMUPHin);
   require(ggpubr);
-  # NOTE: vegan NOT loaded in Master - use distance_batch_isolated() for all groups
+  require(vegan);
 
   data  <- qs::qread("merged.data.raw.qs");
   data <- subsetPhyloseqByDataset(mbSetObj, data);
 
   sam_data <- as.data.frame(as.matrix(sample_data(data)));
 
-  # OPTIMIZED: Batch all distance calculations in SINGLE callr subprocess
-  # This replaces N metadata groups × 1 distance call = N callr calls with 1
   meta_groups <- unique(sam_data[, metadata])
-  data_subsets <- list()
-
-  for(meta.grp in meta_groups){
-    sub_sam_data <- sam_data[which(sam_data[, metadata] == meta.grp), ]
-    sub_data <- data@otu_table[, rownames(sub_sam_data)]
-    data_subsets[[as.character(meta.grp)]] <- as.matrix(sub_data)
-  }
-
-  # Single callr for all distance calculations
-  dist_results <- distance_batch_isolated(data_subsets, method = "bray")
 
   plot.list <- list();
   i <- 1;
   for(meta.grp in meta_groups){
     sub_sam_data <- sam_data[which(sam_data[, metadata] == meta.grp), ]
+    sub_data <- data@otu_table[, rownames(sub_sam_data)]
 
-    # Use pre-computed distance from batch result
-    dist_data <- dist_results[[as.character(meta.grp)]]
+    dist_data <- vegdist(t(as.matrix(sub_data)), method = "bray")
 
     fit_discrete <- discrete_discover(D = dist_data,
                                       batch = "dataset",
@@ -666,8 +672,8 @@ PlotDiscreteDiagnostic <- function(mbSetObj, fileName, metadata, format="png", d
 PlotContinuousPopulation <- function(mbSetObj, loadingName, ordinationName, metadata, format="png", dpi=72){
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
-  # NOTE: vegan NOT loaded in Master - use distance_batch_isolated() for all groups
   require(MMUPHin);
+  require(vegan);
   require(dplyr); require(ggplot2);
 
   loading.list <- list();
@@ -678,26 +684,13 @@ PlotContinuousPopulation <- function(mbSetObj, loadingName, ordinationName, meta
 
   sam_data <- as.data.frame(as.matrix(sample_data(data)));
 
-  # OPTIMIZED: Batch all distance calculations in SINGLE callr subprocess
-  # This replaces N metadata groups × 1 distance call = N callr calls with 1
   meta_groups <- unique(sam_data[, metadata])
-  data_subsets <- list()
-
-  for(meta.grp in meta_groups){
-    sub_sam_data <- sam_data[which(sam_data[, metadata] == meta.grp), ]
-    sub_data <- data@otu_table[, rownames(sub_sam_data)]
-    data_subsets[[as.character(meta.grp)]] <- as.matrix(sub_data)
-  }
-
-  # Single callr for all distance calculations
-  dist_results <- distance_batch_isolated(data_subsets, method = "bray")
 
   for(meta.grp in meta_groups){
     sub_sam_data <- sam_data[which(sam_data[, metadata] == meta.grp), ]
     sub_data <- data@otu_table[, rownames(sub_sam_data)];
 
-    # Use pre-computed distance from batch result
-    dist.data <- dist_results[[as.character(meta.grp)]]
+    dist.data <- vegdist(t(as.matrix(sub_data)), method = "bray")
 
     fit_continuous <- continuous_discover(feature_abd = sub_data,
                                           batch = "dataset",

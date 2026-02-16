@@ -1082,8 +1082,8 @@ PlotRareCurve <- function(mbSetObj, graphName, variable){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   set.seed(13789);
-  # NOTE: vegan NOT loaded - Pro version shadows this with callr isolation
-  
+  require(vegan);
+
   data <- data.matrix(mbSetObj$dataSet$filt.data);
   rarefaction_curve_data<-as.matrix(otu_table(data));
   

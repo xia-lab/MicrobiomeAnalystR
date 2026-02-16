@@ -203,7 +203,7 @@ PCoA3DAnal.16SRef <- function(mbSetObj, barplotNm, ordMeth, distName, taxrank, m
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
-  # NOTE: vegan NOT loaded in Master - ordinate() uses callr internally
+  require(vegan);
 
   data <- userrefdata;
 

@@ -110,8 +110,6 @@ PlotTreeGraph <- function(mbSetObj, plotNm, distnm, clstDist, metadata,
     pg_sd <- sample_data(data)
     pg_tree <- prune_taxa(taxa_names(pg_ot), pg_tree)
     data <- merge_phyloseq(pg_tb, pg_ot, pg_sd, pg_tree)
-    # NOTE: Tree rooting is handled by UniFrac_isolated in callr subprocess
-    # No need to call ape::root here - avoids loading ape in Master
     dist.mat <- distance(data, distnm, type = "samples")
   } else {
     dist.mat <- distance(data, distnm, type = "samples")
