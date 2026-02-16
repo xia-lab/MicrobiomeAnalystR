@@ -545,10 +545,27 @@ performLimma <-function(data,sample_data,sample_type,analysisVar){
       
     }
     
-  } else { 
-    
+  } else {
+
     covariates[, analysis.var] <- covariates[, analysis.var] %>% as.numeric();
     design <- model.matrix(formula(paste0("~ 0", paste0(" + ", vars, collapse = ""))), data = covariates);
+
+    # Ensure design matrix has column names (critical for limma)
+    if(is.null(colnames(design)) || any(colnames(design) == "")){
+      if(adj.bool){
+        nms=sapply(seq(adj.vars), function(x) {
+          if(!(is.null(levels(covariates[,adj.vars[x]])))){
+            return(levels(covariates[,adj.vars[x]])[-1])
+          }else{
+            return(adj.vars[x])
+          }
+        })
+        colnames(design) = c(analysis.var, unlist(nms))
+      }else{
+        colnames(design) = vars
+      }
+    }
+
     fit <- eBayes(lmFit(feature_table, design));
     rest <- topTable(fit, number = Inf, coef = analysis.var);
     colnames(rest)[1] <- analysis.var;
@@ -811,11 +828,12 @@ MetaboIDmap <- function(netModel,predDB,IDtype,met.vec=NA){
       met.map <- met.map[!(is.na(met.map$Match)),]
       map.l <- length(unique(met.map$Match))
     }else if(IDtype=="kegg"){
-      
+
       metInfo <- qs::qread(paste0(lib.path.mmp,"general_kegg2name.qs"));
       met.map <- data.frame(Query=met.vec,Match=met.vec,Name=met.vec,stringsAsFactors = F)
       met.map$Name <-  metInfo$Name[match(met.map$Query,metInfo$ID)]
       met.map$Node <-  metInfo$node[match(met.map$Query,metInfo$ID)]
+      met.map$id <-  metInfo$node[match(met.map$Query,metInfo$ID)]
       met.map <- met.map[!(is.na(met.map$Name)),]
       map.l <- length(unique(met.map$Match))
     }
@@ -1633,11 +1651,35 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
 
 
 PrepareOTUQueryJson <- function(mbSetObj,taxalvl,contain="bac"){
-  
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
+
   if(contain=="bac"| contain=="hsabac"|contain=="all"|contain=="hsa"){
-    met.map <- qs::qread("keggNet.met.map.qs")
+    # Check if mapping file exists, if not create it
+    if(file.exists("keggNet.met.map.qs")){
+      met.map <- qs::qread("keggNet.met.map.qs")
+    } else if(!is.null(current.proc$met$name.map)){
+      # Create from name.map if available and save it
+      met.map <- current.proc$met$name.map
+      shadow_save(met.map,"keggNet.met.map.qs")
+    } else if(!is.null(current.proc$met$data.orig)){
+      # For pre-mapped KEGG IDs, create a simple mapping structure
+      met_ids <- rownames(current.proc$met$data.orig)
+      met.map <- data.frame(
+        Query = met_ids,
+        Match = met_ids,
+        Name = met_ids,
+        Node = met_ids,
+        id = met_ids,
+        stringsAsFactors = FALSE
+      )
+      shadow_save(met.map,"keggNet.met.map.qs")
+      message("[MMP] Created default mapping for pre-mapped KEGG metabolite IDs")
+    } else {
+      AddErrMsg("Metabolite data not found! Please ensure metabolite data was uploaded successfully.");
+      return(0);
+    }
+
     query.res <- rep(2,length(unique(met.map$id[!(is.na(met.map$id))])))
     names(query.res) <- unique(met.map$id[!(is.na(met.map$id))])
     
@@ -1725,8 +1767,29 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
     }
     
 
-    metmat <-  t(current.proc$met$data.proc)          
-    met.map <-  qs::qread("keggNet.met.map.qs")
+    metmat <-  t(current.proc$met$data.proc)
+
+    # Check if mapping file exists, if not create it
+    if(file.exists("keggNet.met.map.qs")){
+      met.map <-  qs::qread("keggNet.met.map.qs")
+    } else if(!is.null(current.proc$met$name.map)){
+      # Create from name.map if available
+      met.map <- current.proc$met$name.map
+    } else {
+      # For pre-mapped KEGG IDs, create a simple mapping structure
+      # Assume metabolite IDs are already in KEGG format
+      met_ids <- rownames(current.proc$met$data.orig)
+      met.map <- data.frame(
+        Query = met_ids,
+        Match = met_ids,
+        Name = met_ids,
+        Node = met_ids,
+        id = met_ids,
+        stringsAsFactors = FALSE
+      )
+      message("[MMP] Created default mapping for pre-mapped KEGG metabolite IDs")
+    }
+
     met.map <- met.map[!(is.na(met.map$Node)),]
     met.map$include = ifelse(met.map$Match %in% unique(unlist(current.set)),T,F)
     shadow_save(met.map,"keggNet.met.map.qs")
@@ -1816,6 +1879,12 @@ enrich2json <- function(){
   hits <- hits[nms];
   resTable <- data.frame(Pathway=rownames(my.res), my.res,check.names=FALSE);
   current.msg <<- "Functional enrichment analysis was completed";
+
+  # Check if mapping file exists
+  if(!file.exists("keggNet.met.map.qs")){
+    AddErrMsg("Metabolite mapping file not found! Please check if metabolite ID mapping was completed.");
+    return(0);
+  }
   met.map <-  qs::qread("keggNet.met.map.qs")
   hits.met <- lapply(hits, function(x){
     x=met.map$Name[match(x,met.map$Match)]  
