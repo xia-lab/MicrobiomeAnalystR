@@ -461,20 +461,16 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
   expFact2 <- expFact2
   group <- group
  
- if(analOpt == "smpl_grp_all" & viewOpt=="bar"){
- 
-  # grp <- as.character(mbSetObj[["dataSet"]][["sample_data"]][[expFact2]])
-  # data <- eval(parse(text = paste("phyloseq:::subset_samples(data,", expFact2, "%in%", "\"", grp, "\"", ")", sep="")))
+ if(analOpt == "smpl_grp_all"){
+
    mbSetObj <- core_comp_grp(mbSetObj,imgName, preval, detection, taxrank,
                           palette, viewOpt,expFact2,format, dpi, width)
-   
+
   }else{
     if(analOpt == "smpl_grp"){
-        data <- eval(parse(text = paste("subset_samples(data,", expFact, "==", "\"", group, "\"", ")", sep="")));
-    }else if(analOpt == "smpl_grp_all"){
-        grp <- as.character(mbSetObj[["dataSet"]][["sample_data"]][[expFact2]])
-        data <- eval(parse(text = paste("subset_samples(data,", expFact2, "%in%", "\"", grp, "\"", ")", sep="")))
- }
+        sdata <- as(sample_data(data), "data.frame")
+        data <- prune_samples(sdata[[expFact]] == group, data)
+    }
 
     # check min 2 reps 
     samples_left <- nsamples(data)
@@ -639,7 +635,8 @@ core_comp_grp <- function(mbSetObj,imgName, preval, detection, taxrank,
   
   data <- mbSetObj$dataSet$proc.phyobj;
   grp <- unique(as.character(mbSetObj[["dataSet"]][["sample_data"]][[expFact2]]))
-  dt <- lapply(grp,function(group) eval(parse(text = paste("subset_samples(data,", expFact2, "==", "\"", group, "\"", ")", sep=""))))
+  sdata <- as(sample_data(data), "data.frame")
+  dt <- lapply(grp, function(group) prune_samples(sdata[[expFact2]] == group, data))
   names(dt) <- grp 
   dt <-lapply(dt,function(data){
     if(taxrank=="OTU"){
@@ -714,9 +711,11 @@ core_comp_grp <- function(mbSetObj,imgName, preval, detection, taxrank,
     guides(fill = guide_legend(keywidth = 1.5, keyheight = 1)) +
      ggtitle(names(data.core)[i]) + 
     theme(
-      axis.text.y = element_text(size = axis_text_size),        
-       axis.text.x = element_text(size = axis_text_size, angle = 45, vjust = 0.5, hjust = 1),         
-      axis.title = element_text(angle = 90, size = 12)  )  
+      axis.text.y = element_text(size = axis_text_size),
+       axis.text.x = element_text(size = axis_text_size, angle = 0, hjust = 0.5),
+      axis.title.y = element_text(size = 12),
+      axis.title.x = element_text(size = 12),
+      plot.title = element_text(hjust = 0.5)  )
 
   if ((i - 1) %% ncol == 0) {
     plot <- plot + ylab(paste0("\n", taxrank))
