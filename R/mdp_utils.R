@@ -1701,12 +1701,22 @@ PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName, metadata,
   mbSetObj$imgSet$alpha <- bargraphName;
 
   if(distName == "PD") {
-    # Faith's Phylogenetic Diversity: sum of branch lengths spanning taxa in each sample
-    tree <- phy_tree(data)
+    # Faith's Phylogenetic Diversity: read tree directly from tree.qs (same as PlotPhylogeneticTree)
+    tree <- tryCatch(qs::qread("tree.qs"), error = function(e) NULL);
+    if(is.null(tree)) {
+      AddErrMsg("Phylogenetic Diversity (PD) requires a phylogenetic tree, but none is available in the current dataset. Please select a different alpha diversity measure.");
+      return(0);
+    }
     otu <- as.data.frame(otu_table(data))
     if(!taxa_are_rows(data)) otu <- t(otu)
+    matched.tips <- intersect(tree$tip.label, rownames(otu))
+    if(length(matched.tips) < 2) {
+      AddErrMsg("Too few OTU names match the phylogenetic tree tip labels for PD calculation. Please check that feature names match tree tip labels.");
+      return(0);
+    }
+    tree <- ape::keep.tip(tree, matched.tips)
     pd_vals <- sapply(colnames(otu), function(s) {
-      present <- rownames(otu)[otu[, s] > 0]
+      present <- intersect(rownames(otu)[otu[, s] > 0], tree$tip.label)
       if(length(present) < 2) return(NA)
       sub_tree <- ape::keep.tip(tree, present)
       sum(sub_tree$edge.length)
