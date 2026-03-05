@@ -1421,6 +1421,393 @@ return(1)
 
 
 
+########### LinDA (Linear DA) ##########################
+
+.linda_winsor <- function(Y, quan) {
+  N <- colSums(Y)
+  P <- t(t(Y) / N)
+  cut <- apply(P, 1, quantile, quan)
+  Cut <- matrix(rep(cut, ncol(Y)), nrow(Y))
+  ind <- P > Cut
+  P[ind] <- Cut[ind]
+  Y <- round(t(t(P) * N))
+  return(Y)
+}
+
+# Core LinDA algorithm with fixed-effect and mixed-effect support
+# Based on: Zhou et al. LinDA: Linear Models for Differential Abundance
+# Analysis of Microbiome Compositional Data. Genome Biology 23:95, 2022.
+.linda_core <- function(otu.tab, meta, formula, type = 'count',
+                        adaptive = TRUE, imputation = FALSE, pseudo.cnt = 0.5, corr.cut = 0.1,
+                        p.adj.method = 'BH', alpha = 0.05,
+                        prev.cut = 0, lib.cut = 1, winsor.quan = NULL) {
+
+  if(any(is.na(otu.tab))) stop('The OTU table contains NAs!')
+
+  allvars <- all.vars(as.formula(formula))
+  Z <- as.data.frame(meta[, allvars, drop = FALSE])
+
+  # Detect random effects
+  random.effect <- grepl('\\(', formula)
+
+  # Preprocessing: filter samples and taxa
+  keep.sam <- which(colSums(otu.tab) >= lib.cut & rowSums(is.na(Z)) == 0)
+  Y <- otu.tab[, keep.sam, drop = FALSE]
+  Z <- as.data.frame(Z[keep.sam, , drop = FALSE])
+  names(Z) <- allvars
+
+  n <- ncol(Y)
+  keep.tax <- which(rowSums(Y > 0) / n >= prev.cut)
+  Y <- Y[keep.tax, , drop = FALSE]
+  m <- nrow(Y)
+
+  if(any(colSums(Y) == 0)) {
+    ind <- which(colSums(Y) > 0)
+    Y <- Y[, ind, drop = FALSE]
+    Z <- as.data.frame(Z[ind, , drop = FALSE])
+    names(Z) <- allvars
+    keep.sam <- keep.sam[ind]
+    n <- ncol(Y)
+  }
+
+  # Scale numeric variables
+  ind <- sapply(1:ncol(Z), function(i) is.numeric(Z[, i]))
+  if(any(ind)) Z[, ind] <- scale(Z[, ind])
+
+  if(!is.null(winsor.quan)) Y <- .linda_winsor(Y, winsor.quan)
+
+  taxa.name <- if(is.null(rownames(otu.tab))) (1:nrow(otu.tab))[keep.tax] else rownames(otu.tab)[keep.tax]
+  samp.name <- if(is.null(rownames(meta))) (1:nrow(meta))[keep.sam] else rownames(meta)[keep.sam]
+
+  # Handle zeros
+  if(type == 'count') {
+    if(any(Y == 0)) {
+      N <- colSums(Y)
+      if(adaptive) {
+        logN <- log(N)
+        if(random.effect) {
+          tmp <- lmerTest::lmer(as.formula(paste0('logN', formula)), Z)
+        } else {
+          tmp <- lm(as.formula(paste0('logN', formula)), Z)
+        }
+        corr.pval <- coef(summary(tmp))[-1, "Pr(>|t|)"]
+        if(any(corr.pval <= corr.cut)) {
+          imputation <- TRUE
+        } else {
+          imputation <- FALSE
+        }
+      }
+      if(imputation) {
+        N.mat <- matrix(rep(N, m), nrow = m, byrow = TRUE)
+        N.mat[Y > 0] <- 0
+        tmp <- N[max.col(N.mat)]
+        Y <- Y + N.mat / tmp
+      } else {
+        Y <- Y + pseudo.cnt
+      }
+    }
+  }
+
+  # CLR transformation
+  logY <- log2(Y)
+  W <- t(logY) - colMeans(logY)
+
+  # Fit models
+  oldw <- getOption('warn')
+  options(warn = -1)
+
+  if(!random.effect) {
+    suppressMessages(fit <- lm(as.formula(paste0('W', formula)), Z))
+    res <- do.call(rbind, coef(summary(fit)))
+    d <- ncol(model.matrix(fit))
+    df <- rep(n - d, m)
+  } else {
+    # Mixed-effect: fit per-taxon lmer
+    suppressMessages({
+      tmp <- lapply(1:m, function(i) {
+        w <- W[, i]
+        fit <- lmerTest::lmer(as.formula(paste0('w', formula)), Z)
+        coef(summary(fit))
+      })
+    })
+    res <- do.call(rbind, tmp)
+  }
+
+  options(warn = oldw)
+
+  # Intercept processing for baseMean
+  res.intc <- res[which(rownames(res) == '(Intercept)'), , drop = FALSE]
+  rownames(res.intc) <- NULL
+
+  oldw <- getOption('warn')
+  options(warn = -1)
+  suppressMessages(bias.intc <- modeest::mlv(sqrt(n) * res.intc[, 1],
+                                             method = 'meanshift', kernel = 'gaussian') / sqrt(n))
+  options(warn = oldw)
+  baseMean <- 2 ^ (res.intc[, 1] - bias.intc)
+  baseMean <- baseMean / sum(baseMean) * 1e6
+
+  # Process each variable
+  variables <- unique(rownames(res))[-1]
+  output <- list()
+  bias <- rep(NA, length(variables))
+
+  for(i in seq_along(variables)) {
+    x <- variables[i]
+    res.voi <- res[which(rownames(res) == x), , drop = FALSE]
+    rownames(res.voi) <- NULL
+
+    if(random.effect) {
+      df <- res.voi[, 3]
+    }
+
+    log2FoldChange <- res.voi[, 1]
+    lfcSE <- res.voi[, 2]
+
+    oldw <- getOption('warn')
+    options(warn = -1)
+    suppressMessages(bias[i] <- modeest::mlv(sqrt(n) * log2FoldChange,
+                                             method = 'meanshift', kernel = 'gaussian') / sqrt(n))
+    options(warn = oldw)
+    log2FoldChange <- log2FoldChange - bias[i]
+    stat <- log2FoldChange / lfcSE
+    pvalue <- 2 * pt(-abs(stat), df)
+    padj <- p.adjust(pvalue, method = p.adj.method)
+    reject <- padj <= alpha
+
+    output[[i]] <- data.frame(baseMean = baseMean, log2FoldChange = log2FoldChange,
+                              lfcSE = lfcSE, stat = stat, pvalue = pvalue,
+                              padj = padj, reject = reject, df = df,
+                              row.names = taxa.name, check.names = FALSE)
+  }
+  names(output) <- variables
+
+  rownames(Y) <- taxa.name
+  colnames(Y) <- samp.name
+  rownames(Z) <- samp.name
+
+  return(list(variables = variables, bias = bias, output = output))
+}
+
+#'Perform LinDA for covariate-adjusted differential abundance analysis
+#'@description LinDA uses centered log2-ratio transformation with bias correction
+#'on linear (or mixed-effect) models. Supports covariates and blocking factors.
+#'@param mbSetObj Input the name of the mbSetObj.
+#'@param analysis.var Primary metadata variable.
+#'@param is.norm Whether data is already normalized.
+#'@param comp Comparison group.
+#'@param ref Reference group.
+#'@param block Blocking factor (random effect). "NA" if none.
+#'@param taxrank Taxonomic level.
+#'@param imgNm Image name for visualization.
+#'@param thresh Adjusted p-value cutoff.
+#'@export
+PerformLinDA <- function(mbSetObj, analysis.var, is.norm = "false",
+                         comp = NULL, ref = NULL, block = "NA",
+                         taxrank = "NA", imgNm = "NA", thresh = 0.05) {
+
+  mbSetObj <- .get.mbSetObj(mbSetObj)
+  thresh <- as.numeric(thresh)
+
+  # Determine covariates
+  if(!exists('adj.vec')) {
+    adj.bool <- FALSE
+    adj.vars <- character(0)
+  } else {
+    adj.vars <- adj.vec
+    adj.bool <- length(adj.vars) > 0 && !all(adj.vars == "")
+    if(!adj.bool) adj.vars <- character(0)
+  }
+
+  mbSetObj$analSet$adj.bool <- adj.bool
+  mbSetObj$analSet$block <- block
+
+  # Get OTU table at the requested taxonomy level
+  if(mbSetObj$module.type == "sdp") {
+    taxrank <- "OTU"
+  }
+
+  if(is.norm == "false") {
+    phyloseq_objs <- qs::qread("phyloseq_prenorm_objs.qs")
+  } else {
+    phyloseq_objs <- qs::qread("phyloseq_objs.qs")
+  }
+
+  if(taxrank == "OTU") {
+    input.data <- as.data.frame(phyloseq_objs$count_tables$OTU)
+  } else {
+    taxrank.inx <- which(names(phyloseq_objs$count_tables) %in% taxrank)
+    input.data <- as.data.frame(phyloseq_objs$count_tables[[taxrank.inx]])
+  }
+
+  # Build metadata
+  meta.nms <- colnames(mbSetObj$dataSet$sample_data)
+  input.meta <- as.data.frame(mbSetObj$dataSet$sample_data@.Data)
+  colnames(input.meta) <- meta.nms
+  rownames(input.meta) <- input.meta$sample_id
+
+  # Align samples
+  common.samples <- intersect(colnames(input.data), rownames(input.meta))
+  input.data <- input.data[, common.samples, drop = FALSE]
+  input.meta <- input.meta[common.samples, , drop = FALSE]
+
+  # Determine analysis type (discrete or continuous)
+  fixed.effects <- if(adj.bool) c(analysis.var, adj.vars) else analysis.var
+  fixed.types <- mbSetObj$dataSet$meta.types[names(mbSetObj$dataSet$meta.types) %in% fixed.effects]
+  analysis.type <- fixed.types[analysis.var]
+  mbSetObj$analSet$analysis.type <- analysis.type
+
+  # For discrete primary variable, subset to comparison groups and set reference
+  if(analysis.type == "disc") {
+    input.meta[[analysis.var]] <- factor(input.meta[[analysis.var]])
+    if(!is.null(ref) && ref != "NA" && !is.null(comp) && comp != "NA") {
+      keep <- input.meta[[analysis.var]] %in% c(comp, ref)
+      input.data <- input.data[, keep, drop = FALSE]
+      input.meta <- input.meta[keep, , drop = FALSE]
+      input.meta[[analysis.var]] <- factor(input.meta[[analysis.var]], levels = c(ref, comp))
+    }
+  }
+
+  # Ensure discrete covariates are factors
+  for(v in fixed.effects) {
+    if(v %in% names(fixed.types) && fixed.types[v] == "disc") {
+      input.meta[[v]] <- factor(input.meta[[v]])
+    }
+  }
+
+  # Build LinDA formula
+  formula.parts <- fixed.effects
+  if(block != "NA") {
+    input.meta[[block]] <- factor(input.meta[[block]])
+    formula.str <- paste0("~", paste(formula.parts, collapse = "+"), "+(1|", block, ")")
+  } else {
+    formula.str <- paste0("~", paste(formula.parts, collapse = "+"))
+  }
+
+  # Run LinDA (adjusted)
+  linda.res <- .linda_core(input.data, input.meta, formula = formula.str,
+                           prev.cut = 0, lib.cut = 1, winsor.quan = 0.97)
+
+  # Find the variable corresponding to the primary metadata
+  # For discrete variables, LinDA creates coefficients like "varNameLevel"
+  all.vars.out <- linda.res$variables
+  if(analysis.type == "disc" && !is.null(comp) && comp != "NA") {
+    var.match <- grep(paste0("^", analysis.var), all.vars.out, value = TRUE)[1]
+  } else {
+    var.match <- all.vars.out[1]
+  }
+  adj.output <- linda.res$output[[var.match]]
+
+  # Run LinDA (unadjusted) for comparison plot if covariates/blocking exist
+  if(adj.bool || block != "NA") {
+    formula.noadj <- paste0("~", analysis.var)
+    linda.noadj <- .linda_core(input.data, input.meta, formula = formula.noadj,
+                               prev.cut = 0, lib.cut = 1, winsor.quan = 0.97)
+    noadj.var <- grep(paste0("^", analysis.var), linda.noadj$variables, value = TRUE)[1]
+    noadj.output <- linda.noadj$output[[noadj.var]]
+  } else {
+    noadj.output <- adj.output
+  }
+
+  # Format results - match PostProcessMaaslin column names
+  if(analysis.type == "disc") {
+    res <- data.frame(
+      Log2FC = signif(adj.output$log2FoldChange, 3),
+      St.Error = signif(adj.output$lfcSE, 3),
+      `P-value` = signif(adj.output$pvalue, 3),
+      FDR = signif(adj.output$padj, 3),
+      row.names = rownames(adj.output),
+      check.names = FALSE
+    )
+    res.noadj <- data.frame(
+      Log2FC = signif(noadj.output$log2FoldChange, 3),
+      `St. Error` = signif(noadj.output$lfcSE, 3),
+      `P-value` = signif(noadj.output$pvalue, 3),
+      FDR = signif(noadj.output$padj, 3),
+      row.names = rownames(noadj.output),
+      check.names = FALSE
+    )
+  } else {
+    res <- data.frame(
+      Coefficient = signif(adj.output$log2FoldChange, 3),
+      St.Error = signif(adj.output$lfcSE, 3),
+      `P-value` = signif(adj.output$pvalue, 3),
+      FDR = signif(adj.output$padj, 3),
+      row.names = rownames(adj.output),
+      check.names = FALSE
+    )
+    res.noadj <- data.frame(
+      Coefficient = signif(noadj.output$log2FoldChange, 3),
+      `St.Error` = signif(noadj.output$lfcSE, 3),
+      `P-value` = signif(noadj.output$pvalue, 3),
+      FDR = signif(noadj.output$padj, 3),
+      row.names = rownames(noadj.output),
+      check.names = FALSE
+    )
+  }
+
+  # Write CSV
+  fast.write(res, file = "multifac_output.csv")
+
+  # Significance
+  sigfeat <- rownames(res)[res$FDR < thresh]
+  sig.count <- length(sigfeat)
+  if(sig.count == 0) {
+    current.msg <<- "No significant features were identified using the given p value cutoff."
+  } else {
+    current.msg <<- paste("A total of", sig.count, "significant features were identified!")
+  }
+
+  # Boxplot data
+  claslbl <- as.factor(input.meta[[analysis.var]])
+  nm <- rownames(input.data)
+  dat3t <- as.data.frame(t(input.data), check.names = FALSE)
+  colnames(dat3t) <- nm
+  box_data <- dat3t
+  box_data$class <- claslbl
+  box_data$norm <- is.norm
+
+  # Adjusted vs unadjusted comparison (for visualization JSON)
+  adj.mat <- res[, c("P-value", "FDR")]
+  noadj.mat <- res.noadj[, c("P-value", "FDR")]
+  colnames(adj.mat) <- c("pval.adj", "fdr.adj")
+  colnames(noadj.mat) <- c("pval.no", "fdr.no")
+  both.mat <- merge(adj.mat, noadj.mat, by = "row.names")
+  both.mat$pval.adj <- -log10(both.mat$pval.adj)
+  both.mat$fdr.adj <- -log10(both.mat$fdr.adj)
+  both.mat$pval.no <- -log10(both.mat$pval.no)
+  both.mat$fdr.no <- -log10(both.mat$fdr.no)
+  rownames(both.mat) <- both.mat[, 1]
+
+  jsonNm <- gsub(".png", ".json", imgNm)
+  jsonObj <- RJSONIO::toJSON(both.mat)
+  sink(jsonNm)
+  cat(jsonObj)
+  sink()
+
+  # Store results matching PostProcessMaaslin structure
+  mbSetObj$analSet$cov.mat <- both.mat
+  mbSetObj$analSet$multiboxdata <- box_data
+  mbSetObj$analSet$sig.count <- sig.count
+  mbSetObj$analSet$cov <- list()
+  mbSetObj$analSet$cov$resTable <- mbSetObj$analSet$resTable <- res
+  mbSetObj$analSet$maas.resnoadj <- res.noadj
+
+  mbSetObj$paramSet$cov <- list(
+    primaryMeta = analysis.var,
+    covariates = if(adj.bool) adj.vars else "NA",
+    block = block,
+    taxrank = taxrank,
+    model = "LinDA",
+    comparison = comp,
+    reference = ref,
+    p.lvl = thresh
+  )
+
+  .set.mbSetObj(mbSetObj)
+  return(1)
+}
+
 ########################################################
 ###########)Permanova_Pairwise##########################
 ########################################################

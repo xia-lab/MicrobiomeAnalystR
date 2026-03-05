@@ -526,7 +526,7 @@ ApplyMetaboFilter <- function(mbSetObj=NA, filter,  rsd){
   filt.res=int.mat[, remain]
   mbSetObj$dataSet$metabolomics$filt.data <- t(filt.res); 
   current.proc$met$data.proc<<-t(filt.res)
-  shadow_save(mbSetObj$dataSet$metabolomics$filt.data, file="metabo.filt.data"); # save an copy
+  shadow_save(mbSetObj$dataSet$metabolomics$filt.data, file="metabo.filt.data.qs"); # save an copy
   current.msg <<- msg
   mbSetObj$dataSet$metabolomics$filt.msg <- current.msg;
   return(.set.mbSetObj(mbSetObj));
@@ -574,7 +574,7 @@ UpdateSampleItems <- function(mbSetObj){
   mbSetObj$dataSet$remsam <- allnm[unmhit.indx];
  
   mbSetObj$dataSet$proc.phyobj <- prune_samples(colnames(prefilt.data),proc.phyobj.orig);
-  shadow_save(prefilt.data, file="data.prefilt")
+  saveDataQs(prefilt.data, "data.prefilt", module.type, dataName)
   current.msg <<- "Successfully updated the sample items!";
   
   # need to update metadata info after removing samples
