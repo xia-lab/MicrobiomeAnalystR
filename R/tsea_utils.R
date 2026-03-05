@@ -24,14 +24,22 @@ GetTseaCol <-function(mbSetObj, colInx){
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-Setup.MapData<-function(mbSetObj, qvec){
+Setup.MapData<-function(mbSetObj, qvec, method="ora"){
 
   lines <- unlist(strsplit(qvec, "\r|\n|\r\n")[1]);
   if(substring(lines[1],1,1)=="#"){
     lines <- lines[-1];
   }
+  lines <- lines[lines != ""];
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  mbSetObj$dataSet$species <- lines;
+  mbSetObj$dataSet$tsea.method <- method;
+  if(method == "gsea"){
+    parts <- strsplit(lines, "\t");
+    mbSetObj$dataSet$species <- trimws(sapply(parts, `[`, 1));
+    mbSetObj$dataSet$scores <- as.numeric(sapply(parts, `[`, 2));
+  } else {
+    mbSetObj$dataSet$species <- lines;
+  }
   return(.set.mbSetObj(mbSetObj))
 }
 
@@ -254,7 +262,94 @@ CalculateHyperScore <- function(mbSetObj){
   });
 
   return(.set.mbSetObj(mbSetObj));
-  
+
+}
+
+#'Calculate GSEA-based enrichment score.
+#'@description This function calculates the enrichment score using fgsea for TSEA.
+#'@param mbSetObj Input the name of the mbSetObj.
+#'@export
+CalculateGseaScore <- function(mbSetObj){
+
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+
+  nm.map <- GetFinalNameMap(mbSetObj);
+  valid.inx <- !(is.na(nm.map$Strain) | duplicated(nm.map$Strain));
+  mapped.names <- nm.map$Strain[valid.inx];
+  scores <- mbSetObj$dataSet$scores[valid.inx];
+
+  # remove entries with NA scores
+  keep <- !is.na(scores);
+  mapped.names <- mapped.names[keep];
+  scores <- scores[keep];
+
+  if(length(mapped.names) == 0){
+    AddErrMsg("No valid scored taxa after mapping!");
+    return(0);
+  }
+
+  ranked.vec <- scores;
+  names(ranked.vec) <- mapped.names;
+  # resolve duplicates by keeping highest absolute score
+  ranked.vec <- ranked.vec[order(abs(ranked.vec), decreasing = TRUE)];
+  ranked.vec <- ranked.vec[!duplicated(names(ranked.vec))];
+  ranked.vec <- sort(ranked.vec, decreasing = TRUE);
+
+  set.size <- length(current.mset);
+  if(set.size <= 1){
+    AddErrMsg("Cannot perform enrichment analysis on a single taxon set!");
+    return(0);
+  }
+
+  gsea.res <- callr::r(function(pathways, stats){
+    res <- fgsea::fgsea(pathways = pathways, stats = stats,
+                        minSize = 3, maxSize = 500, scoreType = "std");
+    as.data.frame(res);
+  }, args = list(pathways = current.mset, stats = ranked.vec));
+
+  # filter to sets with leading edge
+  le.counts <- sapply(gsea.res$leadingEdge, length);
+  keep.inx <- le.counts > 0;
+  if(sum(keep.inx) == 0){
+    AddErrMsg("No enriched taxon sets found!");
+    return(0);
+  }
+  gsea.res <- gsea.res[keep.inx, ];
+  le.counts <- le.counts[keep.inx];
+
+  # build result matrix matching ORA column layout
+  res.mat <- matrix(NA, nrow = nrow(gsea.res), ncol = 6);
+  rownames(res.mat) <- gsea.res$pathway;
+  colnames(res.mat) <- c("total", "expected", "hits", "Raw p", "Holm p", "FDR");
+
+  res.mat[, 1] <- gsea.res$size;        # total = set_size
+  res.mat[, 2] <- gsea.res$NES;         # expected = NES
+  res.mat[, 3] <- le.counts;            # hits = leading_edge_count
+  res.mat[, 4] <- gsea.res$pval;        # Raw p
+  res.mat[, 5] <- p.adjust(gsea.res$pval, "holm");
+  res.mat[, 6] <- gsea.res$padj;        # FDR (fgsea's BH-adjusted)
+
+  ord.inx <- order(res.mat[, 4]);
+  res.mat <- signif(res.mat[ord.inx, , drop = FALSE], 3);
+
+  # build hits list (leading edge taxa per set)
+  hits <- lapply(seq_len(nrow(gsea.res)), function(i){
+    gsea.res$leadingEdge[[i]];
+  });
+  names(hits) <- gsea.res$pathway;
+  hits <- hits[rownames(res.mat)];
+
+  mbSetObj$analSet$ora.mat <- res.mat;
+  mbSetObj$analSet$ora.hits <- hits;
+  fast.write(res.mat, file = "tsea_gsea_result.csv");
+
+  tryCatch({
+    ExportResultMatArrow(res.mat, "ora_mat");
+  }, error = function(e){
+    warning(paste("Arrow save failed for ora_mat:", e$message));
+  });
+
+  return(.set.mbSetObj(mbSetObj));
 }
 
 #'Getter to return final map
