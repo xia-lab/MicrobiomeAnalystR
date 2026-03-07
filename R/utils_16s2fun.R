@@ -82,10 +82,9 @@ my.16sfun.anot<-function(mbSetObj, type, pipeline,ggversion) {
         needs_semi <- !grepl(";$", rn)
         rn[needs_semi] <- paste0(rn[needs_semi], ";")
 
-        # OPTIMIZED: Combine taxonomy name corrections in single operation
-        rn <- gsub("Bacteroidota|Enterobacterales",
-                   function(x) if(x == "Bacteroidota") "Bacteroidetes" else "Enterobacteriales",
-                   rn, perl = TRUE)
+        # Fix taxonomy name corrections
+        rn <- gsub("Bacteroidota", "Bacteroidetes", rn, fixed = TRUE)
+        rn <- gsub("Enterobacterales", "Enterobacteriales", rn, fixed = TRUE)
 
         # Final cleanup
         rownames(merge.otu) <- stringr::str_trim(rn, side = "both")
@@ -652,6 +651,7 @@ functional_prediction_final$description <- functional_prediction_final$KO<-NULL
 ##modify tax4fun to remove all 0 columns
 
 Tax4Fun <- function(Tax4FunInput,folderReferenceData, fctProfiling=TRUE,refProfile="UProC",shortReadMode=TRUE,normCopyNo=TRUE){
+  require(Matrix)
   Tax4FunReferenceData <- importTax4FunReferenceData(folderReferenceData)
   ### clean the taxonomy names for match
   cleanedNms <- DeepCleanTaxaNames(rownames(Tax4FunInput$otuTable))
@@ -849,7 +849,7 @@ importTax4FunReferenceData <- function(folder){
   referenceData$SilvaToKEGGMappingMat <- tmpReferenceData
   tmpReferenceData <- readRDS(paste(pathReferenceData,"SilvaIDs.RData",sep=""))
   referenceData$SilvaIDs <- tmpReferenceData
-  tmpReferenceData <- readRDS(paste(pathReferenceData,"SilvaTaxmat.RData",sep=""))
+  tmpReferenceData <- readRDS("../../libs/tax4fun/SilvaTaxmat.RData")
   referenceData$SilvaTaxmat <- tmpReferenceData
 
   return(referenceData)
