@@ -1698,21 +1698,65 @@ PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName, metadata,
   }
 
   bargraphName = paste(bargraphName, ".", format, sep="");
-  mbSetObj$imgSet$alpha <- bargraphName;  
-  
-  box = plot_richness(data, color = metadata, measures = distName) + scale_x_discrete(limits=c(smplord));
-  
+  mbSetObj$imgSet$alpha <- bargraphName;
+
+  if(distName == "PD") {
+    # Faith's Phylogenetic Diversity: read tree directly from tree.qs (same as PlotPhylogeneticTree)
+    tree <- tryCatch(qs::qread("tree.qs"), error = function(e) NULL);
+    if(is.null(tree)) {
+      AddErrMsg("Phylogenetic Diversity (PD) requires a phylogenetic tree, but none is available in the current dataset. Please select a different alpha diversity measure.");
+      return(0);
+    }
+    otu <- as.data.frame(otu_table(data))
+    if(!taxa_are_rows(data)) otu <- t(otu)
+    matched.tips <- intersect(tree$tip.label, rownames(otu))
+    if(length(matched.tips) < 2) {
+      AddErrMsg("Too few OTU names match the phylogenetic tree tip labels for PD calculation. Please check that feature names match tree tip labels.");
+      return(0);
+    }
+    tree <- ape::keep.tip(tree, matched.tips)
+    pd_vals <- sapply(colnames(otu), function(s) {
+      present <- intersect(rownames(otu)[otu[, s] > 0], tree$tip.label)
+      if(length(present) < 2) return(NA)
+      sub_tree <- ape::keep.tip(tree, present)
+      sum(sub_tree$edge.length)
+    })
+    sam_df <- as.data.frame(sample_data(data))
+    alpha_df <- data.frame(
+      samples = names(pd_vals),
+      sam_df[names(pd_vals), , drop = FALSE],
+      variable = "PD",
+      value = as.numeric(pd_vals),
+      se = 0,
+      check.names = FALSE,
+      stringsAsFactors = FALSE
+    )
+    alpha_df$samples <- factor(alpha_df$samples, levels = smplord)
+    box <- ggplot(alpha_df, aes_string(x = "samples", y = "value", color = metadata)) +
+      geom_point(size = 3, alpha = 0.7) +
+      scale_x_discrete(limits = smplord) +
+      labs(y = "Alpha Diversity Measure\nPD") +
+      theme_bw() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+  } else {
+    box = plot_richness(data, color = metadata, measures = distName) + scale_x_discrete(limits=c(smplord));
+    box = box + theme_bw() + theme(axis.text.x = element_text(angle = 45, hjust = 1,vjust= 1));
+    box$layers <- box$layers[-1];
+    box <- box + geom_point(size=3, alpha=0.7);
+  }
+
   if(colors == "viridis"){
     box = box + viridis::scale_color_viridis(discrete=TRUE)
   }else if(colors %in% c("magma","plasma","inferno")){
     box <- box + viridis::scale_color_viridis(option=colors, discrete=TRUE)
   }
-  
-  mbSetObj$analSet$alpha <- box$data;
+
+  if(distName == "PD") {
+    mbSetObj$analSet$alpha <- alpha_df
+  } else {
+    mbSetObj$analSet$alpha <- box$data;
+  }
   fast.write(mbSetObj$analSet$alpha, file="alphadiversity.csv");
-  box = box + theme_bw() + theme(axis.text.x = element_text(angle = 45, hjust = 1,vjust= 1));
-  box$layers <- box$layers[-1];
-  box <- box + geom_point(size=3, alpha=0.7);
   #getting scale for plot (using same for boxplot also)
   ylimits <<- layer_scales(box)$y$range$range;
   

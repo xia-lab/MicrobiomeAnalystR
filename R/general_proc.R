@@ -526,7 +526,7 @@ ApplyMetaboFilter <- function(mbSetObj=NA, filter,  rsd){
   filt.res=int.mat[, remain]
   mbSetObj$dataSet$metabolomics$filt.data <- t(filt.res); 
   current.proc$met$data.proc<<-t(filt.res)
-  shadow_save(mbSetObj$dataSet$metabolomics$filt.data, file="metabo.filt.data"); # save an copy
+  shadow_save(mbSetObj$dataSet$metabolomics$filt.data, file="metabo.filt.data.qs"); # save an copy
   current.msg <<- msg
   mbSetObj$dataSet$metabolomics$filt.msg <- current.msg;
   return(.set.mbSetObj(mbSetObj));
@@ -574,7 +574,7 @@ UpdateSampleItems <- function(mbSetObj){
   mbSetObj$dataSet$remsam <- allnm[unmhit.indx];
  
   mbSetObj$dataSet$proc.phyobj <- prune_samples(colnames(prefilt.data),proc.phyobj.orig);
-  shadow_save(prefilt.data, file="data.prefilt")
+  saveDataQs(prefilt.data, "data.prefilt", module.type, dataName)
   current.msg <<- "Successfully updated the sample items!";
   
   # need to update metadata info after removing samples
@@ -639,10 +639,25 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
     msg <- c(msg, paste("No data rarefaction was performed."));
   }
   
-  # create phyloseq obj
+  # create phyloseq obj - preserve phylogenetic tree if present
   mbSetObj$dataSet$sample_data$sample_id <- rownames(mbSetObj$dataSet$sample_data);
   sample_table <- sample_data(mbSetObj$dataSet$sample_data, errorIfNULL=TRUE);
-  mbSetObj$dataSet$proc.phyobj<- merge_phyloseq(otu_table(data,taxa_are_rows =TRUE), sample_table, mbSetObj$dataSet$taxa_table);
+  orig.phyobj <- readDataQs("orig.phyobj", module.type, dataName);
+  orig.tree <- access(orig.phyobj, "phy_tree", errorIfNULL = FALSE);
+  if(!is.null(orig.tree)) {
+    # prune tree to match surviving taxa after filtering/rarefaction
+    current.taxa <- taxa_names(otu_table(data, taxa_are_rows = TRUE));
+    tree.tips <- orig.tree$tip.label;
+    tips.to.keep <- tree.tips[tree.tips %in% current.taxa];
+    if(length(tips.to.keep) >= 2) {
+      pruned.tree <- ape::keep.tip(orig.tree, tips.to.keep);
+      mbSetObj$dataSet$proc.phyobj <- merge_phyloseq(otu_table(data,taxa_are_rows =TRUE), sample_table, mbSetObj$dataSet$taxa_table, pruned.tree);
+    } else {
+      mbSetObj$dataSet$proc.phyobj <- merge_phyloseq(otu_table(data,taxa_are_rows =TRUE), sample_table, mbSetObj$dataSet$taxa_table);
+    }
+  } else {
+    mbSetObj$dataSet$proc.phyobj <- merge_phyloseq(otu_table(data,taxa_are_rows =TRUE), sample_table, mbSetObj$dataSet$taxa_table);
+  }
   
   
   #make hierarchies
@@ -1911,8 +1926,20 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
       AddErrMsg("Issues with sample names in your files! Make sure names are not purely numeric (i.e. 1, 2, 3).");
       return(0);
     }
-     data.proc <- data.proc[!grepl("^__",rownames(data.proc)),] 
-    mbSetObj$dataSet$proc.phyobj <- merge_phyloseq(data.proc, mbSetObj$dataSet$sample_data, mbSetObj$dataSet$taxa_table);
+     data.proc <- data.proc[!grepl("^__",rownames(data.proc)),]
+    proc.tree <- NULL;
+    if(mbSetObj$tree.uploaded) {
+      proc.tree <- tryCatch({
+        tr <- qs::qread("tree.qs");
+        common.tips <- intersect(tr$tip.label, taxa_names(data.proc));
+        if(length(common.tips) >= 2) ape::keep.tip(tr, common.tips) else NULL
+      }, error = function(e) NULL);
+    }
+    if(!is.null(proc.tree)) {
+      mbSetObj$dataSet$proc.phyobj <- merge_phyloseq(data.proc, mbSetObj$dataSet$sample_data, mbSetObj$dataSet$taxa_table, proc.tree);
+    } else {
+      mbSetObj$dataSet$proc.phyobj <- merge_phyloseq(data.proc, mbSetObj$dataSet$sample_data, mbSetObj$dataSet$taxa_table);
+    }
     
     if(length(rank_names(mbSetObj$dataSet$proc.phyobj)) > 7){
       tax_table(mbSetObj$dataSet$proc.phyobj) <- tax_table(mbSetObj$dataSet$proc.phyobj)[, 1:7]

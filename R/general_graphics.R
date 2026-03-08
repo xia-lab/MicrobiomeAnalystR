@@ -831,31 +831,31 @@ GetColorSchema <- function(mbSetObj, grayscale = F) {
     for (i in 1:length(lvs)) {
       colors[mbSetObj$analSet$cls == lvs[i]] <- dist.cols[i]
     }
-  } else if (grp.num > 9) {
+  } else {
     pal12 <- c(
-      "#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", "#FB9A99",
-      "#E31A1C", "#FDBF6F", "#FF7F00", "#CAB2D6", "#6A3D9A",
-      "#FFFF99", "#B15928"
+      "#1F78B4", "#33A02C", "#E31A1C", "#FF7F00", "#6A3D9A",
+      "#A6CEE3", "#B2DF8A", "#FB9A99", "#FDBF6F", "#CAB2D6",
+      "#B15928", "#666666"
     )
-    dist.cols <- grDevices::colorRampPalette(pal12)(grp.num)
+    if (grp.num > 12) {
+      dist.cols <- grDevices::colorRampPalette(pal12)(grp.num)
+    } else {
+      dist.cols <- pal12[1:grp.num]
+    }
     lvs <- levels(claslbl)
-    colors <- vector(mode = "character", length = length(mbSetObj$analSet$cls))
+    colors <- vector(mode = "character", length = length(claslbl))
 
     for (i in 1:length(lvs)) {
       colors[claslbl == lvs[i]] <- dist.cols[i]
     }
-  } else {
-    colors <- as.numeric(claslbl) + 1
+
     if (exists("colVec")) {
       if (any(colVec == "#NA")) {
-        cols <- vector(mode = "character", length = length(claslbl))
         clsVec <- as.character(claslbl)
         grpnms <- names(colVec)
-
         for (i in 1:length(grpnms)) {
-          cols[clsVec == grpnms[i]] <- colVec[i]
+          colors[clsVec == grpnms[i]] <- colVec[i]
         }
-        colors <- cols
       }
     }
   }
