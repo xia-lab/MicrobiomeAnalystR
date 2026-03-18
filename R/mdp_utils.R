@@ -2296,7 +2296,23 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
       }else{
              ord <- ordinate(data, method = ordmeth,"unifrac");
       }
-    }else{ 
+    }else if(distName == "aitchison"){
+      # Aitchison distance: Euclidean on CLR-transformed data
+      otu_mat <- as(otu_table(data), "matrix")
+      if(!taxa_are_rows(data)) otu_mat <- t(otu_mat)
+      otu_mat <- otu_mat + 0.5
+      clr_mat <- t(apply(otu_mat, 2, function(x) log(x) - mean(log(x))))
+      if(ordmeth=="PCA"){
+        ord <- prcomp(clr_mat, center=TRUE, scale=FALSE)
+      }else{
+        ait_dist <- dist(clr_mat, method="euclidean")
+        if(ordmeth=="PCoA"){
+          ord <- ape::pcoa(ait_dist)
+        }else{
+          ord <- vegan::metaMDS(ait_dist, k=2, trymax=100)
+        }
+      }
+    }else{
       if(ordmeth=="PCA"){
           ord <- prcomp(t(data@otu_table@.Data), center=TRUE, scale=F)
       }else{
@@ -3167,7 +3183,21 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pai
   
   data <- transform_sample_counts(data, function(x) x/sum(x));
 
-  data.dist <- distance(data, method=distnm);
+  if(distnm %in% c("wunifrac", "unifrac")){
+    if(distnm == "wunifrac"){
+      data.dist <- phyloseq::UniFrac(data, weighted=TRUE, normalized=TRUE)
+    }else{
+      data.dist <- phyloseq::UniFrac(data, weighted=FALSE)
+    }
+  }else if(distnm == "aitchison"){
+    otu_mat <- as(otu_table(data), "matrix")
+    if(!taxa_are_rows(data)) otu_mat <- t(otu_mat)
+    otu_mat <- otu_mat + 0.5
+    clr_mat <- t(apply(otu_mat, 2, function(x) log(x) - mean(log(x))))
+    data.dist <- dist(clr_mat, method="euclidean")
+  }else{
+    data.dist <- distance(data, method=distnm);
+  }
   group <- get_variable(data, variable);
   stat.info <- "";
   resTab <- list();
