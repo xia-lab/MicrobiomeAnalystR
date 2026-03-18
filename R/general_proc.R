@@ -1628,8 +1628,8 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
         }else{
           
           
-          if(taxa_type=="SILVA"){
-            
+          if(taxa_type=="SILVA" || taxa_type=="RDP"){
+
             suppressMessages(library(splitstackshape));
             feat_nm<-data.frame(mbSetObj$dataSet$feat_nm,check.names=FALSE);
             names(feat_nm)<-"Rank";
@@ -1637,7 +1637,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
             taxmat= data.frame(matrix(NA, ncol = 7, nrow = nrow(taxonomy)),check.names=FALSE);
             colnames(taxmat) <- classi.lvl;
             taxmat[,1:ncol(taxonomy)]<-taxonomy;
-            taxmat<-taxmat[colSums(!is.na(taxmat))>0]; 
+            taxmat<-taxmat[colSums(!is.na(taxmat))>0];
             taxmat<-as.matrix(taxmat);
             rownames(taxmat)<-c(1:nrow(taxmat));
             #phyloseq taxonomy object

@@ -25,19 +25,19 @@
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import randomForest
-RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank){
+RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank, impMeasure="MeanDecreaseAccuracy"){
 
   suppressMessages(library(randomForest));
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
+
   # set up random numbers
   if(is.null(mbSetObj$analSet$random.seeds)){
     mbSetObj$analSet$random.seeds <- GetRandomNumbers();
     mbSetObj$analSet$cur.inx <- 0;
     mbSetObj$analSet$rn.seed <- mbSetObj$analSet$random.seeds[1];
   }
-  
+
   if(randomOn == -1){
     rn.sd <- 123456;
   }else if(randomOn == 0){ # keep current
@@ -47,11 +47,11 @@ RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank){
     rn.sd <- mbSetObj$analSet$random.seeds[cur.inx];
     mbSetObj$analSet$cur.inx <- cur.inx;
   }
-  
+
   set.seed(rn.sd);
   # save the seed
   mbSetObj$analSet$rn.seed <- rn.sd;
-  
+
   if(mbSetObj$module.type=="sdp"){
     taxrank<-"OTU";
     data <- mbSetObj$dataSet$norm.phyobj;
@@ -60,13 +60,13 @@ RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank){
     if(!exists("phyloseq_objs")){
       phyloseq_objs <- qs::qread("phyloseq_objs.qs")
     }
-    
+
     if(taxrank=="OTU"){
       data1 <- t(phyloseq_objs$count_tables$OTU)
     }else{
       taxrank.inx <- which(names(phyloseq_objs$count_tables) %in% taxrank)
       data1 <- t(phyloseq_objs$count_tables[[taxrank.inx]])
-    } 
+    }
   }
 
   meta.info <- sample_data(mbSetObj$dataSet$norm.phyobj)
@@ -81,21 +81,28 @@ RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank){
     data1 <- cbind(sel.meta.vecs, data1);
     colnames(data1)[1:length(meta.vec.rf)] <- meta.vec.rf;
   }
-  
+
   data.impfeat <<- data1;
   cls <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   variable <<- variable;
   rf_out <- randomForest(data1, cls, ntree = treeNum, mtry = tryNum, importance = TRUE, proximity = TRUE);
-  # set up named sig table for display
+
+  # validate importance measure
+  if(!impMeasure %in% c("MeanDecreaseAccuracy", "MeanDecreaseGini")){
+    impMeasure <- "MeanDecreaseAccuracy";
+  }
+  rf.imp.measure <<- impMeasure;
+
+  # set up named sig table for display using selected measure
   impmat <- rf_out$importance;
-  impmat <- impmat[rev(order(impmat[,"MeanDecreaseAccuracy"])),]
-  sigmat <- impmat[,"MeanDecreaseAccuracy", drop=F];
+  impmat <- impmat[rev(order(impmat[,impMeasure])),]
+  sigmat <- impmat[,impMeasure, drop=F];
   sigmat <- signif(sigmat, 5);
   fast.write(sigmat,file="randomforests_sigfeatures.csv");
-  
+
   box_data <- as.data.frame(data1,check.names=FALSE);
   box_data$class <- cls;
-  
+
   mbSetObj$analSet$boxdata <- box_data;
 
   mbSetObj$analSet$cls <- cls;
@@ -187,7 +194,7 @@ PlotRF.Classify<-function(mbSetObj, feature, imgName, format="png", dpi=72, widt
 PlotRF.VIP<-function(mbSetObj, feature, imgName, format="png", dpi=72, width=NA){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
+
   imgName = paste(imgName, ".", format, sep="");
   mbSetObj$imgSet$rf.imp <- imgName;
 
@@ -200,7 +207,9 @@ PlotRF.VIP<-function(mbSetObj, feature, imgName, format="png", dpi=72, width=NA)
   }
   h <- w-1; # margin is big
 
-  vip.score <- rev(sort(mbSetObj$analSet$rf$importance[,"MeanDecreaseAccuracy"]));
+  # Use selected importance measure (default to MeanDecreaseAccuracy)
+  impMeasure <- if(exists("rf.imp.measure")) rf.imp.measure else "MeanDecreaseAccuracy"
+  vip.score <- rev(sort(mbSetObj$analSet$rf$importance[,impMeasure]));
   cls <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   cls.len <- length(levels(cls));
 
@@ -208,9 +217,10 @@ PlotRF.VIP<-function(mbSetObj, feature, imgName, format="png", dpi=72, width=NA)
   rt.mrg <- cls.len + 3;
   w <- w + rt.mrg/72; # convert to inch
 
+  xlbl <- gsub("MeanDecrease", "Mean Decrease ", impMeasure)
   Cairo::Cairo(file = imgName,  unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
   op <- par(mar=c(5,7,3,rt.mrg)); # update right side margin with the number of class
-  PlotImpVar(mbSetObj, vip.score,"MeanDecreaseAccuracy", feature);
+  PlotImpVar(mbSetObj, vip.score, xlbl, feature);
   par(op);
   dev.off();
   return(.set.mbSetObj(mbSetObj))
