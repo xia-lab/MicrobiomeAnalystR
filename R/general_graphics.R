@@ -119,18 +119,17 @@ PlotTreeGraph <- function(mbSetObj, plotNm, distnm, clstDist, metadata,
   hc_tree <- hclust(dist.mat, method = clstDist)
   mbSetObj$imgSet$tree <- plotNm
 
+  nsamp <- nsamples(data)
   if (is.na(width)) {
-    w <- minH <- 650
-    myH <- nsamples(data) * 16 + 150
-
-    if (myH < minH) {
-      myH <- minH
-    }
-    w <- round(w / 72, 2)
-    h <- round(myH / 72, 2)
+    w <- 9.0
+    h <- max(9.0, nsamp * 0.35 + 2)
   }
 
-  Cairo::Cairo(file = plotNm, unit = "in", dpi = dpi, width = w, height = h, type = format, bg = "white", pointsize = 18)
+  # Scale text for DPI: larger pointsize for high DPI, normal for 72
+  pt <- if(dpi > 100) 16 else 12
+  lab_cex <- if(dpi > 100) 1.0 else 0.8
+
+  Cairo::Cairo(file = plotNm, unit = "in", dpi = dpi, width = w, height = h, type = format, bg = "white", pointsize = pt)
   par(mar = c(4, 2, 2, 10))
   clusDendro <- as.dendrogram(hc_tree)
 
@@ -167,9 +166,9 @@ PlotTreeGraph <- function(mbSetObj, plotNm, distnm, clstDist, metadata,
       labCol <- labelColors[a$label]
       attr(n, "nodePar") <-
         if (is.list(a$nodePar)) {
-          c(a$nodePar, lab.col = labCol, lab.cex = 1.2, pch = NA)
+          c(a$nodePar, lab.col = labCol, lab.cex = lab_cex, pch = NA)
         } else {
-          list(lab.col = labCol, lab.cex = 1.2, pch = NA)
+          list(lab.col = labCol, lab.cex = lab_cex, pch = NA)
         }
     }
     n
