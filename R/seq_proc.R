@@ -25,7 +25,7 @@ PerformSeqCheck <- function(home_dir = ""){
     p1 <- plotQualityProfile(fnFs[1:2])
   }
   shadow_save(p1, "diagnotics_plot_src.qs");
-  Cairo::Cairo(1600, 1250,file = paste0("diagnotics.png"),dpi = 180,bg = "white")
+  Cairo::Cairo(file = paste0("diagnotics.png"), unit = "in", dpi = 96, width = 22.2, height = 17.4, type = "png", bg = "white")
   print(p1)
   dev.off()
   return(1)
@@ -161,16 +161,16 @@ PerformSeqProcessing <- function(){
   MessageOutput("Plotting error frequency bar plots ... ")
   if(params$is_paired){
     p1 <- plotErrors(errF, nominalQ=TRUE)
-    Cairo::Cairo(file = "error_images_f.png",  unit="in", dpi=72, width=12, height=10, type="png", bg="white");
+    Cairo::Cairo(file = "error_images_f.png",  unit="in", dpi=96, width=12, height=10, type="png", bg="white");
     suppressWarnings(print(p1))
     dev.off();
     p2 <- plotErrors(errR, nominalQ=TRUE)
-    Cairo::Cairo(file = "error_images_r.png",  unit="in", dpi=72, width=12, height=10, type="png", bg="white");
+    Cairo::Cairo(file = "error_images_r.png",  unit="in", dpi=96, width=12, height=10, type="png", bg="white");
     suppressWarnings(print(p2))
     dev.off();
   } else {
     p0 <- plotErrors(errF, nominalQ=TRUE)
-    Cairo::Cairo(file = "error_images_f.png",  unit="in", dpi=72, width=12, height=10, type="png", bg="white");
+    Cairo::Cairo(file = "error_images_f.png",  unit="in", dpi=96, width=12, height=10, type="png", bg="white");
     suppressWarnings(print(p0))
     dev.off();
   }
@@ -578,6 +578,7 @@ sweaveBash4execPro <- function(users.path, isfromGoogle = FALSE, source_path){
 
   # Set working dir & load saved params
   str <- paste0(str, ";\n", "setwd(\'",users.path,"\')");
+  str <- paste0(str, ";\n", "default.dpi <- 150");
   str <- paste0(str, ";\n", "source('", seq_proc_path, "')");
   str <- paste0(str, ";\n", "load('dataObj_param.rda')");
   str <- paste0(str, ";\n", "dataObj <<- dataObj");
@@ -844,7 +845,7 @@ generateResFigures <- function(mbSetObj = NA){
   # plot_richness
   p1 <- plot_richness(ps, measures=c("Shannon", "Simpson"), color="Groups")
   
-  Cairo::Cairo(840, 500,file = paste0("richness.png"),dpi = 90,bg = "white")
+  Cairo::Cairo(file = paste0("richness.png"), unit = "in", dpi = 90, width = 11.7, height = 6.9, type = "png", bg = "white")
   print(p1)
   dev.off()
   
@@ -857,7 +858,7 @@ generateResFigures <- function(mbSetObj = NA){
   ord.nmds.bray <- ordinate(ps.prop, method="NMDS", distance="bray")
   
   p2 <- plot_ordination(ps.prop, ord.nmds.bray, color="Groups", title="Bray NMDS")
-  Cairo::Cairo(840, 500,file = paste0("nmds.png"),dpi = 90,bg = "white")
+  Cairo::Cairo(file = paste0("nmds.png"), unit = "in", dpi = 90, width = 11.7, height = 6.9, type = "png", bg = "white")
   print(p2)
   dev.off()
   
@@ -871,7 +872,7 @@ generateResFigures <- function(mbSetObj = NA){
   ps.top20 <- prune_taxa(top20, ps.top20)
   p3 <- plot_bar(ps.top20, fill="Family") + facet_wrap(~Groups, scales="free_x")
   
-  Cairo::Cairo(840, 500,file = paste0("bars.png"),dpi = 90,bg = "white")
+  Cairo::Cairo(file = paste0("bars.png"), unit = "in", dpi = 90, width = 11.7, height = 6.9, type = "png", bg = "white")
   print(p3)
   dev.off()
   
@@ -887,7 +888,7 @@ generateResFigures <- function(mbSetObj = NA){
   }
 }
 
-libSizeQuickView <- function(dataObj = NULL, format = "png", dpi = 72){
+libSizeQuickView <- function(dataObj = NULL, format = "png", dpi = default.dpi){
 
   if(is.null(dataObj)){
     load("dataObj_completed.rda");
@@ -923,7 +924,7 @@ libSizeQuickView <- function(dataObj = NULL, format = "png", dpi = 72){
   }
   
   # plot libsize_quickview
-  Cairo::Cairo(file=paste0("libsize_quickview.", format), width=myW, height=myH, type=format, bg="white",dpi=dpi);
+  Cairo::Cairo(file=paste0("libsize_quickview.", format), unit="in", dpi=dpi, width=myW/72, height=myH/72, type=format, bg="white");
   xlim.ext <- GetExtendRange(smpl.sums, 10);
   par(mar=c(4,10,2,2));
   dotchart(smpl.sums, col="forestgreen", xlim=xlim.ext, pch=19, xlab="Read Counts", main="Library Raw Size Overview");
@@ -936,7 +937,7 @@ libSizeQuickView <- function(dataObj = NULL, format = "png", dpi = 72){
 plotSeqDiagnotics <- function(imageName = "diagnotics", format = "png", dpi = 120){
     if(file.exists("diagnotics_plot_src.qs")){
         p1 <- qs::qread("diagnotics_plot_src.qs")
-        Cairo::Cairo(1600, 1250,file = paste0(imageName, ".",format), dpi = dpi, bg = "white", type=format)
+        Cairo::Cairo(file = paste0(imageName, ".",format), unit = "in", dpi = 96, width = 22.2, height = 17.4, type = format, bg = "white")
         print(p1)
         dev.off()            
     }

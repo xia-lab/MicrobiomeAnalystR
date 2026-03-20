@@ -188,7 +188,7 @@ ReadShotgunBiomData <- function(mbSetObj, dataName, geneidtype, module.type, ism
 #'@export
 #'@import ggfortify
 PreparePCA4Shotgun <- function(mbSetObj, imgName,imgName2, format="json", inx1, inx2, inx3,
-                              variable, showlabel, format2d="png", dpi=72){
+                              variable, showlabel, format2d="png", dpi=default.dpi){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   suppressMessages(library(ggfortify));
@@ -227,7 +227,7 @@ PreparePCA4Shotgun <- function(mbSetObj, imgName,imgName2, format="json", inx1, 
   #sink();
 
   #2D
-  Cairo::Cairo(file=imgName2, width=720, height=500, type=format2d, bg="white",dpi=dpi);
+  Cairo::Cairo(file=imgName2, unit="in", dpi=dpi, width=10.0, height=6.9, type=format2d, bg="white");
   label = FALSE;
     
   if(showlabel=="samnm"){
@@ -272,7 +272,7 @@ PreparePCA4Shotgun <- function(mbSetObj, imgName,imgName2, format="json", inx1, 
 #'@export
 #'@import reshape
 PlotFunctionStack <-function(mbSetObj, summaryplot, functionlvl, abundcal, geneidtype, metadata,
-                            colpalopt, format="png", dpi=72){
+                            colpalopt, format="png", dpi=default.dpi){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
@@ -433,7 +433,7 @@ PlotFunctionStack <-function(mbSetObj, summaryplot, functionlvl, abundcal, genei
     x.colors <- rep(custom_col42,length.out=x);
   }
 
-  Cairo::Cairo(file=summaryplot,width=w, height=600, type=format, bg="white",dpi=dpi);
+  Cairo::Cairo(file=summaryplot, unit="in", dpi=dpi, width=w/72, height=8.3, type=format, bg="white");
   mbSetObj$imgSet$func.prof<-summaryplot;
 
   box <- ggplot(data,aes(x=step,y=value)) + 

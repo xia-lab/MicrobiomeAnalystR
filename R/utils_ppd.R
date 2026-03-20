@@ -199,7 +199,7 @@ PerformRefDataMapping <- function(mbSetObj, refdataNm, taxo_type, sample_var, bi
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import vegan
-PCoA3DAnal.16SRef <- function(mbSetObj, barplotNm, ordMeth, distName, taxrank, metadata, format="png", dpi=72){
+PCoA3DAnal.16SRef <- function(mbSetObj, barplotNm, ordMeth, distName, taxrank, metadata, format="png", dpi=default.dpi){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
@@ -231,7 +231,7 @@ PCoA3DAnal.16SRef <- function(mbSetObj, barplotNm, ordMeth, distName, taxrank, m
   barplotNm = paste(barplotNm, ".", format, sep="");
   mbSetObj$imgSet$ppd.2d<-barplotNm;
   
-  Cairo::Cairo(file=barplotNm, width=720, height=500, type=format, bg="white",dpi=dpi);
+  Cairo::Cairo(file=barplotNm, unit="in", dpi=dpi, width=10.0, height=6.9, type=format, bg="white");
   box = plot_ordination(data,GP.ord,color=metadata,shape="data");
   box$layers <- box$layers[-1];
   box=box+geom_point(size =4,alpha=0.8)+theme_bw();

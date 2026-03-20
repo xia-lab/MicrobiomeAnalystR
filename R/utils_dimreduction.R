@@ -41,7 +41,7 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
   d.list[["mic"]][["meta"]] = data.frame(mbSetObj$dataSet$sample_data)
   
   d.list[["met"]] = list()
-  d.list[["met"]][["data.proc"]] =   current.proc$met$data.proc
+  d.list[["met"]][["data.proc"]] = if(!is.null(current.proc$met$data.norm)) current.proc$met$data.norm else current.proc$met$data.proc
   d.list[["met"]][["comp.res"]] =   current.proc$met$res_deAnal[,c(1:3)] #comp.res
   d.list[["met"]][["enrich.nms"]] = rownames(current.proc$met$res_deAnal)
   d.list[["met"]][["meta"]] = data.frame(mbSetObj$dataSet$sample_data)

@@ -1102,8 +1102,10 @@ ComputeEncasing <- function(filenm, type, names.vec, level=0.95, omics="NA"){
     mesh[[1]] = as.mesh3d(sh, triangles=T);
   }else if(type == "ellipse"){
     library(rgl);
+    n = nrow(coords);
     pos=cov(coords, y = NULL, use = "everything");
-    mesh[[1]] = ellipse3d(x=as.matrix(pos), level=level);
+    t_val = sqrt(qchisq(level, 3));
+    mesh[[1]] = ellipse3d(x=as.matrix(pos), t=t_val);
   }else{
     library(ks);
     res=kde(coords);

@@ -777,19 +777,43 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
   mbSetObj$dataSet$norm.msg <- msg;
   
   ### prepare for mmp module
+  ## -----------------------------------------------------------------------
+  ## MMP DATA FLOW NOTE (for future development):
+  ##
+  ## current.proc$mic$data.proc / current.proc$met$data.proc:
+  ##   - Always holds the LATEST processed state of the data
+  ##   - After filtering: holds filtered data
+  ##   - After normalization: overwritten with normalized data
+  ##   - After autoScale (Update button): overwritten with normalized+autoScaled data
+  ##   - All MMP integration methods (CompareMic/Met, Procrustes, DIABLO,
+  ##     correlation heatmap, etc.) read from data.proc
+  ##
+  ## current.proc$mic$data.norm.orig / current.proc$met$data.norm.orig:
+  ##   - Immutable copy of normalized data (set once during normalization)
+  ##   - Used as source for autoScale toggle: checked -> AutoScale(norm.orig),
+  ##     unchecked -> restore from norm.orig
+  ##
+  ## current.proc$mic$data.norm / current.proc$met$data.norm:
+  ##   - Tracks data.proc after normalization (used by PCA/Density plots)
+  ##
+  ## Filtered data is preserved separately in:
+  ##   - mbSetObj$dataSet$filt.data (microbiome) / filt.data.orig on disk
+  ##   - mbSetObj$dataSet$metabolomics$filt.data / metabo.filt.data.qs on disk
+  ##   - phyloseq_prenorm_objs.qs (pre-normalization count tables at all levels)
+  ##
+  ## NOTE: MDP module uses data.proc differently — it holds filtered data
+  ##   for ecological analyses. Do NOT change MDP data flow.
+  ## -----------------------------------------------------------------------
   if(exists("current.proc")){
     shadow_save(data.list,"prescale.phyobj.qs")
-    if(isAutoScale=="true" | scale.opt == "auto"){
-      data.list$count_tables <- lapply(data.list$count_tables,function(df) t(AutoScale(t(df))))
-    }  
-    current.proc$mic$data.proc<<- data.list$count_tables[["OTU"]]
-    
+    current.proc$mic$data.norm.orig <<- data.list$count_tables[["OTU"]]
+    current.proc$mic$data.norm <<- data.list$count_tables[["OTU"]]
+    current.proc$mic$data.proc <<- data.list$count_tables[["OTU"]]
   }
   ### Normalized object for each taxonomy level
   saveDataQs(data.list, "phyloseq_objs.qs", module.type, dataName);  
   return(.set.mbSetObj(mbSetObj));
 }
-
 
 #'Function to perform normalization on metabolomics data
 #'@description This function performs normalization on the uploaded metabolomics
@@ -810,12 +834,13 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
 #'@export
 #'@import edgeR
 #'@import metagenomeSeq
-PerformMetaboNormalization <- function(mbSetObj, rowNorm, transNorm, scaleNorm,isAutoScale){
+PerformMetaboNormalization <- function(mbSetObj, rowNorm, transNorm, scaleNorm, ...){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   data <-t(mbSetObj$dataSet$metabolomics$filt.data);
-  # now proc.phyobj is now filtered data
-  
+  # Save pre-normalization metabolomics data for before/after comparison
+  shadow_save(t(data), file="metabo.prenorm.qs");
+
   msg <- "";
   
   colNames <- colnames(data);
@@ -894,7 +919,7 @@ PerformMetaboNormalization <- function(mbSetObj, rowNorm, transNorm, scaleNorm,i
       x - mean(x);
     });
     scalenm<-"Mean Centering";
-  }else if(scaleNorm=='AutoNorm'| isAutoScale == "true"){
+  }else if(scaleNorm=='AutoNorm'){
     data<-apply(data, 2, function(x){
       (x - mean(x))/sd(x, na.rm=T);
     });
@@ -932,8 +957,11 @@ PerformMetaboNormalization <- function(mbSetObj, rowNorm, transNorm, scaleNorm,i
   mbSetObj$dataSet$metabolomics$norm.data <- t(as.data.frame(data)); ## feature in row and sample in column
   
   shadow_save( mbSetObj$dataSet$metabolomics$norm.data, file="metabo.complete.norm.qs");
-  
-  current.proc$met$data.proc<<-t(as.data.frame(data))
+
+  ## See MMP DATA FLOW NOTE in PerformNormalization above
+  current.proc$met$data.norm.orig <<- t(as.data.frame(data))
+  current.proc$met$data.norm <<- t(as.data.frame(data))
+  current.proc$met$data.proc <<- t(as.data.frame(data))
   
   mbSetObj$dataSet$metabolomics$rownorm.method <- rownm;
   mbSetObj$dataSet$metabolomics$trans.method <- transnm;
@@ -1102,7 +1130,7 @@ PlotRareCurve <- function(mbSetObj, graphName, variable){
   data <- data.matrix(mbSetObj$dataSet$filt.data);
   rarefaction_curve_data<-as.matrix(otu_table(data));
   
-  Cairo::Cairo(file=graphName, width=900, height=480, type="png", bg="white");
+  Cairo::Cairo(file=graphName, unit="in", dpi=96, width=12.5, height=6.7, type="png", bg="white");
   
   #sample-wise
   subsmpl=50;
@@ -1173,7 +1201,7 @@ PlotRareCurve <- function(mbSetObj, graphName, variable){
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataName="", interactive=F){
+PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=default.dpi, dataName="", interactive=F){
 
   mbSetObj <- .get.mbSetObj(mbSetObj)
   library(ggplot2)
@@ -1255,7 +1283,7 @@ PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataN
   # Determine the width based on the number of samples
   num_samples <- length(smpl.sums)
   width <- ifelse(num_samples < 50, 800, 800 + (num_samples - 50) * 10)
-  height <- 600
+  height <- 400
   
   # Plotting with ggplot2
   imgName <- paste0(origImgName, ".", format)
@@ -1267,7 +1295,7 @@ PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataN
           legend.text = element_text(size = 14), legend.title = element_text(size = 14))
   
   if(imgName != ""){
-    Cairo::Cairo(file=imgName, width=width, height=height, type=format, bg="white", dpi=dpi);
+    Cairo::Cairo(file=imgName, unit="in", dpi=dpi, width=width/72, height=height/72, type=format, bg="white");
     print(g);
     dev.off();
   }
@@ -1388,6 +1416,7 @@ PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataN
       yaxis = plot_data$layout$yaxis,
       shapes = plot_data$layout$shapes,
       annotations = plot_data$annotations,
+      height = 400,
       note = "proc"
     )
     
@@ -1407,132 +1436,159 @@ PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=72, dataN
 #'
 
 
-PlotPCAView <- function(imgName, format="png", dpi=72,init){
+PlotPCAView <- function(imgName, format="png", dpi=default.dpi, init=0){
   require("ggsci")
-  
-  #dpi<-as.numeric(dpi)
+  require("ggpubr")
+
   imgName = paste(imgName,".", format, sep="");
-  
+
   fig.list <- list()
-  pca.list<- list()
-  pct <- list();
-  
-  for(i in 1:2){
-    if(i==1){
-      data.proc <- current.proc$mic$data.proc;
-      x <- data.matrix(data.proc);
-      type="Microbiome"
-    }else{
-      data.proc <- current.proc$met$data.proc;
-      x <- data.matrix(data.proc);
-      type="Metabolomics"
-    }
-    pca <- prcomp(t(na.omit(x)), center=T, scale=T);
-    imp.pca<-summary(pca)$importance;
-    xlabel <- paste0("PC1"," (", 100*round(imp.pca[2,][1], 3), "%)")
-    ylabel <- paste0("PC2"," (", 100*round(imp.pca[2,][2], 3), "%)")
-    names <- colnames(x);
-    pca.res <- as.data.frame(pca$x);
-    pca.res <- pca.res[,c(1,2)]
-    
-    xlim <- GetExtendRange(pca.res$PC1);
-    ylim <- GetExtendRange(pca.res$PC2);
-    
-    metaFile <- qs::qread("data.sample_data")
-    Factor <- metaFile[,1]
-    pca.rest <- pca.res
-    pca.rest$Conditions <- Factor
-    pca.rest$names <- rownames(pca.res)
-    
-    pcafig <- ggplot(pca.rest, aes(x=PC1, y=PC2,  color=Conditions)) +
-      geom_point(size=3, alpha=0.7) + 
-      scale_color_npg()+
-      xlim(xlim) + 
-      ylim(ylim) + 
-      xlab(xlabel) + 
-      ylab(ylabel) +
-      theme_bw()
-    fig.list[[i]] <- pcafig
-    
-    pos.xyz = data.frame(x=pca$x[,1], y=pca$x[,2], z=pca$x[,3]);
-    loading.pos.xyz = data.frame(pca$rotation[,c(1:3)]);
-    loadingNames = rownames(pca$rotation);
-    
-    pos.xyz <- as.data.frame(pos.xyz);
-    pos.xyz <- unitAutoScale(pos.xyz);
-    
-    loadingNames <- rownames(loading.pos.xyz);
-    loading.pos.xyz <- as.data.frame(loading.pos.xyz);
-    loading <- unitAutoScale(loading.pos.xyz);
-    rownames(loading) <- loadingNames;
-    nm <- paste0("pca_", type);
-    pca.list[[nm]][["score"]] <- pos.xyz * 1000;
-    pca.list[[nm]][["loading"]] <- loading* 1000;    
-    
-    pct[[nm]] <- unname(round(imp.pca[2,],3))[c(1:3)]*100;
+  pca.list <- list()
+  pct <- list()
+
+  metaFile <- qs::qread("data.sample_data")
+  Factor <- metaFile[,1]
+
+  .make_pca_plot <- function(x, xlabel, ylabel, title){
+    pca <- prcomp(t(na.omit(x)), center=T, scale=T)
+    imp.pca <- summary(pca)$importance
+    xl <- paste0("PC1 (", 100*round(imp.pca[2,1], 3), "%)")
+    yl <- paste0("PC2 (", 100*round(imp.pca[2,2], 3), "%)")
+    pca.res <- as.data.frame(pca$x[,c(1,2)])
+    pca.res$Conditions <- Factor
+    ggplot(pca.res, aes(x=PC1, y=PC2, color=Conditions)) +
+      geom_point(size=3, alpha=0.7) +
+      scale_color_npg() +
+      xlab(xl) + ylab(yl) + ggtitle(title) +
+      theme_bw() +
+      theme(plot.title=element_text(size=11, face="bold"))
   }
-  pca.list$pct2 <- pct;
-  shadow_save(pca.list, file="pca.scatter.qs");
-  
-  h<-6*round(length(fig.list)/2)
-  Cairo::Cairo(file=imgName, width=14, height=h, type=format, bg="white", unit="in", dpi=dpi);
-  library("ggpubr")
-  p1 <- ggarrange(plotlist=fig.list, ncol = 2, nrow = round(length(fig.list)/2), labels=c("Microbiome","Metabolomics"))
+
+  datasets <- list(
+    list(name="Microbiome", proc=if(!is.null(current.proc$mic$data.norm)) current.proc$mic$data.norm else current.proc$mic$data.proc, raw_file="phyloseq_prenorm_objs.qs", raw_key="OTU"),
+    list(name="Metabolomics", proc=if(!is.null(current.proc$met$data.norm)) current.proc$met$data.norm else current.proc$met$data.proc, raw_file="metabo.prenorm.qs", raw_key=NULL)
+  )
+
+  idx <- 1
+  for(ds in datasets){
+    x.after <- data.matrix(ds$proc)
+
+    # Save 3D PCA data (for after normalization - used by scatter viewer)
+    pca.full <- prcomp(t(na.omit(x.after)), center=T, scale=T)
+    imp.pca <- summary(pca.full)$importance
+    pos.xyz <- as.data.frame(data.frame(x=pca.full$x[,1], y=pca.full$x[,2], z=pca.full$x[,3]))
+    pos.xyz <- unitAutoScale(pos.xyz)
+    loading.pos.xyz <- as.data.frame(pca.full$rotation[,c(1:3)])
+    loading <- unitAutoScale(loading.pos.xyz)
+    rownames(loading) <- rownames(pca.full$rotation)
+    nm <- paste0("pca_", ds$name)
+    pca.list[[nm]][["score"]] <- pos.xyz * 1000
+    pca.list[[nm]][["loading"]] <- loading * 1000
+    pct[[nm]] <- unname(round(imp.pca[2,],3))[c(1:3)]*100
+
+    # Before normalization/autoScale - use pre-normalization file if available,
+    # then fall back to data.norm.orig (pre-autoScale baseline), then x.after
+    if(!is.null(ds$raw_key) && file.exists(ds$raw_file)){
+      raw.data <- shadow_qread(ds$raw_file)
+      if(is.list(raw.data) && !is.null(raw.data$count_tables)){
+        x.before <- data.matrix(raw.data$count_tables[[ds$raw_key]])
+      } else {
+        x.before <- data.matrix(raw.data)
+      }
+    } else if(is.null(ds$raw_key) && file.exists(ds$raw_file)){
+      x.before <- data.matrix(shadow_qread(ds$raw_file))
+    } else if(ds$name == "Microbiome" && !is.null(current.proc$mic$data.norm.orig)){
+      x.before <- data.matrix(current.proc$mic$data.norm.orig)
+    } else if(ds$name == "Metabolomics" && !is.null(current.proc$met$data.norm.orig)){
+      x.before <- data.matrix(current.proc$met$data.norm.orig)
+    } else {
+      x.before <- x.after
+    }
+    fig.list[[idx]] <- .make_pca_plot(x.before, "", "", paste0(ds$name, " (Before)"))
+    idx <- idx + 1
+
+    # After normalization (right)
+    fig.list[[idx]] <- .make_pca_plot(x.after, "", "", paste0(ds$name, " (After)"))
+    idx <- idx + 1
+  }
+
+  pca.list$pct2 <- pct
+  shadow_save(pca.list, file="pca.scatter.qs")
+
+  # Always 2x2: top = Microbiome (before, after), bottom = Metabolomics (before, after)
+  Cairo::Cairo(file=imgName, width=14, height=12, type=format, bg="white", unit="in", dpi=96)
+  p1 <- ggarrange(fig.list[[1]], fig.list[[2]], fig.list[[3]], fig.list[[4]],
+                   ncol=2, nrow=2, common.legend=TRUE, legend="bottom")
   print(p1)
-  dev.off();
+  dev.off()
   return(1)
-  
+
 }
 
 
-PlotDensityView <- function(imgName, format="png",  init=0, autoScale=T,dpi=72){
-  
-  # dpi <- as.numeric(dpi)
+PlotDensityView <- function(imgName, format="png",  init=0, autoScale=T,dpi=default.dpi){
+
   imgName = paste(imgName,".", format, sep="");
-  fig.list <- list()
-  merged.df <- data.frame
-  
-  df.list <- list()
-  for(i in 1:2){
-    
-    if(i==1){
-      data.proc <- current.proc$mic$data.proc;
-      dat <- data.matrix(data.proc);
-      if(init==0){dat= t(AutoScale(t(data.proc))) }
-      st <- stack(as.data.frame(dat))
-      st$type <- "Microbiome"
-      merged.df <- st
-    }else{
-      data.proc <- current.proc$met$data.proc;
-      dat <- data.matrix(data.proc);
-      if(init==0){dat = t(AutoScale(t(data.proc)))}
-      st <- stack(as.data.frame(dat))
-      st$type <- "Metabolomics"
-      merged.df <-rbind(merged.df, st)
-    } 
-    
+  merged.df <- data.frame()
+
+  # Build data for before (filtered) and after (normalized/autoScaled) for both omics
+  datasets <- list(
+    list(name="Microbiome", proc=if(!is.null(current.proc$mic$data.norm)) current.proc$mic$data.norm else current.proc$mic$data.proc),
+    list(name="Metabolomics", proc=if(!is.null(current.proc$met$data.norm)) current.proc$met$data.norm else current.proc$met$data.proc)
+  )
+
+  for(ds in datasets){
+    # After normalization (current state)
+    dat.after <- data.matrix(ds$proc)
+    st <- stack(as.data.frame(dat.after))
+    st$type <- ds$name
+    st$stage <- "After Normalization"
+    merged.df <- rbind(merged.df, st)
+
+    # Before normalization/autoScale - use pre-normalization file if available,
+    # then fall back to data.norm.orig (pre-autoScale baseline), then dat.after
+    {
+      if(ds$name == "Microbiome" && file.exists("phyloseq_prenorm_objs.qs")){
+        raw.data <- shadow_qread("phyloseq_prenorm_objs.qs")$count_tables[["OTU"]]
+      } else if(ds$name == "Metabolomics" && file.exists("metabo.prenorm.qs")){
+        raw.data <- shadow_qread("metabo.prenorm.qs")
+      } else if(ds$name == "Microbiome" && !is.null(current.proc$mic$data.norm.orig)){
+        raw.data <- current.proc$mic$data.norm.orig
+      } else if(ds$name == "Metabolomics" && !is.null(current.proc$met$data.norm.orig)){
+        raw.data <- current.proc$met$data.norm.orig
+      } else {
+        raw.data <- dat.after
+      }
+      dat.before <- data.matrix(raw.data)
+      st2 <- stack(as.data.frame(dat.before))
+      st2$type <- ds$name
+      st2$stage <- "Before Normalization"
+      merged.df <- rbind(merged.df, st2)
+    }
   }
-  
-  
-  
-  type<-merged.df$type
-  merged.df$ind <- paste0(merged.df$ind, "_", merged.df$type)
-  #if(init==0){
-  # merged.df$values[which(merged.df$values==0)] <- 10^-3
-  # merged.df$values <- log((merged.df$values),base=2)
-  
-  # }
-  
-  Cairo::Cairo(file=imgName, width=10, height=6, type=format, bg="white", dpi=dpi, unit="in");
-  g <- ggplot(merged.df, aes(x=values)) + 
-    geom_line(aes(color=type, group=ind), stat="density", alpha=0.1) + 
-    geom_line(aes(color=type), stat="density", alpha=0.7, linewidth=3) +
-    scale_color_manual(values=c("#E64B35B2","#00A087B2"))+
-    theme_bw()
+
+  merged.df <- merged.df[is.finite(merged.df$values), ]
+  merged.df$ind <- paste0(merged.df$ind, "_", merged.df$type, "_", merged.df$stage)
+  merged.df$type <- factor(merged.df$type, levels=c("Microbiome", "Metabolomics"))
+
+  # Always 4 panels: Before/After x Microbiome/Metabolomics
+  merged.df$stage <- factor(merged.df$stage, levels=c("Before Normalization", "After Normalization"))
+  merged.df$panel <- paste0(merged.df$type, " (", gsub(" Normalization", "", merged.df$stage), ")")
+  merged.df$panel <- factor(merged.df$panel, levels=c(
+    "Microbiome (Before)", "Microbiome (After)",
+    "Metabolomics (Before)", "Metabolomics (After)"))
+
+  Cairo::Cairo(file=imgName, width=10, height=8, type=format, bg="white", dpi=dpi, unit="in");
+  g <- ggplot(merged.df, aes(x=values)) +
+    geom_line(aes(group=ind), stat="density", alpha=0.1, color="#E64B35B2") +
+    geom_line(stat="density", alpha=0.7, linewidth=1.5, color="#E64B35B2") +
+    facet_wrap(~panel, scales="free", ncol=2, nrow=2) +
+    labs(x="Value", y="Density") +
+    theme_bw() +
+    theme(strip.text=element_text(size=11, face="bold"))
   print(g)
   dev.off();
-  
-  
+
   return(1)
 }
 

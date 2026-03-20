@@ -317,7 +317,11 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
   
   sink(filenm);
   if(reductionOptGlobal == "diablo"){
-    cat(rjson::toJSON(netData));
+    # Write selected taxrank level as top-level JSON (JS viewer expects flat structure)
+    # Store all levels in 'allLevels' for potential level switching
+    selectedData <- netData[[taxrank]];
+    selectedData$allLevels <- names(netData);
+    cat(rjson::toJSON(selectedData));
   }else{
     cat(RJSONIO::toJSON(netData));
   }

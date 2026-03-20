@@ -134,39 +134,16 @@ RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank, impM
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotRF.Classify<-function(mbSetObj, feature, imgName, format="png", dpi=72, width=NA){
-  
+PlotRF.Classify<-function(mbSetObj, feature, imgName, format="png", dpi=default.dpi, width=NA){
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
+
   imgName = paste(imgName,".", format, sep="");
-  
+
   mbSetObj$imgSet$rf.cls <- imgName;
 
-  if (feature < 5) {
-    h <- feature * 1.2
-  } else if (feature < 10) {
-    h <- feature * 1.4
-  } else if (feature < 15) {
-    h <- feature / 1.6
-  } else if (feature < 20) {
-    h <- feature / 1.8
-  } else if (feature < 25) {
-    h <- feature / 2
-  } else if (feature < 30) {
-    h <- feature / 2.2
-  } else if (feature < 40) {
-    h <- feature / 2.5
-  } else {
-    h <- feature / 10
-  }
-  
-  if(is.na(width)){
-    w <- 9;
-  }else if(width == 0){
-    w <- 8;
-  }else{
-    w <- width;
-  }
+  w <- 8;
+  h <- 6;
 
   Cairo::Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
   par(mar=c(4,4,3,2));
@@ -191,7 +168,7 @@ PlotRF.Classify<-function(mbSetObj, feature, imgName, format="png", dpi=72, widt
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotRF.VIP<-function(mbSetObj, feature, imgName, format="png", dpi=72, width=NA){
+PlotRF.VIP<-function(mbSetObj, feature, imgName, format="png", dpi=default.dpi, width=NA){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
@@ -942,7 +919,7 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotLEfSeSummary <- function(mbSetObj, ldaFeature, layoutOptlf, imgName, format="png", width = NA, dpi=72, colOpt="default") {
+PlotLEfSeSummary <- function(mbSetObj, ldaFeature, layoutOptlf, imgName, format="png", width = NA, dpi=default.dpi, colOpt="default") {
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   set.seed(280561493);
@@ -2399,7 +2376,7 @@ FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, feat){
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotCorr <- function(mbSetObj, imgName, format="png", dpi=72,appendnm, width=NA){
+PlotCorr <- function(mbSetObj, imgName, format="png", dpi=default.dpi,appendnm, width=NA){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -3602,7 +3579,7 @@ PlotCompRes <- function(mbSetObj = NA, type = "", imgName = "") {
   
   # Save the plot using Cairo for high quality output
   if (fileName != "") {
-    Cairo::Cairo(file = fileName, width = 1000, height = 800, dpi=72)
+    Cairo::Cairo(file = fileName, unit = "in", dpi = 96, width = 13.9, height = 11.1, type = "png", bg = "white")
     print(p)
     dev.off()
   } else {

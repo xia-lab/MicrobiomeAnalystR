@@ -10,6 +10,46 @@
 #############processing functions####################
 #####################################################
 
+#'Apply or remove AutoScale on normalized MMP data
+#'@description Reads from data.norm.orig (immutable normalized copy),
+#'applies or skips AutoScale, updates data.norm and data.proc for integration.
+#'See MMP DATA FLOW NOTE in general_proc.R PerformNormalization.
+#'@param mbSetObj Input the name of the mbSetObj
+#'@param applyAutoScale Character "true" or "false"
+#'@return mbSetObj
+ApplyAutoScale <- function(mbSetObj, applyAutoScale = "true"){
+
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+
+  # On first call, snapshot data.proc as data.norm.orig so we have an immutable source to revert to
+  if(is.null(current.proc$mic$data.norm.orig) && !is.null(current.proc$mic$data.proc)){
+    current.proc$mic$data.norm.orig <<- current.proc$mic$data.proc
+  }
+  if(is.null(current.proc$met$data.norm.orig) && !is.null(current.proc$met$data.proc)){
+    current.proc$met$data.norm.orig <<- current.proc$met$data.proc
+  }
+
+  if(!is.null(current.proc$mic$data.norm.orig)){
+    if(applyAutoScale == "true"){
+      current.proc$mic$data.norm <<- t(AutoScale(t(current.proc$mic$data.norm.orig)))
+    } else {
+      current.proc$mic$data.norm <<- current.proc$mic$data.norm.orig
+    }
+    current.proc$mic$data.proc <<- current.proc$mic$data.norm
+  }
+
+  if(!is.null(current.proc$met$data.norm.orig)){
+    if(applyAutoScale == "true"){
+      current.proc$met$data.norm <<- t(AutoScale(t(current.proc$met$data.norm.orig)))
+    } else {
+      current.proc$met$data.norm <<- current.proc$met$data.norm.orig
+    }
+    current.proc$met$data.proc <<- current.proc$met$data.norm
+  }
+
+  return(.set.mbSetObj(mbSetObj));
+}
+
 CreateMMPFakeFile <- function(mbSetObj,isNormalized="true",isNormalizedMet="true",module.type){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -419,13 +459,14 @@ CompareMet <- function(mbSetObj, analysisVar,alg="limma",plvl=0.05,ref, compr, s
   sample_data <-  mbSetObj$dataSet$sample_data
   sample_data <- sample_data[sample_data[[analysisVar]] %in% c(ref,compr),]
   sample_type <- mbSetObj$dataSet$meta_info
-  metdat <-current.proc$met$data.proc %>% 
-         .[,colnames(.)%in%sample_data$sample_id]
+  metdat <- if(!is.null(current.proc$met$data.norm)) current.proc$met$data.norm else current.proc$met$data.proc
+  # Use sample_id column if available, otherwise use rownames
+  samp.ids <- if(!is.null(sample_data$sample_id)) sample_data$sample_id else rownames(sample_data)
+  metdat <- metdat[, colnames(metdat) %in% samp.ids, drop=FALSE]
   metdat.de <- performLimma(metdat,sample_data,sample_type,analysisVar)
   fast.write(metdat.de, file="limma_output.csv");
   current.proc$met$res_deAnal <<- metdat.de
   mbSetObj$dataSet$metabolomics$resTable <- metdat.de
-  #print(colnames(metdat.de))
   sigfeat <- rownames(metdat.de)[metdat.de$P_value < plvl];
   sig.count <- length(sigfeat);
   if(sig.count == 0){
@@ -1272,7 +1313,7 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
                           colname="T",rowname="T", fontsize_col=10, fontsize_row=10,
                           sign, cor.thresh=0.5,corp.thresh=0.05,
                           potential.thresh=0.5,predpval.thresh=0.05, topN=50,
-                          var.inx=NA, border=T, width=NA, dpi=72){
+                          var.inx=NA, border=T, width=NA, dpi=default.dpi){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   suppressMessages(library(iheatmapr));
@@ -2089,11 +2130,11 @@ GetAssociationPlot <- function(type,keggid,koid,micDataType,metIDType,taxalvl,im
       library(cowplot)
       imgNm.bar <- paste("barplot_",imgNm,  ".png",sep="");
       imgNm.circle <- paste("circleplot_",imgNm,  ".png",sep="");
-      Cairo(file=imgNm.bar, width=wb, height=hb, type="png", bg="white", unit="in", dpi=100);
+      Cairo(file=imgNm.bar, width=wb, height=hb, type="png", bg="white", unit="in", dpi=default.dpi);
       grid.arrange(grobs =barplot, ncol=colnm)
       dev.off();
       if(exists("circleplot")){
-        Cairo(file=imgNm.circle, width=wc, height=hc, type="png", bg="white", unit="in", dpi=100);
+        Cairo(file=imgNm.circle, width=wc, height=hc, type="png", bg="white", unit="in", dpi=default.dpi);
         grid.arrange(grobs =circleplot, ncol=colnm)
         dev.off();
       }
@@ -2165,7 +2206,7 @@ GetAssociationPlot <- function(type,keggid,koid,micDataType,metIDType,taxalvl,im
     library(ggplot2);
     library(viridis);
     imgNm <- paste(imgNm,  ".png",sep="");
-    Cairo(file=imgNm, width=5, height=5, type="png", bg="white", unit="in", dpi=100);
+    Cairo(file=imgNm, width=5, height=5, type="png", bg="white", unit="in", dpi=default.dpi);
     p1 <- ggplot(data.plot, aes(x=mic, y=`-log(p)`,fill=`-log(p)`)) + 
       scale_fill_viridis_c(option = "plasma",alpha = 0.8)+
       geom_bar(stat = "identity") + xlab("")+
@@ -2328,11 +2369,11 @@ UpdateAssociationPlot <- function(imgNm,topNum=10){
   library(cowplot)
   imgNm.bar <- paste("barplot_",imgNm,  ".png",sep="");
   imgNm.circle <- paste("circleplot_",imgNm,  ".png",sep="");
-  Cairo(file=imgNm.bar, width=wb, height=hb, type="png", bg="white", unit="in", dpi=100);
+  Cairo(file=imgNm.bar, width=wb, height=hb, type="png", bg="white", unit="in", dpi=default.dpi);
   grid.arrange(grobs =barplot, ncol=colnm)
   dev.off();
   if(exists("circleplot")){
-    Cairo(file=imgNm.circle, width=wc, height=hc, type="png", bg="white", unit="in", dpi=100);
+    Cairo(file=imgNm.circle, width=wc, height=hc, type="png", bg="white", unit="in", dpi=default.dpi);
     grid.arrange(grobs =circleplot, ncol=colnm)
     dev.off();
   }
@@ -2817,7 +2858,7 @@ CreatM2MHeatmapList<-function(mbSetObj, plotNm,  format="png",
                               clustRow="T", clustCol="T", 
                               colname="T",rowname="T", fontsize_col=10, fontsize_row=10,
                               potential.thresh=0.5,
-                              var.inx=NA, border=T, width=NA, dpi=72){
+                              var.inx=NA, border=T, width=NA, dpi=default.dpi){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   suppressMessages(library(iheatmapr));
@@ -3094,11 +3135,11 @@ GetPredictionPlot <- function(mbSetObj, keggid,imgNm,predDB="agora",potentialThr
   library(cowplot)
   imgNm.bar <- paste("barplot_",imgNm,  ".png",sep="");
   imgNm.circle <- paste("circleplot_",imgNm,  ".png",sep="");
-  Cairo(file=imgNm.bar, width=wb, height=hb, type="png", bg="white", unit="in", dpi=100);
+  Cairo(file=imgNm.bar, width=wb, height=hb, type="png", bg="white", unit="in", dpi=default.dpi);
   grid.arrange(grobs =barplot, ncol=colnm)
   dev.off();
   if(exists("circleplot")){
-    Cairo(file=imgNm.circle, width=wc, height=hc, type="png", bg="white", unit="in", dpi=100);
+    Cairo(file=imgNm.circle, width=wc, height=hc, type="png", bg="white", unit="in", dpi=default.dpi);
     grid.arrange(grobs =circleplot, ncol=colnm)
     dev.off();
   }
@@ -3214,11 +3255,11 @@ UpdatePredictionPlot <- function(mbSetObj,imgNm,topNum=10){
   library(cowplot)
   imgNm.bar <- paste("barplot_",imgNm,  ".png",sep="");
   imgNm.circle <- paste("circleplot_",imgNm,  ".png",sep="");
-  Cairo(file=imgNm.bar, width=wb, height=hb, type="png", bg="white", unit="in", dpi=100);
+  Cairo(file=imgNm.bar, width=wb, height=hb, type="png", bg="white", unit="in", dpi=default.dpi);
   grid.arrange(grobs =barplot, ncol=colnm)
   dev.off();
   if(exists("circleplot")){
-    Cairo(file=imgNm.circle, width=wc, height=hc, type="png", bg="white", unit="in", dpi=100);
+    Cairo(file=imgNm.circle, width=wc, height=hc, type="png", bg="white", unit="in", dpi=default.dpi);
     grid.arrange(grobs =circleplot, ncol=colnm)
     dev.off();
   }
@@ -3247,7 +3288,7 @@ UpdatePredictionPlot <- function(mbSetObj,imgNm,topNum=10){
 ###########################################################
 ###########################################################
 
-PlotCorrHistogram <- function(imgNm, dpi=72, format="png"){
+PlotCorrHistogram <- function(imgNm, dpi=default.dpi, format="png"){
   dpi<-as.numeric(dpi)
   imgNm <- paste(imgNm, "dpi", dpi, ".", format, sep="");
   
@@ -3286,7 +3327,7 @@ PlotCorrHistogram <- function(imgNm, dpi=72, format="png"){
 }
 
 
-PlotDiagnostic <- function(imgName, dpi=72, format="png",alg, taxrank="OTU"){
+PlotDiagnostic <- function(imgName, dpi=default.dpi, format="png",alg, taxrank="OTU"){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   dpi <- as.numeric(dpi);
   imgNm <- paste(imgName,  ".", format, sep="");
@@ -3350,7 +3391,7 @@ PlotDiagnostic <- function(imgName, dpi=72, format="png",alg, taxrank="OTU"){
 }
 
 
-PlotDiagnosticPca <- function(imgNm, dpi=72, format="png",type="diablo", taxrank="OTU"){
+PlotDiagnosticPca <- function(imgNm, dpi=default.dpi, format="png",type="diablo", taxrank="OTU"){
   #save.image("diag.RData");
   mbSetObj <- .get.mbSetObj(mbSetObj);
   require("Cairo");
@@ -3417,7 +3458,7 @@ PlotDiagnosticPca <- function(imgNm, dpi=72, format="png",type="diablo", taxrank
 }
 
 
-PlotDiagnosticLoading <- function(imgNm, dpi=72, format="png",type="diablo",taxrank="OTU"){
+PlotDiagnosticLoading <- function(imgNm, dpi=default.dpi, format="png",type="diablo",taxrank="OTU"){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   require("Cairo");
   library(ggplot2)

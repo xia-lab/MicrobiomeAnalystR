@@ -58,7 +58,7 @@ PlotMetaPCA <- function(imgNm, dpi, format,factor="NA"){
 #'License: GNU GPL (>= 2)
 #'@export
 #'
-PlotMetaDensity<- function(imgNm, dpi=72, format="png", factor=""){
+PlotMetaDensity<- function(imgNm, dpi=default.dpi, format="png", factor=""){
   require("ggplot2")
   microbiome.meta <- qs::qread("microbiome_meta.qs");
   dat <- microbiome.meta$data;
