@@ -849,7 +849,8 @@ ComputeMummichogRTPermPvals <- function(input_ecpdlist, total_matched_ecpds, pat
   sink();
 
   mbSetObj <- .get.mbSetObj(mbSet);
-  mbSetObj <- recordEnrTable(mbSetObj, "mmp", res.mat, "KEGG", "Mummichog");
+  enr.key <- if(!is.null(mbSetObj$paramSet$koProj.type)) mbSetObj$paramSet$koProj.type else "mmp_met";
+  mbSetObj <- recordEnrTable(mbSetObj, enr.key, res.mat, "KEGG", "Mummichog");
   mbSetObj <- .set.mbSetObj(mbSetObj);
 
   return(current.proc);
@@ -997,7 +998,8 @@ ComputeMummichogRTPermPvals <- function(input_ecpdlist, total_matched_ecpds, pat
   sink();
 
   mbSetObj <- .get.mbSetObj(mbSet);
-  mbSetObj <- recordEnrTable(mbSetObj, "mmp", res.mat, "KEGG", "Mummichog");
+  enr.key <- if(!is.null(mbSetObj$paramSet$koProj.type)) mbSetObj$paramSet$koProj.type else "mmp_met";
+  mbSetObj <- recordEnrTable(mbSetObj, enr.key, res.mat, "KEGG", "Mummichog");
   mbSetObj <- .set.mbSetObj(mbSetObj);
 
   return(current.proc);
@@ -1111,6 +1113,8 @@ create.adducts <- function(cpd.lib){
     l2[[49]] <- "";
     l2[[2001]] <- "";
     mz.mat <- cpd.lib$adducts[[ms_mode]];
+    if(is.null(mz.mat) || length(mz.mat) == 0 || (is.matrix(mz.mat) && nrow(mz.mat) == 0)) next;
+    if(!is.matrix(mz.mat)) mz.mat <- matrix(mz.mat, ncol=1);
     floor.mzs <- floor(mz.mat);
     for(i in 1:nrow(floor.mzs)){
       neighbourhood <- floor.mzs[i,];

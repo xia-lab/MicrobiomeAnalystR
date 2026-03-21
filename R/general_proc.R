@@ -383,15 +383,30 @@ ApplyVarianceFilter <- function(mbSetObj, filtopt, filtPerct){
   dataName <- mbSetObj$dataSet$name;
   module.type <- mbSetObj$module.type;
   data <- mbSetObj$dataSet$filt.data;
-  
+
+  # Sanitize: ensure numeric matrix, convert non-numeric to NA, remove rows with all NA/non-finite
+  if(!is.numeric(data)) {
+    rn <- rownames(data); cn <- colnames(data);
+    data <- matrix(as.numeric(as.matrix(data)), nrow=nrow(data), dimnames=list(rn, cn));
+  }
+  # Replace non-finite values (Inf, -Inf, NaN) with NA
+  data[!is.finite(data)] <- NA;
+  # Remove features (rows) that are entirely NA
+  all_na <- apply(data, 1, function(row) all(is.na(row)));
+  if(any(all_na)) {
+    data <- data[!all_na, , drop=FALSE];
+  }
+  mbSetObj$dataSet$filt.data <- data;
+
   rmn_feat <- nrow(data);
-  
+
   filter.val <- nm <- NULL;
-  
+
   mbSetObj$dataSet$var.filtered <- FALSE
-  
-  if(filtPerct==0){# no low-count filtering
-    remain <- rep(TRUE, rmn_feat);
+
+  if(filtPerct==0){# remove constant (zero-variance) variables only
+    vars <- apply(data, 1, var, na.rm=TRUE);
+    remain <- !is.na(vars) & vars > 0;
   }else{
     mbSetObj$dataSet$var.filtered <- TRUE
 
@@ -457,15 +472,34 @@ ApplyMetaboFilter <- function(mbSetObj=NA, filter,  rsd){
   
   data <- mbSetObj$dataSet$metabolomics$data.orig;
   int.mat <- t(data) ;
-  
-  
+
+  # Sanitize: ensure numeric matrix, convert non-numeric to NA, remove features with all NA/non-finite
+  if(!is.numeric(int.mat)) {
+    rn <- rownames(int.mat); cn <- colnames(int.mat);
+    int.mat <- matrix(as.numeric(as.matrix(int.mat)), nrow=nrow(int.mat), dimnames=list(rn, cn));
+  }
+  # Replace non-finite values (Inf, -Inf, NaN) with NA
+  int.mat[!is.finite(int.mat)] <- NA;
+  # Remove features (columns) that are entirely NA
+  all_na <- apply(int.mat, 2, function(col) all(is.na(col)));
+  if(any(all_na)) {
+    int.mat <- int.mat[, !all_na, drop=FALSE];
+  }
+
   feat.num <- ncol(int.mat);
   feat.nms <- colnames(int.mat);
   nm <- NULL;
   msg <- "";
-  if(all(c(filter == "none", feat.num < 5000))) { # only allow for less than 4000
-    remain <- rep(TRUE, feat.num);
-    msg <- paste(msg, "No filtering was applied");
+  if(filter == "none") {
+    # Always remove constant (zero-variance) variables
+    vars <- apply(int.mat, 2, var, na.rm=TRUE);
+    remain <- !is.na(vars) & vars > 0;
+    n.removed <- sum(!remain);
+    if(n.removed > 0) {
+      msg <- paste(msg, "Removed", n.removed, "constant variables (zero variance).");
+    } else {
+      msg <- paste(msg, "No constant variables found. No filtering was applied.");
+    }
   }else {
     if (filter == "rsd"){
       sds <- apply(int.mat, 2, sd, na.rm=T);

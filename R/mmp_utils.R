@@ -464,6 +464,7 @@ CompareMet <- function(mbSetObj, analysisVar,alg="limma",plvl=0.05,ref, compr, s
   samp.ids <- if(!is.null(sample_data$sample_id)) sample_data$sample_id else rownames(sample_data)
   metdat <- metdat[, colnames(metdat) %in% samp.ids, drop=FALSE]
   metdat.de <- performLimma(metdat,sample_data,sample_type,analysisVar)
+
   fast.write(metdat.de, file="limma_output.csv");
   current.proc$met$res_deAnal <<- metdat.de
   mbSetObj$dataSet$metabolomics$resTable <- metdat.de
@@ -915,7 +916,7 @@ MicIDmap <- function(netModel,predDB,taxalvl="all"){
     }
     
   }else if(netModel=="keggNet"){
-    if(taxalvl=="default"){
+    if(taxalvl=="default" || is.null(mic.vec[[taxalvl]])){
       taxalvl = names(mic.vec)[length(mic.vec)]
     }
     
@@ -1701,7 +1702,15 @@ PrepareOTUQueryJson <- function(mbSetObj,taxalvl,contain="bac"){
 
 PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,contain="hsabac",enrich.type){
   mbSetObj <- .get.mbSetObj(mbSetObj);
- 
+
+  # Set enrichment key based on data type for proper storage
+  if(dataType %in% c("peak", "metabolite")){
+    mbSetObj$paramSet$koProj.type <- "mmp_met";
+  } else if(dataType %in% c("ko", "otu")){
+    mbSetObj$paramSet$koProj.type <- "mmp_mic";
+  }
+  .set.mbSetObj(mbSetObj);
+
   if(enrich.type == "hyper"){
     if(dataType=="metabolite"){
       mbSetObj <- PerformMetListEnrichment(mbSetObj, contain, file.nm);
@@ -1779,8 +1788,8 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
     
     hits <- lapply(current.set, function(x){x[x %in% colnames(datmat)]});
     set.num <- unlist(lapply(current.set, length), use.names = FALSE);
-    dat.in <- list(cls=phenotype, data=datmat, subsets=hits, set.num=set.num, filenm=file.nm);
-    
+    dat.in <- list(cls=phenotype, data=datmat, subsets=hits, set.num=set.num, filenm=file.nm, category=category);
+
   }else if(dataType=="ko"){
     if(contain=="bac"){
       current.set <- qs::qread(paste0(lib.path.mmp,"ko_set_bac.qs"))
@@ -1810,10 +1819,10 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
     
     hits <- lapply(current.set, function(x){x[x %in% colnames(datmat)]});
     set.num <- unlist(lapply(current.set, length), use.names = FALSE);
-    dat.in <- list(cls=phenotype, data=datmat, subsets=hits, set.num=set.num, filenm=file.nm);
+    dat.in <- list(cls=phenotype, data=datmat, subsets=hits, set.num=set.num, filenm=file.nm, category=category);
   }
-  
-  
+
+
   my.fun <- function(){
     gt.obj <- globaltest::gt(dat.in$cls, dat.in$data, subsets=dat.in$subsets);
     gt.res <- globaltest::result(gt.obj);
@@ -1841,7 +1850,7 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
   }
   
   
-  dat.in <- list(cls=phenotype, data=datmat, subsets=hits, set.num=set.num, filenm=file.nm , my.fun=my.fun);
+  dat.in <- list(cls=phenotype, data=datmat, subsets=hits, set.num=set.num, filenm=file.nm, category=category, my.fun=my.fun);
   
   shadow_save(dat.in, file="dat.in.qs");
   return(1);
@@ -1898,8 +1907,8 @@ enrich2json <- function(){
   sink();
 
   mbSetObj <- .get.mbSetObj(NA);
-  
-  mbSetObj <- recordEnrTable(mbSetObj, "mmp", resTable, "KEGG", "Global Test");
+  enr.key <- if(!is.null(mbSetObj$paramSet$koProj.type)) mbSetObj$paramSet$koProj.type else "mmp_met";
+  mbSetObj <- recordEnrTable(mbSetObj, enr.key, resTable, "KEGG", "Global Test");
 
   # write csv
   fast.write(resTable, file=paste(file.nm, ".csv", sep=""), row.names=F);
@@ -2425,7 +2434,7 @@ tuneKOmap <- function(){
 
 DoDimensionReductionIntegrative <- function(mbSetObj, reductionOpt, method="globalscore", dimn,analysisVar,diabloPar=0.2){
   if(!exists("my.reduce.dimension")){ # public web on same user dir
-    .load.scripts.on.demand("utils_dimreduction.Rc");    
+    .load.scripts.on.demand("utils_dimreduction.Rc");
   }
   if(analysisVar=="null"){
     analysisVar = current.proc$meta_para$analysis.var
@@ -2792,7 +2801,8 @@ PerformMetListEnrichment <- function(mbSetObj, contain,file.nm){
     return(x)
   })
   
-  mbSetObj <- recordEnrTable(mbSetObj, "mmp", resTable, "KEGG", "Overrepresentation Analysis", current.set, hits.query);
+  enr.key <- if(!is.null(mbSetObj$paramSet$koProj.type)) mbSetObj$paramSet$koProj.type else "mmp_met";
+  mbSetObj <- recordEnrTable(mbSetObj, enr.key, resTable, "KEGG", "Overrepresentation Analysis", current.set, hits.query);
  
   json.res <- list(hits.query =convert2JsonList(hits.query),
                    path.nms = path.nms,

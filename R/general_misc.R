@@ -184,6 +184,7 @@ generate_breaks = function(x, n, center = F){
 
 scale_vec_colours = function(x, col = rainbow(10), breaks = NA){
   breaks <- sort(unique(breaks));
+  if(length(breaks) < 2) return(rep(col[1], length(x)))
   return(col[as.numeric(cut(x, breaks = breaks, include.lowest = T))])
 }
 

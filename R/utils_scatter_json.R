@@ -176,12 +176,12 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
       rownames(loading.data) = names
       de = combined.res$comp.res[[tax]]
       if(!is.null(de)){
-        de = de[match(rownames(de), ids), , drop=FALSE]
-        common_rows = intersect(rownames(loading.data), rownames(de))
-        loading.data = loading.data[common_rows, , drop=FALSE]
-        de = de[common_rows, , drop=FALSE]
-        ids <- ids[match(ids, rownames(loading.data))];
-        names <- names[match(ids, rownames(loading.data))];
+        # Keep only features present in both loading data and DE results
+        common <- rownames(loading.data) %in% rownames(de)
+        loading.data <- loading.data[common, , drop=FALSE]
+        ids <- ids[common]
+        names <- names[common]
+        de <- de[rownames(loading.data), , drop=FALSE]
         de[de == "NaN"] = 1
         pv = as.numeric(de[,"T.Stats"])
         pv_no_zero = pv[pv != 0]
@@ -194,16 +194,9 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
         pvals <<- rep(0, nrow(loading.data));
         type.vec <- pvals;
       }
-      if(exists("comp.res.inx",combined.res)){
-        match.inx <- match(combined.res$enrich_ids[[tax]], rownames(loading.data))
-        res <- combined.res$comp.res.inx[[tax]]
-        res <- res[match.inx]
-        res <- res[!is.na(res)]
-        for(i in 1:length(unique(res))){
-          inx = res== i
-          type.vec[inx] <- omicstype.vec[i]
-        }
-      }
+      # Assign omicstype based on whether feature is mic or met
+      met_features <- rownames(current.proc$met$data.proc)
+      type.vec <- ifelse(rownames(loading.data) %in% met_features, "metabolomics", "microbiome")
       colors<- ComputeColorGradient(pvals,  F);
       colorb <- colors;
       sizes <- as.numeric(rescale2NewRange(pv, 15, 25));
@@ -236,6 +229,20 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
             between=1
           )
         );
+      }
+      # Filter sigMat to only include features present in loading nodes
+      loading_node_ids <- rownames(loading.data)
+      if(!is.null(sig.mats[[tax]][["metabolomics"]]) && nrow(sig.mats[[tax]][["metabolomics"]]) > 0){
+        met_keep <- sig.mats[[tax]][["metabolomics"]]$ids %in% loading_node_ids
+        if(any(met_keep)){
+          sig.mats[[tax]][["metabolomics"]] <- sig.mats[[tax]][["metabolomics"]][met_keep, , drop=FALSE]
+        }
+      }
+      if(!is.null(sig.mats[[tax]][["microbiome"]]) && nrow(sig.mats[[tax]][["microbiome"]]) > 0){
+        mic_keep <- sig.mats[[tax]][["microbiome"]]$ids %in% loading_node_ids
+        if(any(mic_keep)){
+          sig.mats[[tax]][["microbiome"]] <- sig.mats[[tax]][["microbiome"]][mic_keep, , drop=FALSE]
+        }
       }
       netData[[tax]] <- list(omicstype=omicstype.vec, nodes=nodes, edges=edge.mat, modules=modules, objects=a$objects, ellipse=meshes, meta=metadf, loading=nodes2, reductionOpt=reductionOptGlobal , objectsLoading=aLoading$objects, sigMat=sig.mats[[tax]]);
       

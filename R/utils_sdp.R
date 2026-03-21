@@ -620,6 +620,9 @@ filtKOmap <- function(include, fileName){
 #'@export
 PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",file.nm){
   mbSetObj <- .get.mbSetObj(mbSetObj);
+  # Ensure enrichment key is set for microbiome
+  mbSetObj$paramSet$koProj.type <- "mmp_mic";
+  .set.mbSetObj(mbSetObj);
   if(enrich.type == "hyper"){
   LoadKEGGKO_lib(category,contain);
     mbSetObj<-PerformKOEnrichAnalysis_List(mbSetObj, file.nm);
@@ -642,7 +645,7 @@ PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",fi
 
   hits <- lapply(current.mset, function(x){x[x %in% colnames(genemat)]});
   set.num <- unlist(lapply(current.mset, length), use.names = FALSE);
-  dat.in <- list(cls=phenotype, data=genemat, subsets=hits, set.num=set.num, filenm=file.nm);
+  dat.in <- list(cls=phenotype, data=genemat, subsets=hits, set.num=set.num, filenm=file.nm, category=category);
 
   my.fun <- function(){
         gt.obj <- globaltest::gt(dat.in$cls, dat.in$data, subsets=dat.in$subsets);
@@ -688,7 +691,15 @@ PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",fi
     nms <- rownames(my.res);
     hits <- hits[nms];
 
-    mbSetObj <- recordEnrTable(mbSetObj, "global", my.res, "KEGG", "Global Test", curr.mset, hits);
+    # .save.global.res is always called for KO/microbiome enrichment
+    # For MMP module, use mmp_mic key; otherwise use koProj.type or "global"
+    if(exists("moduleType") && moduleType == "mmp"){
+      enr.key <- "mmp_mic";
+    } else {
+      enr.key <- if(!is.null(mbSetObj$paramSet$koProj.type)) mbSetObj$paramSet$koProj.type else "global";
+    }
+    lib.name <- if(!is.null(dat.in$category)) paste0("KEGG ", tools::toTitleCase(dat.in$category)) else "KEGG";
+    mbSetObj <- recordEnrTable(mbSetObj, enr.key, my.res, lib.name, "Global Test", curr.mset, hits);
     mbSetObj <- Save2KEGGJSON(mbSetObj, hits, my.res, file.nm);
     return(.set.mbSetObj(mbSetObj));
 }
