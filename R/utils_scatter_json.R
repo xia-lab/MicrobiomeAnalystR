@@ -56,9 +56,11 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
   if("omics" %in% colnames(metadf)){
     sel.meta = "omics"
   }
-  netData <- vector("list",length=length(pos.xyz.all))
-  names(netData) <- names(pos.xyz.all)
-  for(tax in names(pos.xyz.all)){
+  # Only generate scatter for the requested taxonomy level
+  tax_levels <- if(taxrank %in% names(pos.xyz.all)) taxrank else names(pos.xyz.all)
+  netData <- vector("list",length=length(tax_levels))
+  names(netData) <- tax_levels
+  for(tax in tax_levels){
     pos.xyz <-   pos.xyz.all[[tax]]
     nodes <- vector(mode="list");
     names <-  make.unique(as.character(rownames(pos.xyz)))
@@ -173,24 +175,25 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
       ids = diablo.res$loadingNames[[tax]]
       rownames(loading.data) = names
       de = combined.res$comp.res[[tax]]
-      de = de[match(rownames(de) ,ids),]
-      
-      # Find the common row names between loading.data and de
-      common_rows = intersect(rownames(loading.data), rownames(de))
-      
-      # Subset both datasets to only include the common rows, maintaining their original order
-      loading.data = loading.data[common_rows, ]
-      de = de[common_rows, ]
-      ids <- ids[match(ids, rownames(loading.data))];
-      names <- names[match(ids, rownames(loading.data))];
-      
-      de[de == "NaN"] = 1
-      pv = as.numeric(de[,"T.Stats"])
-      pv_no_zero = pv[pv != 0]
-      minval = min(pv_no_zero)
-      pv[pv == 0] = minval/2
-      pvals <<- pv;
-      type.vec <- pvals;
+      if(!is.null(de)){
+        de = de[match(rownames(de), ids), , drop=FALSE]
+        common_rows = intersect(rownames(loading.data), rownames(de))
+        loading.data = loading.data[common_rows, , drop=FALSE]
+        de = de[common_rows, , drop=FALSE]
+        ids <- ids[match(ids, rownames(loading.data))];
+        names <- names[match(ids, rownames(loading.data))];
+        de[de == "NaN"] = 1
+        pv = as.numeric(de[,"T.Stats"])
+        pv_no_zero = pv[pv != 0]
+        minval = if(length(pv_no_zero) > 0) min(pv_no_zero) else 1
+        pv[pv == 0] = minval/2
+        pvals <<- pv;
+        type.vec <- pvals;
+      } else {
+        # No comparison data for this taxa level — use uniform coloring
+        pvals <<- rep(0, nrow(loading.data));
+        type.vec <- pvals;
+      }
       if(exists("comp.res.inx",combined.res)){
         match.inx <- match(combined.res$enrich_ids[[tax]], rownames(loading.data))
         res <- combined.res$comp.res.inx[[tax]]

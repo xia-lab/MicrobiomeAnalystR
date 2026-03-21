@@ -35,14 +35,14 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
     d.list[["mic"]][["enrich.nms"]] = list(OTU=rownames(current.proc$mic$res_deAnal))
     
   }else{
-    d.list[["mic"]][["comp.res"]] = lapply(phyloseq_objs$res_deAnal, function(x){names(x)[1] ="T.Stats"; return(x[,c(3,4,1)])})
+    d.list[["mic"]][["comp.res"]] = lapply(phyloseq_objs$res_deAnal, function(x){names(x)[1] ="T.Stats"; return(x[,c(3,4,1), drop=FALSE])})
     d.list[["mic"]][["enrich.nms"]] = lapply(phyloseq_objs$res_deAnal ,function(x) rownames(x))
   }
   d.list[["mic"]][["meta"]] = data.frame(mbSetObj$dataSet$sample_data)
   
   d.list[["met"]] = list()
   d.list[["met"]][["data.proc"]] = if(!is.null(current.proc$met$data.norm)) current.proc$met$data.norm else current.proc$met$data.proc
-  d.list[["met"]][["comp.res"]] =   current.proc$met$res_deAnal[,c(1:3)] #comp.res
+  d.list[["met"]][["comp.res"]] =   current.proc$met$res_deAnal[,c(1:3), drop=FALSE] #comp.res
   d.list[["met"]][["enrich.nms"]] = rownames(current.proc$met$res_deAnal)
   d.list[["met"]][["meta"]] = data.frame(mbSetObj$dataSet$sample_data)
   

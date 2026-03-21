@@ -1562,11 +1562,9 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
     dend_col <- hclust(dist(t(data1), method = smplDist), method = clstDist)
     p <- p %>% add_col_dendro(dend_col)
   }
-   options(device = "pdf") 
+   options(device = "pdf")
   as_list <- to_plotly_list(p)
-   pwidget <- to_widget(p)
-   save(pwidget, file = plotwidget)
- 
+
   ### add the layer for  annotation
   if(exists("annols")){    
     annht <- as_list$layout$annotations
@@ -1639,7 +1637,12 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
   as_json <- paste0("{ \"x\":", as_json, ",\"evals\": [],\"jsHooks\": []}")
   
   write(as_json, plotjs)
-  
+
+  # Save annotated widget — inject annotations so stars/symbols appear in report
+  pwidget <- to_widget(p)
+  pwidget$x$layout$annotations <- as_list$layout$annotations
+  save(pwidget, file = plotwidget)
+
   if(is.null(current.msg)){
     current.msg<<-"null"
   }
@@ -1653,7 +1656,7 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
   mbSetObj$analSet$integration$sign <- sign
   mbSetObj$imgSet$heatmap_cormmp <- plotwidget
 
-  # Store image in reportSet for slide generation based on htMode
+  # Store image path in reportSet based on htMode
   if(htMode == "corrht"){
     mbSetObj$imgSet$reportSet$corrht <- plotNm
   }else if(htMode == "predht"){

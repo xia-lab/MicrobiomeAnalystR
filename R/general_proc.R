@@ -1450,7 +1450,11 @@ PlotPCAView <- function(imgName, format="png", dpi=default.dpi, init=0){
   Factor <- metaFile[,1]
 
   .make_pca_plot <- function(x, xlabel, ylabel, title){
-    pca <- prcomp(t(na.omit(x)), center=T, scale=T)
+    x <- na.omit(x)
+    # Remove zero-variance features to avoid prcomp scale error
+    vars <- apply(x, 1, var, na.rm=TRUE)
+    x <- x[vars > 0, , drop=FALSE]
+    pca <- prcomp(t(x), center=T, scale=T)
     imp.pca <- summary(pca)$importance
     xl <- paste0("PC1 (", 100*round(imp.pca[2,1], 3), "%)")
     yl <- paste0("PC2 (", 100*round(imp.pca[2,2], 3), "%)")
@@ -1472,6 +1476,9 @@ PlotPCAView <- function(imgName, format="png", dpi=default.dpi, init=0){
   idx <- 1
   for(ds in datasets){
     x.after <- data.matrix(ds$proc)
+    # Remove zero-variance features
+    vars.after <- apply(x.after, 1, var, na.rm=TRUE)
+    x.after <- x.after[vars.after > 0, , drop=FALSE]
 
     # Save 3D PCA data (for after normalization - used by scatter viewer)
     pca.full <- prcomp(t(na.omit(x.after)), center=T, scale=T)
