@@ -417,6 +417,43 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
       }
       netData[[tax]] <- list(omicstype=omicstype.vec, nodes=nodes, edges=edge.mat, modules=modules, objects=a$objects, ellipse=meshes, meta=metadf, loading=nodes2, reductionOpt=reductionOptGlobal, objectsLoading=aLoading$objects, sigMat=sig.mats[[tax]]);
 
+      # Generate PCA scatter for individual omics
+      pca.scatter <- generatePCAscatter(phyloseq_objs$count_tables[[tax]], metdat, tax)
+      mofa.res$pca.scatter[[tax]] <- pca.scatter
+      for(i in 1:length(omicstype.vec)){
+        pos <- pca.scatter[[paste0("pca_", omicstype.vec[i])]]$score
+        pca_nodes <- nodes[c(1:nrow(pos))]
+        for(j in 1:nrow(pos)){
+          pca_nodes[[j]][["id"]] <- rownames(pos)[j]
+          pca_nodes[[j]][["label"]] <- rownames(pos)[j]
+          pca_nodes[[j]][["fx"]] <- pos[j,1]
+          pca_nodes[[j]][["fy"]] <- pos[j,2]
+          pca_nodes[[j]][["fz"]] <- pos[j,3]
+        }
+        nm <- paste0("pca_", omicstype.vec[[i]])
+        netData[[tax]][[nm]] <- pca_nodes
+
+        # PCA loading nodes
+        pca_ld <- pca.scatter[[paste0("pca_", omicstype.vec[i])]]$loading
+        pca_loading <- nodes2[c(1:nrow(pca_ld))]
+        pca_count <- 1
+        for(k in 1:length(nodes2)){
+          if(nodes2[[k]][["id"]] %in% rownames(pca_ld) || nodes2[[k]][["label"]] %in% rownames(pca_ld)){
+            pca_loading[[pca_count]] <- nodes2[[k]]
+            inx <- which(rownames(pca_ld) == nodes2[[k]][["id"]])
+            if(length(inx) == 0) inx <- which(rownames(pca_ld) == nodes2[[k]][["label"]])
+            if(length(inx) > 0){
+              pca_loading[[pca_count]][["fx"]] <- pca_ld[inx,1]
+              pca_loading[[pca_count]][["fy"]] <- pca_ld[inx,2]
+              pca_loading[[pca_count]][["fz"]] <- pca_ld[inx,3]
+            }
+            pca_count <- pca_count + 1
+          }
+        }
+        nm <- paste0("pca_", omicstype.vec[[i]], "_loading")
+        netData[[tax]][[nm]] <- pca_loading
+      }
+      mofa.res$misc[[tax]]$pct2 <- c(mofa.res$misc[[tax]]$pct2, pca.scatter$pct2)
       netData[[tax]][["misc"]] <- mofa.res$misc[[tax]];
       shadow_save(mofa.res,"mofa.res.qs")
     }
@@ -427,9 +464,8 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
   jsonNms_scatter <<- filenm;
   
   sink(filenm);
-  if(reductionOptGlobal == "diablo"){
+  if(reductionOptGlobal %in% c("diablo", "mofa")){
     # Write selected taxrank level as top-level JSON (JS viewer expects flat structure)
-    # Store all levels in 'allLevels' for potential level switching
     selectedData <- netData[[taxrank]];
     selectedData$allLevels <- names(netData);
     cat(rjson::toJSON(selectedData));

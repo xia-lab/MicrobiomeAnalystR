@@ -2442,6 +2442,74 @@ DoDimensionReductionIntegrative <- function(mbSetObj, reductionOpt, method="glob
   return(my.reduce.dimension(mbSetObj, reductionOpt, method,dimn, analysisVar,diabloPar));
 }
 
+GetMofaRes <- function(){
+  if(!file.exists("mofa_result.qs")) return(0)
+  mofa_result <- qs::qread("mofa_result.qs")
+  tax_name <- mofa_result$tax_name
+  met_features <- mofa_result$met_features
+  loading_ids <- mofa_result$loading_ids
+
+  mofa_pos <- mofa_result$pos.xyz
+  mofa_loading <- mofa_result$loading.pos.xyz
+
+  mofa_pos_xyz <- mofa_pos[, 1:min(3, ncol(mofa_pos)), drop=FALSE]
+  pos.xyz <- setNames(list(mofa_pos_xyz), tax_name)
+
+  num_factors <- ncol(mofa_loading) - 1
+  loading_xyz <- mofa_loading[, 1:num_factors, drop=FALSE]
+  loading.pos.xyz <- setNames(list(as.data.frame(loading_xyz)), tax_name)
+  loadingNames <- setNames(list(loading_ids), tax_name)
+
+  omics_vec <- ifelse(loading_ids %in% met_features, "metabolomics", "microbiome")
+  var.exp <- mofa_result$var.exp
+
+  sel <- if(exists("mofa.selected.factors")) mofa.selected.factors else c(1,2,3)
+  misc <- setNames(list(list(
+    pct2 = list(microbiome = unname(var.exp[sel, 1] * 100), metabolomics = unname(var.exp[sel, 2] * 100),
+                both = unname(rowSums(var.exp[sel, , drop=FALSE]) * 100)),
+    mofa_factors = sel,
+    var.exp = var.exp
+  )), tax_name)
+
+  mbSetObj <- .get.mbSetObj(NA)
+  newmeta <- current.proc$meta_para$sample_data
+
+  mofa.res <- list()
+  mofa.res$pos.xyz <- pos.xyz
+  mofa.res$loading.pos.xyz <- loading.pos.xyz
+  mofa.res$loadingNames <- loadingNames
+  mofa.res$misc <- misc
+  mofa.res$newmeta <- newmeta
+  mofa.res$omics_vec <- omics_vec
+
+  combined.res <- qs::qread("combined.res.qs")
+
+  hit.inx <- mapply(function(x,y) match(x,y), loadingNames, combined.res$enrich_ids)
+  loadingSymbols <- mapply(function(x,y) y[x], hit.inx, combined.res$enrich_ids)
+  if(!is.list(loadingSymbols)){
+    loadingSymbols <- setNames(list(loadingSymbols), names(loadingNames))
+  }
+
+  pos.xyz <- lapply(pos.xyz, function(x) as.data.frame(x)[,1:min(3,ncol(x)), drop=FALSE])
+  pos.xyz <- lapply(pos.xyz, function(x) unitAutoScale(x))
+  pos.xyz <- lapply(pos.xyz, "rownames<-", rownames(mofa_pos))
+  loading.pos.xyz <- lapply(loading.pos.xyz, as.data.frame)
+  loading.pos.xyz <- lapply(loading.pos.xyz, unitAutoScale)
+
+  mofa.res$pos.xyz <- pos.xyz
+  mofa.res$loading.pos.xyz <- loading.pos.xyz
+  mofa.res$loadingNames <- loadingNames
+  mofa.res$loading.enrich <- loadingSymbols
+
+  shadow_save(mofa.res, "mofa.res.full.qs")
+  shadow_save(mofa.res, "mofa.res.qs")
+
+  reductionOptGlobal <<- "mofa"
+  mbSetObj$analSet$dimrdc <- "mofa"
+  .set.mbSetObj(mbSetObj)
+  return(1)
+}
+
 ApplyMofaFactorSelection <- function(){
   if(!exists("mofa.selected.factors")) return(1)
   # Read full 5-factor data
@@ -2454,6 +2522,14 @@ ApplyMofaFactorSelection <- function(){
       mofa.res$pos.xyz[[lvl]] <- unitAutoScale(as.data.frame(pos[, sel, drop=FALSE]))
       mofa.res$loading.pos.xyz[[lvl]] <- unitAutoScale(as.data.frame(ld[, sel, drop=FALSE]))
     }
+    # Update pct2 to reflect selected factors
+    var.exp <- mofa.res$misc[[lvl]]$var.exp
+    mofa.res$misc[[lvl]]$pct2 <- list(
+      microbiome = unname(var.exp[sel, 1] * 100),
+      metabolomics = unname(var.exp[sel, 2] * 100),
+      both = unname(rowSums(var.exp[sel, , drop=FALSE]) * 100)
+    )
+    mofa.res$misc[[lvl]]$mofa_factors <- sel
   }
   shadow_save(mofa.res, "mofa.res.qs")
   return(1)
@@ -3414,6 +3490,34 @@ PlotDiagnostic <- function(imgName, dpi=default.dpi, format="png",alg, taxrank="
 
     plot(perf.res)
     mbSetObj$imgSet$diablo$diagnostic <- imgNm
+  } else if(alg == "mofa"){
+    library(data.table)
+    mofa.res <- qs::qread("mofa.res.qs")
+    var.exp <- mofa.res$misc[[1]]$var.exp
+    if(!is.null(var.exp)){
+      df <- as.data.frame(var.exp)
+      colnames(df) <- gsub("^mic$", "Microbiome", colnames(df))
+      colnames(df) <- gsub("^met$", "Metabolomics", colnames(df))
+      df$Factor <- rownames(df)
+      if(is.null(df$Factor) || all(is.na(df$Factor))) df$Factor <- paste0("Factor", 1:nrow(df))
+      df_long <- as.data.frame(data.table::melt(as.data.table(df), id.vars="Factor",
+                                                 variable.name="View", value.name="Variance"))
+      df_long$Variance <- df_long$Variance * 100
+      df_long$Factor <- gsub("Factor", "Factor ", df_long$Factor)
+      library(ggplot2)
+      p <- ggplot(df_long, aes(x=Factor, y=View, fill=Variance)) +
+        geom_tile(color="grey30", linewidth=0.8) +
+        geom_text(aes(label=sprintf("%.2f%%", Variance)), size=3.5, color="black") +
+        scale_fill_gradient(low="white", high="#C0392B", name="Var. (%)") +
+        labs(x="", y="", title="Variance Explained per Factor") +
+        theme_minimal(base_size=12) +
+        theme(axis.text.x=element_text(angle=0, hjust=0.5), plot.title=element_text(hjust=0.5, size=13), panel.grid=element_blank())
+      print(p)
+    } else {
+      plot.new()
+      text(0.5, 0.5, "Variance explained not available", cex=1.5)
+    }
+    mbSetObj$imgSet$mofa$diagnostic <- imgNm
   }
   dev.off();
   .set.mbSetObj(mbSetObj)
@@ -3483,6 +3587,26 @@ PlotDiagnosticPca <- function(imgNm, dpi=default.dpi, format="png",type="diablo"
     print(p)
     dev.off();
     mbSetObj$imgSet$procrustes$pca <- imgNm
+  } else if(type == "mofa"){
+    mofa.res <- qs::qread("mofa.res.qs")
+    pos <- mofa.res$pos.xyz[[1]]
+    meta <- mofa.res$newmeta
+    common_samples <- intersect(rownames(pos), rownames(meta))
+    pos <- pos[common_samples, , drop=FALSE]
+    var.exp <- mofa.res$misc[[1]]$var.exp
+    xlab <- "Factor 1"; ylab <- "Factor 2"
+    if(!is.null(var.exp)){
+      xlab <- sprintf("Factor 1 (%.1f%%)", sum(var.exp[1,]) * 100)
+      ylab <- sprintf("Factor 2 (%.1f%%)", if(nrow(var.exp)>=2) sum(var.exp[2,]) * 100 else 0)
+    }
+    df <- data.frame(F1=pos[,1], F2=if(ncol(pos)>=2) pos[,2] else 0, Conditions=meta[common_samples,1])
+    Cairo(file=imgNm, unit="in", dpi=dpi, width=8, height=6, type=format, bg="white")
+    p <- ggplot(df, aes(x=F1, y=F2, color=Conditions)) +
+      geom_point(size=3, alpha=0.8) + stat_ellipse(level=0.95, linetype="dashed") +
+      theme_bw(base_size=12) + labs(x=xlab, y=ylab, title="MOFA Sample Space")
+    print(p)
+    dev.off()
+    mbSetObj$imgSet$mofa$pca <- imgNm
   }
   .set.mbSetObj(mbSetObj)
 }
@@ -3782,22 +3906,28 @@ ComputeEncasingDiablo <- function(filenm, type, names.vec, level=0.95, omics="NA
   names = strsplit(names.vec, "; ")[[1]]
   
 
- # if(reductionOptGlobal %in% c("diablo", "spls") || omics != "NA"){
- if(reductionOptGlobal %in% c("diablo", "spls")){
+ if(reductionOptGlobal == "mofa"){
+    if(!exists("mofa.res")) mofa.res <- qs::qread("mofa.res.qs")
+    if(grepl("pca_", omics, fixed=TRUE)){
+      pos.xyz <- mofa.res$pca.scatter[[taxalvl]][[omics]]$score/1000
+    }else{
+      pos.xyz <- mofa.res$pos.xyz[[taxalvl]]
+    }
+  } else if(reductionOptGlobal %in% c("diablo", "spls")){
     if(!exists("diablo.res")){
       diablo.res <- qs::qread("diablo.res.qs")
     }
     if(grepl("pca_", omics, fixed=TRUE)){
       pos.xyz<-diablo.res$pca.scatter[[taxalvl]][[omics]]$score/1000
     }else{
-      
+
       if(omics == "microbiome"){
         pos.xyz = diablo.res$pos.xyz[[taxalvl]]
       }else{
         pos.xyz = diablo.res$pos.xyz2[[taxalvl]]
       }
     }
-    
+
   }else{
     procrustes.res <- qs::qread("procrustes.res.qs")
     pos.xyz = procrustes.res$pos.xyz[[taxalvl]]
@@ -3849,7 +3979,14 @@ ComputeEncasingBatchDiablo <- function(filenm, type, groups_json, level = 0.95, 
     groups_list <- split(groups_list, seq_len(nrow(groups_list)))
   }
 
-  if(reductionOptGlobal %in% c("diablo", "spls")){
+  if(reductionOptGlobal == "mofa"){
+    if(!exists("mofa.res")) mofa.res <- qs::qread("mofa.res.qs")
+    if(grepl("pca_", omics, fixed=TRUE)){
+      pos.xyz <- mofa.res$pca.scatter[[taxalvl]][[omics]]$score/1000
+    }else{
+      pos.xyz <- mofa.res$pos.xyz[[taxalvl]]
+    }
+  } else if(reductionOptGlobal %in% c("diablo", "spls")){
     if(!exists("diablo.res")){
       diablo.res <- qs::qread("diablo.res.qs")
     }

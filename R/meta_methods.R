@@ -287,7 +287,7 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
     data@sam_data$sample_id <- gsub("-", ".", data@sam_data$sample_id);
     
     
-    res <- res %>% rownames_to_column("sample_id") %>%
+    res <- res %>% tibble::rownames_to_column("sample_id") %>%
       select(sample_id, everything()) %>% 
       left_join(data@sam_data[, c("sample_id")]) %>%
       as_tibble() %>%

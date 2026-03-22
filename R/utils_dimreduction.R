@@ -167,67 +167,22 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
     shadow_save(procrustes.res,"procrustes.res.qs")
 
   } else if(reductionOpt == "mofa"){
-    if(!exists("run_mofa")){
-      .load.scripts.on.demand("mofa_core.Rc");
-      .load.scripts.on.demand("util_mofa.Rc");
-    }
-    library(MOFA2)
-    library(reshape2)
-
+    # Save input for external MOFA script (avoids HDF5Array conflicts in Rserve)
     mic_mat <- as.matrix(d.list$mic$data.proc[[1]])
     met_mat <- as.matrix(d.list$met$data.proc)
-    data.list.mofa <- list(mic = mic_mat, met = met_mat)
-
-    MOFAobject <- create_mofa_from_matrix(data.list.mofa)
-    data_opts <- get_default_data_options(MOFAobject)
-    model_opts <- get_default_model_options(MOFAobject)
-    model_opts$num_factors <- 5
-    train_opts <- get_default_training_options(MOFAobject)
-    MOFAobject <- prepare_mofa(object = MOFAobject, data_options = data_opts,
-                                model_options = model_opts, training_options = train_opts)
-    model <- run_mofa(MOFAobject, save_data = FALSE)
-
-    factors <- get_factors(model, as.data.frame = TRUE)
-    mofa_pos <- reshape2::dcast(factors, sample ~ factor, value.var = "value")
-    rownames(mofa_pos) <- mofa_pos$sample
-    mofa_pos <- mofa_pos[, -1]
-
-    weights <- get_weights(model, as.data.frame = TRUE)
-    mofa_loading <- reshape2::dcast(weights, feature ~ factor, value.var = "value")
-    mofa_loading$ids <- as.character(mofa_loading$feature)
-    mofa_loading <- mofa_loading[, -1]
-
-    var.exp <- model@cache[["variance_explained"]][["r2_per_factor"]][[1]] / 100
-    var.exp <- round(var.exp, digits = 3)
-
     tax_name <- names(d.list$mic$data.proc)[1]
-    mofa_pos_xyz <- mofa_pos[, 1:min(3, ncol(mofa_pos)), drop=FALSE]
-    pos.xyz <- setNames(list(mofa_pos_xyz), tax_name)
-    names <- list(rownames(mofa_pos_xyz))
-    names(names) <- tax_name
-
-    loading_ids <- mofa_loading$ids
-    loading_xyz <- mofa_loading[, 1:min(3, ncol(mofa_loading) - 1), drop=FALSE]
-    loading.pos.xyz <- setNames(list(as.data.frame(loading_xyz)), tax_name)
-    loadingNames <- setNames(list(loading_ids), tax_name)
-
     met_features <- rownames(d.list$met$data.proc)
-    omics_vec <- ifelse(loading_ids %in% met_features, "metabolomics", "microbiome")
 
-    misc <- setNames(list(list(
-      pct2 = list(microbiome = var.exp[, 1] * 100, metabolomics = var.exp[, 2] * 100),
-      var.exp = var.exp
-    )), tax_name)
-
-    mofa.res <- list()
-    mofa.res$pos.xyz <- pos.xyz
-    mofa.res$loading.pos.xyz <- loading.pos.xyz
-    mofa.res$loadingNames <- loadingNames
-    mofa.res$misc <- misc
-    mofa.res$newmeta <- newmeta
-    mofa.res$omics_vec <- omics_vec
+    mofa.input <- list(
+      data.list = list(mic = mic_mat, met = met_mat),
+      tax_name = tax_name,
+      met_features = met_features
+    )
+    shadow_save(mofa.input, "mofa_input.qs")
     shadow_save(combined.res, "combined.res.qs")
-    shadow_save(mofa.res, "mofa.res.qs")
+
+    # Return 2 to signal Java to run _perform_mofa.R externally
+    return(2)
   }
 
     pos.xyz <- lapply(pos.xyz,function(x) as.data.frame(x)[,c(1:3)]);
