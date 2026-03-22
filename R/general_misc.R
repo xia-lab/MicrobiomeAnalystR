@@ -1007,6 +1007,28 @@ AutoScale <- function(data){apply(data, 2, function(x){
   });
 }
 
+#' Validate data before rarefaction
+#' @description Checks if data is suitable for rarefaction (requires count data).
+#' Handles three cases: integer counts (pass), estimated counts with fractions (round),
+#' and normalized continuous data (reject).
+#' @param data Matrix of abundance data
+#' @return Data matrix (possibly rounded) or NULL if data is unsuitable
+#' @export
+ValidateRarefactionData <- function(data){
+  tol <- 1e-5
+  is_fractional <- any(abs(data - round(data)) > tol, na.rm = TRUE)
+  if(is_fractional){
+    if(mean(data, na.rm = TRUE) < 1){
+      AddErrMsg("Rarefaction can only be applied to raw or estimated count data. Your data appears to be normalized (values < 1).")
+      return(NULL)
+    } else {
+      data <- round(data)
+      current.msg <<- c(current.msg, "Note: Fractional counts detected. Values have been rounded to the nearest integer to allow for rarefaction.")
+    }
+  }
+  return(data)
+}
+
 #univ/metagenome/rnaseq/lefse/maaslin/list/global
 GetKeggProjectionType <- function(mbSetObj=NA){
     mbSetObj <- .get.mbSetObj(mbSetObj);

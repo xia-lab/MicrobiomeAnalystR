@@ -51,6 +51,15 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
     }
     pos.xyz.all =  diablo.res$pos.xyz
     metadf = diablo.res$newmeta
+  }else if(reductionOptGlobal == "mofa"){
+    if(!exists("mofa.res")){
+      mofa.res <- qs::qread("mofa.res.qs")
+    }
+    if(!exists("combined.res")){
+      combined.res <- qs::qread("combined.res.qs")
+    }
+    pos.xyz.all = mofa.res$pos.xyz
+    metadf = mofa.res$newmeta
   }
   
   if("omics" %in% colnames(metadf)){
@@ -318,8 +327,100 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
       diablo.res$misc[[tax]]$pct2 <- c( diablo.res$misc[[tax]]$pct2, pca.scatter$pct2);
       netData[[tax]][["misc"]] <- diablo.res$misc[[tax]];
       shadow_save(diablo.res,"diablo.res.qs")
+
+    }else if(reductionOptGlobal == "mofa"){
+
+      edge.mat = "";
+      modules = "NA"
+      ellipse ="NA"
+
+      mofa.res$pos.xyz[[tax]] = pos.xyz;
+
+      loading.data = mofa.res$loading.pos.xyz[[tax]];
+      aLoading=list();
+      aLoading$objects = "NA";
+
+      names = mofa.res$loading.enrich[[tax]]
+      ids = mofa.res$loadingNames[[tax]]
+      rownames(loading.data) = names
+      de = combined.res$comp.res[[tax]]
+      if(!is.null(de) && nrow(loading.data) > 0){
+        common <- rownames(loading.data) %in% rownames(de)
+        if(any(common)){
+          loading.data <- loading.data[common, , drop=FALSE]
+          ids <- ids[common]
+          names <- names[common]
+          de <- de[rownames(loading.data), , drop=FALSE]
+          de[de == "NaN"] = 1
+          pv = as.numeric(de[,"T.Stats"])
+          pv_no_zero = pv[pv != 0]
+          minval = if(length(pv_no_zero) > 0) min(pv_no_zero) else 1
+          pv[pv == 0] = minval/2
+          pvals <<- pv;
+        } else {
+          pvals <<- rep(1, nrow(loading.data));
+          pv <- pvals;
+        }
+      } else {
+        pvals <<- rep(1, nrow(loading.data));
+        pv <- pvals;
+      }
+      met_features <- rownames(current.proc$met$data.proc)
+      type.vec <- ifelse(rownames(loading.data) %in% met_features, "metabolomics", "microbiome")
+      if(length(pvals) == 0){ pvals <<- c(1); pv <- c(1); }
+      colors<- ComputeColorGradient(pvals, F);
+      colorb <- colors;
+      sizes <- as.numeric(rescale2NewRange(pv, 15, 25));
+      nodes2 <- vector(mode="list");
+
+      seed.inx <- names %in% unique(seeds[[tax]]);
+      seed_arr <- rep("notSeed",length(names));
+      seed_arr[seed.inx] <- "seed";
+
+      for(i in 1:length(rownames(loading.data))){
+        nodes2[[i]] <- list(
+          id=rownames(loading.data)[i],
+          label=rownames(loading.data)[i],
+          size=sizes[i],
+          cluster=1,
+          omicstype=type.vec[i],
+          fx = unname(loading.data[i,1])*1000,
+          fy = unname(loading.data[i,2])*1000,
+          fz = unname(loading.data[i,3])*1000,
+          seedArr = seed_arr[i],
+          colorb=colorb[i],
+          colorw=colorb[i],
+          topocolb="#ffa500",
+          topocolw="#ffa500",
+          expcolb="#ffa500",
+          expcolw="#ffa500",
+          attributes=list(
+            expr = 1,
+            degree=1,
+            between=1
+          )
+        );
+      }
+      # Filter sigMat to only include features present in loading nodes
+      loading_node_ids <- rownames(loading.data)
+      if(!is.null(sig.mats[[tax]][["metabolomics"]]) && nrow(sig.mats[[tax]][["metabolomics"]]) > 0){
+        met_keep <- sig.mats[[tax]][["metabolomics"]]$ids %in% loading_node_ids
+        if(any(met_keep)){
+          sig.mats[[tax]][["metabolomics"]] <- sig.mats[[tax]][["metabolomics"]][met_keep, , drop=FALSE]
+        }
+      }
+      if(!is.null(sig.mats[[tax]][["microbiome"]]) && nrow(sig.mats[[tax]][["microbiome"]]) > 0){
+        mic_keep <- sig.mats[[tax]][["microbiome"]]$ids %in% loading_node_ids
+        if(any(mic_keep)){
+          sig.mats[[tax]][["microbiome"]] <- sig.mats[[tax]][["microbiome"]][mic_keep, , drop=FALSE]
+        }
+      }
+      netData[[tax]] <- list(omicstype=omicstype.vec, nodes=nodes, edges=edge.mat, modules=modules, objects=a$objects, ellipse=meshes, meta=metadf, loading=nodes2, reductionOpt=reductionOptGlobal, objectsLoading=aLoading$objects, sigMat=sig.mats[[tax]]);
+
+      netData[[tax]][["misc"]] <- mofa.res$misc[[tax]];
+      shadow_save(mofa.res,"mofa.res.qs")
     }
-    
+
   }
   
   

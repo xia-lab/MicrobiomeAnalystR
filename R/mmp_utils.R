@@ -2442,6 +2442,23 @@ DoDimensionReductionIntegrative <- function(mbSetObj, reductionOpt, method="glob
   return(my.reduce.dimension(mbSetObj, reductionOpt, method,dimn, analysisVar,diabloPar));
 }
 
+ApplyMofaFactorSelection <- function(){
+  if(!exists("mofa.selected.factors")) return(1)
+  # Read full 5-factor data
+  mofa.res <- shadow_qread("mofa.res.full.qs")
+  sel <- mofa.selected.factors
+  for(lvl in names(mofa.res$pos.xyz)){
+    pos <- mofa.res$pos.xyz[[lvl]]
+    ld <- mofa.res$loading.pos.xyz[[lvl]]
+    if(max(sel) <= ncol(pos)){
+      mofa.res$pos.xyz[[lvl]] <- unitAutoScale(as.data.frame(pos[, sel, drop=FALSE]))
+      mofa.res$loading.pos.xyz[[lvl]] <- unitAutoScale(as.data.frame(ld[, sel, drop=FALSE]))
+    }
+  }
+  shadow_save(mofa.res, "mofa.res.qs")
+  return(1)
+}
+
 doScatterJsonPair <- function(filenm,analysisVar,taxrank="genus"){
    
   if(!exists("my.json.scatter.pair")){ # public web on same user dir
