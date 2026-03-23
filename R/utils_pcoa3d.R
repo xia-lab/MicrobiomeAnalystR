@@ -76,13 +76,21 @@ my.pcoa.3d <- function(mbSetObj, ordMeth, distName, taxrank, colopt, variable, t
     } else {
       GP.ord <- ordinate(data, ordMeth, "unifrac", weighted=FALSE);
     }
+  } else if(distName == "aitchison"){
+    otu_mat <- as(otu_table(data), "matrix")
+    if(!taxa_are_rows(data)) otu_mat <- t(otu_mat)
+    otu_mat <- otu_mat + 0.5
+    clr_mat <- t(apply(otu_mat, 2, function(x) log(x) - mean(log(x))))
+    if(ordMeth=="PCA"){
+      GP.ord <- prcomp(clr_mat, center=TRUE, scale=FALSE)
+    }else{
+      ait_dist <- dist(clr_mat, method="euclidean")
+      GP.ord <- ape::pcoa(ait_dist)
+    }
   } else {
- 
-    
       if(ordMeth=="PCA"){
              GP.ord  <- prcomp(t(data@otu_table@.Data), center=TRUE, scale=F)
       }else{
-       
        GP.ord <- ordinate(data,ordMeth,distName);
       }
   }

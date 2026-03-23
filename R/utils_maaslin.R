@@ -226,6 +226,7 @@ if(model =="CPLM"){
                             reference = NULL){
   require('data.table')
   require('dplyr')
+  require('vegan')
 if(case==1){
   input_data = maaslin.para$input_data
   if(exists("input_metadata",where = maaslin.para)){

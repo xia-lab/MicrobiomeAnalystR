@@ -859,6 +859,7 @@ CheckMetaDataIntegrity <- function(mbSetObj, taxo_type="OTU", sample_var="NA"){
                           data.lbl=data.lbl);
   
   shadow_save(microbiome.meta, "microbiome_meta.qs");
+  shadow_save(microbiome.meta, "microbiome_meta_prenorm.qs");
   paramSet$smps.vec <- colnames(common.matrix);
   
   # setup common stats gene number, smpl number, grp info

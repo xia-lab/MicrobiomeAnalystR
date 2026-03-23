@@ -639,7 +639,7 @@ return(.set.mbSetObj(mbSetObj));
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import reshape
-PlotSelectedSample <-function(mbSetObj, imgNm, smplID, OtuIdType, rel_perct, format="png", dpi=72){
+PlotSelectedSample <-function(mbSetObj, imgNm, smplID, OtuIdType, rel_perct, format="png", dpi=default.dpi){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
@@ -668,7 +668,7 @@ PlotSelectedSample <-function(mbSetObj, imgNm, smplID, OtuIdType, rel_perct, for
   rowNum <- ceiling(a/3);
   myH <- rowNum*18 + h;
   imgNm = paste(imgNm,".",format, sep="");
-  Cairo::Cairo(file=imgNm,width=420, height=myH, type=format, bg="white",dpi=dpi);
+  Cairo::Cairo(file=imgNm, unit="in", dpi=dpi, width=5.8, height=myH/72, type=format, bg="white");
   piedata_rel <- transform(transform(piedata_new, value=value/sum(value)));
   ind <- which(piedata_rel[,"value"]>rel_perct);
   ind1 <- which(piedata_rel[,"value"]<rel_perct);
