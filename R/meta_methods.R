@@ -14,7 +14,7 @@
 #'License: GNU GPL (>= 2)
 #'@export
 #'
-PerformMetaEffectSize <- function(mbSetObj=NA, imgName="", taxrank="OTU", selMeta, BHth=0.05, de.method="LM", ef.method="REML", format="png", dpi=100){
+PerformMetaEffectSize <- function(mbSetObj=NA, imgName="", taxrank="OTU", selMeta, BHth=0.05, de.method="LM", ef.method="REML", format="png", dpi=default.dpi){
 
   if(exists('cov.meta.eff')){
     cov <- cov.meta.eff;
@@ -119,7 +119,7 @@ PerformMetaEffectSize <- function(mbSetObj=NA, imgName="", taxrank="OTU", selMet
     coord_flip()+ ylab("Coefficient") + xlab("Feature")
   
   imgName = paste(imgName, ".", format, sep="");
-  Cairo::Cairo(file = imgName, unit="px", dpi=dpi, width=800, height=600, type=format, bg="white");
+  Cairo::Cairo(file = imgName, unit="in", dpi=dpi, width=11.1, height=8.3, type=format, bg="white");
   print(p);
   dev.off();
   res <- SetupMetaStats(BHth, paramSet, analSet);
@@ -228,7 +228,7 @@ SetupMetaStats <- function(BHth, paramSet,analSet){
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank="Family", view.mode="ratio", format="png", dpi=100) {
+CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank="Family", view.mode="ratio", format="png", dpi=default.dpi) {
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   mdata.all <- mbSetObj$mdata.all;
@@ -287,7 +287,7 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
     data@sam_data$sample_id <- gsub("-", ".", data@sam_data$sample_id);
     
     
-    res <- res %>% rownames_to_column("sample_id") %>%
+    res <- res %>% tibble::rownames_to_column("sample_id") %>%
       select(sample_id, everything()) %>% 
       left_join(data@sam_data[, c("sample_id")]) %>%
       as_tibble() %>%
@@ -413,7 +413,7 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
       theme(axis.text.x=element_text(angle=45, hjust=1)) + 
       theme(text = element_text(size = 16));
     
-    Cairo::Cairo(file = imgName, unit="px", dpi=dpi, width=800, height=600, type=format, bg="white");
+    Cairo::Cairo(file = imgName, unit="in", dpi=dpi, width=11.1, height=8.3, type=format, bg="white");
     print(fig);
     dev.off();
   }else{
@@ -439,7 +439,7 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
       theme(text = element_text(size = 16))
 
     # Create the plot
-    Cairo::Cairo(file = imgName, unit="px", dpi=dpi, width=800, height=600, type=format, bg="white")
+    Cairo::Cairo(file = imgName, unit="in", dpi=dpi, width=11.1, height=8.3, type=format, bg="white")
     print(box1)
     dev.off()
   }
@@ -496,7 +496,7 @@ bf_ratio <- function(phylo){
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotBetaSummary <- function(mbSetObj, plotNm,taxalvl, sel.meta, alg, format="png", dpi=100){
+PlotBetaSummary <- function(mbSetObj, plotNm,taxalvl, sel.meta, alg, format="png", dpi=default.dpi){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   data.obj <- qs::qread("merged.data.qs");
   data.obj <- subsetPhyloseqByDataset(mbSetObj, data.obj);
@@ -582,7 +582,7 @@ p <- p + geom_point(shape=16, alpha=0.8, size=4) +
     scale_alpha_manual(values=c(0.5,0));
   
   imgName = paste(plotNm, ".", format, sep="");
-  Cairo::Cairo(file = imgName, unit="px", dpi=72, width=800, height=600, type=format, bg="white");
+  Cairo::Cairo(file = imgName, unit="in", dpi=default.dpi, width=11.1, height=8.3, type=format, bg="white");
   print(p);
   dev.off();
   
@@ -595,7 +595,7 @@ p <- p + geom_point(shape=16, alpha=0.8, size=4) +
 }
 
 
-PlotDiscreteDiagnostic <- function(mbSetObj, fileName, metadata, format="png", dpi=72){
+PlotDiscreteDiagnostic <- function(mbSetObj, fileName, metadata, format="png", dpi=default.dpi){
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
   mdata.all <- mbSetObj$mdata.all;
@@ -662,14 +662,14 @@ PlotDiscreteDiagnostic <- function(mbSetObj, fileName, metadata, format="png", d
 
   imgName = paste(fileName, ".", format, sep="");
   
-  Cairo::Cairo(file=imgName, width=700, height=1200, type=format, bg="white",dpi=dpi);
+  Cairo::Cairo(file=imgName, unit="in", dpi=96, width=9.7, height=16.7, type=format, bg="white");
   p <- ggarrange(plotlist=plot.list, ncol = length(unique(sam_data[,metadata])));
   print(p);
   dev.off();
   return(.set.mbSetObj(mbSetObj))
 }
 
-PlotContinuousPopulation <- function(mbSetObj, loadingName, ordinationName, metadata, format="png", dpi=72){
+PlotContinuousPopulation <- function(mbSetObj, loadingName, ordinationName, metadata, format="png", dpi=default.dpi){
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
   require(MMUPHin);
@@ -729,13 +729,13 @@ PlotContinuousPopulation <- function(mbSetObj, loadingName, ordinationName, meta
   
   
   loadingName <-paste(loadingName, ".", format, sep="");
-  Cairo::Cairo(file=loadingName, width=700, height=1200, type=format, bg="white",dpi=dpi);
+  Cairo::Cairo(file=loadingName, unit="in", dpi=96, width=9.7, height=16.7, type=format, bg="white");
   pl1 <- ggarrange(plotlist=loading.list, nrow = length(unique(sam_data[,metadata])));
   print(pl1);
   dev.off();
   
   ordinationName <-paste(ordinationName, ".", format, sep="");
-  Cairo::Cairo(file=ordinationName, width=700, height=1200, type=format, bg="white",dpi=dpi);
+  Cairo::Cairo(file=ordinationName, unit="in", dpi=96, width=9.7, height=16.7, type=format, bg="white");
   pl2 <- ggarrange(plotlist=ordination.list, nrow = length(unique(sam_data[,metadata])));
   print(pl2);
   dev.off();

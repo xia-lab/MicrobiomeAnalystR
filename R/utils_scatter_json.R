@@ -51,14 +51,25 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
     }
     pos.xyz.all =  diablo.res$pos.xyz
     metadf = diablo.res$newmeta
+  }else if(reductionOptGlobal == "mofa"){
+    if(!exists("mofa.res")){
+      mofa.res <- qs::qread("mofa.res.qs")
+    }
+    if(!exists("combined.res")){
+      combined.res <- qs::qread("combined.res.qs")
+    }
+    pos.xyz.all = mofa.res$pos.xyz
+    metadf = mofa.res$newmeta
   }
   
   if("omics" %in% colnames(metadf)){
     sel.meta = "omics"
   }
-  netData <- vector("list",length=length(pos.xyz.all))
-  names(netData) <- names(pos.xyz.all)
-  for(tax in names(pos.xyz.all)){
+  # Only generate scatter for the requested taxonomy level
+  tax_levels <- if(taxrank %in% names(pos.xyz.all)) taxrank else names(pos.xyz.all)
+  netData <- vector("list",length=length(tax_levels))
+  names(netData) <- tax_levels
+  for(tax in tax_levels){
     pos.xyz <-   pos.xyz.all[[tax]]
     nodes <- vector(mode="list");
     names <-  make.unique(as.character(rownames(pos.xyz)))
@@ -173,34 +184,28 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
       ids = diablo.res$loadingNames[[tax]]
       rownames(loading.data) = names
       de = combined.res$comp.res[[tax]]
-      de = de[match(rownames(de) ,ids),]
-      
-      # Find the common row names between loading.data and de
-      common_rows = intersect(rownames(loading.data), rownames(de))
-      
-      # Subset both datasets to only include the common rows, maintaining their original order
-      loading.data = loading.data[common_rows, ]
-      de = de[common_rows, ]
-      ids <- ids[match(ids, rownames(loading.data))];
-      names <- names[match(ids, rownames(loading.data))];
-      
-      de[de == "NaN"] = 1
-      pv = as.numeric(de[,"T.Stats"])
-      pv_no_zero = pv[pv != 0]
-      minval = min(pv_no_zero)
-      pv[pv == 0] = minval/2
-      pvals <<- pv;
-      type.vec <- pvals;
-      if(exists("comp.res.inx",combined.res)){
-        match.inx <- match(combined.res$enrich_ids[[tax]], rownames(loading.data))
-        res <- combined.res$comp.res.inx[[tax]]
-        res <- res[match.inx]
-        res <- res[!is.na(res)]
-        for(i in 1:length(unique(res))){
-          inx = res== i
-          type.vec[inx] <- omicstype.vec[i]
-        }
+      if(!is.null(de)){
+        # Keep only features present in both loading data and DE results
+        common <- rownames(loading.data) %in% rownames(de)
+        loading.data <- loading.data[common, , drop=FALSE]
+        ids <- ids[common]
+        names <- names[common]
+        de <- de[rownames(loading.data), , drop=FALSE]
+        de[de == "NaN"] = 1
+        pv = as.numeric(de[,"T.Stats"])
+        pv_no_zero = pv[pv != 0]
+        minval = if(length(pv_no_zero) > 0) min(pv_no_zero) else 1
+        pv[pv == 0] = minval/2
+        pvals <<- pv;
+        type.vec <- pvals;
+      } else {
+        # No comparison data for this taxa level — use uniform coloring
+        pvals <<- rep(0, nrow(loading.data));
+        type.vec <- pvals;
       }
+      # Assign omicstype based on whether feature is mic or met
+      met_features <- rownames(current.proc$met$data.proc)
+      type.vec <- ifelse(rownames(loading.data) %in% met_features, "metabolomics", "microbiome")
       colors<- ComputeColorGradient(pvals,  F);
       colorb <- colors;
       sizes <- as.numeric(rescale2NewRange(pv, 15, 25));
@@ -233,6 +238,20 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
             between=1
           )
         );
+      }
+      # Filter sigMat to only include features present in loading nodes
+      loading_node_ids <- rownames(loading.data)
+      if(!is.null(sig.mats[[tax]][["metabolomics"]]) && nrow(sig.mats[[tax]][["metabolomics"]]) > 0){
+        met_keep <- sig.mats[[tax]][["metabolomics"]]$ids %in% loading_node_ids
+        if(any(met_keep)){
+          sig.mats[[tax]][["metabolomics"]] <- sig.mats[[tax]][["metabolomics"]][met_keep, , drop=FALSE]
+        }
+      }
+      if(!is.null(sig.mats[[tax]][["microbiome"]]) && nrow(sig.mats[[tax]][["microbiome"]]) > 0){
+        mic_keep <- sig.mats[[tax]][["microbiome"]]$ids %in% loading_node_ids
+        if(any(mic_keep)){
+          sig.mats[[tax]][["microbiome"]] <- sig.mats[[tax]][["microbiome"]][mic_keep, , drop=FALSE]
+        }
       }
       netData[[tax]] <- list(omicstype=omicstype.vec, nodes=nodes, edges=edge.mat, modules=modules, objects=a$objects, ellipse=meshes, meta=metadf, loading=nodes2, reductionOpt=reductionOptGlobal , objectsLoading=aLoading$objects, sigMat=sig.mats[[tax]]);
       
@@ -308,16 +327,148 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
       diablo.res$misc[[tax]]$pct2 <- c( diablo.res$misc[[tax]]$pct2, pca.scatter$pct2);
       netData[[tax]][["misc"]] <- diablo.res$misc[[tax]];
       shadow_save(diablo.res,"diablo.res.qs")
+
+    }else if(reductionOptGlobal == "mofa"){
+
+      edge.mat = "";
+      modules = "NA"
+      ellipse ="NA"
+
+      mofa.res$pos.xyz[[tax]] = pos.xyz;
+
+      loading.data = mofa.res$loading.pos.xyz[[tax]];
+      aLoading=list();
+      aLoading$objects = "NA";
+
+      names = mofa.res$loading.enrich[[tax]]
+      ids = mofa.res$loadingNames[[tax]]
+      rownames(loading.data) = names
+      de = combined.res$comp.res[[tax]]
+      if(!is.null(de) && nrow(loading.data) > 0){
+        common <- rownames(loading.data) %in% rownames(de)
+        if(any(common)){
+          loading.data <- loading.data[common, , drop=FALSE]
+          ids <- ids[common]
+          names <- names[common]
+          de <- de[rownames(loading.data), , drop=FALSE]
+          de[de == "NaN"] = 1
+          pv = as.numeric(de[,"T.Stats"])
+          pv_no_zero = pv[pv != 0]
+          minval = if(length(pv_no_zero) > 0) min(pv_no_zero) else 1
+          pv[pv == 0] = minval/2
+          pvals <<- pv;
+        } else {
+          pvals <<- rep(1, nrow(loading.data));
+          pv <- pvals;
+        }
+      } else {
+        pvals <<- rep(1, nrow(loading.data));
+        pv <- pvals;
+      }
+      met_features <- rownames(current.proc$met$data.proc)
+      type.vec <- ifelse(rownames(loading.data) %in% met_features, "metabolomics", "microbiome")
+      if(length(pvals) == 0){ pvals <<- c(1); pv <- c(1); }
+      colors<- ComputeColorGradient(pvals, F);
+      colorb <- colors;
+      sizes <- as.numeric(rescale2NewRange(pv, 15, 25));
+      nodes2 <- vector(mode="list");
+
+      seed.inx <- names %in% unique(seeds[[tax]]);
+      seed_arr <- rep("notSeed",length(names));
+      seed_arr[seed.inx] <- "seed";
+
+      for(i in 1:length(rownames(loading.data))){
+        nodes2[[i]] <- list(
+          id=rownames(loading.data)[i],
+          label=rownames(loading.data)[i],
+          size=sizes[i],
+          cluster=1,
+          omicstype=type.vec[i],
+          fx = unname(loading.data[i,1])*1000,
+          fy = unname(loading.data[i,2])*1000,
+          fz = unname(loading.data[i,3])*1000,
+          seedArr = seed_arr[i],
+          colorb=colorb[i],
+          colorw=colorb[i],
+          topocolb="#ffa500",
+          topocolw="#ffa500",
+          expcolb="#ffa500",
+          expcolw="#ffa500",
+          attributes=list(
+            expr = 1,
+            degree=1,
+            between=1
+          )
+        );
+      }
+      # Filter sigMat to only include features present in loading nodes
+      loading_node_ids <- rownames(loading.data)
+      if(!is.null(sig.mats[[tax]][["metabolomics"]]) && nrow(sig.mats[[tax]][["metabolomics"]]) > 0){
+        met_keep <- sig.mats[[tax]][["metabolomics"]]$ids %in% loading_node_ids
+        if(any(met_keep)){
+          sig.mats[[tax]][["metabolomics"]] <- sig.mats[[tax]][["metabolomics"]][met_keep, , drop=FALSE]
+        }
+      }
+      if(!is.null(sig.mats[[tax]][["microbiome"]]) && nrow(sig.mats[[tax]][["microbiome"]]) > 0){
+        mic_keep <- sig.mats[[tax]][["microbiome"]]$ids %in% loading_node_ids
+        if(any(mic_keep)){
+          sig.mats[[tax]][["microbiome"]] <- sig.mats[[tax]][["microbiome"]][mic_keep, , drop=FALSE]
+        }
+      }
+      netData[[tax]] <- list(omicstype=omicstype.vec, nodes=nodes, edges=edge.mat, modules=modules, objects=a$objects, ellipse=meshes, meta=metadf, loading=nodes2, reductionOpt=reductionOptGlobal, objectsLoading=aLoading$objects, sigMat=sig.mats[[tax]]);
+
+      # Generate PCA scatter for individual omics
+      pca.scatter <- generatePCAscatter(phyloseq_objs$count_tables[[tax]], metdat, tax)
+      mofa.res$pca.scatter[[tax]] <- pca.scatter
+      for(i in 1:length(omicstype.vec)){
+        pos <- pca.scatter[[paste0("pca_", omicstype.vec[i])]]$score
+        pca_nodes <- nodes[c(1:nrow(pos))]
+        for(j in 1:nrow(pos)){
+          pca_nodes[[j]][["id"]] <- rownames(pos)[j]
+          pca_nodes[[j]][["label"]] <- rownames(pos)[j]
+          pca_nodes[[j]][["fx"]] <- pos[j,1]
+          pca_nodes[[j]][["fy"]] <- pos[j,2]
+          pca_nodes[[j]][["fz"]] <- pos[j,3]
+        }
+        nm <- paste0("pca_", omicstype.vec[[i]])
+        netData[[tax]][[nm]] <- pca_nodes
+
+        # PCA loading nodes
+        pca_ld <- pca.scatter[[paste0("pca_", omicstype.vec[i])]]$loading
+        pca_loading <- nodes2[c(1:nrow(pca_ld))]
+        pca_count <- 1
+        for(k in 1:length(nodes2)){
+          if(nodes2[[k]][["id"]] %in% rownames(pca_ld) || nodes2[[k]][["label"]] %in% rownames(pca_ld)){
+            pca_loading[[pca_count]] <- nodes2[[k]]
+            inx <- which(rownames(pca_ld) == nodes2[[k]][["id"]])
+            if(length(inx) == 0) inx <- which(rownames(pca_ld) == nodes2[[k]][["label"]])
+            if(length(inx) > 0){
+              pca_loading[[pca_count]][["fx"]] <- pca_ld[inx,1]
+              pca_loading[[pca_count]][["fy"]] <- pca_ld[inx,2]
+              pca_loading[[pca_count]][["fz"]] <- pca_ld[inx,3]
+            }
+            pca_count <- pca_count + 1
+          }
+        }
+        nm <- paste0("pca_", omicstype.vec[[i]], "_loading")
+        netData[[tax]][[nm]] <- pca_loading
+      }
+      mofa.res$misc[[tax]]$pct2 <- c(mofa.res$misc[[tax]]$pct2, pca.scatter$pct2)
+      netData[[tax]][["misc"]] <- mofa.res$misc[[tax]];
+      shadow_save(mofa.res,"mofa.res.qs")
     }
-    
+
   }
   
   
   jsonNms_scatter <<- filenm;
   
   sink(filenm);
-  if(reductionOptGlobal == "diablo"){
-    cat(rjson::toJSON(netData));
+  if(reductionOptGlobal %in% c("diablo", "mofa")){
+    # Write selected taxrank level as top-level JSON (JS viewer expects flat structure)
+    selectedData <- netData[[taxrank]];
+    selectedData$allLevels <- names(netData);
+    cat(rjson::toJSON(selectedData));
   }else{
     cat(RJSONIO::toJSON(netData));
   }

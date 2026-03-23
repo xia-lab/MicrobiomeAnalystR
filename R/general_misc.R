@@ -184,6 +184,7 @@ generate_breaks = function(x, n, center = F){
 
 scale_vec_colours = function(x, col = rainbow(10), breaks = NA){
   breaks <- sort(unique(breaks));
+  if(length(breaks) < 2) return(rep(col[1], length(x)))
   return(col[as.numeric(cut(x, breaks = breaks, include.lowest = T))])
 }
 
@@ -1006,6 +1007,28 @@ AutoScale <- function(data){apply(data, 2, function(x){
   });
 }
 
+#' Validate data before rarefaction
+#' @description Checks if data is suitable for rarefaction (requires count data).
+#' Handles three cases: integer counts (pass), estimated counts with fractions (round),
+#' and normalized continuous data (reject).
+#' @param data Matrix of abundance data
+#' @return Data matrix (possibly rounded) or NULL if data is unsuitable
+#' @export
+ValidateRarefactionData <- function(data){
+  tol <- 1e-5
+  is_fractional <- any(abs(data - round(data)) > tol, na.rm = TRUE)
+  if(is_fractional){
+    if(mean(data, na.rm = TRUE) < 1){
+      AddErrMsg("Rarefaction can only be applied to raw or estimated count data. Your data appears to be normalized (values < 1).")
+      return(NULL)
+    } else {
+      data <- round(data)
+      current.msg <<- c(current.msg, "Note: Fractional counts detected. Values have been rounded to the nearest integer to allow for rarefaction.")
+    }
+  }
+  return(data)
+}
+
 #univ/metagenome/rnaseq/lefse/maaslin/list/global
 GetKeggProjectionType <- function(mbSetObj=NA){
     mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -1102,8 +1125,10 @@ ComputeEncasing <- function(filenm, type, names.vec, level=0.95, omics="NA"){
     mesh[[1]] = as.mesh3d(sh, triangles=T);
   }else if(type == "ellipse"){
     library(rgl);
+    n = nrow(coords);
     pos=cov(coords, y = NULL, use = "everything");
-    mesh[[1]] = ellipse3d(x=as.matrix(pos), level=level);
+    t_val = sqrt(qchisq(level, 3));
+    mesh[[1]] = ellipse3d(x=as.matrix(pos), t=t_val);
   }else{
     library(ks);
     res=kde(coords);

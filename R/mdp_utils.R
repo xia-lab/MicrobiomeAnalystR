@@ -166,7 +166,7 @@ PerformNetworkCorrelation <- function(mbSetObj, taxrank, cor.method="pearson", c
 #'@export
 #'@import grid
 #'@import gridExtra
-PlotBoxDataCorr<-function(mbSetObj, boxplotName, feat, format="png", sel.meta="", dpi=72){
+PlotBoxDataCorr<-function(mbSetObj, boxplotName, feat, format="png", sel.meta="", dpi=default.dpi){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   colorPal <- "dark";
   
@@ -212,7 +212,7 @@ PlotBoxDataCorr<-function(mbSetObj, boxplotName, feat, format="png", sel.meta=""
     width <- 400
   }
   
-  Cairo::Cairo(file=boxplotName, width=width, height=300, type=format, bg="white", dpi=dpi);
+  Cairo::Cairo(file=boxplotName, unit="in", dpi=dpi, width=width/72, height=4.2, type=format, bg="white");
   
   box <- ggplot(data, aes(x=data$class, y = data$log_feat, fill=as.factor(class))) + stat_boxplot(geom ='errorbar') + 
     geom_boxplot(outlier.shape = NA) + geom_jitter() + theme_bw() + labs(y="Log-transformed Counts\n", x=paste0("\n",variable), fill=variable) +
@@ -451,7 +451,7 @@ PrepareBoxPlot <- function(mbSetObj, taxrank, variable){
 #'@import viridis
 CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
                               palette, viewOpt, analOpt, expFact, group, expFact2,
-                              format="png", dpi=72, width=NA, interactive = FALSE){
+                              format="png", dpi=default.dpi, width=NA, interactive = FALSE){
   #print(viewOpt)
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -504,8 +504,14 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
     data.compositional <- transform_sample_counts(data,function(x) x / sum(x));
     data.core <- core(data.compositional, detection = detection, prevalence = preval);
  
-    core.nm <- data.frame(prevalence(data.compositional, detection = detection, sort = TRUE),check.names=FALSE);
-    colnames(core.nm)[1] <- "Prevelance";
+    prev.vec <- prevalence(data.compositional, detection = detection, sort = TRUE);
+    # Compute mean relative abundance for each taxon
+    abund.mat <- as(otu_table(data.compositional), "matrix");
+    if(!taxa_are_rows(data.compositional)) abund.mat <- t(abund.mat);
+    mean.abund <- rowMeans(abund.mat);
+    core.nm <- data.frame(Prevalence = prev.vec,
+                          Mean_Abundance = signif(mean.abund[names(prev.vec)], 4),
+                          check.names=FALSE);
     fileName <- "core_microbiome.csv";
     fast.write(core.nm, file=fileName);
   
@@ -631,7 +637,7 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
 }
 
 core_comp_grp <- function(mbSetObj,imgName, preval, detection, taxrank,
-                          palette, viewOpt,expFact2,format="png", dpi=72, width=NA){
+                          palette, viewOpt,expFact2,format="png", dpi=default.dpi, width=NA){
   
   data <- mbSetObj$dataSet$proc.phyobj;
   grp <- unique(as.character(mbSetObj[["dataSet"]][["sample_data"]][[expFact2]]))
@@ -662,15 +668,20 @@ core_comp_grp <- function(mbSetObj,imgName, preval, detection, taxrank,
   dt.compositional <- lapply(dt,function(data) transform_sample_counts(data,function(x) x / sum(x))) ;
   data.core <- lapply(dt.compositional,function(data.compositional) core(data.compositional, detection = detection, prevalence = preval));
   
-  core.nm <- lapply(dt.compositional,function(data.compositional) data.frame(prevalence(data.compositional, detection = detection, sort = TRUE),check.names=FALSE));
-  core.nm <- lapply(names(core.nm), function(name) {
-    x <- core.nm[[name]]
-    z <- tibble::rownames_to_column(x, "Feature")
-    names(z)[2] <- "Prevalence"
-    z$Group <- name  
+  core.nm <- lapply(names(dt.compositional), function(name) {
+    data.comp <- dt.compositional[[name]]
+    prev.vec <- prevalence(data.comp, detection = detection, sort = TRUE)
+    abund.mat <- as(otu_table(data.comp), "matrix")
+    if(!taxa_are_rows(data.comp)) abund.mat <- t(abund.mat)
+    mean.abund <- rowMeans(abund.mat)
+    z <- data.frame(Feature = names(prev.vec),
+                    Prevalence = prev.vec,
+                    Mean_Abundance = signif(mean.abund[names(prev.vec)], 4),
+                    Group = name,
+                    check.names = FALSE, stringsAsFactors = FALSE)
     return(z)
   })
-  core.nm = do.call(rbind,core.nm)
+  core.nm = do.call(rbind, core.nm)
   fileName <- "core_microbiome.csv";
   fast.write(core.nm, file=fileName);
   
@@ -1523,7 +1534,7 @@ UpdatePieData<-function(mbSetObj, lowtaxa){
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-SavePiechartImg <- function(mbSetObj, taxalvl, pieName="", format="png", dpi=72, interactive=F) {
+SavePiechartImg <- function(mbSetObj, taxalvl, pieName="", format="png", dpi=default.dpi, interactive=F) {
   mbSetObj <- .get.mbSetObj(mbSetObj);
   set.seed(280);
   pieName = paste(pieName,".", format, sep="");
@@ -1561,7 +1572,7 @@ SavePiechartImg <- function(mbSetObj, taxalvl, pieName="", format="png", dpi=72,
       geom_text(aes(x=1.6,label = scales::percent(round(value,2))), check_overlap = T,size=3,position = position_stack(vjust = 0.5),color="grey48") +
       theme(legend.position="right",axis.text = element_blank(),axis.ticks = element_blank(),panel.grid  = element_blank(), plot.title = element_text(hjust=0.5, face="bold"),legend.text=element_text(color="grey48")) +
       labs(x="", y="",fill="");
-    Cairo::Cairo(file=pieName, width=630, height=500, type=format, bg="white", dpi=dpi);
+    Cairo::Cairo(file=pieName, unit="in", dpi=dpi, width=8.8, height=6.9, type=format, bg="white");
     print(box);
     dev.off();
     return(.set.mbSetObj(mbSetObj))
@@ -1580,7 +1591,7 @@ SavePiechartImg <- function(mbSetObj, taxalvl, pieName="", format="png", dpi=72,
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotPiechart <- function(mbSetObj, rel_perct, pieName, format="png", dpi=72) {
+PlotPiechart <- function(mbSetObj, rel_perct, pieName, format="png", dpi=default.dpi) {
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
@@ -1606,7 +1617,7 @@ PlotPiechart <- function(mbSetObj, rel_perct, pieName, format="png", dpi=72) {
     piedata2 <- piedata2[-ind_zero,];
   }
   
-  Cairo::Cairo(file=pieName,width=630, height=400, type=format, bg="white",dpi=dpi);
+  Cairo::Cairo(file=pieName, unit="in", dpi=dpi, width=8.8, height=5.6, type=format, bg="white");
   
   box=ggplot(piedata2, aes(x="", y = value, fill=variable)) +
     geom_bar(width = 1, stat = "identity") + theme_bw() +
@@ -1655,7 +1666,7 @@ PlotPiechart <- function(mbSetObj, rel_perct, pieName, format="png", dpi=72) {
 #'@export
 #'@import viridis
 PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName, metadata, 
-                        taxrank, colors = "default", format="png", dpi=72, interactive = FALSE){
+                        taxrank, colors = "default", format="png", dpi=default.dpi, interactive = FALSE){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);  
   set.seed(13133);
@@ -1760,7 +1771,7 @@ PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName, metadata,
   #getting scale for plot (using same for boxplot also)
   ylimits <<- layer_scales(box)$y$range$range;
   
-  Cairo::Cairo(file=bargraphName, width, height=450, type=format, bg="white", dpi=dpi);
+  Cairo::Cairo(file=bargraphName, unit="in", dpi=dpi, width=width/72, height=6.3, type=format, bg="white");
 
   if(mbSetObj$module.type == "meta"){
      box <- box + facet_grid(. ~ dataset, scales = "free", space = "free");
@@ -1802,7 +1813,7 @@ PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName, metadata,
 #'@import reshape
 PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
                                     imgOpt, feat_cnt, toptaxa, abunTopTaxaOpt, 
-                                    appendnm, format="png", dpi=72){
+                                    appendnm, format="png", dpi=default.dpi){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(mbSetObj$module.type == "meta"){
@@ -1976,7 +1987,7 @@ PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
   mbSetObj$imgSet$stackRda <-rdaName;
   mbSetObj$imgSet$stackType <- "sample";
   
-  Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
+  Cairo::Cairo(file=barplotName, unit="in", dpi=dpi, width=w/72, height=h/72, type=format, bg="white");
 box <- ggplot(data, aes(x = reorder(variable, value), y = value)) +
   geom_bar(stat = "identity", width = 0.6, fill = "steelblue") +
   theme_bw() +
@@ -2030,7 +2041,7 @@ sink();
 #'@import viridis
   
   PlotAlphaBoxData<-function(mbSetObj, boxplotName, distName, metadata, 
-                             colors="default", format="png", dpi=72){
+                             colors="default", format="png", dpi=default.dpi){
     mbSetObj <- .get.mbSetObj(mbSetObj);
     suppressMessages(library(viridis));
     
@@ -2082,7 +2093,7 @@ sink();
       box1 <- box1 + viridis::scale_fill_viridis(option=colors, discrete=TRUE)
     }
     
-    Cairo::Cairo(file=boxplotName, width=width, height=400, type=format, bg="white", dpi=dpi);
+    Cairo::Cairo(file=boxplotName, unit="in", dpi=dpi, width=width/72, height=5.6, type=format, bg="white");
     if(mbSetObj$module.type == "meta"){
       box1 <- box1 + facet_grid(. ~ dataset, scales = "free", space = "free");
     }
@@ -2138,7 +2149,7 @@ sink();
 #'@import ape
 
 PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, metadata, 
-                                 showlabel, taxrank, taxa, alphaopt, ellopt, comp.method, format="png", dpi=72,
+                                 showlabel, taxrank, taxa, alphaopt, ellopt, comp.method, format="png", dpi=default.dpi,
                                  custom_col = "none",pairwise, interactive = FALSE){
   #save.image("beta.Rdata");
   combined <- F;
@@ -2296,7 +2307,23 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
       }else{
              ord <- ordinate(data, method = ordmeth,"unifrac");
       }
-    }else{ 
+    }else if(distName == "aitchison"){
+      # Aitchison distance: Euclidean on CLR-transformed data
+      otu_mat <- as(otu_table(data), "matrix")
+      if(!taxa_are_rows(data)) otu_mat <- t(otu_mat)
+      otu_mat <- otu_mat + 0.5
+      clr_mat <- t(apply(otu_mat, 2, function(x) log(x) - mean(log(x))))
+      if(ordmeth=="PCA"){
+        ord <- prcomp(clr_mat, center=TRUE, scale=FALSE)
+      }else{
+        ait_dist <- dist(clr_mat, method="euclidean")
+        if(ordmeth=="PCoA"){
+          ord <- ape::pcoa(ait_dist)
+        }else{
+          ord <- vegan::metaMDS(ait_dist, k=2, trymax=100)
+        }
+      }
+    }else{
       if(ordmeth=="PCA"){
           ord <- prcomp(t(data@otu_table@.Data), center=TRUE, scale=F)
       }else{
@@ -2424,7 +2451,7 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
   
   box = box + theme(text = element_text(size = 14));
   
-  Cairo::Cairo(file=plotNm, width=width, height=height, type=format, bg="white",dpi=dpi);
+  Cairo::Cairo(file=plotNm, unit="in", dpi=dpi, width=width/72, height=height/72, type=format, bg="white");
   print(box);
   dev.off();
   
@@ -2453,7 +2480,7 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotFunAnotSummary<-function(mbSetObj, imgName, format="png",funanno, dpi=72){
+PlotFunAnotSummary<-function(mbSetObj, imgName, format="png",funanno, dpi=default.dpi){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -2483,7 +2510,7 @@ PlotFunAnotSummary<-function(mbSetObj, imgName, format="png",funanno, dpi=72){
  
   imgName = paste(imgName, ".",format, sep="");
   mbSetObj$imgSet[[func.file]] <- imgName;
-  Cairo::Cairo(file=imgName, width=900, height=480, type=format, bg="white",dpi=dpi);
+  Cairo::Cairo(file=imgName, unit="in", dpi=96, width=12.5, height=6.7, type=format, bg="white");
   box <- ggplot(stack(log(result)), aes(x = factor(ind, levels = names(result)), y=values)) + labs(x=NULL, y="log (KO Counts)") + geom_boxplot() + theme(axis.text.x = element_text(angle = 90, hjust = 1))
   print(box);
   dev.off();
@@ -2523,7 +2550,7 @@ PlotFunAnotSummary<-function(mbSetObj, imgName, format="png",funanno, dpi=72){
 #'@import viridis
 PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadata,
                                 feat_cnt, colpalopt, calcmeth, toptaxa, abunTopTaxaOpt, 
-                                appendnm=FALSE, format="png", dpi=72){
+                                appendnm=FALSE, format="png", dpi=default.dpi){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   suppressMessages(library(viridis));
@@ -2735,7 +2762,7 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
   mbSetObj$imgSet$stackRda <-rdaName;
   mbSetObj$imgSet$stackType <- "area";
  
-  Cairo::Cairo(file=barplotName,width=min(w,1000), height=h, type=format, bg="white",dpi=dpi);
+  Cairo::Cairo(file=barplotName, unit="in", dpi=dpi, width=min(w,1000)/72, height=h/72, type=format, bg="white");
   
   box <- ggplot(data,aes(x=step,y=value)) + theme_bw() +
     theme(axis.text.x = element_text(angle = 90, hjust =1,vjust=0.5)) +
@@ -2838,7 +2865,7 @@ sink();
 #'@import viridis
 PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, imgOpt, 
                               feat_cnt, colpalopt, calcmeth, toptaxa, abunTopTaxaOpt, 
-                              appendnm, format="png", dpi=72, interactive = FALSE){
+                              appendnm, format="png", dpi=default.dpi, interactive = FALSE){
 
   suppressMessages(library(viridis));
   #save.image("tax.RData");
@@ -3044,7 +3071,7 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
   }else{
     guide_num = 5
   }
-  Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
+  Cairo::Cairo(file=barplotName, unit="in", dpi=dpi, width=w/72, height=h/72, type=format, bg="white");
   box <- ggplot(data = data,
                 aes(x = sample,
                     y = value,
@@ -3167,7 +3194,21 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pai
   
   data <- transform_sample_counts(data, function(x) x/sum(x));
 
-  data.dist <- distance(data, method=distnm);
+  if(distnm %in% c("wunifrac", "unifrac")){
+    if(distnm == "wunifrac"){
+      data.dist <- phyloseq::UniFrac(data, weighted=TRUE, normalized=TRUE)
+    }else{
+      data.dist <- phyloseq::UniFrac(data, weighted=FALSE)
+    }
+  }else if(distnm == "aitchison"){
+    otu_mat <- as(otu_table(data), "matrix")
+    if(!taxa_are_rows(data)) otu_mat <- t(otu_mat)
+    otu_mat <- otu_mat + 0.5
+    clr_mat <- t(apply(otu_mat, 2, function(x) log(x) - mean(log(x))))
+    data.dist <- dist(clr_mat, method="euclidean")
+  }else{
+    data.dist <- distance(data, method=distnm);
+  }
   group <- get_variable(data, variable);
   stat.info <- "";
   resTab <- list();
@@ -3265,7 +3306,7 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pai
 #'@import reshape
 PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, facet2, imgOpt,
                                      feat_cnt, colpalopt, calcmeth, toptaxa,abunTopTaxaOpt, 
-                                     appendnm, format="png", dpi=80, interactive = FALSE){
+                                     appendnm, format="png", dpi=default.dpi, interactive = FALSE){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
@@ -3490,7 +3531,7 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
   mbSetObj$imgSet$stackType <- "group";
   
   stackdata <<- data
-  Cairo::Cairo(file=barplotName,width=w, height=h, type=format, bg="white",dpi=dpi);
+  Cairo::Cairo(file=barplotName, unit="in", dpi=dpi, width=w/72, height=h/72, type=format, bg="white");
   box <- ggplot(data,aes(x = step, y = value, fill = variable))+
     geom_bar(stat="identity", position="stack", width = 0.4)+
     #scale_y_continuous(expand = c(0, 0, 0.3, 0)) +
@@ -3583,7 +3624,7 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
 #'License: GNU GPL (>= 2)
 #'@export
 PlotRarefactionCurve <- function(mbSetObj, data.src, linecolor, linetype, facet, step=5, 
-                                 imgName, format="png", dpi=72, interactive = FALSE){
+                                 imgName, format="png", dpi=default.dpi, interactive = FALSE){
 
  current.msg<<-"";
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -3624,7 +3665,7 @@ PlotRarefactionCurve <- function(mbSetObj, data.src, linecolor, linetype, facet,
   }
   
   imgName = paste(imgName,".", format, sep="");
-  Cairo::Cairo(file=imgName, width = 1.5 * w, height = 540, type=format, bg="white", dpi=dpi);
+  Cairo::Cairo(file=imgName, unit="in", dpi=dpi, width=1.5*w/72, height=7.5, type=format, bg="white");
   linecolor <- ifelse(linecolor == "none", "NULL", linecolor);
   linetype <- ifelse(linetype == "none", "NULL", linetype);
 
@@ -3674,7 +3715,7 @@ PlotRarefactionCurve <- function(mbSetObj, data.src, linecolor, linetype, facet,
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-PlotPhylogeneticTree <-function(mbSetObj, color, shape, taxa, treeshape, imgName, format="png", dpi=72){
+PlotPhylogeneticTree <-function(mbSetObj, color, shape, taxa, treeshape, imgName, format="png", dpi=default.dpi){
 
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -3829,7 +3870,7 @@ GetHtMetaCpInfo <- function(mbSetObj, meta){
 #'@export
 #'@import metacoder
 PrepareHeatTreePlot <- function(mbSetObj, meta, taxalvl, color, layoutOpt, comparison, 
-                                wilcox.cutoff, switchCmpDirection, colorMode, showLabels, imgName, format="png", dpi=72){
+                                wilcox.cutoff, switchCmpDirection, colorMode, showLabels, imgName, format="png", dpi=default.dpi){
  suppressMessages(library(metacoder))
 
   mbSetObj <- .get.mbSetObj(mbSetObj);  
@@ -3895,7 +3936,7 @@ PrepareHeatTreePlot <- function(mbSetObj, meta, taxalvl, color, layoutOpt, compa
   PrepareHeatTreePlotDataParse_cmf_diff_table_res <- PrepareHeatTreePlotDataParse_cmf_diff_table(PrepareHeatTreePlotDataParse_cmf_res); #generate diff table
   PrepareHeatTreePlotDataParse_cmf_res <<- PrepareHeatTreePlotDataParse_cmf_res; #generate heat tree
   
-  PrepareHeatTreePlotDataParse_cmf_plot(mbSetObj, color, layoutOpt, comparison, wilcox.cutoff,colorMode, showLabels, imgName, format, dpi=72);
+  PrepareHeatTreePlotDataParse_cmf_plot(mbSetObj, color, layoutOpt, comparison, wilcox.cutoff,colorMode, showLabels, imgName, format, dpi=default.dpi);
   
   #below is for PDF reporter
   mbSetObj$analSet$heat_tree_plot <- paste0(imgName,".",format); 
@@ -3993,7 +4034,7 @@ PrepareHeatTreePlotDataParse_cmf_diff_table <- function(PrepareHeatTreePlotDataP
 #'@export
 #'@import metacoder
 #'@import viridis
-PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, comparison, wilcox.cutoff, colorMode, showLabels, imgName, format, dpi=72){
+PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, comparison, wilcox.cutoff, colorMode, showLabels, imgName, format, dpi=default.dpi){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   suppressMessages(library(viridis));
@@ -4023,7 +4064,7 @@ PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, co
   
   set.seed(56784);
   
-  Cairo::Cairo(file=paste0(imgName, ".", format), height = 875, width = 1000, type=format, bg="white", dpi=96);
+  Cairo::Cairo(file=paste0(imgName, ".", format), unit="in", dpi=96, width=13.9, height=12.2, type=format, bg="white");
   wilcox.cutoff <- as.numeric(wilcox.cutoff)
 
    if(colorMode=="sig"){
@@ -4101,7 +4142,7 @@ if(layoutOpt == "reda"){# two layouts are provided
 }
 
 PlotGroupDataHeattree <- function(mbSetObj, meta, comparison, taxalvl, color, layoutOpt, 
-                                  showLabels,imgName, format="png", dpi=72){
+                                  showLabels,imgName, format="png", dpi=default.dpi){
   suppressMessages(library(metacoder))
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -4138,7 +4179,7 @@ PlotGroupDataHeattree <- function(mbSetObj, meta, comparison, taxalvl, color, la
 };
 
 PlotSampleDataHeattree <- function(mbSetObj,comparison, taxalvl, color, layoutOpt, 
-                                  showLabels, imgName, format="png", dpi=72){
+                                  showLabels, imgName, format="png", dpi=default.dpi){
   suppressMessages(library(metacoder))
   mbSetObj <- .get.mbSetObj(mbSetObj);
   tax_o <- taxalvl;
@@ -4175,7 +4216,7 @@ PlotSampleDataHeattree <- function(mbSetObj,comparison, taxalvl, color, layoutOp
 };
 
 PlotOverviewDataHeattree <- function(mbSetObj, taxalvl, color, layoutOpt, 
-                                    showLabels, imgName, format="png", dpi=72){
+                                    showLabels, imgName, format="png", dpi=default.dpi){
   suppressMessages(library(metacoder))
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -4286,8 +4327,8 @@ PrepareHeatTreePlotAbR <- function(dm = dm, tax_dm = tax_dm, taxalvl = taxalvl, 
   
   set.seed(56784);
   
-  Cairo::Cairo(file=paste0(imgName, ".", format), height = 875, width = 1000, type=format, bg="white", dpi=96);
-  
+  Cairo::Cairo(file=paste0(imgName, ".", format), unit="in", dpi=96, width=13.9, height=12.2, type=format, bg="white");
+
   if(showLabels=="true"){
   if(layoutOpt == "reda"){# two layouts are provided
     box <- heat_tree(dm_obj_cmf,

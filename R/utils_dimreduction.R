@@ -27,7 +27,15 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
   }
   
   d.list[["mic"]] = list()
-  d.list[["mic"]][["data.proc"]] = phyloseq_objs$count_tables
+  # Use normalized/auto-scaled data for integration
+  if(micDataType=='ko'){
+    d.list[["mic"]][["data.proc"]] = list(OTU = current.proc$mic$data.proc)
+  } else {
+    # Wrap as named list matching the analyzed taxonomy level
+    analyzed_lvl <- names(which(!sapply(phyloseq_objs$res_deAnal, is.null)))
+    if(length(analyzed_lvl) == 0) analyzed_lvl <- names(phyloseq_objs$count_tables)
+    d.list[["mic"]][["data.proc"]] = setNames(list(current.proc$mic$data.proc), analyzed_lvl[1])
+  }
   if(micDataType=='ko'){
     d.list[["mic"]][["comp.res"]]  = current.proc$mic$res_deAnal[,c(3,4,1)]
     names(d.list[["mic"]][["comp.res"]])[3] = "T.Stats"
@@ -35,14 +43,14 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
     d.list[["mic"]][["enrich.nms"]] = list(OTU=rownames(current.proc$mic$res_deAnal))
     
   }else{
-    d.list[["mic"]][["comp.res"]] = lapply(phyloseq_objs$res_deAnal, function(x){names(x)[1] ="T.Stats"; return(x[,c(3,4,1)])})
+    d.list[["mic"]][["comp.res"]] = lapply(phyloseq_objs$res_deAnal, function(x){names(x)[1] ="T.Stats"; return(x[,c(3,4,1), drop=FALSE])})
     d.list[["mic"]][["enrich.nms"]] = lapply(phyloseq_objs$res_deAnal ,function(x) rownames(x))
   }
   d.list[["mic"]][["meta"]] = data.frame(mbSetObj$dataSet$sample_data)
   
   d.list[["met"]] = list()
-  d.list[["met"]][["data.proc"]] =   current.proc$met$data.proc
-  d.list[["met"]][["comp.res"]] =   current.proc$met$res_deAnal[,c(1:3)] #comp.res
+  d.list[["met"]][["data.proc"]] = if(!is.null(current.proc$met$data.norm)) current.proc$met$data.norm else current.proc$met$data.proc
+  d.list[["met"]][["comp.res"]] =   current.proc$met$res_deAnal[,c(1:3), drop=FALSE] #comp.res
   d.list[["met"]][["enrich.nms"]] = rownames(current.proc$met$res_deAnal)
   d.list[["met"]][["meta"]] = data.frame(mbSetObj$dataSet$sample_data)
   
@@ -157,6 +165,24 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
     combined.res$meta = newmeta
     shadow_save(combined.res,"combined.res.qs")
     shadow_save(procrustes.res,"procrustes.res.qs")
+
+  } else if(reductionOpt == "mofa"){
+    # Save input for external MOFA script (avoids HDF5Array conflicts in Rserve)
+    mic_mat <- as.matrix(d.list$mic$data.proc[[1]])
+    met_mat <- as.matrix(d.list$met$data.proc)
+    tax_name <- names(d.list$mic$data.proc)[1]
+    met_features <- rownames(d.list$met$data.proc)
+
+    mofa.input <- list(
+      data.list = list(mic = mic_mat, met = met_mat),
+      tax_name = tax_name,
+      met_features = met_features
+    )
+    shadow_save(mofa.input, "mofa_input.qs")
+    shadow_save(combined.res, "combined.res.qs")
+
+    # Return 2 to signal Java to run _perform_mofa.R externally
+    return(2)
   }
 
     pos.xyz <- lapply(pos.xyz,function(x) as.data.frame(x)[,c(1:3)]);
@@ -182,7 +208,18 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
     },hit.inx, combined.res$enrich_ids);
     if(micDataType=="ko"){
       loadingSymbols=list(OTU=loadingSymbols)
+    } else if(!is.list(loadingSymbols)){
+      loadingSymbols=setNames(list(loadingSymbols), names(loadingNames))
     }
+  }
+  if(reductionOpt == "mofa"){
+    loading.pos.xyz = lapply(loading.pos.xyz, as.data.frame)
+    loading.pos.xyz <- lapply(loading.pos.xyz, unitAutoScale)
+    mofa.res$pos.xyz <- pos.xyz
+    mofa.res$loading.pos.xyz <- loading.pos.xyz
+    mofa.res$loadingNames <- loadingNames
+    mofa.res$loading.enrich <- loadingSymbols
+    shadow_save(mofa.res, "mofa.res.qs")
   }
   if(reductionOpt == "diablo"){
     loading.pos.xyz = lapply(loading.pos.xyz,as.data.frame)

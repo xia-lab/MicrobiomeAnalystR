@@ -34,15 +34,16 @@
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-Init.mbSetObj <- function(){
+Init.mbSetObj <- function(default.dpi=72){
 
+  default.dpi <<- default.dpi;
   rm(list = ls(all.names = TRUE))
   dataSet <- list();
   analSet <- list();
   imgSet <- list();
    if(!exists(".on.public.web")){
     .on.public.web <<- FALSE
-  }  
+  }
 
   mbSetObj <- list();
   mbSetObj$dataSet <- dataSet;

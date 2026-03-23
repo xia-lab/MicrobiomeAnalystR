@@ -5,6 +5,14 @@
 ## Part of the Rserve/qs to Apache Arrow migration
 ###################################################
 
+#' Read a qs file (alias for qs::qread, matches Pro shadow_qread)
+#' @param file Path to qs file
+#' @return The deserialized R object
+#' @export
+shadow_qread <- function(file) {
+  qs::qread(file)
+}
+
 #' Sync file to disk and verify existence (Safe-Handshake pattern)
 #'
 #' This function ensures that a file is fully written to disk before

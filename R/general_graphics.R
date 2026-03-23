@@ -67,7 +67,7 @@ PCoA3D.Anal <- function(mbSetObj, ordMeth, distName, taxrank, colopt, variable, 
 #' @import ape
 #' @import viridis
 PlotTreeGraph <- function(mbSetObj, plotNm, distnm, clstDist, metadata,
-                          taxrank, colorOpts, format = "png", dpi = 72, width = NA,
+                          taxrank, colorOpts, format = "png", dpi = default.dpi, width = NA,
                           plotType = "rectangle") {
   suppressMessages(library(ape));
   suppressMessages(library(viridis));
@@ -119,18 +119,17 @@ PlotTreeGraph <- function(mbSetObj, plotNm, distnm, clstDist, metadata,
   hc_tree <- hclust(dist.mat, method = clstDist)
   mbSetObj$imgSet$tree <- plotNm
 
+  nsamp <- nsamples(data)
   if (is.na(width)) {
-    w <- minH <- 650
-    myH <- nsamples(data) * 16 + 150
-
-    if (myH < minH) {
-      myH <- minH
-    }
-    w <- round(w / 72, 2)
-    h <- round(myH / 72, 2)
+    w <- 9.0
+    h <- max(9.0, nsamp * 0.35 + 2)
   }
 
-  Cairo::Cairo(file = plotNm, unit = "in", dpi = dpi, width = w, height = h, type = format, bg = "white")
+  # Scale text for DPI: larger pointsize for high DPI, normal for 72
+  pt <- if(dpi > 100) 16 else 12
+  lab_cex <- if(dpi > 100) 1.0 else 0.8
+
+  Cairo::Cairo(file = plotNm, unit = "in", dpi = dpi, width = w, height = h, type = format, bg = "white", pointsize = pt)
   par(mar = c(4, 2, 2, 10))
   clusDendro <- as.dendrogram(hc_tree)
 
@@ -167,17 +166,17 @@ PlotTreeGraph <- function(mbSetObj, plotNm, distnm, clstDist, metadata,
       labCol <- labelColors[a$label]
       attr(n, "nodePar") <-
         if (is.list(a$nodePar)) {
-          c(a$nodePar, lab.col = labCol, pch = NA)
+          c(a$nodePar, lab.col = labCol, lab.cex = lab_cex, pch = NA)
         } else {
-          list(lab.col = labCol, pch = NA)
+          list(lab.col = labCol, lab.cex = lab_cex, pch = NA)
         }
     }
     n
   }
 
   clusDendro <- dendrapply(clusDendro, colLab)
+  par(cex = 1.2)
   plot(clusDendro, horiz = T, axes = T, type = plotType)
-  par(cex = 1)
   legend.nm <- unique(as.character(hc.cls))
   legend.nm <- gsub("\\.", " ", legend.nm)
   legend("topleft", legend = legend.nm, pch = 15, col = unique(cols), bty = "n")
@@ -211,7 +210,7 @@ PlotTreeGraph <- function(mbSetObj, plotNm, distnm, clstDist, metadata,
 #' @export
 #' @import grid
 #' @import gridExtra
-PlotBoxData <- function(mbSetObj, boxplotName, feat, plotType, format = "png", dpi = 72) {
+PlotBoxData <- function(mbSetObj, boxplotName, feat, plotType, format = "png", dpi = default.dpi) {
   mbSetObj <- .get.mbSetObj(mbSetObj)
 
   suppressMessages(library(grid));
@@ -257,9 +256,9 @@ PlotBoxData <- function(mbSetObj, boxplotName, feat, plotType, format = "png", d
     }
   }
 
-  Cairo::Cairo(file = boxplotName, width = 720, height = 360, type = format, bg = "white", dpi = dpi)
+  Cairo::Cairo(file = boxplotName, unit = "in", dpi = dpi, width = 10.0, height = 5.0, type = format, bg = "white")
 
-    box <- ggplot2::ggplot(data, aes(x = data$class, y = data[, feat], fill = data$class))  
+    box <- ggplot2::ggplot(data, aes(x = data$class, y = data[, feat], fill = data$class))
     box1 <- ggplot2::ggplot(data, aes(x = data$class, data$log_feat, fill = data$class)) 
     
     if(plotType == "violin"){
@@ -291,7 +290,7 @@ PlotBoxData <- function(mbSetObj, boxplotName, feat, plotType, format = "png", d
   return(.set.mbSetObj(mbSetObj))
 }
 
-PlotBoxMultiData <- function(mbSetObj, boxplotName, analysis.var, feat, plotType, format = "png", dpi = 72) {
+PlotBoxMultiData <- function(mbSetObj, boxplotName, analysis.var, feat, plotType, format = "png", dpi = default.dpi) {
   mbSetObj <- .get.mbSetObj(mbSetObj)
 
   suppressMessages(library(grid));
@@ -374,16 +373,16 @@ PlotBoxMultiData <- function(mbSetObj, boxplotName, analysis.var, feat, plotType
   }
 
  
-    Cairo::Cairo(file = boxplotName, width = 720, height = 360, type = format, bg = "white", dpi = dpi)
+    Cairo::Cairo(file = boxplotName, unit = "in", dpi = dpi, width = 10.0, height = 5.0, type = format, bg = "white")
     grid.arrange(ggplotGrob(plot1), ggplotGrob(plot2), ncol = 2, nrow = 1, top = feat)
     dev.off()
-   
+
   return(.set.mbSetObj(mbSetObj))
 }
 
 
 
-PlotBoxMultiMetabo <- function(mbSetObj, boxplotName, analysis.var, feat,plotType, format = "png", dpi = 72) {
+PlotBoxMultiMetabo <- function(mbSetObj, boxplotName, analysis.var, feat,plotType, format = "png", dpi = default.dpi) {
   mbSetObj <- .get.mbSetObj(mbSetObj)
 
   suppressMessages(library(grid));
@@ -455,10 +454,10 @@ PlotBoxMultiMetabo <- function(mbSetObj, boxplotName, analysis.var, feat,plotTyp
   }
 
  
-    Cairo::Cairo(file = boxplotName, width = 720, height = 360, type = format, bg = "white", dpi = dpi)
+    Cairo::Cairo(file = boxplotName, unit = "in", dpi = dpi, width = 10.0, height = 5.0, type = format, bg = "white")
     grid.arrange(ggplotGrob(plot1), ggplotGrob(plot2), ncol = 2, nrow = 1, top = feat)
     dev.off()
-   
+
   message("metabo box plot done")
   return(.set.mbSetObj(mbSetObj))
 }
@@ -781,14 +780,8 @@ as_list <- to_plotly_list(p)
 
   pstatic <- CreateStaticHeatmap(data1sc, fzAnno, colors, nrows, x_start, y_start, x_spacing, annotation, sz, bf, showColnm, showRownm, doclust, smplDist, clstDist, fzCol, fzRow)
 
-  # DPI-aware width and height scaling
-  # Base DPI is 150 (the default), scale dimensions proportionally to maintain physical size
-  dpi_scale <- dpi / 150
-  w_scaled <- w * dpi_scale
-  h_scaled <- h * dpi_scale
-
   imgFile <- paste0(plotNm, "_dpi", dpi, ".", format)
-  Cairo::Cairo(file = imgFile, unit="px", dpi=dpi, width=w_scaled, height=h_scaled, type=format, bg="white");
+  Cairo::Cairo(file = imgFile, unit = "in", dpi = dpi, width = w / 150, height = h / 150, type = format, bg = "white");
   print(pstatic)
   dev.off()
 

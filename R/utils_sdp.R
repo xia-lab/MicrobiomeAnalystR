@@ -188,7 +188,7 @@ ReadShotgunBiomData <- function(mbSetObj, dataName, geneidtype, module.type, ism
 #'@export
 #'@import ggfortify
 PreparePCA4Shotgun <- function(mbSetObj, imgName,imgName2, format="json", inx1, inx2, inx3,
-                              variable, showlabel, format2d="png", dpi=72){
+                              variable, showlabel, format2d="png", dpi=default.dpi){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   suppressMessages(library(ggfortify));
@@ -227,7 +227,7 @@ PreparePCA4Shotgun <- function(mbSetObj, imgName,imgName2, format="json", inx1, 
   #sink();
 
   #2D
-  Cairo::Cairo(file=imgName2, width=720, height=500, type=format2d, bg="white",dpi=dpi);
+  Cairo::Cairo(file=imgName2, unit="in", dpi=dpi, width=10.0, height=6.9, type=format2d, bg="white");
   label = FALSE;
     
   if(showlabel=="samnm"){
@@ -272,7 +272,7 @@ PreparePCA4Shotgun <- function(mbSetObj, imgName,imgName2, format="json", inx1, 
 #'@export
 #'@import reshape
 PlotFunctionStack <-function(mbSetObj, summaryplot, functionlvl, abundcal, geneidtype, metadata,
-                            colpalopt, format="png", dpi=72){
+                            colpalopt, format="png", dpi=default.dpi){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
@@ -433,7 +433,7 @@ PlotFunctionStack <-function(mbSetObj, summaryplot, functionlvl, abundcal, genei
     x.colors <- rep(custom_col42,length.out=x);
   }
 
-  Cairo::Cairo(file=summaryplot,width=w, height=600, type=format, bg="white",dpi=dpi);
+  Cairo::Cairo(file=summaryplot, unit="in", dpi=dpi, width=w/72, height=8.3, type=format, bg="white");
   mbSetObj$imgSet$func.prof<-summaryplot;
 
   box <- ggplot(data,aes(x=step,y=value)) + 
@@ -620,6 +620,9 @@ filtKOmap <- function(include, fileName){
 #'@export
 PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",file.nm){
   mbSetObj <- .get.mbSetObj(mbSetObj);
+  # Ensure enrichment key is set for microbiome
+  mbSetObj$paramSet$koProj.type <- "mmp_mic";
+  .set.mbSetObj(mbSetObj);
   if(enrich.type == "hyper"){
   LoadKEGGKO_lib(category,contain);
     mbSetObj<-PerformKOEnrichAnalysis_List(mbSetObj, file.nm);
@@ -642,7 +645,7 @@ PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",fi
 
   hits <- lapply(current.mset, function(x){x[x %in% colnames(genemat)]});
   set.num <- unlist(lapply(current.mset, length), use.names = FALSE);
-  dat.in <- list(cls=phenotype, data=genemat, subsets=hits, set.num=set.num, filenm=file.nm);
+  dat.in <- list(cls=phenotype, data=genemat, subsets=hits, set.num=set.num, filenm=file.nm, category=category);
 
   my.fun <- function(){
         gt.obj <- globaltest::gt(dat.in$cls, dat.in$data, subsets=dat.in$subsets);
@@ -688,7 +691,15 @@ PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",fi
     nms <- rownames(my.res);
     hits <- hits[nms];
 
-    mbSetObj <- recordEnrTable(mbSetObj, "global", my.res, "KEGG", "Global Test", curr.mset, hits);
+    # .save.global.res is always called for KO/microbiome enrichment
+    # For MMP module, use mmp_mic key; otherwise use koProj.type or "global"
+    if(exists("moduleType") && moduleType == "mmp"){
+      enr.key <- "mmp_mic";
+    } else {
+      enr.key <- if(!is.null(mbSetObj$paramSet$koProj.type)) mbSetObj$paramSet$koProj.type else "global";
+    }
+    lib.name <- if(!is.null(dat.in$category)) paste0("KEGG ", tools::toTitleCase(dat.in$category)) else "KEGG";
+    mbSetObj <- recordEnrTable(mbSetObj, enr.key, my.res, lib.name, "Global Test", curr.mset, hits);
     mbSetObj <- Save2KEGGJSON(mbSetObj, hits, my.res, file.nm);
     return(.set.mbSetObj(mbSetObj));
 }

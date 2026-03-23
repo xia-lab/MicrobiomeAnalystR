@@ -10,6 +10,46 @@
 #############processing functions####################
 #####################################################
 
+#'Apply or remove AutoScale on normalized MMP data
+#'@description Reads from data.norm.orig (immutable normalized copy),
+#'applies or skips AutoScale, updates data.norm and data.proc for integration.
+#'See MMP DATA FLOW NOTE in general_proc.R PerformNormalization.
+#'@param mbSetObj Input the name of the mbSetObj
+#'@param applyAutoScale Character "true" or "false"
+#'@return mbSetObj
+ApplyAutoScale <- function(mbSetObj, applyAutoScale = "true"){
+
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+
+  # On first call, snapshot data.proc as data.norm.orig so we have an immutable source to revert to
+  if(is.null(current.proc$mic$data.norm.orig) && !is.null(current.proc$mic$data.proc)){
+    current.proc$mic$data.norm.orig <<- current.proc$mic$data.proc
+  }
+  if(is.null(current.proc$met$data.norm.orig) && !is.null(current.proc$met$data.proc)){
+    current.proc$met$data.norm.orig <<- current.proc$met$data.proc
+  }
+
+  if(!is.null(current.proc$mic$data.norm.orig)){
+    if(applyAutoScale == "true"){
+      current.proc$mic$data.norm <<- t(AutoScale(t(current.proc$mic$data.norm.orig)))
+    } else {
+      current.proc$mic$data.norm <<- current.proc$mic$data.norm.orig
+    }
+    current.proc$mic$data.proc <<- current.proc$mic$data.norm
+  }
+
+  if(!is.null(current.proc$met$data.norm.orig)){
+    if(applyAutoScale == "true"){
+      current.proc$met$data.norm <<- t(AutoScale(t(current.proc$met$data.norm.orig)))
+    } else {
+      current.proc$met$data.norm <<- current.proc$met$data.norm.orig
+    }
+    current.proc$met$data.proc <<- current.proc$met$data.norm
+  }
+
+  return(.set.mbSetObj(mbSetObj));
+}
+
 CreateMMPFakeFile <- function(mbSetObj,isNormalized="true",isNormalizedMet="true",module.type){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -419,13 +459,15 @@ CompareMet <- function(mbSetObj, analysisVar,alg="limma",plvl=0.05,ref, compr, s
   sample_data <-  mbSetObj$dataSet$sample_data
   sample_data <- sample_data[sample_data[[analysisVar]] %in% c(ref,compr),]
   sample_type <- mbSetObj$dataSet$meta_info
-  metdat <-current.proc$met$data.proc %>% 
-         .[,colnames(.)%in%sample_data$sample_id]
+  metdat <- if(!is.null(current.proc$met$data.norm)) current.proc$met$data.norm else current.proc$met$data.proc
+  # Use sample_id column if available, otherwise use rownames
+  samp.ids <- if(!is.null(sample_data$sample_id)) sample_data$sample_id else rownames(sample_data)
+  metdat <- metdat[, colnames(metdat) %in% samp.ids, drop=FALSE]
   metdat.de <- performLimma(metdat,sample_data,sample_type,analysisVar)
+
   fast.write(metdat.de, file="limma_output.csv");
   current.proc$met$res_deAnal <<- metdat.de
   mbSetObj$dataSet$metabolomics$resTable <- metdat.de
-  #print(colnames(metdat.de))
   sigfeat <- rownames(metdat.de)[metdat.de$P_value < plvl];
   sig.count <- length(sigfeat);
   if(sig.count == 0){
@@ -892,7 +934,7 @@ MicIDmap <- function(netModel,predDB,taxalvl="all"){
     }
     
   }else if(netModel=="keggNet"){
-    if(taxalvl=="default"){
+    if(taxalvl=="default" || is.null(mic.vec[[taxalvl]])){
       taxalvl = names(mic.vec)[length(mic.vec)]
     }
     
@@ -1290,7 +1332,7 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
                           colname="T",rowname="T", fontsize_col=10, fontsize_row=10,
                           sign, cor.thresh=0.5,corp.thresh=0.05,
                           potential.thresh=0.5,predpval.thresh=0.05, topN=50,
-                          var.inx=NA, border=T, width=NA, dpi=72){
+                          var.inx=NA, border=T, width=NA, dpi=default.dpi){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   suppressMessages(library(iheatmapr));
@@ -1539,11 +1581,9 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
     dend_col <- hclust(dist(t(data1), method = smplDist), method = clstDist)
     p <- p %>% add_col_dendro(dend_col)
   }
-   options(device = "pdf") 
+   options(device = "pdf")
   as_list <- to_plotly_list(p)
-   pwidget <- to_widget(p)
-   save(pwidget, file = plotwidget)
- 
+
   ### add the layer for  annotation
   if(exists("annols")){    
     annht <- as_list$layout$annotations
@@ -1616,7 +1656,12 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
   as_json <- paste0("{ \"x\":", as_json, ",\"evals\": [],\"jsHooks\": []}")
   
   write(as_json, plotjs)
-  
+
+  # Save annotated widget — inject annotations so stars/symbols appear in report
+  pwidget <- to_widget(p)
+  pwidget$x$layout$annotations <- as_list$layout$annotations
+  save(pwidget, file = plotwidget)
+
   if(is.null(current.msg)){
     current.msg<<-"null"
   }
@@ -1630,7 +1675,7 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
   mbSetObj$analSet$integration$sign <- sign
   mbSetObj$imgSet$heatmap_cormmp <- plotwidget
 
-  # Store image in reportSet for slide generation based on htMode
+  # Store image path in reportSet based on htMode
   if(htMode == "corrht"){
     mbSetObj$imgSet$reportSet$corrht <- plotNm
   }else if(htMode == "predht"){
@@ -1699,7 +1744,15 @@ PrepareOTUQueryJson <- function(mbSetObj,taxalvl,contain="bac"){
 
 PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,contain="hsabac",enrich.type){
   mbSetObj <- .get.mbSetObj(mbSetObj);
- 
+
+  # Set enrichment key based on data type for proper storage
+  if(dataType %in% c("peak", "metabolite")){
+    mbSetObj$paramSet$koProj.type <- "mmp_met";
+  } else if(dataType %in% c("ko", "otu")){
+    mbSetObj$paramSet$koProj.type <- "mmp_mic";
+  }
+  .set.mbSetObj(mbSetObj);
+
   if(enrich.type == "hyper"){
     if(dataType=="metabolite"){
       mbSetObj <- PerformMetListEnrichment(mbSetObj, contain, file.nm);
@@ -1798,8 +1851,8 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
     
     hits <- lapply(current.set, function(x){x[x %in% colnames(datmat)]});
     set.num <- unlist(lapply(current.set, length), use.names = FALSE);
-    dat.in <- list(cls=phenotype, data=datmat, subsets=hits, set.num=set.num, filenm=file.nm);
-    
+    dat.in <- list(cls=phenotype, data=datmat, subsets=hits, set.num=set.num, filenm=file.nm, category=category);
+
   }else if(dataType=="ko"){
     if(contain=="bac"){
       current.set <- qs::qread(paste0(lib.path.mmp,"ko_set_bac.qs"))
@@ -1829,10 +1882,10 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
     
     hits <- lapply(current.set, function(x){x[x %in% colnames(datmat)]});
     set.num <- unlist(lapply(current.set, length), use.names = FALSE);
-    dat.in <- list(cls=phenotype, data=datmat, subsets=hits, set.num=set.num, filenm=file.nm);
+    dat.in <- list(cls=phenotype, data=datmat, subsets=hits, set.num=set.num, filenm=file.nm, category=category);
   }
-  
-  
+
+
   my.fun <- function(){
     gt.obj <- globaltest::gt(dat.in$cls, dat.in$data, subsets=dat.in$subsets);
     gt.res <- globaltest::result(gt.obj);
@@ -1860,7 +1913,7 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
   }
   
   
-  dat.in <- list(cls=phenotype, data=datmat, subsets=hits, set.num=set.num, filenm=file.nm , my.fun=my.fun);
+  dat.in <- list(cls=phenotype, data=datmat, subsets=hits, set.num=set.num, filenm=file.nm, category=category, my.fun=my.fun);
   
   shadow_save(dat.in, file="dat.in.qs");
   return(1);
@@ -1923,8 +1976,8 @@ enrich2json <- function(){
   sink();
 
   mbSetObj <- .get.mbSetObj(NA);
-  
-  mbSetObj <- recordEnrTable(mbSetObj, "mmp", resTable, "KEGG", "Global Test");
+  enr.key <- if(!is.null(mbSetObj$paramSet$koProj.type)) mbSetObj$paramSet$koProj.type else "mmp_met";
+  mbSetObj <- recordEnrTable(mbSetObj, enr.key, resTable, "KEGG", "Global Test");
 
   # write csv
   fast.write(resTable, file=paste(file.nm, ".csv", sep=""), row.names=F);
@@ -2158,11 +2211,11 @@ GetAssociationPlot <- function(type,keggid,koid,micDataType,metIDType,taxalvl,im
       library(cowplot)
       imgNm.bar <- paste("barplot_",imgNm,  ".png",sep="");
       imgNm.circle <- paste("circleplot_",imgNm,  ".png",sep="");
-      Cairo(file=imgNm.bar, width=wb, height=hb, type="png", bg="white", unit="in", dpi=100);
+      Cairo(file=imgNm.bar, width=wb, height=hb, type="png", bg="white", unit="in", dpi=default.dpi);
       grid.arrange(grobs =barplot, ncol=colnm)
       dev.off();
       if(exists("circleplot")){
-        Cairo(file=imgNm.circle, width=wc, height=hc, type="png", bg="white", unit="in", dpi=100);
+        Cairo(file=imgNm.circle, width=wc, height=hc, type="png", bg="white", unit="in", dpi=default.dpi);
         grid.arrange(grobs =circleplot, ncol=colnm)
         dev.off();
       }
@@ -2234,7 +2287,7 @@ GetAssociationPlot <- function(type,keggid,koid,micDataType,metIDType,taxalvl,im
     library(ggplot2);
     library(viridis);
     imgNm <- paste(imgNm,  ".png",sep="");
-    Cairo(file=imgNm, width=5, height=5, type="png", bg="white", unit="in", dpi=100);
+    Cairo(file=imgNm, width=5, height=5, type="png", bg="white", unit="in", dpi=default.dpi);
     p1 <- ggplot(data.plot, aes(x=mic, y=`-log(p)`,fill=`-log(p)`)) + 
       scale_fill_viridis_c(option = "plasma",alpha = 0.8)+
       geom_bar(stat = "identity") + xlab("")+
@@ -2397,11 +2450,11 @@ UpdateAssociationPlot <- function(imgNm,topNum=10){
   library(cowplot)
   imgNm.bar <- paste("barplot_",imgNm,  ".png",sep="");
   imgNm.circle <- paste("circleplot_",imgNm,  ".png",sep="");
-  Cairo(file=imgNm.bar, width=wb, height=hb, type="png", bg="white", unit="in", dpi=100);
+  Cairo(file=imgNm.bar, width=wb, height=hb, type="png", bg="white", unit="in", dpi=default.dpi);
   grid.arrange(grobs =barplot, ncol=colnm)
   dev.off();
   if(exists("circleplot")){
-    Cairo(file=imgNm.circle, width=wc, height=hc, type="png", bg="white", unit="in", dpi=100);
+    Cairo(file=imgNm.circle, width=wc, height=hc, type="png", bg="white", unit="in", dpi=default.dpi);
     grid.arrange(grobs =circleplot, ncol=colnm)
     dev.off();
   }
@@ -2450,12 +2503,105 @@ tuneKOmap <- function(){
 
 DoDimensionReductionIntegrative <- function(mbSetObj, reductionOpt, method="globalscore", dimn,analysisVar,diabloPar=0.2){
   if(!exists("my.reduce.dimension")){ # public web on same user dir
-    .load.scripts.on.demand("utils_dimreduction.Rc");    
+    .load.scripts.on.demand("utils_dimreduction.Rc");
   }
   if(analysisVar=="null"){
     analysisVar = current.proc$meta_para$analysis.var
   }
   return(my.reduce.dimension(mbSetObj, reductionOpt, method,dimn, analysisVar,diabloPar));
+}
+
+GetMofaRes <- function(){
+  if(!file.exists("mofa_result.qs")) return(0)
+  mofa_result <- qs::qread("mofa_result.qs")
+  tax_name <- mofa_result$tax_name
+  met_features <- mofa_result$met_features
+  loading_ids <- mofa_result$loading_ids
+
+  mofa_pos <- mofa_result$pos.xyz
+  mofa_loading <- mofa_result$loading.pos.xyz
+
+  mofa_pos_xyz <- mofa_pos[, 1:min(3, ncol(mofa_pos)), drop=FALSE]
+  pos.xyz <- setNames(list(mofa_pos_xyz), tax_name)
+
+  num_factors <- ncol(mofa_loading) - 1
+  loading_xyz <- mofa_loading[, 1:num_factors, drop=FALSE]
+  loading.pos.xyz <- setNames(list(as.data.frame(loading_xyz)), tax_name)
+  loadingNames <- setNames(list(loading_ids), tax_name)
+
+  omics_vec <- ifelse(loading_ids %in% met_features, "metabolomics", "microbiome")
+  var.exp <- mofa_result$var.exp
+
+  sel <- if(exists("mofa.selected.factors")) mofa.selected.factors else c(1,2,3)
+  misc <- setNames(list(list(
+    pct2 = list(microbiome = unname(var.exp[sel, 1] * 100), metabolomics = unname(var.exp[sel, 2] * 100),
+                both = unname(rowSums(var.exp[sel, , drop=FALSE]) * 100)),
+    mofa_factors = sel,
+    var.exp = var.exp
+  )), tax_name)
+
+  mbSetObj <- .get.mbSetObj(NA)
+  newmeta <- current.proc$meta_para$sample_data
+
+  mofa.res <- list()
+  mofa.res$pos.xyz <- pos.xyz
+  mofa.res$loading.pos.xyz <- loading.pos.xyz
+  mofa.res$loadingNames <- loadingNames
+  mofa.res$misc <- misc
+  mofa.res$newmeta <- newmeta
+  mofa.res$omics_vec <- omics_vec
+
+  combined.res <- qs::qread("combined.res.qs")
+
+  hit.inx <- mapply(function(x,y) match(x,y), loadingNames, combined.res$enrich_ids)
+  loadingSymbols <- mapply(function(x,y) y[x], hit.inx, combined.res$enrich_ids)
+  if(!is.list(loadingSymbols)){
+    loadingSymbols <- setNames(list(loadingSymbols), names(loadingNames))
+  }
+
+  pos.xyz <- lapply(pos.xyz, function(x) as.data.frame(x)[,1:min(3,ncol(x)), drop=FALSE])
+  pos.xyz <- lapply(pos.xyz, function(x) unitAutoScale(x))
+  pos.xyz <- lapply(pos.xyz, "rownames<-", rownames(mofa_pos))
+  loading.pos.xyz <- lapply(loading.pos.xyz, as.data.frame)
+  loading.pos.xyz <- lapply(loading.pos.xyz, unitAutoScale)
+
+  mofa.res$pos.xyz <- pos.xyz
+  mofa.res$loading.pos.xyz <- loading.pos.xyz
+  mofa.res$loadingNames <- loadingNames
+  mofa.res$loading.enrich <- loadingSymbols
+
+  shadow_save(mofa.res, "mofa.res.full.qs")
+  shadow_save(mofa.res, "mofa.res.qs")
+
+  reductionOptGlobal <<- "mofa"
+  mbSetObj$analSet$dimrdc <- "mofa"
+  .set.mbSetObj(mbSetObj)
+  return(1)
+}
+
+ApplyMofaFactorSelection <- function(){
+  if(!exists("mofa.selected.factors")) return(1)
+  # Read full 5-factor data
+  mofa.res <- shadow_qread("mofa.res.full.qs")
+  sel <- mofa.selected.factors
+  for(lvl in names(mofa.res$pos.xyz)){
+    pos <- mofa.res$pos.xyz[[lvl]]
+    ld <- mofa.res$loading.pos.xyz[[lvl]]
+    if(max(sel) <= ncol(pos)){
+      mofa.res$pos.xyz[[lvl]] <- unitAutoScale(as.data.frame(pos[, sel, drop=FALSE]))
+      mofa.res$loading.pos.xyz[[lvl]] <- unitAutoScale(as.data.frame(ld[, sel, drop=FALSE]))
+    }
+    # Update pct2 to reflect selected factors
+    var.exp <- mofa.res$misc[[lvl]]$var.exp
+    mofa.res$misc[[lvl]]$pct2 <- list(
+      microbiome = unname(var.exp[sel, 1] * 100),
+      metabolomics = unname(var.exp[sel, 2] * 100),
+      both = unname(rowSums(var.exp[sel, , drop=FALSE]) * 100)
+    )
+    mofa.res$misc[[lvl]]$mofa_factors <- sel
+  }
+  shadow_save(mofa.res, "mofa.res.qs")
+  return(1)
 }
 
 doScatterJsonPair <- function(filenm,analysisVar,taxrank="genus"){
@@ -2817,7 +2963,8 @@ PerformMetListEnrichment <- function(mbSetObj, contain,file.nm){
     return(x)
   })
   
-  mbSetObj <- recordEnrTable(mbSetObj, "mmp", resTable, "KEGG", "Overrepresentation Analysis", current.set, hits.query);
+  enr.key <- if(!is.null(mbSetObj$paramSet$koProj.type)) mbSetObj$paramSet$koProj.type else "mmp_met";
+  mbSetObj <- recordEnrTable(mbSetObj, enr.key, resTable, "KEGG", "Overrepresentation Analysis", current.set, hits.query);
  
   json.res <- list(hits.query =convert2JsonList(hits.query),
                    path.nms = path.nms,
@@ -2886,7 +3033,7 @@ CreatM2MHeatmapList<-function(mbSetObj, plotNm,  format="png",
                               clustRow="T", clustCol="T", 
                               colname="T",rowname="T", fontsize_col=10, fontsize_row=10,
                               potential.thresh=0.5,
-                              var.inx=NA, border=T, width=NA, dpi=72){
+                              var.inx=NA, border=T, width=NA, dpi=default.dpi){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   suppressMessages(library(iheatmapr));
@@ -3163,11 +3310,11 @@ GetPredictionPlot <- function(mbSetObj, keggid,imgNm,predDB="agora",potentialThr
   library(cowplot)
   imgNm.bar <- paste("barplot_",imgNm,  ".png",sep="");
   imgNm.circle <- paste("circleplot_",imgNm,  ".png",sep="");
-  Cairo(file=imgNm.bar, width=wb, height=hb, type="png", bg="white", unit="in", dpi=100);
+  Cairo(file=imgNm.bar, width=wb, height=hb, type="png", bg="white", unit="in", dpi=default.dpi);
   grid.arrange(grobs =barplot, ncol=colnm)
   dev.off();
   if(exists("circleplot")){
-    Cairo(file=imgNm.circle, width=wc, height=hc, type="png", bg="white", unit="in", dpi=100);
+    Cairo(file=imgNm.circle, width=wc, height=hc, type="png", bg="white", unit="in", dpi=default.dpi);
     grid.arrange(grobs =circleplot, ncol=colnm)
     dev.off();
   }
@@ -3283,11 +3430,11 @@ UpdatePredictionPlot <- function(mbSetObj,imgNm,topNum=10){
   library(cowplot)
   imgNm.bar <- paste("barplot_",imgNm,  ".png",sep="");
   imgNm.circle <- paste("circleplot_",imgNm,  ".png",sep="");
-  Cairo(file=imgNm.bar, width=wb, height=hb, type="png", bg="white", unit="in", dpi=100);
+  Cairo(file=imgNm.bar, width=wb, height=hb, type="png", bg="white", unit="in", dpi=default.dpi);
   grid.arrange(grobs =barplot, ncol=colnm)
   dev.off();
   if(exists("circleplot")){
-    Cairo(file=imgNm.circle, width=wc, height=hc, type="png", bg="white", unit="in", dpi=100);
+    Cairo(file=imgNm.circle, width=wc, height=hc, type="png", bg="white", unit="in", dpi=default.dpi);
     grid.arrange(grobs =circleplot, ncol=colnm)
     dev.off();
   }
@@ -3316,7 +3463,7 @@ UpdatePredictionPlot <- function(mbSetObj,imgNm,topNum=10){
 ###########################################################
 ###########################################################
 
-PlotCorrHistogram <- function(imgNm, dpi=72, format="png"){
+PlotCorrHistogram <- function(imgNm, dpi=default.dpi, format="png"){
   dpi<-as.numeric(dpi)
   imgNm <- paste(imgNm, "dpi", dpi, ".", format, sep="");
   
@@ -3355,7 +3502,7 @@ PlotCorrHistogram <- function(imgNm, dpi=72, format="png"){
 }
 
 
-PlotDiagnostic <- function(imgName, dpi=72, format="png",alg, taxrank="OTU"){
+PlotDiagnostic <- function(imgName, dpi=default.dpi, format="png",alg, taxrank="OTU"){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   dpi <- as.numeric(dpi);
   imgNm <- paste(imgName,  ".", format, sep="");
@@ -3412,6 +3559,34 @@ PlotDiagnostic <- function(imgName, dpi=72, format="png",alg, taxrank="OTU"){
 
     plot(perf.res)
     mbSetObj$imgSet$diablo$diagnostic <- imgNm
+  } else if(alg == "mofa"){
+    library(data.table)
+    mofa.res <- qs::qread("mofa.res.qs")
+    var.exp <- mofa.res$misc[[1]]$var.exp
+    if(!is.null(var.exp)){
+      df <- as.data.frame(var.exp)
+      colnames(df) <- gsub("^mic$", "Microbiome", colnames(df))
+      colnames(df) <- gsub("^met$", "Metabolomics", colnames(df))
+      df$Factor <- rownames(df)
+      if(is.null(df$Factor) || all(is.na(df$Factor))) df$Factor <- paste0("Factor", 1:nrow(df))
+      df_long <- as.data.frame(data.table::melt(as.data.table(df), id.vars="Factor",
+                                                 variable.name="View", value.name="Variance"))
+      df_long$Variance <- df_long$Variance * 100
+      df_long$Factor <- gsub("Factor", "Factor ", df_long$Factor)
+      library(ggplot2)
+      p <- ggplot(df_long, aes(x=Factor, y=View, fill=Variance)) +
+        geom_tile(color="grey30", linewidth=0.8) +
+        geom_text(aes(label=sprintf("%.2f%%", Variance)), size=3.5, color="black") +
+        scale_fill_gradient(low="white", high="#C0392B", name="Var. (%)") +
+        labs(x="", y="", title="Variance Explained per Factor") +
+        theme_minimal(base_size=12) +
+        theme(axis.text.x=element_text(angle=0, hjust=0.5), plot.title=element_text(hjust=0.5, size=13), panel.grid=element_blank())
+      print(p)
+    } else {
+      plot.new()
+      text(0.5, 0.5, "Variance explained not available", cex=1.5)
+    }
+    mbSetObj$imgSet$mofa$diagnostic <- imgNm
   }
   dev.off();
   .set.mbSetObj(mbSetObj)
@@ -3419,7 +3594,7 @@ PlotDiagnostic <- function(imgName, dpi=72, format="png",alg, taxrank="OTU"){
 }
 
 
-PlotDiagnosticPca <- function(imgNm, dpi=72, format="png",type="diablo", taxrank="OTU"){
+PlotDiagnosticPca <- function(imgNm, dpi=default.dpi, format="png",type="diablo", taxrank="OTU"){
   #save.image("diag.RData");
   mbSetObj <- .get.mbSetObj(mbSetObj);
   require("Cairo");
@@ -3481,12 +3656,32 @@ PlotDiagnosticPca <- function(imgNm, dpi=72, format="png",type="diablo", taxrank
     print(p)
     dev.off();
     mbSetObj$imgSet$procrustes$pca <- imgNm
+  } else if(type == "mofa"){
+    mofa.res <- qs::qread("mofa.res.qs")
+    pos <- mofa.res$pos.xyz[[1]]
+    meta <- mofa.res$newmeta
+    common_samples <- intersect(rownames(pos), rownames(meta))
+    pos <- pos[common_samples, , drop=FALSE]
+    var.exp <- mofa.res$misc[[1]]$var.exp
+    xlab <- "Factor 1"; ylab <- "Factor 2"
+    if(!is.null(var.exp)){
+      xlab <- sprintf("Factor 1 (%.1f%%)", sum(var.exp[1,]) * 100)
+      ylab <- sprintf("Factor 2 (%.1f%%)", if(nrow(var.exp)>=2) sum(var.exp[2,]) * 100 else 0)
+    }
+    df <- data.frame(F1=pos[,1], F2=if(ncol(pos)>=2) pos[,2] else 0, Conditions=meta[common_samples,1])
+    Cairo(file=imgNm, unit="in", dpi=dpi, width=8, height=6, type=format, bg="white")
+    p <- ggplot(df, aes(x=F1, y=F2, color=Conditions)) +
+      geom_point(size=3, alpha=0.8) + stat_ellipse(level=0.95, linetype="dashed") +
+      theme_bw(base_size=12) + labs(x=xlab, y=ylab, title="MOFA Sample Space")
+    print(p)
+    dev.off()
+    mbSetObj$imgSet$mofa$pca <- imgNm
   }
   .set.mbSetObj(mbSetObj)
 }
 
 
-PlotDiagnosticLoading <- function(imgNm, dpi=72, format="png",type="diablo",taxrank="OTU"){
+PlotDiagnosticLoading <- function(imgNm, dpi=default.dpi, format="png",type="diablo",taxrank="OTU"){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   require("Cairo");
   library(ggplot2)
@@ -3780,22 +3975,28 @@ ComputeEncasingDiablo <- function(filenm, type, names.vec, level=0.95, omics="NA
   names = strsplit(names.vec, "; ")[[1]]
   
 
- # if(reductionOptGlobal %in% c("diablo", "spls") || omics != "NA"){
- if(reductionOptGlobal %in% c("diablo", "spls")){
+ if(reductionOptGlobal == "mofa"){
+    if(!exists("mofa.res")) mofa.res <- qs::qread("mofa.res.qs")
+    if(grepl("pca_", omics, fixed=TRUE)){
+      pos.xyz <- mofa.res$pca.scatter[[taxalvl]][[omics]]$score/1000
+    }else{
+      pos.xyz <- mofa.res$pos.xyz[[taxalvl]]
+    }
+  } else if(reductionOptGlobal %in% c("diablo", "spls")){
     if(!exists("diablo.res")){
       diablo.res <- qs::qread("diablo.res.qs")
     }
     if(grepl("pca_", omics, fixed=TRUE)){
       pos.xyz<-diablo.res$pca.scatter[[taxalvl]][[omics]]$score/1000
     }else{
-      
+
       if(omics == "microbiome"){
         pos.xyz = diablo.res$pos.xyz[[taxalvl]]
       }else{
         pos.xyz = diablo.res$pos.xyz2[[taxalvl]]
       }
     }
-    
+
   }else{
     procrustes.res <- qs::qread("procrustes.res.qs")
     pos.xyz = procrustes.res$pos.xyz[[taxalvl]]
@@ -3847,7 +4048,14 @@ ComputeEncasingBatchDiablo <- function(filenm, type, groups_json, level = 0.95, 
     groups_list <- split(groups_list, seq_len(nrow(groups_list)))
   }
 
-  if(reductionOptGlobal %in% c("diablo", "spls")){
+  if(reductionOptGlobal == "mofa"){
+    if(!exists("mofa.res")) mofa.res <- qs::qread("mofa.res.qs")
+    if(grepl("pca_", omics, fixed=TRUE)){
+      pos.xyz <- mofa.res$pca.scatter[[taxalvl]][[omics]]$score/1000
+    }else{
+      pos.xyz <- mofa.res$pos.xyz[[taxalvl]]
+    }
+  } else if(reductionOptGlobal %in% c("diablo", "spls")){
     if(!exists("diablo.res")){
       diablo.res <- qs::qread("diablo.res.qs")
     }

@@ -328,7 +328,7 @@ setIncludeMeta <- function(metaBool){
     paramSet$meta.selected <- metaBool;
     saveSet(paramSet, "paramSet");
 }
-PlotSelectedFeature<-function(mbSetObj, imgName, feat.id, format="png", sel.meta="", dpi=72){
+PlotSelectedFeature<-function(mbSetObj, imgName, feat.id, format="png", sel.meta="", dpi=default.dpi){
   suppressMessages(library(grid));
   suppressMessages(library(gridExtra));
 
