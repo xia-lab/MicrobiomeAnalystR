@@ -1846,8 +1846,29 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
     met.map <- met.map[!(is.na(met.map$Node)),]
     met.map$include = ifelse(met.map$Match %in% unique(unlist(current.set)),T,F)
     shadow_save(met.map,"keggNet.met.map.qs")
-    colnames(metmat) <- met.map$Match[match(colnames(metmat),met.map$Query)]
-    datmat <- metmat[,which(colnames(metmat)!='')]
+
+    # Store original column names in case mapping fails
+    orig_colnames <- colnames(metmat)
+
+    # Map column names, handling NA/empty results
+    mapped_colnames <- met.map$Match[match(colnames(metmat),met.map$Query)]
+
+    # If mapping produces all NAs or empty strings, keep original names
+    if(all(is.na(mapped_colnames) | mapped_colnames == '')) {
+      warning("[MMP] Column name mapping failed, using original metabolite IDs")
+      datmat <- metmat
+    } else {
+      # Replace NA/empty with original names to preserve columns
+      mapped_colnames[is.na(mapped_colnames) | mapped_colnames == ''] <-
+        orig_colnames[is.na(mapped_colnames) | mapped_colnames == '']
+      colnames(metmat) <- mapped_colnames
+      datmat <- metmat[,which(colnames(metmat) != ''), drop=FALSE]
+    }
+
+    # Ensure datmat has valid column names for globaltest
+    if(is.null(colnames(datmat)) || length(colnames(datmat)) == 0) {
+      stop("[PRO-STANDARD] Computation failed: colnames missing in alternative design matrix. Please check metabolite ID mapping.")
+    }
     
     hits <- lapply(current.set, function(x){x[x %in% colnames(datmat)]});
     set.num <- unlist(lapply(current.set, length), use.names = FALSE);
@@ -1887,6 +1908,11 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
 
 
   my.fun <- function(){
+    # Validate data matrix has column names before calling globaltest
+    if(is.null(colnames(dat.in$data)) || length(colnames(dat.in$data)) == 0) {
+      stop("[PRO-STANDARD] Computation failed: colnames missing in alternative design matrix")
+    }
+
     gt.obj <- globaltest::gt(dat.in$cls, dat.in$data, subsets=dat.in$subsets);
     gt.res <- globaltest::result(gt.obj);
     
