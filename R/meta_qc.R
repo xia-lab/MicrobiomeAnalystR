@@ -224,7 +224,7 @@ PerformBatchCorrection <- function(){
     shadow_save(merged.data, "merged.data.qs");
   }
   dat.in <- list(my.fun=my.fun);
-  qs:::qsave(dat.in, file="dat.in.qs");
+  qs::qsave(dat.in, file="dat.in.qs");
   return(1);
 }
 

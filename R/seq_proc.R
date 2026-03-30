@@ -10,22 +10,48 @@ MessageOutput <- function(msg, eol = "\n"){
 }
 
 PerformSeqCheck <- function(home_dir = ""){
-  require(dada2)
-  
+
   path <- home_dir
-  list.files(path)
   fnFs <- sort(list.files(paste0(path, "/upload"), pattern="_R1.fastq", full.names = TRUE))
   fnRs <- sort(list.files(paste0(path, "/upload"), pattern="_R2.fastq", full.names = TRUE))
-  
-  if(length(fnRs)>=2){
-    p1 <- plotQualityProfile(c(fnFs[1:2], fnRs[1:2]))
-  } else if(length(fnRs)==1){
-    p1 <- plotQualityProfile(c(fnFs[1], fnRs[1]))
-  } else {
-    p1 <- plotQualityProfile(fnFs[1:2])
+
+  if (length(fnFs) == 0) {
+    stop("No FASTQ files found in ", paste0(path, "/upload"))
   }
+
+  # plotQualityProfile requires dada2 — isolate in subprocess on Pro
+  if (exists("rsclient_isolated_exec", mode = "function")) {
+    p1 <- rsclient_isolated_exec(
+      func_body = function(input_data) {
+        require(dada2)
+        fnFs <- input_data$fnFs
+        fnRs <- input_data$fnRs
+        if (length(fnRs) >= 2) {
+          dada2::plotQualityProfile(c(fnFs[1:2], fnRs[1:2]))
+        } else if (length(fnRs) == 1) {
+          dada2::plotQualityProfile(c(fnFs[1], fnRs[1]))
+        } else {
+          dada2::plotQualityProfile(fnFs[1:min(2, length(fnFs))])
+        }
+      },
+      input_data = list(fnFs = fnFs, fnRs = fnRs),
+      packages = c("dada2", "qs"),
+      timeout = 300,
+      output_type = "qs"
+    )
+  } else {
+    require(dada2)
+    if (length(fnRs) >= 2) {
+      p1 <- plotQualityProfile(c(fnFs[1:2], fnRs[1:2]))
+    } else if (length(fnRs) == 1) {
+      p1 <- plotQualityProfile(c(fnFs[1], fnRs[1]))
+    } else {
+      p1 <- plotQualityProfile(fnFs[1:min(2, length(fnFs))])
+    }
+  }
+
   shadow_save(p1, "diagnotics_plot_src.qs");
-  Cairo::Cairo(file = paste0("diagnotics.png"), unit = "in", dpi = 96, width = 22.2, height = 17.4, type = "png", bg = "white")
+  Cairo::Cairo(file = "diagnotics.png", unit = "in", dpi = 96, width = 22.2, height = 17.4, type = "png", bg = "white")
   print(p1)
   dev.off()
   return(1)
@@ -455,27 +481,35 @@ composeParamFun <- function(trimLeft, trimRight,
   
   dataObj$funs <- funs;
   dataObj <<- dataObj;
+  # Save to standard home (getwd) — pipeline script also uses standard home as wd
   save(dataObj, file = "dataObj_param.rda")
   return(1);
 }
 
 sweaveRScript4exec <- function(users.path){
+  # Resolve absolute path to seq_proc.R for the external R process
+  seq_proc_abs <- NULL
+  if (exists(".rscripts.abs.path", envir = .GlobalEnv)) {
+    seq_proc_abs <- file.path(.rscripts.abs.path, "MicrobiomeAnalystR", "R", "seq_proc.R")
+  }
+  if (is.null(seq_proc_abs) || !file.exists(seq_proc_abs)) {
+    seq_proc_abs <- normalizePath("../../rscripts/MicrobiomeAnalystR/R/seq_proc.R", mustWork = FALSE)
+  }
+
   str <- paste0('library(dada2)');
-  
-  # Set working dir & funcs to be used
-  str <- paste0(str, ";\n", "setwd(\'",users.path,"\')");
+
+  # Working dir = standard home (where output and upload/ symlinks are)
+  str <- paste0(str, ";\n", "setwd(\'", getwd(), "\')");
+  # Source public seq_proc.R directly — gets public functions, not Pro wrappers
+  str <- paste0(str, ";\n", "source('", seq_proc_abs, "')");
   str <- paste0(str, ";\n", "load('dataObj_param.rda')");
   str <- paste0(str, ";\n", "dataObj <<- dataObj");
-  str <- paste0(str, ";\n", "MessageOutput <- dataObj[['funs']][['MessageOutput']]");
-  str <- paste0(str, ";\n", "PerformSeqCheck <- dataObj[['funs']][['PerformSeqCheck']]");
-  str <- paste0(str, ";\n", "PerformSeqImport <- dataObj[['funs']][['PerformSeqImport']]");
-  str <- paste0(str, ";\n", "PerformSeqProcessing <- dataObj[['funs']][['PerformSeqProcessing']]");
-  
+
   ## Construct the exec pipeline
-  str <- paste0(str, ';\n',  "PerformSeqImport('.')")
+  str <- paste0(str, ';\n',  "PerformSeqImport('", getwd(), "')")
   str <- paste0(str, ';\n',  "PerformSeqProcessing()")
-  
-  # sink command for running
+
+  # Write script to standard home (getwd)
   sink("ExecuteRaw16Seq.R");
   cat(str);
   sink();
@@ -512,14 +546,15 @@ sweaveBash4exec <- function(users.path){
   str <- paste0(str, ';\n',  "PerformSeqImport('.')")
   str <- paste0(str, ';\n',  "PerformSeqProcessing()")
   
-  # sink command for running
-  sink("ExecuteRaw16Seq.sh");
-  
+  # Write bash script to raw data folder (NOT current getwd)
+  script_path <- file.path(users.path, "ExecuteRaw16Seq.sh")
+  sink(script_path);
+
   cat(conf_inf);
   cat(paste0("\nsrun R -e \"\n", str, "\n\""));
-  
+
   sink();
-  
+
   return(1)
 }
 
@@ -587,8 +622,9 @@ sweaveBash4execPro <- function(users.path, isfromGoogle = FALSE, source_path){
   str <- paste0(str, ';\n',  "PerformSeqImport('.')")
   str <- paste0(str, ';\n',  "PerformSeqProcessing()")
 
-  # sink command for running
-  sink("ExecuteRaw16Seq.sh");
+  # Write bash script to raw data folder (NOT current getwd)
+  script_path <- file.path(users.path, "ExecuteRaw16Seq.sh")
+  sink(script_path);
 
   cat(conf_inf);
   if(download_script!=""){
