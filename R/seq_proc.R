@@ -19,35 +19,14 @@ PerformSeqCheck <- function(home_dir = ""){
     stop("No FASTQ files found in ", paste0(path, "/upload"))
   }
 
-  # plotQualityProfile requires dada2 — isolate in subprocess on Pro
-  if (exists("rsclient_isolated_exec", mode = "function")) {
-    p1 <- rsclient_isolated_exec(
-      func_body = function(input_data) {
-        require(dada2)
-        fnFs <- input_data$fnFs
-        fnRs <- input_data$fnRs
-        if (length(fnRs) >= 2) {
-          dada2::plotQualityProfile(c(fnFs[1:2], fnRs[1:2]))
-        } else if (length(fnRs) == 1) {
-          dada2::plotQualityProfile(c(fnFs[1], fnRs[1]))
-        } else {
-          dada2::plotQualityProfile(fnFs[1:min(2, length(fnFs))])
-        }
-      },
-      input_data = list(fnFs = fnFs, fnRs = fnRs),
-      packages = c("dada2", "qs"),
-      timeout = 300,
-      output_type = "qs"
-    )
+  # Raw data processing runs on local/Docker/SLURM — no memory isolation needed
+  require(dada2)
+  if (length(fnRs) >= 2) {
+    p1 <- plotQualityProfile(c(fnFs[1:2], fnRs[1:2]))
+  } else if (length(fnRs) == 1) {
+    p1 <- plotQualityProfile(c(fnFs[1], fnRs[1]))
   } else {
-    require(dada2)
-    if (length(fnRs) >= 2) {
-      p1 <- plotQualityProfile(c(fnFs[1:2], fnRs[1:2]))
-    } else if (length(fnRs) == 1) {
-      p1 <- plotQualityProfile(c(fnFs[1], fnRs[1]))
-    } else {
-      p1 <- plotQualityProfile(fnFs[1:min(2, length(fnFs))])
-    }
+    p1 <- plotQualityProfile(fnFs[1:min(2, length(fnFs))])
   }
 
   shadow_save(p1, "diagnotics_plot_src.qs");
@@ -141,12 +120,12 @@ PerformSeqProcessing <- function(){
    MessageOutput("Start Sequencing data filtering and triming2 ... ")
 
   if(params$is_paired){
-    out <- filterAndTrim(fnFs, filtFs, fnRs, filtRs, truncLen=truncLen, 
+    out <- filterAndTrim(fnFs, filtFs, fnRs, filtRs, truncLen=truncLen,
                  trimLeft = trimLeft, trimRight = trimRight,
                  maxN=maxN, maxEE=maxEE, truncQ=truncQ, rm.phix=rm.phix,
                  compress=TRUE, multithread=TRUE) # On Windows set multithread=FALSE
   } else {
-    out <- filterAndTrim(fnFs, filtFs, truncLen=truncLen, 
+    out <- filterAndTrim(fnFs, filtFs, truncLen=truncLen,
                          trimLeft = trimLeft, trimRight = trimRight,
                          maxN=maxN, maxEE=maxEE, truncQ=truncQ, rm.phix=rm.phix,
                          compress=TRUE, multithread=TRUE) # On Windows set multithread=FALSE
@@ -168,13 +147,13 @@ PerformSeqProcessing <- function(){
     msg_d1 <- capture.output(derepF1 <- derepFastq(filtFs, verbose=TRUE), type = "message")
     sapply(msg_d1, MessageOutput)
   }
-  
+
   MessageOutput("OK, done!")
   write.table(20.0, file = "log_progress.txt", quote = F, row.names = F, col.names = F, append = F)
   ##Learn the error rates
   MessageOutput("Step 4: Perform sequencing data dereplicating ... ")
   if(params$is_paired){
-    msg_d3 <- capture.output(errF <- learnErrors(derepF1, multithread=TRUE)) 
+    msg_d3 <- capture.output(errF <- learnErrors(derepF1, multithread=TRUE))
     msg_d4 <- capture.output(errR <- learnErrors(derepR1, multithread=TRUE))
     sapply(msg_d3, MessageOutput)
     sapply(msg_d4, MessageOutput)
@@ -202,7 +181,7 @@ PerformSeqProcessing <- function(){
   }
 
   MessageOutput("OK, done!")
-  
+
   ###Denoise
   MessageOutput("Step 5: Perform sequencing data denoising ... ")
   if(params$is_paired){
@@ -218,7 +197,7 @@ PerformSeqProcessing <- function(){
   }
 
   MessageOutput("OK, done!")
-  
+
   ####merge
   if(params$is_paired){
     MessageOutput("Step 6: Perform sequencing data merging ... ")
@@ -235,13 +214,13 @@ PerformSeqProcessing <- function(){
     MessageOutput("OK, done!")
     write.table(60.0, file = "log_progress.txt", quote = F, row.names = F, col.names = F, append = F)
   }
-  
+
   ####
   #####Remove chimeras
   MessageOutput("Step 7: Perform sequencing chimeras removal ... ")
   msg_d8 <- capture.output(seqtab.nochim <- removeBimeraDenovo(seqtab,
-                                                               method="consensus", 
-                                                               multithread=TRUE, 
+                                                               method="consensus",
+                                                               multithread=TRUE,
                                                                verbose=TRUE), type = "message")
   sapply(msg_d8, MessageOutput)
   MessageOutput("OK, done!")
@@ -500,7 +479,7 @@ sweaveRScript4exec <- function(users.path){
 
   # Working dir = standard home (where output and upload/ symlinks are)
   str <- paste0(str, ";\n", "setwd(\'", getwd(), "\')");
-  # Source public seq_proc.R directly — gets public functions, not Pro wrappers
+  # Source seq_proc.R directly
   str <- paste0(str, ";\n", "source('", seq_proc_abs, "')");
   str <- paste0(str, ";\n", "load('dataObj_param.rda')");
   str <- paste0(str, ";\n", "dataObj <<- dataObj");
@@ -606,7 +585,7 @@ sweaveBash4execPro <- function(users.path, isfromGoogle = FALSE, source_path){
 
 
   ## Prepare R script for running
-  # Source original seq_proc.R to get non-wrapper functions (Pro wrappers need callr which isn't available here)
+  # Source original seq_proc.R to get non-wrapper functions (wrappers not available in external process)
   seq_proc_path <- file.path(source_path, "MicrobiomeAnalystR", "R", "seq_proc.R")
 
   str <- paste0('library(dada2)');

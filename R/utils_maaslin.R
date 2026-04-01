@@ -745,23 +745,35 @@ if(case==1){
       })
  
 nafeat =which(!unlist(lapply(outputs,function(x) any(is.na(x[["para"]]$pval)|any(is.nan(x[["para"]]$pval))))))
-outputs <- outputs[nafeat] 
+outputs <- outputs[nafeat]
     # stop the cluster
     if (!is.null(cluster))
       parallel::stopCluster(cluster)
-    
+
+    if (length(outputs) == 0) {
+      message("[MaAsLin2] Model failed for all features")
+      return(NULL)
+    }
+
     # bind the results for each feature
     paras <-
       do.call(rbind, lapply(outputs, function(x) {
         return(x$para)
       }))
-    
+
     if (!(is.null(random_effects_formula))) {
-      ranef <-
-        do.call(rbind, lapply(outputs, function(x) {
+      ranef <- tryCatch({
+        r <- do.call(rbind, lapply(outputs, function(x) {
           return(x$ranef)
         }))
-      row.names(ranef) <- colnames(features) 
+        if (!is.null(r) && !is.null(dim(r))) {
+          row.names(r) <- colnames(features)[nafeat]
+        }
+        r
+      }, error = function(e) {
+        message("[MaAsLin2] Random effects extraction failed: ", e$message)
+        NULL
+      })
     }
 
 nafeat = paras$feature[is.na(paras$pval)|is.nan(paras$pval)]
