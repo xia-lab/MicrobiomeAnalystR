@@ -33,7 +33,7 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
     }
   }else if(cor.method == "secom_p1"){
   
-  if(!exists("my.secom.anal")){ # public web on same user dir
+  if(!exists("my.secom.anal")){
     .load.scripts.on.demand("utils_secom.Rc");    
   }
  
@@ -50,7 +50,7 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
 
 }else if(cor.method == "secom_p2"){
   
-  if(!exists("my.secom.anal")){ # public web on same user dir
+  if(!exists("my.secom.anal")){
     .load.scripts.on.demand("utils_secom.Rc");    
   }
 
@@ -67,7 +67,7 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
 
 }else if(cor.method == "secom_dist"){
   
-  if(!exists("my.secom.anal")){ # public web on same user dir
+  if(!exists("my.secom.anal")){
     .load.scripts.on.demand("utils_secom.Rc");    
   }
 
