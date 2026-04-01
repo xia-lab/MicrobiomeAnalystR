@@ -404,9 +404,16 @@ ApplyVarianceFilter <- function(mbSetObj, filtopt, filtPerct){
 
   mbSetObj$dataSet$var.filtered <- FALSE
 
-  if(filtPerct==0){# remove constant (zero-variance) variables only
-    vars <- apply(data, 1, var, na.rm=TRUE);
-    remain <- !is.na(vars) & vars > 0;
+  # Always remove zero-variance features first (essential for downstream methods like DIABLO)
+  vars <- apply(data, 1, var, na.rm=TRUE);
+  zero.var <- is.na(vars) | vars == 0;
+  if(any(zero.var)) {
+    message(paste0("Removed ", sum(zero.var), " zero-variance features"))
+    data <- data[!zero.var, , drop=FALSE];
+  }
+
+  if(filtPerct==0){# only zero-variance removal (already done above)
+    remain <- rep(TRUE, nrow(data));
   }else{
     mbSetObj$dataSet$var.filtered <- TRUE
 
@@ -486,14 +493,19 @@ ApplyMetaboFilter <- function(mbSetObj=NA, filter,  rsd){
     int.mat <- int.mat[, !all_na, drop=FALSE];
   }
 
+  # Always remove zero-variance features first (essential for downstream methods like DIABLO)
+  vars <- apply(int.mat, 2, var, na.rm=TRUE);
+  zero.var <- is.na(vars) | vars == 0;
+  if(any(zero.var)) {
+    int.mat <- int.mat[, !zero.var, drop=FALSE];
+  }
+
   feat.num <- ncol(int.mat);
   feat.nms <- colnames(int.mat);
   nm <- NULL;
   msg <- "";
   if(filter == "none") {
-    # Always remove constant (zero-variance) variables
-    vars <- apply(int.mat, 2, var, na.rm=TRUE);
-    remain <- !is.na(vars) & vars > 0;
+    remain <- rep(TRUE, feat.num);
     n.removed <- sum(!remain);
     if(n.removed > 0) {
       msg <- paste(msg, "Removed", n.removed, "constant variables (zero variance).");

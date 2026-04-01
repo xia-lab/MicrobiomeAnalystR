@@ -3756,7 +3756,7 @@ PlotDiabloCirocs <- function(imgNm, cutoff=0.5, featureSize=0.25, dpi=150, forma
       nodes <- nodes[order(nodes$type, nodes$name), ]
 
       # Assign colors by data type
-      type_colors <- c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3")
+      type_colors <- c("#ED7D31", "#70AD47", "#FFC000", "#9B59B6")
       type_names <- unique(nodes$type)
       sector_colors <- setNames(
         type_colors[match(nodes$type, type_names)],
@@ -3771,8 +3771,8 @@ PlotDiabloCirocs <- function(imgNm, cutoff=0.5, featureSize=0.25, dpi=150, forma
         stringsAsFactors = FALSE
       )
       link_colors <- ifelse(as.numeric(edges$corr) > 0,
-                            adjustcolor("#B2182B", alpha.f = 0.5),
-                            adjustcolor("#2166AC", alpha.f = 0.5))
+                            rgb(255, 80, 80, alpha = 153, maxColorValue = 255),
+                            rgb(80, 80, 255, alpha = 153, maxColorValue = 255))
 
       Cairo::Cairo(file = file.path(work_dir, imgNm), width = 10, height = 10,
                    type = format, bg = "white", unit = "in", dpi = dpi)
@@ -3804,7 +3804,8 @@ PlotDiabloCirocs <- function(imgNm, cutoff=0.5, featureSize=0.25, dpi=150, forma
       legend("bottomleft", legend = type_names, fill = type_colors[1:length(type_names)],
              title = "Data Type", bty = "n", cex = 0.9)
       legend("bottomright", legend = c("Positive", "Negative"),
-             fill = c(adjustcolor("#B2182B", 0.5), adjustcolor("#2166AC", 0.5)),
+             fill = c(rgb(255, 80, 80, alpha = 153, maxColorValue = 255),
+                      rgb(80, 80, 255, alpha = 153, maxColorValue = 255)),
              title = "Correlation", bty = "n", cex = 0.9)
 
       circos.clear()
