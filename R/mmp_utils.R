@@ -1754,40 +1754,141 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
   .set.mbSetObj(mbSetObj);
 
   if(enrich.type == "hyper"){
-    if(dataType=="metabolite"){
-      mbSetObj <- PerformMetListEnrichment(mbSetObj, contain, file.nm);
-    }else{
-      LoadKEGGKO_lib(category);
-      PerformKOEnrichAnalysis_List(mbSetObj, file.nm);
-      mbSetObj <- .get.mbSetObj(mbSetObj);
-    }
-    
+    tryCatch({
+      if(dataType=="metabolite"){
+        mbSetObj <- PerformMetListEnrichment(mbSetObj, contain, file.nm);
+      }else{
+        LoadKEGGKO_lib(category);
+        PerformKOEnrichAnalysis_List(mbSetObj, file.nm);
+        mbSetObj <- .get.mbSetObj(mbSetObj);
+      }
+    }, error = function(e) {
+      message("[PerformTuneEnrichAnalysis] Error during hyper enrichment: ", e$message)
+      AddErrMsg(paste0("Enrichment analysis failed: ", e$message))
+
+      # Create empty result files
+      json.res <- list(hits.query = list(),
+                       hits.edge = list(),
+                       path.ids = list(),
+                       fun.pval = list(),
+                       hit.num = list());
+      json.mat <- rjson::toJSON(json.res);
+      json.nm <- paste(file.nm, ".json", sep="");
+      sink(json.nm); cat(json.mat); sink();
+
+      resTable <- data.frame(Pathway=character(0), Size=numeric(0), Hits=numeric(0),
+                            `Total Cmpd`=numeric(0), Pval=numeric(0), FDR=numeric(0),
+                            check.names=FALSE);
+      fast.write(resTable, file=paste(file.nm, ".csv", sep=""), row.names=F);
+    })
+
   }else if(enrich.type =="global"){
     if(contain=="usrbac" & micDataType=="ko"){
       tuneKOmap()
       contain = "bac"
     }
-    .prepare.global.tune(mbSetObj, dataType, category, file.nm,contain);
-    .perform.computing();
-    
-    if(dataType=="ko"){
-      mbSetObj = .save.global.res();
-      taxalvl = "ko"
-    }else if(dataType=="metabolite"){
-      
-      mbSetObj=enrich2json()
-    }
-    
+
+    # Wrap in tryCatch to ensure JSON/CSV files are created even on error
+    tryCatch({
+      .prepare.global.tune(mbSetObj, dataType, category, file.nm,contain);
+      .perform.computing();
+
+      if(dataType=="ko"){
+        mbSetObj = .save.global.res();
+        taxalvl = "ko"
+      }else if(dataType=="metabolite"){
+        mbSetObj=enrich2json()
+      }
+    }, error = function(e) {
+      message("[PerformTuneEnrichAnalysis] Error during enrichment: ", e$message)
+      AddErrMsg(paste0("Enrichment analysis failed: ", e$message))
+
+      # Create empty result files to prevent 404 errors
+      if(dataType=="ko"){
+        # Create empty KO enrichment results
+        json.res <- list(hits.query = list(),
+                         hits.edge = list(),
+                         path.ids = list(),
+                         fun.pval = list(),
+                         hit.num = list());
+        json.mat <- rjson::toJSON(json.res);
+        json.nm <- paste(file.nm, ".json", sep="");
+        sink(json.nm); cat(json.mat); sink();
+
+        resTable <- data.frame(Pathway=character(0), Size=numeric(0), Hits=numeric(0),
+                              `Statistic Q`=numeric(0), `Expected Q`=numeric(0),
+                              Pval=numeric(0), `Holm p`=numeric(0), FDR=numeric(0),
+                              check.names=FALSE);
+        fast.write(resTable, file=paste(file.nm, ".csv", sep=""), row.names=F);
+        taxalvl = "ko"
+      }else if(dataType=="metabolite"){
+        # Create empty metabolite enrichment results
+        json.res <- list(hits.query = list(),
+                         path.nms = list(),
+                         path.pval = list(),
+                         hit.num = list(),
+                         path.fdr = list(),
+                         hits.query.nm = list(),
+                         hits.node = list(),
+                         expr.mat = list(),
+                         sig.path = 0);
+        json.mat <- RJSONIO::toJSON(json.res);
+        json.nm <- paste(file.nm, ".json", sep="");
+        sink(json.nm); cat(json.mat); sink();
+
+        resTable <- data.frame(Pathway=character(0), Size=numeric(0), Hits=numeric(0),
+                              `Statistic Q`=numeric(0), `Expected Q`=numeric(0),
+                              Pval=numeric(0), `Holm p`=numeric(0), FDR=numeric(0),
+                              check.names=FALSE);
+        fast.write(resTable, file=paste(file.nm, ".csv", sep=""), row.names=F);
+      }
+    })
+
   }else if(enrich.type =="mummichog"){
-    
-    if(!exists("performPeakEnrich")){ # public web on same user dir
-      .load.scripts.on.demand("utils_peak2fun.Rc");    
-    }
-    mbSetObj=performPeakEnrich(lib=contain);
-    mbSetObj <- .get.mbSetObj(mbSet);
+
+    tryCatch({
+      if(!exists("performPeakEnrich")){ # public web on same user dir
+        .load.scripts.on.demand("utils_peak2fun.Rc");
+      }
+      mbSetObj=performPeakEnrich(lib=contain);
+      mbSetObj <- .get.mbSetObj(mbSet);
+    }, error = function(e) {
+      message("[PerformTuneEnrichAnalysis] Error during mummichog enrichment: ", e$message)
+      AddErrMsg(paste0("Mummichog analysis failed: ", e$message))
+
+      # Create empty result files
+      json.res <- list(hits.query = list(),
+                       path.nms = list(),
+                       path.pval = list(),
+                       hit.num = list(),
+                       path.fdr = list(),
+                       hits.query.nm = list(),
+                       hits.node = list(),
+                       expr.mat = list(),
+                       sig.path = 0);
+      json.mat <- RJSONIO::toJSON(json.res);
+      json.nm <- paste(file.nm, ".json", sep="");
+      sink(json.nm); cat(json.mat); sink();
+
+      resTable <- data.frame(Pathway=character(0), Size=numeric(0), Hits=numeric(0),
+                            `Statistic Q`=numeric(0), `Expected Q`=numeric(0),
+                            Pval=numeric(0), `Holm p`=numeric(0), FDR=numeric(0),
+                            check.names=FALSE);
+      fast.write(resTable, file=paste(file.nm, ".csv", sep=""), row.names=F);
+    })
   }
   print("s6")
   if(!exists("taxalvl")){taxalvl = "ko"}
+
+  # Initialize analSet structure if not present
+  mbSetObj <- .get.mbSetObj(mbSetObj)
+  if(is.null(mbSetObj$analSet)){
+    mbSetObj$analSet <- list()
+  }
+  if(is.null(mbSetObj$analSet$keggnet)){
+    mbSetObj$analSet$keggnet <- list()
+  }
+
   mbSetObj$analSet$keggnet$background <- contain
   mbSetObj$analSet$keggnet$taxalvl <- taxalvl
   return(.set.mbSetObj(mbSetObj))
@@ -1891,8 +1992,8 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
     }else{
       current.set <- qs::qread(paste0(lib.path.mmp,"ko_set_bac.qs"))
     }
-    
-    set2nm <-  qs::qread(paste0(rpath, "libs/mmp/set2nm.qs")[["pathway"]]);
+
+    set2nm <-  qs::qread(paste0(rpath, "libs/mmp/set2nm.qs"))[["pathway"]];
     set.ids <- names(current.set);
     names(set.ids) <- names(current.set)<-  set2nm[set.ids];
     
@@ -1946,14 +2047,43 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
 }
 
 enrich2json <- function(){
-  dat.in <- qs::qread("dat.in.qs"); 
+  dat.in <- qs::qread("dat.in.qs");
   hits = dat.in$subsets
   file.nm = dat.in$filenm;
   my.res <- dat.in$my.res;
+  mbSetObj <- .get.mbSetObj(NA);
+
   if(all(c(length(my.res)==1, is.na(my.res)))){
     AddErrMsg("No match was found to the selected metabolite set library!");
-    return(0);
+
+    # Create empty results to ensure JSON is generated
+    resTable <- data.frame(Pathway=character(0), Size=numeric(0), Hits=numeric(0),
+                          `Statistic Q`=numeric(0), `Expected Q`=numeric(0),
+                          Pval=numeric(0), `Holm p`=numeric(0), FDR=numeric(0),
+                          check.names=FALSE);
+
+    # Write empty JSON
+    json.res <- list(hits.query = list(),
+                     path.nms = list(),
+                     path.pval = list(),
+                     hit.num = list(),
+                     path.fdr = list(),
+                     hits.query.nm = list(),
+                     hits.node = list(),
+                     expr.mat = list(),
+                     sig.path = 0);
+    json.mat <- RJSONIO::toJSON(json.res);
+    json.nm <- paste(file.nm, ".json", sep="");
+    sink(json.nm); cat(json.mat); sink();
+
+    # Write empty CSV
+    fast.write(resTable, file=paste(file.nm, ".csv", sep=""), row.names=F);
+
+    enr.key <- if(!is.null(mbSetObj$paramSet$koProj.type)) mbSetObj$paramSet$koProj.type else "mmp_met";
+    mbSetObj <- recordEnrTable(mbSetObj, enr.key, resTable, "KEGG", "Global Test");
+    return(mbSetObj);
   }
+
   nms <- rownames(my.res);
   hits <- hits[nms];
   resTable <- data.frame(Pathway=rownames(my.res), my.res,check.names=FALSE);
@@ -1962,7 +2092,33 @@ enrich2json <- function(){
   # Check if mapping file exists
   if(!file.exists("keggNet.met.map.qs")){
     AddErrMsg("Metabolite mapping file not found! Please check if metabolite ID mapping was completed.");
-    return(0);
+
+    # Create empty results to ensure JSON is generated
+    resTable <- data.frame(Pathway=character(0), Size=numeric(0), Hits=numeric(0),
+                          `Statistic Q`=numeric(0), `Expected Q`=numeric(0),
+                          Pval=numeric(0), `Holm p`=numeric(0), FDR=numeric(0),
+                          check.names=FALSE);
+
+    # Write empty JSON
+    json.res <- list(hits.query = list(),
+                     path.nms = list(),
+                     path.pval = list(),
+                     hit.num = list(),
+                     path.fdr = list(),
+                     hits.query.nm = list(),
+                     hits.node = list(),
+                     expr.mat = list(),
+                     sig.path = 0);
+    json.mat <- RJSONIO::toJSON(json.res);
+    json.nm <- paste(file.nm, ".json", sep="");
+    sink(json.nm); cat(json.mat); sink();
+
+    # Write empty CSV
+    fast.write(resTable, file=paste(file.nm, ".csv", sep=""), row.names=F);
+
+    enr.key <- if(!is.null(mbSetObj$paramSet$koProj.type)) mbSetObj$paramSet$koProj.type else "mmp_met";
+    mbSetObj <- recordEnrTable(mbSetObj, enr.key, resTable, "KEGG", "Global Test");
+    return(mbSetObj);
   }
   met.map <-  qs::qread("keggNet.met.map.qs")
   hits.met <- lapply(hits, function(x){
@@ -3579,8 +3735,23 @@ PlotDiagnostic <- function(imgName, dpi=default.dpi, format="png",alg, taxrank="
     res <- diablo.res$dim.res[[length(diablo.res$dim.res)]]
 
     require(mixOmics)
+
+    # Calculate appropriate number of folds based on sample size
+    n_samples <- nrow(res$X[[1]])
+
+    # For classification (block.splsda), check minimum class size
+    if(!is.null(res$Y) && is.factor(res$Y)) {
+      min_class_size <- min(table(res$Y))
+      max_folds <- min(n_samples, min_class_size)
+    } else {
+      max_folds <- n_samples
+    }
+
+    # Use minimum of 10 or max possible folds, but at least 2
+    n_folds <- max(2, min(10, max_folds))
+
     set.seed(123)
-    perf.res <- mixOmics:::perf(res, validation = 'Mfold', folds = 10, nrepeat = 1, dist="max.dist", near.zero.var=T)
+    perf.res <- mixOmics:::perf(res, validation = 'Mfold', folds = n_folds, nrepeat = 1, dist="max.dist", near.zero.var=T)
     diablo.comp <<- median(perf.res$choice.ncomp$WeightedVote)
 
     plot(perf.res)
@@ -3714,32 +3885,122 @@ PlotDiagnosticLoading <- function(imgNm, dpi=default.dpi, format="png",type="dia
   dpi <- as.numeric(dpi);
   imgNm <- paste(imgNm,  ".", format, sep="");
   mbSetObj$imgSet$diablo$loading <- imgNm
-  if(type == "diablo"){
-    library(grid)
-    library(gridExtra)
-    library(cowplot)
-    fig.list <- list()
-    diablo.res <- qs::qread("diablo.res.qs")
-    if(length(diablo.res$dim.res) == 1){
-    dim.res <- diablo.res$dim.res[[1]]
-    }else{
-    dim.res <- diablo.res$dim.res[[taxrank]]
+
+  tryCatch({
+    if(isTRUE(!is.na(type) && length(type) == 1 && type == "diablo")){
+      diablo.res <- qs::qread("diablo.res.qs")
+      if(length(diablo.res$dim.res) == 1){
+        dim.res <- diablo.res$dim.res[[1]]
+      }else{
+        dim.res <- diablo.res$dim.res[[taxrank]]
+      }
+      if(is.null(dim.res)){
+        stop(paste0("No DIABLO dimension reduction result found for taxrank '", taxrank, "'."))
+      }
+
+      # mixOmics objects can carry block-wise ncomp vectors; plotLoadings expects scalar-like logic.
+      ncomp.raw <- suppressWarnings(as.integer(dim.res$ncomp))
+      ncomp.max <- if(length(ncomp.raw) == 0) NA_integer_ else suppressWarnings(min(ncomp.raw, na.rm = TRUE))
+      if(!is.finite(ncomp.max) || is.na(ncomp.max) || ncomp.max < 1){
+        ncomp.max <- NA_integer_
+      }
+      var.comp.max <- suppressWarnings(min(vapply(dim.res$variates, function(v) ncol(as.matrix(v)), integer(1)), na.rm = TRUE))
+      if(!is.finite(var.comp.max) || is.na(var.comp.max) || var.comp.max < 1){
+        var.comp.max <- 1L
+      }
+
+      if(is.na(ncomp.max)){
+        ncomp.max <- var.comp.max
+      }
+
+      # Keep object ncomp scalar to avoid logical(1) coercion errors in downstream mixOmics checks.
+      dim.res$ncomp <- as.integer(ncomp.max)
+      ncomp.plot <- min(3L, as.integer(ncomp.max), as.integer(var.comp.max))
+      if(!is.finite(ncomp.plot) || is.na(ncomp.plot) || ncomp.plot < 1){
+        ncomp.plot <- 1L
+      }
+
+      h <- max(6, 4 * ncomp.plot)
+      Cairo(file=imgNm, width=15, height=h, type=format, bg="white", unit="in", dpi=dpi);
+      op <- par(no.readonly = TRUE)
+      par(mfrow = c(ncomp.plot, 1), mar = c(5, 4, 3, 1))
+
+      for(comp.idx in seq_len(ncomp.plot)){
+        tryCatch({
+          load.list <- dim.res$loadings
+          if(is.null(load.list) || length(load.list) == 0){
+            stop("No loading matrices found in DIABLO result.")
+          }
+
+          top.rows <- lapply(names(load.list), function(block.nm){
+            mat <- as.matrix(load.list[[block.nm]])
+            if(ncol(mat) < comp.idx){
+              return(NULL)
+            }
+            vals <- mat[, comp.idx, drop = TRUE]
+            keep <- is.finite(vals)
+            vals <- vals[keep]
+            if(length(vals) == 0){
+              return(NULL)
+            }
+            ord <- order(abs(vals), decreasing = TRUE)
+            ord <- ord[seq_len(min(10, length(ord)))]
+            data.frame(
+              feature = names(vals)[ord],
+              loading = as.numeric(vals[ord]),
+              block = block.nm,
+              stringsAsFactors = FALSE
+            )
+          })
+
+          top.df <- do.call(rbind, top.rows)
+          if(is.null(top.df) || nrow(top.df) == 0){
+            stop(paste0("No finite loadings available for component ", comp.idx, "."))
+          }
+
+          top.df$feature <- paste0(top.df$block, ": ", top.df$feature)
+          top.df <- top.df[order(abs(top.df$loading), decreasing = TRUE), , drop = FALSE]
+          top.df$feature <- factor(top.df$feature, levels = rev(unique(top.df$feature)))
+
+          p <- ggplot(top.df, aes(x = feature, y = loading, fill = block)) +
+            geom_col(width = 0.7) +
+            coord_flip() +
+            labs(
+              title = paste("DIABLO Loadings - Component", comp.idx),
+              x = NULL,
+              y = "Loading"
+            ) +
+            theme_bw(base_size = 10) +
+            theme(
+              legend.position = "bottom",
+              plot.title = element_text(hjust = 0.5)
+            )
+          print(p)
+        }, error = function(e) {
+          message("[PlotDiagnosticLoading] Component ", comp.idx, " error: ", e$message)
+          plot.new()
+          text(0.5, 0.5, paste0("Component ", comp.idx, " failed:\n", e$message), col = "red", cex = 1)
+        })
+      }
+      par(op)
+      dev.off();
+    } else {
+      stop("Unsupported loading plot type or invalid type value.")
     }
-    fig.list[[1]] <- as_grob(function(){
-      plotLoadings(dim.res, ndisplay=10, comp = 1, contrib="max", method="median", size.name=1.1, legend=T)
-    })
-    fig.list[[2]] <- as_grob(function(){
-      plotLoadings(dim.res, ndisplay=10, comp = 2, contrib="max", method="median", size.name=1.1, legend=T)
-    })
-    fig.list[[3]] <-as_grob(function(){
-      plotLoadings(dim.res, ndisplay=10, comp = 3, contrib="max", method="median", size.name=1.1, legend=T)
-    })
-    h <- 8*round(length(fig.list))
-    Cairo(file=imgNm, width=13, height=h, type=format, bg="white", unit="in", dpi=dpi);
-    grid.arrange(grobs =fig.list, nrow=length(fig.list))
-    dev.off();
-  }
+  }, error = function(e) {
+    # Ensure a fallback image is always produced so UI panel is not blank.
+    message("[PlotDiagnosticLoading] Fatal error: ", e$message)
+    Cairo(file=imgNm, width=12, height=4, type=format, bg="white", unit="in", dpi=dpi)
+    plot.new()
+    text(0.5, 0.5,
+         paste("DIABLO loading plot fallback:\n", e$message),
+         col = "red", cex = 1.0)
+    dev.off()
+    AddErrMsg("DIABLO loading plot fallback created due to plotting error.")
+  })
+
   .set.mbSetObj(mbSetObj)
+  return(1)
 }
 
 GetDiagnosticSummary<- function(type){
@@ -3754,6 +4015,219 @@ GetDiagnosticSummary<- function(type){
   }else{
     return(c("","") )
   }
+}
+
+# Generate JSON for DIABLO circos plot
+GenerateDiabloCircosJson <- function(cutoff = 0.5, maxEdges = 100) {
+  tryCatch({
+    if(!file.exists("diablo.res.qs")) {
+      message("[GenerateDiabloCircosJson] diablo.res.qs not found")
+      return(0)
+    }
+
+    diablo.res <- qs::qread("diablo.res.qs")
+    if(length(diablo.res$dim.res) == 0) {
+      message("[GenerateDiabloCircosJson] No DIABLO results found")
+      return(0)
+    }
+
+    cutoff <- suppressWarnings(as.numeric(cutoff))
+    if(!is.finite(cutoff) || is.na(cutoff)) cutoff <- 0.5
+    cutoff <- max(0, min(1, cutoff))
+
+    maxEdges <- suppressWarnings(as.integer(maxEdges))
+    if(is.na(maxEdges) || maxEdges < 1) maxEdges <- 100
+
+    # Get the first (or only) result
+    dim.res <- diablo.res$dim.res[[1]]
+    load.list <- dim.res$loadings
+    if(is.null(load.list) || length(load.list) < 2){
+      message("[GenerateDiabloCircosJson] DIABLO loadings unavailable or fewer than 2 blocks")
+      json.data <- list(cutoff = cutoff, maxEdges = maxEdges, nodes = list(), links = list())
+      json.str <- RJSONIO::toJSON(json.data)
+      sink("diablo_circos.json")
+      cat(json.str)
+      sink()
+      return(0)
+    }
+
+    block.names <- names(load.list)[1:2]
+    b1 <- block.names[1]
+    b2 <- block.names[2]
+    L1 <- as.matrix(load.list[[b1]])
+    L2 <- as.matrix(load.list[[b2]])
+
+    if(ncol(L1) < 1 || ncol(L2) < 1){
+      message("[GenerateDiabloCircosJson] Loading matrices contain no components")
+      json.data <- list(cutoff = cutoff, maxEdges = maxEdges, nodes = list(), links = list())
+      json.str <- RJSONIO::toJSON(json.data)
+      sink("diablo_circos.json")
+      cat(json.str)
+      sink()
+      return(0)
+    }
+
+    ncomp.use <- min(3, ncol(L1), ncol(L2))
+    comps <- seq_len(ncomp.use)
+    L1 <- L1[, comps, drop = FALSE]
+    L2 <- L2[, comps, drop = FALSE]
+
+    # Keep informative features only
+    keep1 <- rowSums(is.finite(L1)) > 0 & rowSums(abs(L1), na.rm = TRUE) > 0
+    keep2 <- rowSums(is.finite(L2)) > 0 & rowSums(abs(L2), na.rm = TRUE) > 0
+    L1 <- L1[keep1, , drop = FALSE]
+    L2 <- L2[keep2, , drop = FALSE]
+
+    # Limit feature count for runtime and visual clarity
+    maxFeatPerBlock <- max(20, ceiling(sqrt(maxEdges) * 5))
+    if(nrow(L1) > maxFeatPerBlock){
+      top1 <- order(rowSums(abs(L1), na.rm = TRUE), decreasing = TRUE)[seq_len(maxFeatPerBlock)]
+      L1 <- L1[top1, , drop = FALSE]
+    }
+    if(nrow(L2) > maxFeatPerBlock){
+      top2 <- order(rowSums(abs(L2), na.rm = TRUE), decreasing = TRUE)[seq_len(maxFeatPerBlock)]
+      L2 <- L2[top2, , drop = FALSE]
+    }
+
+    if(nrow(L1) == 0 || nrow(L2) == 0){
+      message("[GenerateDiabloCircosJson] No valid features after filtering")
+      json.data <- list(cutoff = cutoff, maxEdges = maxEdges, nodes = list(), links = list())
+      json.str <- RJSONIO::toJSON(json.data)
+      sink("diablo_circos.json")
+      cat(json.str)
+      sink()
+      return(0)
+    }
+
+    # Build cosine-like cross-block similarity from loading vectors across selected components.
+    L1[!is.finite(L1)] <- 0
+    L2[!is.finite(L2)] <- 0
+    S <- L1 %*% t(L2)
+    n1 <- sqrt(rowSums(L1^2))
+    n2 <- sqrt(rowSums(L2^2))
+    D <- outer(n1, n2)
+    C <- S / D
+    C[!is.finite(C)] <- 0
+
+    hit <- which(abs(C) >= cutoff, arr.ind = TRUE)
+    if(nrow(hit) == 0){
+      message("[GenerateDiabloCircosJson] No correlations above cutoff")
+      json.data <- list(cutoff = cutoff, maxEdges = maxEdges, nodes = list(), links = list())
+      json.str <- RJSONIO::toJSON(json.data)
+      sink("diablo_circos.json")
+      cat(json.str)
+      sink()
+      return(1)
+    }
+
+    edge.df <- data.frame(
+      source = rownames(L1)[hit[, 1]],
+      target = rownames(L2)[hit[, 2]],
+      corr = as.numeric(C[hit]),
+      stringsAsFactors = FALSE
+    )
+    edge.df <- edge.df[order(abs(edge.df$corr), decreasing = TRUE), , drop = FALSE]
+    if(nrow(edge.df) > maxEdges){
+      edge.df <- edge.df[seq_len(maxEdges), , drop = FALSE]
+    }
+
+    edge.list <- lapply(seq_len(nrow(edge.df)), function(i){
+      list(
+        source = edge.df$source[i],
+        target = edge.df$target[i],
+        corr = round(edge.df$corr[i], 4),
+        type1 = b1,
+        type2 = b2,
+        label1 = edge.df$source[i],
+        label2 = edge.df$target[i]
+      )
+    })
+
+    uniq1 <- unique(edge.df$source)
+    uniq2 <- unique(edge.df$target)
+    node.list <- c(
+      lapply(uniq1, function(nm) list(id = nm, label = nm, type = b1)),
+      lapply(uniq2, function(nm) list(id = nm, label = nm, type = b2))
+    )
+
+    json.data <- list(
+      cutoff = cutoff,
+      maxEdges = maxEdges,
+      nodes = node.list,
+      links = edge.list
+    )
+
+    # Save JSON
+    json.str <- RJSONIO::toJSON(json.data)
+    sink("diablo_circos.json")
+    cat(json.str)
+    sink()
+
+    message("[GenerateDiabloCircosJson] Circos JSON generated successfully")
+    return(1)
+  }, error = function(e) {
+    message("[GenerateDiabloCircosJson] Error: ", e$message)
+    # Create empty JSON on error
+    json.data <- list(cutoff = cutoff, maxEdges = maxEdges, nodes = list(), links = list())
+    json.str <- RJSONIO::toJSON(json.data)
+    sink("diablo_circos.json")
+    cat(json.str)
+    sink()
+    return(0)
+  })
+}
+
+# Plot DIABLO circos diagram
+PlotDiabloCirocs <- function(imgNm, cutoff = 0.5, featureSize = 0.25, dpi = 150, format = "png") {
+  tryCatch({
+    mbSetObj <- .get.mbSetObj(mbSetObj)
+    require("Cairo")
+    library(mixOmics)
+
+    if(!file.exists("diablo.res.qs")) {
+      message("[PlotDiabloCirocs] diablo.res.qs not found")
+      return(0)
+    }
+
+    diablo.res <- qs::qread("diablo.res.qs")
+    if(length(diablo.res$dim.res) == 0) {
+      message("[PlotDiabloCirocs] No DIABLO results found")
+      return(0)
+    }
+
+    # Get the first result
+    dim.res <- diablo.res$dim.res[[1]]
+
+    imgNm <- paste(imgNm, ".", format, sep="")
+    mbSetObj$imgSet$diablo$circos <- imgNm
+
+    # Create circos plot
+    Cairo(file=imgNm, width=10, height=10, type=format, bg="white", unit="in", dpi=dpi)
+
+    tryCatch({
+      circosPlot(dim.res, cutoff = cutoff, size.variables = featureSize,
+                 showInter = TRUE, show.intra = FALSE,
+                 comp = 1:min(3, dim.res$ncomp),
+                 ncol.legend = 2, size.legend = 0.9)
+    }, error = function(e) {
+      # If circos plot fails, create a text message
+      plot.new()
+      text(0.5, 0.5, paste("Circos plot could not be generated:\n", e$message),
+           cex = 1.2, col = "red")
+      message("[PlotDiabloCirocs] Circos plot error: ", e$message)
+    })
+
+    dev.off()
+
+    # Generate JSON for interactive viewer
+    GenerateDiabloCircosJson(cutoff, 100)
+
+    .set.mbSetObj(mbSetObj)
+    return(1)
+  }, error = function(e) {
+    message("[PlotDiabloCirocs] Error: ", e$message)
+    return(0)
+  })
 }
 
 

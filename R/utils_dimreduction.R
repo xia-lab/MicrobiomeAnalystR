@@ -66,7 +66,28 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
   combined.res$comp.res.inx = comp.res.inx1
   combined.res$meta = newmeta
   if(reductionOpt == "diablo"){
+    meta.df <- current.proc$meta_para$sample_data
+    if(!(analysisVar %in% colnames(meta.df))){
+      stop(paste0("[DIABLO] Analysis variable '", analysisVar, "' is not available in sample metadata."))
+    }
+
     diablo.meta.type <- mbSetObj$dataSet$meta.types[analysisVar]
+    diablo.meta.type <- if(length(diablo.meta.type) > 0) as.character(diablo.meta.type[[1]]) else NA_character_
+    if(is.na(diablo.meta.type) || !(diablo.meta.type %in% c("disc", "cont"))){
+      meta.var.raw <- meta.df[, analysisVar, drop = TRUE]
+      if(is.numeric(meta.var.raw)){
+        diablo.meta.type <- "cont"
+      } else {
+        meta.num <- suppressWarnings(as.numeric(as.character(meta.var.raw)))
+        if(sum(!is.na(meta.num)) == length(meta.var.raw) && length(unique(meta.num)) > 5){
+          diablo.meta.type <- "cont"
+        } else {
+          diablo.meta.type <- "disc"
+        }
+      }
+      message("[DIABLO] Metadata type for '", analysisVar, "' was missing/invalid; inferred as '", diablo.meta.type, "'.")
+    }
+
     diabloPar <- as.numeric(diabloPar); #default diabloPar was 0.2
     diablo.res <- list()
     dats <- vector("list",length=length(d.list$mic$data.proc))
@@ -84,25 +105,73 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
         x <- data.frame(x, stringsAsFactors = FALSE);
         x <- t(x);
       })
-      ncomp = min(ncol(dats[[l]]$mic),dimn)
 
-      # Prepare Y and design
-      if(diablo.meta.type == "disc"){
-        Y <-  current.proc$meta_para$sample_data[,analysisVar];
+      # Prepare Y and remove invalid samples for this analysis variable
+      if(isTRUE(diablo.meta.type == "disc")){
+        Y_factor <- as.factor(meta.df[, analysisVar, drop = TRUE])
+        keep.inx <- !is.na(Y_factor) & as.character(Y_factor) != ""
+        Y_factor <- droplevels(Y_factor[keep.inx])
       } else {
-        meta.var <- current.proc$meta_para$sample_data[,analysisVar];
-        Y <- matrix(as.numeric(as.character(meta.var)));
-        rownames(Y) <- rownames(current.proc$meta_para$sample_data);
+        meta.var <- meta.df[, analysisVar, drop = TRUE]
+        Y_numeric <- suppressWarnings(as.numeric(as.character(meta.var)))
+        keep.inx <- is.finite(Y_numeric)
+        Y_numeric <- Y_numeric[keep.inx]
       }
+
+      dats[[l]] <- lapply(dats[[l]], function(x) x[keep.inx, , drop = FALSE])
+
+      n_samples <- nrow(dats[[l]]$mic)
+      if(n_samples < 2){
+        stop(paste0("[DIABLO] Not enough valid samples for '", analysisVar, "' after filtering missing/non-numeric values."))
+      }
+
+      max_ncomp_by_samples <- n_samples - 1  # Maximum components = n_samples - 1
+
+      # Calculate appropriate ncomp considering sample size and class size
+      if(isTRUE(diablo.meta.type == "disc")){
+        if(length(unique(Y_factor)) < 2){
+          stop(paste0("[DIABLO] Analysis variable '", analysisVar, "' needs at least 2 groups after filtering."))
+        }
+        min_class_size <- min(table(Y_factor))
+        max_ncomp_by_classes <- min_class_size - 1  # Each class needs enough samples
+        max_ncomp <- max(1, min(max_ncomp_by_samples, max_ncomp_by_classes, ncol(dats[[l]]$mic), dimn))
+        Y <- Y_factor
+      } else {
+        max_ncomp <- max(1, min(max_ncomp_by_samples, ncol(dats[[l]]$mic), dimn))
+        Y <- matrix(Y_numeric, ncol = 1)
+        rownames(Y) <- rownames(dats[[l]]$mic)
+      }
+
+      ncomp <- max_ncomp
+
       design = matrix(diabloPar, ncol = length(dats[[l]]), nrow = length(dats[[l]]),
                       dimnames = list(names(dats[[l]]), names(dats[[l]])));
       diag(design) = 0;
 
       library(mixOmics)
-      if(diablo.meta.type == "disc"){
-        res[[l]] = block.splsda(X = dats[[l]], Y = Y, ncomp = ncomp, design = design, near.zero.var = T)
+
+      # Determine if we can use near.zero.var (requires sufficient samples for internal CV)
+      # near.zero.var uses internal 10-fold CV by default
+      use_nzv <- TRUE
+      if(isTRUE(diablo.meta.type == "disc")){
+        min_class_size <- min(table(Y))
+        # Need at least 10 samples per class for default 10-fold CV
+        if(n_samples < 10 || min_class_size < 10) {
+          use_nzv <- FALSE
+          message("[DIABLO] Disabling near-zero variance filtering due to small sample size (n=", n_samples, ", min class=", min_class_size, ")")
+        }
       } else {
-        res[[l]] = block.spls(X = dats[[l]], Y = Y, ncomp = ncomp, design = design, mode = "regression", near.zero.var = T)
+        # For regression, need at least 10 total samples
+        if(n_samples < 10) {
+          use_nzv <- FALSE
+          message("[DIABLO] Disabling near-zero variance filtering due to small sample size (n=", n_samples, ")")
+        }
+      }
+
+      if(isTRUE(diablo.meta.type == "disc")){
+        res[[l]] = block.splsda(X = dats[[l]], Y = Y, ncomp = ncomp, design = design, near.zero.var = use_nzv)
+      } else {
+        res[[l]] = block.spls(X = dats[[l]], Y = Y, ncomp = ncomp, design = design, mode = "regression", near.zero.var = use_nzv)
       }
       pos.xyz[[l]] <- res[[l]]$variates[[1]]
       pos.xyz2[[l]] <- res[[l]]$variates[[2]]
@@ -245,6 +314,5 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
 
   return(1)
 }
-
 
 

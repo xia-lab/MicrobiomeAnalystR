@@ -677,14 +677,49 @@ PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",fi
 
 .save.global.res <- function(){
   mbSetObj <- .get.mbSetObj("NA");
-  dat.in <- qs::qread("dat.in.qs"); 
+  dat.in <- qs::qread("dat.in.qs");
   hits = dat.in$subsets
   file.nm = dat.in$filenm;
   my.res <- dat.in$my.res;
   curr.mset <- dat.in$curr.mset;
+
   if(all(c(length(my.res)==1, is.na(my.res)))){
         AddErrMsg("No match was found to the selected metabolite set library!");
-        return(0);
+
+        # Create empty result matrix to ensure JSON/CSV are generated
+        empty.res <- matrix(nrow=0, ncol=7);
+        colnames(empty.res) <- c("Size", "Hits", "Statistic Q", "Expected Q", "Pval", "Holm p", "FDR");
+        rownames(empty.res) <- character(0);
+
+        # Determine enrichment key
+        if(exists("moduleType") && moduleType == "mmp"){
+          enr.key <- "mmp_mic";
+        } else {
+          enr.key <- if(!is.null(mbSetObj$paramSet$koProj.type)) mbSetObj$paramSet$koProj.type else "global";
+        }
+        lib.name <- if(!is.null(dat.in$category)) paste0("KEGG ", tools::toTitleCase(dat.in$category)) else "KEGG";
+
+        # Record empty table
+        mbSetObj <- recordEnrTable(mbSetObj, enr.key, empty.res, lib.name, "Global Test", curr.mset, list());
+
+        # Create empty JSON
+        json.res <- list(hits.query = list(),
+                         hits.edge = list(),
+                         path.ids = list(),
+                         fun.pval = list(),
+                         hit.num = list());
+        json.mat <- rjson::toJSON(json.res);
+        json.nm <- paste(file.nm, ".json", sep="");
+        sink(json.nm); cat(json.mat); sink();
+
+        # Write empty CSV
+        resTable <- data.frame(Pathway=character(0), Size=numeric(0), Hits=numeric(0),
+                              `Statistic Q`=numeric(0), `Expected Q`=numeric(0),
+                              Pval=numeric(0), `Holm p`=numeric(0), FDR=numeric(0),
+                              check.names=FALSE);
+        fast.write(resTable, file=paste(file.nm, ".csv", sep=""), row.names=F);
+
+        return(.set.mbSetObj(mbSetObj));
   }
 
     # in R, sort list is by its name!, using pos order has issues!
