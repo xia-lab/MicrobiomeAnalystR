@@ -70,12 +70,48 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
   combined.res$comp.res.inx = comp.res.inx1
   combined.res$meta = newmeta
   if(reductionOpt == "diablo"){
-    meta.df <- current.proc$meta_para$sample_data
-    if(!(analysisVar %in% colnames(meta.df))){
-      stop(paste0("[DIABLO] Analysis variable '", analysisVar, "' is not available in sample metadata."))
+    meta.df <- NULL
+    if(!is.null(current.proc$meta_para$sample_data) && is.data.frame(current.proc$meta_para$sample_data)){
+      meta.df <- current.proc$meta_para$sample_data
+    } else if(!is.null(mbSetObj$dataSet$sample_data) && is.data.frame(mbSetObj$dataSet$sample_data)){
+      meta.df <- mbSetObj$dataSet$sample_data
+    }
+    if(is.null(meta.df) || ncol(meta.df) < 1){
+      stop("[DIABLO] Sample metadata is missing or empty.")
     }
 
-    diablo.meta.type <- mbSetObj$dataSet$meta.types[analysisVar]
+    resolve_meta_name <- function(nm, choices){
+      if(length(nm) == 0 || is.null(nm) || is.na(nm)) return(NA_character_)
+      nm <- as.character(nm)[1]
+      if(nm %in% choices) return(nm)
+      choices_trim <- trimws(as.character(choices))
+      hit <- which(choices_trim == trimws(nm))
+      if(length(hit) > 0) return(choices[hit[1]])
+      hit <- which(tolower(choices_trim) == tolower(trimws(nm)))
+      if(length(hit) > 0) return(choices[hit[1]])
+      return(NA_character_)
+    }
+
+    analysisVar.orig <- as.character(analysisVar)[1]
+    analysisVar <- resolve_meta_name(analysisVar.orig, colnames(meta.df))
+    if(is.na(analysisVar) && !is.null(mbSetObj$dataSet$sample_data) && is.data.frame(mbSetObj$dataSet$sample_data)){
+      meta.df2 <- mbSetObj$dataSet$sample_data
+      alt <- resolve_meta_name(analysisVar.orig, colnames(meta.df2))
+      if(!is.na(alt)){
+        meta.df <- meta.df2
+        analysisVar <- alt
+      }
+    }
+    if(is.na(analysisVar)){
+      stop(paste0("[DIABLO] Analysis variable '", analysisVar.orig, "' is not available in sample metadata."))
+    }
+    if(analysisVar != analysisVar.orig){
+      message("[DIABLO] Using metadata variable '", analysisVar, "' (resolved from '", analysisVar.orig, "').")
+    }
+
+    meta.type.nms <- names(mbSetObj$dataSet$meta.types)
+    meta.type.key <- resolve_meta_name(analysisVar, meta.type.nms)
+    diablo.meta.type <- if(!is.na(meta.type.key)) mbSetObj$dataSet$meta.types[meta.type.key] else NA
     diablo.meta.type <- if(length(diablo.meta.type) > 0) as.character(diablo.meta.type[[1]]) else NA_character_
     if(is.na(diablo.meta.type) || !(diablo.meta.type %in% c("disc", "cont"))){
       meta.var.raw <- meta.df[, analysisVar, drop = TRUE]
@@ -173,6 +209,8 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
             require(gridExtra); require(gridGraphics); require(cowplot)
           })
           input <- qs::qread("diablo_input.qs")
+          message("[DIABLO] Starting model fitting with ", input$ncomp, " components...")
+          start_time <- Sys.time()
           if (input$meta_type == "disc") {
             model <- mixOmics::block.splsda(X = input$dats, Y = input$Y,
                                             ncomp = input$ncomp, design = input$design, near.zero.var = TRUE)
@@ -180,6 +218,7 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
             model <- mixOmics::block.spls(X = input$dats, Y = input$Y,
                                           ncomp = input$ncomp, design = input$design, mode = "regression", near.zero.var = TRUE)
           }
+          message("[DIABLO] Model fitting completed in ", round(difftime(Sys.time(), start_time, units="secs"), 1), " seconds")
           # Extract plain data
           pos.xyz <- model$variates[[1]]
           pos.xyz2 <- model$variates[[2]]
@@ -216,6 +255,7 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
           }
 
           # 1. plotDiablo (PCA diagnostic) — only plot components that exist
+          message("[DIABLO] Generating PCA diagnostic plots...")
           .safe_plot(input$pca_img, 8, 15, function() {
             ncomp_max <- min(3, model$ncomp[1])
             fig.list <- list()
@@ -235,7 +275,8 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
           })
 
           # 2. Loading plots — custom robust rendering (avoids mixOmics::plotLoadings margin issues)
-          .safe_plot(input$loading_img, 13, 24, function() {
+          message("[DIABLO] Generating loading plots...")
+          .safe_plot(input$loading_img, 10, 18, function() {  # Reduced from 13×24 to 10×18 for faster rendering
             ncomp.raw <- suppressWarnings(as.integer(model$ncomp))
             ncomp.max <- if(length(ncomp.raw) == 0) NA_integer_ else suppressWarnings(min(ncomp.raw, na.rm = TRUE))
             if(!is.finite(ncomp.max) || is.na(ncomp.max) || ncomp.max < 1){
@@ -308,15 +349,59 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
           diablo.comp <- NA
 
           # 4. circos JSON for interactive chord viewer
+          # Can be disabled by setting diablo.skip.circos <<- TRUE from Java
+          skip_circos <- if (exists("diablo.skip.circos")) diablo.skip.circos else FALSE
+          if (!skip_circos) {
+          message("[DIABLO] Computing correlations for circos plot...")
+          circos_start <- Sys.time()
           tryCatch({
             # Compute cross-block correlations from projected data
             block_names <- names(model$X)
+            message("[DIABLO circos] Filtering features with non-zero variance...")
             X_proj <- lapply(model$X, function(x) {
               x[, which(apply(x, 2, var) > 0), drop = FALSE]
             })
+
+            # PRE-FILTER: Limit features to top N by loading weights to speed up correlation
+            max_features <- if (exists("diablo.circos.max.features")) diablo.circos.max.features else 1000
+            X_proj_filtered <- lapply(names(X_proj), function(block_name) {
+              x <- X_proj[[block_name]]
+              if (ncol(x) > max_features) {
+                # Select top features by sum of absolute loadings across components
+                loading_mat <- as.matrix(model$loadings[[block_name]])
+                loading_scores <- rowSums(abs(loading_mat))
+                top_idx <- order(loading_scores, decreasing = TRUE)[1:max_features]
+                message("[DIABLO circos] Pre-filtering ", block_name, ": ", ncol(x), " -> ", max_features, " features")
+                x[, top_idx, drop = FALSE]
+              } else {
+                x
+              }
+            })
+            names(X_proj_filtered) <- names(X_proj)
+            X_proj <- X_proj_filtered
+
+            message("[DIABLO circos] Computing correlation matrix (", ncol(X_proj[[1]]), " x ", ncol(X_proj[[2]]), " = ", ncol(X_proj[[1]]) * ncol(X_proj[[2]]), " correlations)...")
             cor_cross <- cor(X_proj[[1]], X_proj[[2]])
-            cutoff <- 0.5
+            message("[DIABLO circos] Correlation matrix computed in ", round(difftime(Sys.time(), circos_start, units="secs"), 1), " seconds")
+            # Use cutoff from Java (default 0.5)
+            cutoff <- if (exists("diablo.circos.cutoff")) diablo.circos.cutoff else 0.5
+            max_edges <- if (exists("diablo.circos.max.edges")) diablo.circos.max.edges else 100
+
+            message("[DIABLO circos] Filtering edges with cutoff ", cutoff, "...")
             sig_idx <- which(abs(cor_cross) > cutoff, arr.ind = TRUE)
+            message("[DIABLO circos] Found ", nrow(sig_idx), " edges above cutoff")
+
+            # ALWAYS enforce maximum edges limit to prevent freeze
+            if (nrow(sig_idx) > max_edges) {
+              message("[DIABLO circos] Too many edges (", nrow(sig_idx), "), limiting to top ", max_edges, " by correlation...")
+              # Get correlation values for edges above cutoff
+              edge_cors <- abs(cor_cross[sig_idx])
+              # Sort and keep only top max_edges
+              top_indices <- order(edge_cors, decreasing = TRUE)[1:max_edges]
+              sig_idx <- sig_idx[top_indices, , drop = FALSE]
+              message("[DIABLO circos] Reduced to ", nrow(sig_idx), " edges")
+            }
+
             if (nrow(sig_idx) > 0) {
               edges <- lapply(1:nrow(sig_idx), function(i) {
                 list(source = rownames(cor_cross)[sig_idx[i,1]],
@@ -327,9 +412,11 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
                      label2 = colnames(cor_cross)[sig_idx[i,2]])
               })
             } else {
-              # If no edges above cutoff, use top 50 by absolute correlation
-              top_n <- min(50, length(cor_cross))
+              # If no edges above cutoff, use top N by absolute correlation
+              top_n <- min(max_edges, length(cor_cross))
+              message("[DIABLO circos] No edges above cutoff, selecting top ", top_n, " edges by correlation...")
               top_idx <- order(abs(cor_cross), decreasing = TRUE)[1:top_n]
+              message("[DIABLO circos] Top edges selected")
               sig_idx <- arrayInd(top_idx, dim(cor_cross))
               edges <- lapply(1:nrow(sig_idx), function(i) {
                 list(source = rownames(cor_cross)[sig_idx[i,1]],
@@ -340,16 +427,49 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
                      label2 = colnames(cor_cross)[sig_idx[i,2]])
               })
             }
+            message("[DIABLO circos] Creating edge list with ", length(edges), " edges...")
             circos_json <- list(DIABLO = edges)
+            message("[DIABLO circos] Writing JSON to file...")
             jsonlite::write_json(circos_json, "diablo_circos.json", auto_unbox = TRUE, pretty = FALSE)
+            message("[DIABLO circos] JSON completed in ", round(difftime(Sys.time(), circos_start, units="secs"), 1), " seconds")
           }, error = function(e) message("[DIABLO circosJSON] ", e$message))
 
-          # Also generate static circos PNG as fallback
-          .safe_plot(input$circos_img, 10, 10, function() {
-            circosPlot(model, cutoff = 0.5, size.variables = 0.25, showIntraLinks = FALSE)
-          })
+          # Also generate static circos PNG as fallback (skip if too many features to avoid freeze)
+          n_features <- sum(sapply(model$X, ncol))
+          skip_png <- n_features > 1000  # Skip PNG if more than 1000 total features
+
+          if (skip_png) {
+            message("[DIABLO] Skipping circos PNG rendering (", n_features, " features is too many, would freeze)")
+            message("[DIABLO] Creating placeholder PNG instead...")
+            # Create a simple placeholder PNG
+            .safe_plot(input$circos_img, 8, 8, function() {
+              plot.new()
+              text(0.5, 0.5, paste0("Circos plot not rendered\n(", n_features, " features)\n\nUse interactive viewer instead"),
+                   cex = 1.5, col = "gray40")
+            })
+          } else {
+            message("[DIABLO] Rendering circos PNG (", n_features, " features, max ", max_edges, " edges)...")
+            png_start <- Sys.time()
+            .safe_plot(input$circos_img, 8, 8, function() {  # Reduced from 10×10 to 8×8 for faster rendering
+              cutoff_val <- if (exists("diablo.circos.cutoff")) diablo.circos.cutoff else 0.5
+              size_val <- if (exists("diablo.circos.feature.size")) diablo.circos.feature.size else 0.25
+              # Use higher cutoff for PNG if many features to prevent freeze
+              png_cutoff <- if (n_features > 500) max(0.7, cutoff_val) else cutoff_val
+              if (png_cutoff > cutoff_val) {
+                message("[DIABLO circos PNG] Using higher cutoff (", png_cutoff, ") for static plot")
+              }
+              circosPlot(model, cutoff = png_cutoff, size.variables = size_val, showIntraLinks = FALSE)
+            })
+            message("[DIABLO] Circos PNG completed in ", round(difftime(Sys.time(), png_start, units="secs"), 1), " seconds")
+          }
+          } else {
+            message("[DIABLO] Circos plot generation skipped (diablo.skip.circos = TRUE)")
+            # Create empty JSON so viewer doesn't break
+            jsonlite::write_json(list(DIABLO = list()), "diablo_circos.json", auto_unbox = TRUE, pretty = FALSE)
+          }
 
           gc(verbose = FALSE, full = TRUE)
+          message("[DIABLO] All plots completed. Total time: ", round(difftime(Sys.time(), start_time, units="secs"), 1), " seconds")
           list(pos.xyz = pos.xyz, pos.xyz2 = pos.xyz2,
                loading.pos.xyz = loading.pos.xyz, loadings = loadings,
                var.vec = var.vec, diablo.comp = diablo.comp)
@@ -505,4 +625,3 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
 
   return(1)
 }
-

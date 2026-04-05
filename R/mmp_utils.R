@@ -3922,6 +3922,8 @@ GetDiagnosticSummary<- function(type){
 GenerateDiabloCircosJson <- function(cutoff=0.5, maxEdges=100) {
   cutoff <- as.numeric(cutoff)
   maxEdges <- as.integer(maxEdges)
+  if(!is.finite(cutoff) || is.na(cutoff)) cutoff <- 0.5
+  if(is.na(maxEdges) || maxEdges < 1) maxEdges <- 100
   tryCatch(
     run_func_via_rsclient(
       func = function(params) {
@@ -3929,12 +3931,71 @@ GenerateDiabloCircosJson <- function(cutoff=0.5, maxEdges=100) {
         diablo.res <- qs::qread(params$diablo_file)
         model <- if (length(diablo.res$dim.res) == 1) diablo.res$dim.res[[1]] else diablo.res$dim.res[[1]]
         block_names <- names(model$X)
-        X_proj <- lapply(model$X, function(x) x[, which(apply(x, 2, var) > 0), drop = FALSE])
-        cor_cross <- cor(X_proj[[1]], X_proj[[2]])
+        if(length(block_names) < 2){
+          jsonlite::write_json(list(DIABLO = list()), "diablo_circos.json", auto_unbox = TRUE, pretty = FALSE)
+          return(invisible(NULL))
+        }
+
+        # Adaptive feature cap to avoid dense correlation explosion on large datasets.
+        # Keep enough candidates for top edges while bounding runtime.
+        feat_cap <- max(100L, min(800L, as.integer(sqrt(params$maxEdges) * 40)))
+        # Hard cap on correlation matrix size (features_block1 x features_block2).
+        # If over this bound, we further trim both blocks to keep runtime predictable.
+        max_matrix_cells <- 2e6
+
+        prep_block <- function(x, cap) {
+          x <- as.matrix(x)
+          if(ncol(x) == 0) return(x)
+          v <- suppressWarnings(apply(x, 2, var, na.rm = TRUE))
+          v[!is.finite(v)] <- 0
+          keep <- which(v > 0)
+          if(length(keep) == 0) keep <- seq_len(ncol(x))
+          x <- x[, keep, drop = FALSE]
+          if(ncol(x) > cap){
+            ord <- order(v[keep], decreasing = TRUE)
+            x <- x[, ord[seq_len(cap)], drop = FALSE]
+          }
+          # Ensure names exist for downstream JSON
+          if(is.null(colnames(x))){
+            colnames(x) <- paste0("F", seq_len(ncol(x)))
+          }
+          x
+        }
+
+        X1 <- prep_block(model$X[[1]], feat_cap)
+        X2 <- prep_block(model$X[[2]], feat_cap)
+        if(ncol(X1) == 0 || ncol(X2) == 0){
+          jsonlite::write_json(list(DIABLO = list()), "diablo_circos.json", auto_unbox = TRUE, pretty = FALSE)
+          return(invisible(NULL))
+        }
+
+        # Enforce hard size limit by trimming lower-variance features.
+        while(as.numeric(ncol(X1)) * as.numeric(ncol(X2)) > max_matrix_cells){
+          if(ncol(X1) >= ncol(X2) && ncol(X1) > 100){
+            v1 <- suppressWarnings(apply(X1, 2, var, na.rm = TRUE)); v1[!is.finite(v1)] <- 0
+            keep1 <- order(v1, decreasing = TRUE)[seq_len(max(100L, floor(ncol(X1) * 0.8)))]
+            X1 <- X1[, keep1, drop = FALSE]
+          } else if(ncol(X2) > 100){
+            v2 <- suppressWarnings(apply(X2, 2, var, na.rm = TRUE)); v2[!is.finite(v2)] <- 0
+            keep2 <- order(v2, decreasing = TRUE)[seq_len(max(100L, floor(ncol(X2) * 0.8)))]
+            X2 <- X2[, keep2, drop = FALSE]
+          } else {
+            break
+          }
+        }
+
+        cor_cross <- suppressWarnings(cor(X1, X2, use = "pairwise.complete.obs"))
+        cor_cross[!is.finite(cor_cross)] <- 0
+        if(length(cor_cross) == 0){
+          jsonlite::write_json(list(DIABLO = list()), "diablo_circos.json", auto_unbox = TRUE, pretty = FALSE)
+          return(invisible(NULL))
+        }
+
         sig_idx <- which(abs(cor_cross) > params$cutoff, arr.ind = TRUE)
         if (nrow(sig_idx) == 0 || nrow(sig_idx) > params$maxEdges) {
           top_n <- min(params$maxEdges, length(cor_cross))
-          top_idx <- order(abs(cor_cross), decreasing = TRUE)[1:top_n]
+          ord <- order(abs(cor_cross), decreasing = TRUE)
+          top_idx <- ord[seq_len(top_n)]
           sig_idx <- arrayInd(top_idx, dim(cor_cross))
         }
         edges <- lapply(1:nrow(sig_idx), function(i) {
