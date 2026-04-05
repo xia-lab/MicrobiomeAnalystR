@@ -234,22 +234,73 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
             }
           })
 
-          # 2. plotLoadings — only plot components that exist
+          # 2. Loading plots — custom robust rendering (avoids mixOmics::plotLoadings margin issues)
           .safe_plot(input$loading_img, 13, 24, function() {
-            ncomp_max <- min(3, model$ncomp[1])
-            fig.list2 <- list()
-            for (nc in 1:ncomp_max) {
-              local_nc <- nc
-              fig.list2[[nc]] <- tryCatch(
-                as_grob(function() plotLoadings(model, ndisplay=10, comp=local_nc, contrib="max", method="median", size.name=1.1, legend=TRUE)),
-                error = function(e) { message("[plotLoadings comp=", local_nc, "] ", e$message); NULL }
-              )
+            ncomp.raw <- suppressWarnings(as.integer(model$ncomp))
+            ncomp.max <- if(length(ncomp.raw) == 0) NA_integer_ else suppressWarnings(min(ncomp.raw, na.rm = TRUE))
+            if(!is.finite(ncomp.max) || is.na(ncomp.max) || ncomp.max < 1){
+              ncomp.max <- suppressWarnings(min(vapply(model$loadings, function(v) ncol(as.matrix(v)), integer(1)), na.rm = TRUE))
             }
-            fig.list2 <- fig.list2[!sapply(fig.list2, is.null)]
-            if (length(fig.list2) > 0) {
-              grid.arrange(grobs = fig.list2, nrow = length(fig.list2))
-            } else {
-              plot.new(); text(0.5, 0.5, "plotLoadings failed for all components", cex = 1.2)
+            if(!is.finite(ncomp.max) || is.na(ncomp.max) || ncomp.max < 1){
+              ncomp.max <- 1L
+            }
+            ncomp.plot <- min(3L, as.integer(ncomp.max))
+
+            op <- par(no.readonly = TRUE)
+            on.exit(par(op), add = TRUE)
+            par(mfrow = c(ncomp.plot, 1), mar = c(5, 4, 3, 1))
+
+            for (nc in seq_len(ncomp.plot)) {
+              tryCatch({
+                top.rows <- lapply(names(model$loadings), function(block.nm){
+                  mat <- as.matrix(model$loadings[[block.nm]])
+                  if(ncol(mat) < nc){
+                    return(NULL)
+                  }
+                  vals <- mat[, nc, drop = TRUE]
+                  keep <- is.finite(vals)
+                  vals <- vals[keep]
+                  if(length(vals) == 0){
+                    return(NULL)
+                  }
+                  ord <- order(abs(vals), decreasing = TRUE)
+                  ord <- ord[seq_len(min(10, length(ord)))]
+                  data.frame(
+                    feature = names(vals)[ord],
+                    loading = as.numeric(vals[ord]),
+                    block = block.nm,
+                    stringsAsFactors = FALSE
+                  )
+                })
+
+                top.df <- do.call(rbind, top.rows)
+                if(is.null(top.df) || nrow(top.df) == 0){
+                  stop(paste0("No finite loadings available for component ", nc, "."))
+                }
+
+                top.df$feature <- paste0(top.df$block, ": ", top.df$feature)
+                top.df <- top.df[order(abs(top.df$loading), decreasing = TRUE), , drop = FALSE]
+                top.df$feature <- factor(top.df$feature, levels = rev(unique(top.df$feature)))
+
+                p <- ggplot2::ggplot(top.df, ggplot2::aes(x = feature, y = loading, fill = block)) +
+                  ggplot2::geom_col(width = 0.7) +
+                  ggplot2::coord_flip() +
+                  ggplot2::labs(
+                    title = paste("DIABLO Loadings - Component", nc),
+                    x = NULL,
+                    y = "Loading"
+                  ) +
+                  ggplot2::theme_bw(base_size = 10) +
+                  ggplot2::theme(
+                    legend.position = "bottom",
+                    plot.title = ggplot2::element_text(hjust = 0.5)
+                  )
+                print(p)
+              }, error = function(e) {
+                message("[custom loading comp=", nc, "] ", e$message)
+                plot.new()
+                text(0.5, 0.5, paste0("Component ", nc, " failed:\n", e$message), cex = 1)
+              })
             }
           })
 
@@ -454,5 +505,4 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
 
   return(1)
 }
-
 
