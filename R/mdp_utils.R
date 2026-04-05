@@ -140,7 +140,7 @@ PerformNetworkCorrelation <- function(mbSetObj, taxrank, cor.method="pearson", c
                                       permNum=100, pvalCutoff=0.05, corrCutoff=0.3, abundOpt="mean", 
                                       corr.net.name, plotNet = FALSE, netType="static", netLayout="kk",
                                       netTextSize = 2.5){
-  if(!exists("my.corr.net")){ # public web on same user dir
+  if(!exists("my.corr.net")){
     .load.scripts.on.demand("utils_corrnet.Rc");    
   }
   return(my.corr.net(mbSetObj, taxrank, cor.method, colorOpt, permNum, pvalCutoff, corrCutoff, abundOpt, corr.net.name, plotNet, netType, netLayout,netTextSize));
@@ -234,7 +234,7 @@ PlotBoxDataCorr<-function(mbSetObj, boxplotName, feat, format="png", sel.meta=""
 }
 
 SparccToNet <- function(mbSetObj=NULL, corr.net.name, networkType="static", netLayout="kk", netTextSize){
-  if(!exists("my.sparcc.net")){ # public web on same user dir
+  if(!exists("my.sparcc.net")){
     .load.scripts.on.demand("utils_sparcc.Rc");    
   }
   return(my.sparcc.net(mbSetObj, corr.net.name, networkType, netLayout, netTextSize));
@@ -262,7 +262,6 @@ PerformLayOut <- function(g){
 PrepareCorrExpValues <- function(mbSetObj, meta, taxalvl, color, layoutOpt, comparison, wilcox.cutoff){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  suppressMessages(library(metacoder)) # required for some diff computing
 
   tax_o <- taxalvl;
   dm <- mbSetObj$dataSet$proc.phyobj;
@@ -2148,12 +2147,14 @@ sink();
 #'@import data.table
 #'@import ape
 
-PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, metadata, 
+PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, metadata,
                                  showlabel, taxrank, taxa, alphaopt, ellopt, comp.method, format="png", dpi=default.dpi,
                                  custom_col = "none",pairwise, interactive = FALSE){
-  #save.image("beta.Rdata");
-  combined <- F;
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
+
+  # vegan/ape calls within are isolated at leaf level via rsclient_isolated_exec
+  combined <- F;
   module.type <- mbSetObj$module.type;
   suppressMessages(library(data.table));
   suppressMessages(library(viridis));
@@ -2232,32 +2233,33 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
       indx <- which(colnames(sample_data(data))=="alphaopt");
       colnames(sample_data(data))[indx] <- alphaopt;
     }else if(colopt=="continuous") {
-      require("MMUPHin");
-      require(vegan);
-
+      # vegan/MMUPHin quarantined — isolate in subprocess
       proc.phyobj <- qs::qread("merged.data.raw.qs");
       data1 <- proc.phyobj;
-
-      sub_sam_data <- sample_data(data1);
-
-      sub_data <- data1@otu_table[, rownames(sub_sam_data)];
+      sub_sam_data <- data.frame(sample_data(data1), check.names = FALSE)
+      sub_data <- as.matrix(data1@otu_table[, rownames(sub_sam_data)])
       sub_data <- apply(sub_data, 2, function(x) x / sum(x))
-      dist.data <- vegdist(t(sub_data), method = "bray");
-      
-      fit_continuous <- continuous_discover(feature_abd = sub_data,
-                                            batch = "dataset",
-                                            data = sub_sam_data,
-                                            control = list(var_perc_cutoff = 0.5,
-                                                           verbose = FALSE));
-      
-      loading <- data.frame(feature = rownames(fit_continuous$consensus_loadings),
-                            loading1 = fit_continuous$consensus_loadings[, 1]);
-      
-      sample_data(data1)$loading <- fit_continuous$consensus_scores[, 1];
-      oldDF <- as(sample_data(data1), "data.frame");
-      newDF <- oldDF[oldDF$dataset %in% dataName, ];
-      sample_data(data) <- sample_data(newDF);
-      
+
+      cont_result <- rsclient_isolated_exec(
+        func_body = function(d) {
+          require(vegan); require(MMUPHin)
+          fit <- MMUPHin::continuous_discover(feature_abd = d$sub_data,
+                                              batch = "dataset",
+                                              data = d$sub_sam_data,
+                                              control = list(var_perc_cutoff = 0.5, verbose = FALSE))
+          list(scores = fit$consensus_scores[, 1], loadings = fit$consensus_loadings[, 1],
+               loading_names = rownames(fit$consensus_loadings))
+        },
+        input_data = list(sub_data = sub_data, sub_sam_data = sub_sam_data),
+        packages = c("vegan", "MMUPHin", "qs"), timeout = 300, output_type = "qs"
+      )
+      if (is.list(cont_result) && isFALSE(cont_result$success)) { AddErrMsg(cont_result$message); return(0) }
+
+      sample_data(data1)$loading <- cont_result$scores
+      oldDF <- as(sample_data(data1), "data.frame")
+      newDF <- oldDF[oldDF$dataset %in% dataName, ]
+      sample_data(data) <- sample_data(newDF)
+
     }else{
       data<-data;
     }
@@ -3175,10 +3177,9 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pai
                                 covariates = FALSE, cov.vec = NA, model.additive = TRUE){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  require(vegan);
 
+  # Data loading (Master — phyloseq functions available via _script_loader.R)
   if(distnm %in% c("wunifrac", "unifrac")) {
-    # Use qs::qread to handle both plain and S4 format
     data <- qs::qread("data_unifra.qs");
   } else {
      if(!(exists("phyloseq_objs"))){
@@ -3189,106 +3190,208 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pai
         AddErrMsg("Errors in projecting to the selected taxanomy level!");
         return(0);
       }
-
   }
-  
+
   data <- transform_sample_counts(data, function(x) x/sum(x));
 
-  if(distnm %in% c("wunifrac", "unifrac")){
-    if(distnm == "wunifrac"){
-      data.dist <- phyloseq::UniFrac(data, weighted=TRUE, normalized=TRUE)
-    }else{
-      data.dist <- phyloseq::UniFrac(data, weighted=FALSE)
-    }
-  }else if(distnm == "aitchison"){
-    otu_mat <- as(otu_table(data), "matrix")
-    if(!taxa_are_rows(data)) otu_mat <- t(otu_mat)
-    otu_mat <- otu_mat + 0.5
-    clr_mat <- t(apply(otu_mat, 2, function(x) log(x) - mean(log(x))))
-    data.dist <- dist(clr_mat, method="euclidean")
-  }else{
-    data.dist <- distance(data, method=distnm);
+  # Distance + stats: vegan/ape quarantined — isolate in subprocess
+  # Extract plain data in Master (avoid sending S4 objects when possible)
+  otu_mat <- as(otu_table(data), "matrix")
+  is_taxa_rows <- taxa_are_rows(data)
+  if (is_taxa_rows) {
+    abund_mat <- t(otu_mat)  # samples x features for vegdist
+  } else {
+    abund_mat <- otu_mat
   }
-  group <- get_variable(data, variable);
-  stat.info <- "";
-  resTab <- list();
- 
-  if(method=="adonis"){
-    sampledf <- data.frame(sample_data(data), check.names=FALSE); 
-    outcome <- "data.dist";
-    variables <- variable;
-    f <- as.formula(paste(outcome,paste(variables, collapse = " * "), sep = " ~ "));
-    
-    # advanced feature to include co-variates and different model options (NOT implemented in web?)
-    if(covariates){
-      variables <- c(variable, cov.vec)
-      
-      if(model.additive){
-        f <- as.formula(
-          paste(outcome,
-                paste(variables, collapse = " + "),
-                sep = " ~ "))
-      }else{
-        f <- as.formula(
-          paste(outcome,
-                paste(variables, collapse = " * "),
-                sep = " ~ "))
-      }
-    }
-   
-    res <- adonis2(formula = f, data = sampledf);
-    resTab <- res[1,];
-    stat.info <- paste("[PERMANOVA] F-value: ", signif(resTab$F, 5),  "; R-squared: ", signif(resTab$R2, 5), "; p-value: ", signif(resTab$Pr, 5), sep="");   
-    stat.info.vec <- c(signif(resTab$F, 5), signif(resTab$R2, 5), signif(resTab$Pr, 5));
-    names(stat.info.vec) <- c("F-value", "R-squared", "p-value");
+  sam_df <- data.frame(sample_data(data), check.names = FALSE)
+  group_vec <- as.character(get_variable(data, variable))
+  
+  # For UniFrac: need tree
+  tree_data <- NULL
+  if (distnm %in% c("wunifrac", "unifrac")) {
+    tree_data <- tryCatch(phy_tree(data), error = function(e) NULL)
+  }
+  
+  # For pairwise PERMANOVA
+  pairwise_grp <- NULL
+  if (pairwise != FALSE && pairwise != "false" && method == "adonis") {
+    pairwise_grp <- tryCatch({
+      g <- sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]
+      list(values = as.character(g), levels = levels(g))
+    }, error = function(e) NULL)
+  }
+  
+  result <- tryCatch({
+    rsclient_isolated_exec(
+      func_body = function(input_data) {
+        require(vegan)
+  
+        abund_mat <- input_data$abund_mat
+        sam_df <- input_data$sam_df
+        group <- input_data$group_vec
+        distnm <- input_data$distnm
+        method <- input_data$method
+        variable <- input_data$variable
+  
+        # Compute distance matrix
+        if (distnm %in% c("wunifrac", "unifrac")) {
+          require(ape)
+          require(phyloseq)
+          ps <- phyloseq::phyloseq(
+            phyloseq::otu_table(t(abund_mat), taxa_are_rows = TRUE),
+            phyloseq::sample_data(sam_df),
+            phyloseq::phy_tree(input_data$tree_data)
+          )
+          if (!ape::is.rooted(phyloseq::phy_tree(ps))) {
+            phyloseq::phy_tree(ps) <- ape::root(
+              phyloseq::phy_tree(ps),
+              sample(phyloseq::taxa_names(ps), 1),
+              resolve.root = TRUE)
+          }
+          if (distnm == "wunifrac") {
+            data.dist <- phyloseq::UniFrac(ps, weighted = TRUE, normalized = TRUE)
+          } else {
+            data.dist <- phyloseq::UniFrac(ps, weighted = FALSE)
+          }
+        } else if (distnm == "aitchison") {
+          otu_clr <- abund_mat + 0.5
+          clr_mat <- t(apply(otu_clr, 1, function(x) log(x) - mean(log(x))))
+          data.dist <- dist(clr_mat, method = "euclidean")
+        } else {
+          data.dist <- vegan::vegdist(abund_mat, method = distnm)
+        }
+  
+        stat.info <- ""
+        stat.info.vec <- NULL
+        pairwise_res <- NULL
+  
+        if (method == "adonis") {
+          sampledf <- sam_df
+          outcome <- "data.dist"
+          covariates <- input_data$covariates
+          cov.vec <- input_data$cov.vec
+          model.additive <- input_data$model.additive
+  
+          if (covariates && !identical(cov.vec, NA)) {
+            if (model.additive) {
+              f <- as.formula(paste(outcome, "~", variable, "+", paste(cov.vec, collapse = "+")))
+            } else {
+              f <- as.formula(paste(outcome, "~", variable, "*", paste(cov.vec, collapse = "*")))
+            }
+          } else {
+            f <- as.formula(paste(outcome, "~", variable))
+          }
+  
+          res <- vegan::adonis2(formula = f, data = sampledf)
+          resTab <- res[1, ]
+          stat.info <- paste("[PERMANOVA] F-value: ", signif(resTab$F, 5),
+                             "; R-squared: ", signif(resTab$R2, 5),
+                             "; p-value: ", signif(resTab$`Pr(>F)`, 5), sep = "")
+          stat.info.vec <- c(signif(resTab$F, 5), signif(resTab$R2, 5), signif(resTab$`Pr(>F)`, 5))
+          names(stat.info.vec) <- c("F-value", "R-squared", "p-value")
+  
+          # Pairwise PERMANOVA
+          pairwise_val <- input_data$pairwise
+          if (!identical(pairwise_val, FALSE) && pairwise_val != "false" && !is.null(input_data$pairwise_grp)) {
+            grp_info <- input_data$pairwise_grp
+            grp <- factor(grp_info$values, levels = grp_info$levels)
+            if (length(levels(grp)) == 2) {
+              pairwise_res <- data.frame(t(c(stat.info.vec, p.adj = signif(resTab$`Pr(>F)`, 5))))
+              rownames(pairwise_res) <- paste(levels(grp)[1], ".vs.", levels(grp)[2])
+            } else {
+              co <- combn(levels(grp), 2)
+              nco <- ncol(co)
+              pairs <- character(nco)
+              F.Model <- numeric(nco)
+              R2 <- numeric(nco)
+              p.value <- numeric(nco)
+              for (j in 1:nco) {
+                pair_idx <- which(grp %in% co[, j])
+                Dij <- as.dist(as.matrix(data.dist)[pair_idx, pair_idx])
+                fij <- data.frame(g = factor(grp[pair_idx]))
+                a <- vegan::adonis2(Dij ~ g, data = fij, permutations = 999)
+                pairs[j] <- paste(co[1, j], 'vs', co[2, j])
+                F.Model[j] <- a$F[1]
+                R2[j] <- a$R2[1]
+                p.value[j] <- a$`Pr(>F)`[1]
+              }
+              pairwise_res <- data.frame(pairs = pairs, F.Model = F.Model, R2 = R2,
+                                         pval = p.value, stringsAsFactors = FALSE)
+              pairwise_res$p.adj <- p.adjust(pairwise_res$pval, method = "fdr")
+              rownames(pairwise_res) <- pairwise_res$pairs
+              pairwise_res$pairs <- NULL
+            }
+          }
+  
+        } else if (method == "anosim") {
+          res <- vegan::anosim(data.dist, group = group, permutations = 999)
+          stat.info <- paste("[ANOSIM] R: ", signif(res$statistic, 5),
+                             "; p-value < ", signif(res$signif, 5), sep = "")
+          stat.info.vec <- c(signif(res$statistic, 5), signif(res$signif, 5))
+          names(stat.info.vec) <- c("R", "p-value")
+  
+        } else if (method == "permdisp") {
+          beta <- vegan::betadisper(data.dist, group = group)
+          resTab <- anova(beta)
+          stat.info <- paste("[PERMDISP] F-value: ", signif(resTab$"F value"[1], 5),
+                             "; p-value: ", signif(resTab$"Pr(>F)"[1], 5), sep = "")
+          stat.info.vec <- c(signif(resTab$"F value"[1], 5), signif(resTab$"Pr(>F)"[1], 5))
+          names(stat.info.vec) <- c("F-value", "p-value")
+  
+        } else if (method == "mirkat") {
+          # Return distance matrix for MiRKAT (runs in Master)
+          return(list(stat.info = NULL, stat.info.vec = NULL,
+                      pairwise_res = NULL, dist_matrix = as.matrix(data.dist),
+                      group_vec = group))
+        }
+  
+        gc(verbose = FALSE, full = TRUE)
+        list(stat.info = stat.info, stat.info.vec = stat.info.vec, pairwise_res = pairwise_res)
+      },
+      input_data = list(
+        abund_mat = abund_mat, sam_df = sam_df, group_vec = group_vec,
+        tree_data = tree_data, distnm = distnm, method = method,
+        variable = variable, pairwise = pairwise,
+        covariates = covariates, cov.vec = cov.vec, model.additive = model.additive,
+        pairwise_grp = pairwise_grp
+      ),
+      packages = c("vegan", "ape", "qs"),
+      timeout = 300,
+      output_type = "qs"
+    )
+  }, error = function(e) {
+    AddErrMsg(paste("PerformCategoryComp failed:", e$message))
+    return(NULL)
+  })
+  
+  if (is.null(result)) return(0)
+  if (is.list(result) && isFALSE(result$success)) { AddErrMsg(result$message); return(0) }
 
-    if(pairwise != "false"){
-        grp <- sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]
-       if(length(levels(grp)) == 2){ # same as before  
-            res <- data.frame(t(c(stat.info.vec, p.adj=signif(resTab$Pr, 5))));
-            rownames(res) <- paste(levels(grp)[1], ".vs.", levels(grp)[2]);
-       }else{
-            res <- .permanova_pairwise(x = data.dist,  grp);
-            rownames(res) <- res$pairs;
-            res$pairs <- NULL;
-      }
-      mbSetObj$analSet$beta.stat.pair <- mbSetObj$analSet$resTable <- signif(res,5);
-      fast.write(mbSetObj$analSet$resTable, file="pairwise_permanova.csv");
-   }
- 
-}else if(method=="anosim"){ # just one group
-    anosim <- anosim(data.dist, group=group);
-    resTab$Rval <- anosim$statistic;
-    resTab$pval <- anosim$signif;
-    stat.info <- paste("[ANOSIM] R: ", signif(resTab$Rval, 5), "; p-value < ", signif(resTab$pval, 5), sep="");
-    stat.info.vec <- c(signif(resTab$Rval, 5), signif(resTab$pval, 5));
-    names(stat.info.vec) <- c("R", "p-value");
-
-  }else if (method=="permdisp"){ # just one group
-    beta <- betadisper(data.dist, group=group);
-    resTab <- anova(beta);
-    stat.info <- paste("[PERMDISP] F-value: ", signif(resTab$"F value"[1], 5), "; p-value: ", signif(resTab$"Pr(>F)"[1], 5), sep="");
-    stat.info.vec <- c(signif(resTab$"F value"[1], 5), signif(resTab$"Pr(>F)"[1], 5));
-    names(stat.info.vec) <- c("F-value", "p-value");
-  }else if(method=="mirkat"){
-    
-    if(!exists("MiRKAT")){ # public web on same user dir
-      .load.scripts.on.demand("utils_mirkat.Rc"); 
+  # MiRKAT: distance was computed in subprocess, run test in Master
+  if (method == "mirkat" && !is.null(result$dist_matrix)) {
+    if (!exists("MiRKAT")) .load.scripts.on.demand("utils_mirkat.Rc")
+    sam_df_full <- data.frame(sample_data(data), check.names = FALSE)
+    exclud <- which(colnames(sam_df_full) %in% variable)
+    X <- apply(sam_df_full[, -exclud, drop = FALSE], 2, function(x) as.numeric(factor(x)))
+    K.weighted <- D2K(result$dist_matrix)
+    Gp <- as.numeric(factor(result$group_vec))
+    res <- MiRKAT(y = Gp, X = X, Ks = K.weighted, out_type = "C", method = "davies", returnKRV = TRUE, returnR2 = TRUE)
+    resTab <- do.call(cbind, res)
+    mbSetObj$analSet$stat.info <- paste("[MiRKAT] R-squared: ", signif(resTab[1, "R2"], 5),
+                                        "; p-value: ", signif(resTab[1, "p_values"], 5),
+                                        "; KRV: ", signif(resTab[1, "KRV"], 5), sep = "")
+    mbSetObj$analSet$stat.info.vec <- signif(resTab[1, c("R2", "p_values", "KRV")], 5)
+    names(mbSetObj$analSet$stat.info.vec) <- c("R-squared", "p-value", "KRV")
+  } else {
+    mbSetObj$analSet$stat.info <- result$stat.info
+    mbSetObj$analSet$stat.info.vec <- result$stat.info.vec
+    if (!is.null(result$pairwise_res)) {
+      mbSetObj$analSet$beta.stat.pair <- signif(result$pairwise_res, 5)
+      mbSetObj$analSet$resTable <- signif(result$pairwise_res, 5)
+      fast.write(mbSetObj$analSet$resTable, file = "pairwise_permanova.csv")
     }
-    exclud <- which(colnames(data@sam_data) %in% variable)
-    X = data@sam_data[,-exclud]
-    X = apply(X, 2, function(x) as.numeric(factor(x)))
-    K.weighted <- D2K(as.matrix(data.dist))
-    Gp <- as.numeric(factor(group))
-    res<- MiRKAT(y =Gp, X = X, Ks = K.weighted, out_type = "C", method = "davies", returnKRV = TRUE, returnR2 = TRUE)
-    resTab <- do.call(cbind,res);
-    stat.info <- paste("[MiRKAT] R-squared: ", signif(resTab[1,"R2"], 5), "; p-value: ", signif(resTab[1,"p_values"], 5),"; KRV: ",signif(resTab[1,"KRV"], 5), sep="");
-    stat.info.vec <- signif(resTab[1, c("R2", "p_values", "KRV")], 5);
-    names(stat.info.vec) <- c("R-squared", "p-value", "KRV");
   }
 
-  mbSetObj$analSet$stat.info <- stat.info;
-  mbSetObj$analSet$stat.info.vec <- stat.info.vec;
   return(.set.mbSetObj(mbSetObj));
 }
 
@@ -3869,10 +3972,8 @@ GetHtMetaCpInfo <- function(mbSetObj, meta){
 #'License: GNU GPL (>= 2)
 #'@export
 #'@import metacoder
-PrepareHeatTreePlot <- function(mbSetObj, meta, taxalvl, color, layoutOpt, comparison, 
+PrepareHeatTreePlot <- function(mbSetObj, meta, taxalvl, color, layoutOpt, comparison,
                                 wilcox.cutoff, switchCmpDirection, colorMode, showLabels, imgName, format="png", dpi=default.dpi){
- suppressMessages(library(metacoder))
-
   mbSetObj <- .get.mbSetObj(mbSetObj);  
   tax_o <- taxalvl;
   dm <- mbSetObj$dataSet$proc.phyobj;
@@ -3964,20 +4065,31 @@ PrepareHeatTreePlotDataParse_cmf <- function(dm_otu_cmf,
   if (any(missing_sep)) {
     dm_otu_cmf$lineage[missing_sep] <- paste0("r__", dm_otu_cmf$lineage[missing_sep])
   }
-  dm_obj_cmf <- metacoder::parse_tax_data(dm_otu_cmf,
+  dm_obj_cmf <- rsclient_isolated_exec(
+    func_body = function(input_data) {
+      require(metacoder)
+      dm_obj <- metacoder::parse_tax_data(input_data$dm_otu_cmf,
                                           class_cols = "lineage",
                                           class_sep = ";",
                                           class_regex = "^(.+)__(.*)$",
                                           class_key = c(tax_rank = "info",
-                                                        tax_name = "taxon_name"));
-  
-  dm_obj_cmf$data$tax_data <- calc_obs_props(dm_obj_cmf, "tax_data"); # normalization
-  
-  dm_obj_cmf$data$tax_abund <- calc_taxon_abund(dm_obj_cmf, "tax_data",
-                                                cols = dm_samples_cmf$sample_id); #calculate taxon abundance
-  dm_obj_cmf$data$diff_table <- compare_groups(dm_obj_cmf, dataset = "tax_abund", #make diff table
-                                               cols = dm_samples_cmf$sample_id, # What columns of sample data to use
-                                               groups = dm_samples_cmf[[meta]]); # What category each sample is assigned to;
+                                                        tax_name = "taxon_name"))
+      dm_obj$data$tax_data <- calc_obs_props(dm_obj, "tax_data")
+      dm_obj$data$tax_abund <- calc_taxon_abund(dm_obj, "tax_data",
+                                                cols = input_data$sample_ids)
+      dm_obj$data$diff_table <- compare_groups(dm_obj, dataset = "tax_abund",
+                                               cols = input_data$sample_ids,
+                                               groups = input_data$groups)
+      return(dm_obj)
+    },
+    input_data = list(dm_otu_cmf = dm_otu_cmf,
+                      sample_ids = dm_samples_cmf$sample_id,
+                      groups = dm_samples_cmf[[meta]]),
+    packages = c("metacoder", "qs"),
+    timeout = 180,
+    output_type = "qs"
+  )
+  if (is.list(dm_obj_cmf) && isFALSE(dm_obj_cmf$success)) { AddErrMsg(dm_obj_cmf$message); return(0) }
   return(dm_obj_cmf);
 };
 
@@ -4037,8 +4149,6 @@ PrepareHeatTreePlotDataParse_cmf_diff_table <- function(PrepareHeatTreePlotDataP
 PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, comparison, wilcox.cutoff, colorMode, showLabels, imgName, format, dpi=default.dpi){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  suppressMessages(library(viridis));
-  
   dm_obj_cmf = PrepareHeatTreePlotDataParse_cmf_res;
   if(color == "ggr"){
     color_new <- c("#006B30", "gray", "#E21818");
@@ -4059,92 +4169,95 @@ PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, co
   }else {
     color_new <- c("#764b93", "gray", "#F0C808");
   };
-  
+
   mbSetObj$analSet$heat_tree_plot <- imgName; # for PDF reporter
-  
+
   set.seed(56784);
-  
-  Cairo::Cairo(file=paste0(imgName, ".", format), unit="in", dpi=96, width=13.9, height=12.2, type=format, bg="white");
   wilcox.cutoff <- as.numeric(wilcox.cutoff)
 
-   if(colorMode=="sig"){
-    dm_obj_cmf$data$diff_table$log2_median_ratio[dm_obj_cmf$data$diff_table$wilcox_p_value>wilcox.cutoff]  <- 0
-   }
+  # metacoder heat_tree uses R5 NSE — must create taxmap AND plot in SAME subprocess
+  # Save the raw OTU data used to create taxmap, let subprocess recreate it
+  work_dir <- getwd()
+  qs::qsave(list(dm_obj_cmf = dm_obj_cmf, color_new = color_new, colorMode = colorMode,
+                  wilcox_cutoff = wilcox.cutoff, showLabels = showLabels,
+                  layoutOpt = layoutOpt, comparison = comparison,
+                  imgFile = file.path(work_dir, paste0(imgName, ".", format)), format = format),
+             "heattree_plot_input.qs")
 
-if(showLabels=="true"){
-  if(layoutOpt == "reda"){# two layouts are provided
-    box <- heat_tree(dm_obj_cmf,
-                     node_label =  ifelse(wilcox_p_value < wilcox.cutoff, taxon_names, NA),  #taxon names
-                     node_size = n_obs, # n_obs is a function that calculates, in this case, the number of OTUs per taxon
-                     node_color = log2_median_ratio, # A column from `obj$data$diff_table`
-                     node_color_interval = c(-8, 8), # The range of `log2_median_ratio` to display
-                     node_color_range = color_new, # The color palette used
-                     node_size_axis_label = "Abundance level",
-                     node_color_axis_label = "Median ratio (log2)",
-                     layout = "davidson-harel", # The primary layout algorithm
-                     initial_layout = "reingold-tilford",
-                     title = comparison,
-                     title_size = 0.05,
-                     node_label_size_range = c(0.02, 0.05),
-                     output_file = NULL);
-  } else {
-    box <- heat_tree(dm_obj_cmf,
-                     node_label =  ifelse(wilcox_p_value < wilcox.cutoff, taxon_names, NA),
-                     node_size = n_obs, # n_obs is a function that calculates, in this case, the number of OTUs per taxon
-                     node_color = log2_median_ratio, # A column from `obj$data$diff_table`
-                     node_color_interval = c(-8, 8), # The range of `log2_median_ratio` to display
-                     node_color_range = color_new, # The color palette used
-                     node_size_axis_label = "Abundance level",
-                     node_color_axis_label = "Median ratio (log2)",
-                     title = comparison,
-                     title_size = 0.05,
-                     node_label_size_range = c(0.02, 0.05),
-                     output_file = NULL);
+  run_func_via_rsclient(
+    func = function(work_dir) {
+      setwd(work_dir)
+      require(metacoder); require(Cairo)
+      input <- qs::qread("heattree_plot_input.qs")
+      dm_obj_cmf <- input$dm_obj_cmf
+      color_new <- input$color_new
+      wilcox.cutoff <- input$wilcox_cutoff
+      showLabels <- input$showLabels
+      layoutOpt <- input$layoutOpt
+      comparison <- input$comparison
 
-  }
-}else{
-if(layoutOpt == "reda"){# two layouts are provided
-    box <- heat_tree(dm_obj_cmf,
-                     node_label =  NA,  #taxon names
-                     node_size = n_obs, # n_obs is a function that calculates, in this case, the number of OTUs per taxon
-                     node_color = log2_median_ratio, # A column from `obj$data$diff_table`
-                     node_color_interval = c(-8, 8), # The range of `log2_median_ratio` to display
-                     node_color_range = color_new, # The color palette used
-                     node_size_axis_label = "Abundance level",
-                     node_color_axis_label = "Median ratio (log2)",
-                     layout = "davidson-harel", # The primary layout algorithm
-                     initial_layout = "reingold-tilford",
-                     title = comparison,
-                     title_size = 0.05,
-                     node_label_size_range = c(0.02, 0.05),
-                     output_file = NULL);
-  } else {
-    box <- heat_tree(dm_obj_cmf,
-                     node_label =  NA,
-                     node_size = n_obs, # n_obs is a function that calculates, in this case, the number of OTUs per taxon
-                     node_color = log2_median_ratio, # A column from `obj$data$diff_table`
-                     node_color_interval = c(-8, 8), # The range of `log2_median_ratio` to display
-                     node_color_range = color_new, # The color palette used
-                     node_size_axis_label = "Abundance level",
-                     node_color_axis_label = "Median ratio (log2)",
-                     title = comparison,
-                     title_size = 0.05,
-                     node_label_size_range = c(0.02, 0.05),
-                     output_file = NULL);
+      if(input$colorMode == "sig"){
+        dm_obj_cmf$data$diff_table$log2_median_ratio[dm_obj_cmf$data$diff_table$wilcox_p_value > wilcox.cutoff] <- 0
+      }
 
-  }
+      set.seed(56784)
+      Cairo(file = input$imgFile, unit = "in", dpi = 96, width = 13.9, height = 12.2, type = input$format, bg = "white")
+      if(showLabels == "true"){
+        if(layoutOpt == "reda"){
+          box <- heat_tree(dm_obj_cmf,
+                           node_label = ifelse(wilcox_p_value < wilcox.cutoff, taxon_names, NA),
+                           node_size = n_obs, node_color = log2_median_ratio,
+                           node_color_interval = c(-8, 8), node_color_range = color_new,
+                           node_size_axis_label = "Abundance level",
+                           node_color_axis_label = "Median ratio (log2)",
+                           layout = "davidson-harel", initial_layout = "reingold-tilford",
+                           title = comparison, title_size = 0.05,
+                           node_label_size_range = c(0.02, 0.05), output_file = NULL)
+        } else {
+          box <- heat_tree(dm_obj_cmf,
+                           node_label = ifelse(wilcox_p_value < wilcox.cutoff, taxon_names, NA),
+                           node_size = n_obs, node_color = log2_median_ratio,
+                           node_color_interval = c(-8, 8), node_color_range = color_new,
+                           node_size_axis_label = "Abundance level",
+                           node_color_axis_label = "Median ratio (log2)",
+                           title = comparison, title_size = 0.05,
+                           node_label_size_range = c(0.02, 0.05), output_file = NULL)
+        }
+      } else {
+        if(layoutOpt == "reda"){
+          box <- heat_tree(dm_obj_cmf,
+                           node_label = NA,
+                           node_size = n_obs, node_color = log2_median_ratio,
+                           node_color_interval = c(-8, 8), node_color_range = color_new,
+                           node_size_axis_label = "Abundance level",
+                           node_color_axis_label = "Median ratio (log2)",
+                           layout = "davidson-harel", initial_layout = "reingold-tilford",
+                           title = comparison, title_size = 0.05,
+                           node_label_size_range = c(0.02, 0.05), output_file = NULL)
+        } else {
+          box <- heat_tree(dm_obj_cmf,
+                           node_label = NA,
+                           node_size = n_obs, node_color = log2_median_ratio,
+                           node_color_interval = c(-8, 8), node_color_range = color_new,
+                           node_size_axis_label = "Abundance level",
+                           node_color_axis_label = "Median ratio (log2)",
+                           title = comparison, title_size = 0.05,
+                           node_label_size_range = c(0.02, 0.05), output_file = NULL)
+        }
+      }
+      print(box)
+      dev.off()
+    },
+    args = list(work_dir = work_dir),
+    timeout_sec = 180
+  )
+  unlink("heattree_plot_input.qs")
 
-};
-  print(box);
-  dev.off();
-  
   return(.set.mbSetObj(mbSetObj))
 }
 
-PlotGroupDataHeattree <- function(mbSetObj, meta, comparison, taxalvl, color, layoutOpt, 
+PlotGroupDataHeattree <- function(mbSetObj, meta, comparison, taxalvl, color, layoutOpt,
                                   showLabels,imgName, format="png", dpi=default.dpi){
-  suppressMessages(library(metacoder))
-  
   mbSetObj <- .get.mbSetObj(mbSetObj);
   tax_o <- taxalvl;
   
@@ -4178,9 +4291,8 @@ PlotGroupDataHeattree <- function(mbSetObj, meta, comparison, taxalvl, color, la
   return(.set.mbSetObj(mbSetObj));
 };
 
-PlotSampleDataHeattree <- function(mbSetObj,comparison, taxalvl, color, layoutOpt, 
+PlotSampleDataHeattree <- function(mbSetObj,comparison, taxalvl, color, layoutOpt,
                                   showLabels, imgName, format="png", dpi=default.dpi){
-  suppressMessages(library(metacoder))
   mbSetObj <- .get.mbSetObj(mbSetObj);
   tax_o <- taxalvl;
   
@@ -4215,10 +4327,8 @@ PlotSampleDataHeattree <- function(mbSetObj,comparison, taxalvl, color, layoutOp
   return(.set.mbSetObj(mbSetObj));
 };
 
-PlotOverviewDataHeattree <- function(mbSetObj, taxalvl, color, layoutOpt, 
+PlotOverviewDataHeattree <- function(mbSetObj, taxalvl, color, layoutOpt,
                                     showLabels, imgName, format="png", dpi=default.dpi){
-  suppressMessages(library(metacoder))
-
   mbSetObj <- .get.mbSetObj(mbSetObj);
   tax_o <- taxalvl;
   
@@ -4289,21 +4399,8 @@ PrepareHeatTreePlotAbR <- function(dm = dm, tax_dm = tax_dm, taxalvl = taxalvl, 
   };
   dm_otu$lineage <- gsub(";+$", "", dm_otu$lineage); #remove empty tax names
   
-  dm_otu_cmf <- dm_otu[, c("otu_id", "lineage", dm_samples_cmf$sample_id)]; #make otu table ready for heat tree  
-  dm_obj_cmf <- metacoder::parse_tax_data(dm_otu_cmf,
-                                          class_cols = "lineage",
-                                          class_sep = ";",
-                                          class_regex = "^(.+)__(.*)$",
-                                          class_key = c(tax_rank = "info",
-                                                        tax_name = "taxon_name"));
-  
-  dm_obj_cmf$data$tax_data <- calc_obs_props(dm_obj_cmf, "tax_data"); # normalization
-  
-  dm_obj_cmf$data$tax_abund <- calc_taxon_abund(dm_obj_cmf, "tax_data",
-                                                cols = dm_samples_cmf$sample_id); #calculate taxon abundance
-  
-  dm_obj_cmf$data$tax_occ <- calc_n_samples(dm_obj_cmf, "tax_abund", groups = dm_samples_cmf$meta_com)
-  
+  dm_otu_cmf <- dm_otu[, c("otu_id", "lineage", dm_samples_cmf$sample_id)]; #make otu table ready for heat tree
+
   if(color == "ggr"){
     color_new <- c("#006B30", "gray", "#E21818");
   } else if(color == "dbgr") {
@@ -4323,71 +4420,105 @@ PrepareHeatTreePlotAbR <- function(dm = dm, tax_dm = tax_dm, taxalvl = taxalvl, 
   }else {
     color_new <- c("#764b93", "gray", "#F0C808");
   };
-  
-  
+
   set.seed(56784);
-  
+
+  box <- rsclient_isolated_exec(
+    func_body = function(input_data) {
+      require(metacoder)
+      dm_otu_cmf <- input_data$dm_otu_cmf
+      sample_ids <- input_data$sample_ids
+      meta_com <- input_data$meta_com
+      color_new <- input_data$color_new
+      showLabels <- input_data$showLabels
+      layoutOpt <- input_data$layoutOpt
+      comparison <- input_data$comparison
+
+      dm_obj_cmf <- metacoder::parse_tax_data(dm_otu_cmf,
+                                              class_cols = "lineage",
+                                              class_sep = ";",
+                                              class_regex = "^(.+)__(.*)$",
+                                              class_key = c(tax_rank = "info",
+                                                            tax_name = "taxon_name"))
+      dm_obj_cmf$data$tax_data <- calc_obs_props(dm_obj_cmf, "tax_data")
+      dm_obj_cmf$data$tax_abund <- calc_taxon_abund(dm_obj_cmf, "tax_data",
+                                                    cols = sample_ids)
+      dm_obj_cmf$data$tax_occ <- calc_n_samples(dm_obj_cmf, "tax_abund", groups = meta_com)
+
+      set.seed(56784)
+      if(showLabels == "true"){
+        if(layoutOpt == "reda"){
+          box <- heat_tree(dm_obj_cmf,
+                           node_label = taxon_names,
+                           node_size = n_obs,
+                           node_color = dm_obj_cmf$data$tax_occ[[2]],
+                           node_color_range = color_new,
+                           node_size_axis_label = "OTU count",
+                           node_color_axis_label = "Samples with reads",
+                           layout = "davidson-harel",
+                           initial_layout = "reingold-tilford",
+                           title = comparison,
+                           title_size = 0.05,
+                           node_label_size_range = c(0.02, 0.05),
+                           output_file = NULL)
+        } else {
+          box <- heat_tree(dm_obj_cmf,
+                           node_label = taxon_names,
+                           node_size = n_obs,
+                           node_color = dm_obj_cmf$data$tax_occ[[2]],
+                           node_color_range = color_new,
+                           node_size_axis_label = "OTU count",
+                           node_color_axis_label = "Samples with reads",
+                           title = comparison,
+                           title_size = 0.05,
+                           node_label_size_range = c(0.02, 0.05),
+                           output_file = NULL)
+        }
+      } else {
+        if(layoutOpt == "reda"){
+          box <- heat_tree(dm_obj_cmf,
+                           node_label = NA,
+                           node_size = n_obs,
+                           node_color = dm_obj_cmf$data$tax_occ[[2]],
+                           node_color_range = color_new,
+                           node_size_axis_label = "OTU count",
+                           node_color_axis_label = "Samples with reads",
+                           layout = "davidson-harel",
+                           initial_layout = "reingold-tilford",
+                           title = comparison,
+                           title_size = 0.05,
+                           node_label_size_range = c(0.02, 0.05),
+                           output_file = NULL)
+        } else {
+          box <- heat_tree(dm_obj_cmf,
+                           node_label = NA,
+                           node_size = n_obs,
+                           node_color = dm_obj_cmf$data$tax_occ[[2]],
+                           node_color_range = color_new,
+                           node_size_axis_label = "OTU count",
+                           node_color_axis_label = "Samples with reads",
+                           title = comparison,
+                           title_size = 0.05,
+                           node_label_size_range = c(0.02, 0.05),
+                           output_file = NULL)
+        }
+      }
+      return(box)
+    },
+    input_data = list(dm_otu_cmf = dm_otu_cmf,
+                      sample_ids = dm_samples_cmf$sample_id,
+                      meta_com = dm_samples_cmf$meta_com,
+                      color_new = color_new,
+                      showLabels = showLabels,
+                      layoutOpt = layoutOpt,
+                      comparison = comparison),
+    packages = c("metacoder", "qs"),
+    timeout = 180,
+    output_type = "qs"
+  )
+  if (is.list(box) && isFALSE(box$success)) { AddErrMsg(box$message); return(0) }
+
   Cairo::Cairo(file=paste0(imgName, ".", format), unit="in", dpi=96, width=13.9, height=12.2, type=format, bg="white");
-
-  if(showLabels=="true"){
-  if(layoutOpt == "reda"){# two layouts are provided
-    box <- heat_tree(dm_obj_cmf,
-                     node_label = taxon_names,
-                     node_size = n_obs, # n_obs is a function that calculates, in this case, the number of OTUs per taxon
-                     node_color = dm_obj_cmf$data$tax_occ[[2]],# A column from `obj$data$tax_occ`
-                     node_color_range = color_new, # The color palette used
-                     node_size_axis_label = "OTU count",
-                     node_color_axis_label = "Samples with reads",
-                     layout = "davidson-harel", # The primary layout algorithm
-                     initial_layout = "reingold-tilford",
-                     title = comparison,
-                     title_size = 0.05,
-                     node_label_size_range = c(0.02, 0.05),
-                     output_file = NULL);
-  } else {
-    box <- heat_tree(dm_obj_cmf,
-                     node_label = taxon_names,
-                     node_size = n_obs, # n_obs is a function that calculates, in this case, the number of OTUs per taxon
-                     node_color = dm_obj_cmf$data$tax_occ[[2]],# A column from `obj$data$tax_occ`
-                     node_color_range = color_new, # The color palette used
-                     node_size_axis_label = "OTU count",
-                     node_color_axis_label = "Samples with reads",
-                     title = comparison,
-                     title_size = 0.05,
-                     node_label_size_range = c(0.02, 0.05),
-                     output_file = NULL);
-  }
-}else{
-if(layoutOpt == "reda"){# two layouts are provided
-    box <- heat_tree(dm_obj_cmf,
-                     node_label = NA,
-                     node_size = n_obs, # n_obs is a function that calculates, in this case, the number of OTUs per taxon
-                     node_color = dm_obj_cmf$data$tax_occ[[2]],# A column from `obj$data$tax_occ`
-                     node_color_range = color_new, # The color palette used
-                     node_size_axis_label = "OTU count",
-                     node_color_axis_label = "Samples with reads",
-                     layout = "davidson-harel", # The primary layout algorithm
-                     initial_layout = "reingold-tilford",
-                     title = comparison,
-                     title_size = 0.05,
-                     node_label_size_range = c(0.02, 0.05),
-                     output_file = NULL);
-  } else {
-    box <- heat_tree(dm_obj_cmf,
-                     node_label = NA,
-                     node_size = n_obs, # n_obs is a function that calculates, in this case, the number of OTUs per taxon
-                     node_color = dm_obj_cmf$data$tax_occ[[2]],# A column from `obj$data$tax_occ`
-                     node_color_range = color_new, # The color palette used
-                     node_size_axis_label = "OTU count",
-                     node_color_axis_label = "Samples with reads",
-                     title = comparison,
-                     title_size = 0.05,
-                     node_label_size_range = c(0.02, 0.05),
-                     output_file = NULL);
-  }
-
-}
-   ;
   print(box);
   dev.off();
 }
@@ -4419,7 +4550,7 @@ Perform16FunAnot_mem <- function(mbSetObj, type, pipeline,ggversion){
 
 
 Perform16FunAnot<-function(mbSetObj, type, pipeline,ggversion) {
-  if(!exists("my.16sfun.anot")){ # public web on same user dir
+  if(!exists("my.16sfun.anot")){
     .load.scripts.on.demand("utils_16s2fun.Rc");    
   }
   return(my.16sfun.anot(mbSetObj, type, pipeline,ggversion));
@@ -4490,46 +4621,61 @@ ComputeGoods <-function(physeq_object){
 # Utility function that performs rarefaction
 ggrare2 <- function(physeq_object, data.src, label = NULL, color = NULL, plot = TRUE, linetype = NULL, se = FALSE, step=5) {
 
-  require(vegan)
   x <- methods::as(otu_table(physeq_object), "matrix")
 
   if (taxa_are_rows(physeq_object)) { x <- t(x) }
 
-  ## Run rarefaction curves for all samples
+  ## Run rarefaction curves for all samples via isolated subprocess
   tot <- rowSums(x)
   S <- rowSums(x > 0)
-  nr <- nrow(x)
   step_new <- floor(max(tot) / as.integer(step))
 
-  error_msgs <- character(0)
-  results <- vector("list", nr)
+  rare_res <- rsclient_isolated_exec(
+    func_body = function(input_data) {
+      require(vegan)
+      x <- input_data$x
+      se <- input_data$se
+      step_new <- input_data$step_new
+      tot <- rowSums(x)
+      nr <- nrow(x)
+      error_msgs <- character(0)
+      results <- vector("list", nr)
+      for (i in seq_len(nr)) {
+        n <- seq(1, tot[i], by = step_new)
+        if (n[length(n)] != tot[i]) {
+          n <- c(n, tot[i])
+        }
+        y <- vegan::rarefy(x[i, , drop = FALSE], n, se = se)
+        if (length(y) == 1) {
+          error_msgs <- c(error_msgs, paste0(
+            "All the feature counts in sample ", rownames(x)[i],
+            " is less than 5 which is necessary for rarefy."
+          ))
+          results[[i]] <- NULL
+        } else if (nrow(y) != 1) {
+          rownames(y) <- c(".S", ".se")
+          results[[i]] <- data.frame(t(y), Size = n, Sample = rownames(x)[i], check.names = FALSE)
+        } else {
+          results[[i]] <- data.frame(.S = y[1, ], Size = n, Sample = rownames(x)[i], check.names = FALSE)
+        }
+      }
+      valid_results <- results[!sapply(results, is.null)]
+      if (length(valid_results) > 0) {
+        df <- do.call(rbind, valid_results)
+      } else {
+        df <- NULL
+      }
+      return(list(df = df, error_msgs = error_msgs))
+    },
+    input_data = list(x = x, se = se, step_new = step_new),
+    packages = c("vegan", "qs"),
+    timeout = 180,
+    output_type = "qs"
+  )
+  if (is.list(rare_res) && isFALSE(rare_res$success)) { AddErrMsg(rare_res$message); return(0) }
 
-  for (i in seq_len(nr)) {
-    n <- seq(1, tot[i], by = step_new)
-    if (n[length(n)] != tot[i]) {
-      n <- c(n, tot[i])
-    }
-    y <- rarefy(x[i, , drop = FALSE], n, se = se)
-    if (length(y) == 1) {
-      error_msgs <- c(error_msgs, paste0(
-        "All the feature counts in sample ", rownames(x)[i],
-        " is less than 5 which is necessary for rarefy."
-      ))
-      results[[i]] <- NULL
-    } else if (nrow(y) != 1) {
-      rownames(y) <- c(".S", ".se")
-      results[[i]] <- data.frame(t(y), Size = n, Sample = rownames(x)[i], check.names = FALSE)
-    } else {
-      results[[i]] <- data.frame(.S = y[1, ], Size = n, Sample = rownames(x)[i], check.names = FALSE)
-    }
-  }
-
-  valid_results <- results[!sapply(results, is.null)]
-  if (length(valid_results) > 0) {
-    df <- do.call(rbind, valid_results)
-  } else {
-    df <- NULL
-  }
+  df <- rare_res$df
+  error_msgs <- rare_res$error_msgs
 
   if (length(error_msgs) > 0) {
     current.msg <<- paste(error_msgs, collapse = " ")

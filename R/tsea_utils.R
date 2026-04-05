@@ -301,11 +301,15 @@ CalculateGseaScore <- function(mbSetObj){
     return(0);
   }
 
-  gsea.res <- callr::r(function(pathways, stats){
-    res <- fgsea::fgsea(pathways = pathways, stats = stats,
-                        minSize = 3, maxSize = 500, scoreType = "std");
-    as.data.frame(res);
-  }, args = list(pathways = current.mset, stats = ranked.vec));
+  gsea.res <- run_func_via_rsclient(
+    func = function(pathways, stats){
+      res <- fgsea::fgsea(pathways = pathways, stats = stats,
+                          minSize = 3, maxSize = 500, scoreType = "std");
+      as.data.frame(res);
+    },
+    args = list(pathways = current.mset, stats = ranked.vec),
+    timeout_sec = 180
+  );
 
   # filter to sets with leading edge
   le.counts <- sapply(gsea.res$leadingEdge, length);

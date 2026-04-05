@@ -11,7 +11,7 @@
 #'@export
 AddErrMsg <- function(msg){
   err.vec <<- c(err.vec, msg);
-  print(msg);
+  message("[ERROR] ", msg);
 }
 
 #' Gets the error message
@@ -770,11 +770,63 @@ assert_equal_type <- function(
   stop(sprintf("%smust be type %s, not %s", header, typeof(template), typeof(x)))
 }
 
-# in public web, this is done by microservice
+# =============================================================================
+# RSclient subprocess execution (Rserve fork) — available on all deployments
+# =============================================================================
+run_func_via_rsclient <- function(func, args = list(), timeout_sec = 60) {
+  conn <- RSclient::RS.connect(host = "localhost", port = 6311)
+  on.exit(try(RSclient::RS.close(conn), silent = TRUE))
+  RSclient::RS.assign(conn, ".exec_wd", getwd())
+  RSclient::RS.assign(conn, ".exec_func", func)
+  RSclient::RS.assign(conn, ".exec_args", args)
+  RSclient::RS.assign(conn, ".exec_timeout", timeout_sec)
+  RSclient::RS.eval(conn, quote({
+    setwd(.exec_wd)
+    setTimeLimit(elapsed = .exec_timeout, transient = TRUE)
+    on.exit(setTimeLimit(elapsed = Inf))
+    do.call(.exec_func, .exec_args)
+  }))
+}
+
+rsclient_isolated_exec <- function(func_body, input_data, packages = character(0),
+                                   timeout = 180, output_type = "qs") {
+  bridge_tmp <- file.path(tempdir(), "rsclient_bridge")
+  if (!dir.exists(bridge_tmp)) dir.create(bridge_tmp, recursive = TRUE)
+  uid <- paste0(sample(letters, 6), collapse = "")
+  input_path <- file.path(bridge_tmp, paste0(uid, "_in.qs"))
+  output_path <- file.path(bridge_tmp, paste0(uid, "_out.qs"))
+  qs::qsave(input_data, input_path, preset = "fast"); Sys.sleep(0.02)
+  on.exit({ for (p in c(input_path, output_path)) if (file.exists(p)) unlink(p) }, add = TRUE)
+  result <- run_func_via_rsclient(
+    func = function(input_path, output_path, func_body, pkgs) {
+      tryCatch({
+        for (pkg in pkgs) suppressPackageStartupMessages(library(pkg, character.only = TRUE))
+        res <- func_body(qs::qread(input_path))
+        qs::qsave(res, output_path, preset = "fast"); Sys.sleep(0.02)
+        list(success = TRUE)
+      }, error = function(e) list(success = FALSE, message = e$message))
+    },
+    args = list(input_path = input_path, output_path = output_path,
+                func_body = func_body, pkgs = packages),
+    timeout_sec = timeout)
+  if (isTRUE(result$success) && file.exists(output_path)) return(qs::qread(output_path))
+  msg <- if (!is.null(result$message)) result$message else "RSclient subprocess failed"
+  message("[rsclient_isolated_exec] ", msg)
+  return(list(success = FALSE, message = msg))
+}
+
+# Closure executor — always forks via RSclient (available on all deployments)
 .perform.computing <- function(){
-    dat.in <- qs::qread("dat.in.qs"); 
-    dat.in$my.res <- dat.in$my.fun();
-    shadow_save(dat.in, file="dat.in.qs");    
+  run_func_via_rsclient(
+    func = function(wd) {
+      setwd(wd)
+      dat.in <- qs::qread("dat.in.qs")
+      dat.in$my.res <- dat.in$my.fun()
+      qs::qsave(dat.in, file = "dat.in.qs")
+    },
+    args = list(wd = getwd()),
+    timeout_sec = 300
+  )
 }
 
 
@@ -993,7 +1045,16 @@ if(grp.num <= 18){ # update color and respect default
 
 .load.scripts.on.demand <- function(fileName=""){
     complete.path <- paste0(rpath, "rscripts/MicrobiomeAnalystR/R/", fileName);
-    compiler::loadcmp(complete.path);
+    if (file.exists(complete.path)) {
+      compiler::loadcmp(complete.path);
+    } else {
+      r.path <- sub("\\.Rc$", ".R", complete.path);
+      if (file.exists(r.path)) {
+        source(r.path, local = FALSE);
+      } else {
+        warning(paste("Script not found:", complete.path, "or", r.path));
+      }
+    }
 }
 
 SetCurrentMetaData <- function(meta.data, type){
@@ -1107,40 +1168,49 @@ rescale2NewRange <- function(qvec, new_min, new_max) {
   return(new_vec)
 }
 
-# for 3D bubble
+# for 3D ellipsoid — rgl quarantined, run in subprocess for memory control
 ComputeEncasing <- function(filenm, type, names.vec, level=0.95, omics="NA"){
-  
-  level <- as.numeric(level)
-  names = strsplit(names.vec, "; ")[[1]]
-  
-  pos.xyz <- qs::qread("pos.xyz.qs");
-  #print(head(pos.xyz));
-  inx = rownames(pos.xyz) %in% names;
-  coords = as.matrix(pos.xyz[inx,c(1:3)])
-  mesh = list()
-  if(type == "alpha"){
-    library(alphashape3d)
-    library(rgl)
-    sh=ashape3d(coords, 1.0, pert = FALSE, eps = 1e-09);
-    mesh[[1]] = as.mesh3d(sh, triangles=T);
-  }else if(type == "ellipse"){
-    library(rgl);
-    n = nrow(coords);
-    pos=cov(coords, y = NULL, use = "everything");
-    t_val = sqrt(qchisq(level, 3));
-    mesh[[1]] = ellipse3d(x=as.matrix(pos), t=t_val);
-  }else{
-    library(ks);
-    res=kde(coords);
-    r = plot(res, cont=level*100, display="rgl");
-    sc = scene3d();
-    mesh = sc$objects;
-  }
-  library(RJSONIO);
-  sink(filenm);
-  cat(toJSON(mesh));
-  sink();
-  return(filenm);
+  tryCatch({
+    level <- as.numeric(level)
+    names = strsplit(names.vec, "; ")[[1]]
+
+    if (!file.exists("pos.xyz.qs")) {
+      sink(filenm); cat("{}"); sink()
+      return(filenm)
+    }
+    pos.xyz <- qs::qread("pos.xyz.qs")
+    inx = rownames(pos.xyz) %in% names
+    coords = as.matrix(pos.xyz[inx, c(1:3)])
+
+    if (nrow(coords) < 4) {
+      sink(filenm); cat(RJSONIO::toJSON(list())); sink()
+      return(filenm)
+    }
+
+    mesh <- rsclient_isolated_exec(
+      func_body = function(input_data) {
+        Sys.setenv(RGL_USE_NULL = TRUE)
+        pos <- cov(input_data$coords, y = NULL, use = "everything")
+        center <- colMeans(input_data$coords)
+        t_val <- sqrt(qchisq(input_data$level, 3))
+        mesh <- list()
+        mesh[[1]] <- rgl::ellipse3d(x = as.matrix(pos), centre = center, t = t_val)
+        mesh
+      },
+      input_data = list(coords = coords, level = level),
+      packages = c("rgl", "qs"),
+      timeout = 120,
+      output_type = "qs"
+    )
+
+    if (!is.list(mesh) || !isFALSE(mesh$success)) {
+      sink(filenm); cat(RJSONIO::toJSON(mesh)); sink()
+    }
+  }, error = function(e) {
+    message("[ComputeEncasing] ", e$message)
+    sink(filenm); cat("{}"); sink()
+  })
+  return(filenm)
 }
 
 AddFeatureToReport <- function(mbSetObj=NA, id, imgName){

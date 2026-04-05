@@ -203,8 +203,6 @@ PCoA3DAnal.16SRef <- function(mbSetObj, barplotNm, ordMeth, distName, taxrank, m
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
-  require(vegan);
-
   data <- userrefdata;
 
   if(taxrank!="OTU"){
@@ -225,23 +223,47 @@ PCoA3DAnal.16SRef <- function(mbSetObj, barplotNm, ordMeth, distName, taxrank, m
     #all NA club together
     data1 <- rowsum(as.matrix(data1), rownames(data1));
   }
-  
-  GP.ord <- ordinate(data, ordMeth, distName);
-  #creating 2D image for Report Generation
+
+  # ordinate + plot_ordination use vegan/phyloseq — isolate in subprocess with Cairo
   barplotNm = paste(barplotNm, ".", format, sep="");
-  mbSetObj$imgSet$ppd.2d<-barplotNm;
-  
-  Cairo::Cairo(file=barplotNm, unit="in", dpi=dpi, width=10.0, height=6.9, type=format, bg="white");
-  box = plot_ordination(data,GP.ord,color=metadata,shape="data");
-  box$layers <- box$layers[-1];
-  box=box+geom_point(size =4,alpha=0.8)+theme_bw();
-  # used for area color for ellipse
-  sam_data<-sample_data(data);
-  clsLbl <- sam_data[[metadata]];
-  box=box+ stat_ellipse(type="norm", linetype=2, geom = "polygon",alpha = 0.2, aes_string(fill = quo(clsLbl)), show.legend=FALSE);
-  print(box);
-  dev.off();
-  
+  mbSetObj$imgSet$ppd.2d <- barplotNm;
+
+  # Extract plain data for subprocess
+  otu_mat <- as(otu_table(data), "matrix")
+  sam_df <- data.frame(sample_data(data), check.names = FALSE)
+
+  GP.ord <- rsclient_isolated_exec(
+    func_body = function(input_data) {
+      require(vegan); require(phyloseq); require(ape)
+      ps <- phyloseq::phyloseq(
+        phyloseq::otu_table(input_data$otu_mat, taxa_are_rows = TRUE),
+        phyloseq::sample_data(input_data$sam_df)
+      )
+      ord <- phyloseq::ordinate(ps, input_data$ordMeth, input_data$distName)
+      # Save plot
+      Cairo::Cairo(file = input_data$barplotNm, unit = "in", dpi = input_data$dpi,
+                   width = 10.0, height = 6.9, type = input_data$format, bg = "white")
+      box <- phyloseq::plot_ordination(ps, ord, color = input_data$metadata, shape = "data")
+      box$layers <- box$layers[-1]
+      box <- box + ggplot2::geom_point(size = 4, alpha = 0.8) + ggplot2::theme_bw()
+      sam_data <- phyloseq::sample_data(ps)
+      clsLbl <- sam_data[[input_data$metadata]]
+      box <- box + ggplot2::stat_ellipse(type = "norm", linetype = 2, geom = "polygon",
+               alpha = 0.2, ggplot2::aes_string(fill = rlang::quo(clsLbl)), show.legend = FALSE)
+      print(box)
+      dev.off()
+      # Return ordination for downstream use
+      list(values = ord$values, vectors = ord$vectors)
+    },
+    input_data = list(otu_mat = otu_mat, sam_df = sam_df, ordMeth = ordMeth,
+                      distName = distName, metadata = metadata,
+                      barplotNm = barplotNm, format = format, dpi = dpi),
+    packages = c("vegan", "phyloseq", "ape", "ggplot2", "Cairo", "qs"),
+    timeout = 180,
+    output_type = "qs"
+  )
+  if (is.list(GP.ord) && isFALSE(GP.ord$success)) { AddErrMsg(GP.ord$message); return(0) }
+
   # obtain variance explained
   sum.pca<-GP.ord;
   imp.pca<-sum.pca$values;

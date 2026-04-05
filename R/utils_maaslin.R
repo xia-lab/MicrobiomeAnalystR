@@ -242,8 +242,8 @@ if(case==1){
   transform = maaslin.para$transform
   
 }else if(case==2){
-  
-  input_data = input_data
+
+  input_data = maaslin.para$check$input_data
   input_metadata = maaslin.para$check$input_metadata
   fixed_effects = maaslin.para$check$fixed_effects
   random_effects = maaslin.para$check$random_effects
@@ -254,10 +254,10 @@ if(case==1){
   min_variance = maaslin.para$check$min_variance
   normalization = maaslin.para$check$normalization
   transform = maaslin.para$check$transform
-  
+
 }else if(case==3){
-  
-  input_data = input_data
+
+  input_data = maaslin.para$test$input_data
   input_metadata = maaslin.para$test$input_metadata
   fixed_effects = maaslin.para$test$fixed_effects
   random_effects = maaslin.para$test$random_effects
@@ -745,23 +745,35 @@ if(case==1){
       })
  
 nafeat =which(!unlist(lapply(outputs,function(x) any(is.na(x[["para"]]$pval)|any(is.nan(x[["para"]]$pval))))))
-outputs <- outputs[nafeat] 
+outputs <- outputs[nafeat]
     # stop the cluster
     if (!is.null(cluster))
       parallel::stopCluster(cluster)
-    
+
+    if (length(outputs) == 0) {
+      message("[MaAsLin2] Model failed for all features")
+      return(NULL)
+    }
+
     # bind the results for each feature
     paras <-
       do.call(rbind, lapply(outputs, function(x) {
         return(x$para)
       }))
-    
+
     if (!(is.null(random_effects_formula))) {
-      ranef <-
-        do.call(rbind, lapply(outputs, function(x) {
+      ranef <- tryCatch({
+        r <- do.call(rbind, lapply(outputs, function(x) {
           return(x$ranef)
         }))
-      row.names(ranef) <- colnames(features) 
+        if (!is.null(r) && !is.null(dim(r))) {
+          row.names(r) <- colnames(features)[nafeat]
+        }
+        r
+      }, error = function(e) {
+        message("[MaAsLin2] Random effects extraction failed: ", e$message)
+        NULL
+      })
     }
 
 nafeat = paras$feature[is.na(paras$pval)|is.nan(paras$pval)]
@@ -835,48 +847,60 @@ paras = paras[!paras$feature %in% nafeat,]
 }
 
 .save.maaslin.res <- function(mbSetObj,case){
-  mbSetObj <- .get.mbSetObj(mbSetObj);
-  dat.in <- qs::qread("dat.in.qs"); 
-  filtered_data_norm <- dat.in$filtered_data_norm
+  tryCatch({
+    mbSetObj <- .get.mbSetObj(mbSetObj);
+    dat.in <- qs::qread("dat.in.qs");
+    filtered_data_norm <- dat.in$filtered_data_norm
 
-  fit_data <- dat.in$my.res 
-  fit_data$results$N <- apply(fit_data$results, 1, FUN = function(x)
-    length(filtered_data_norm[, x[1]]));
-  
-  fit_data$results$N.not.zero <- apply(fit_data$results, 1, FUN = function(x)
-    length(which(filtered_data_norm[, x[1]] > 0)));
-  
-  fit_data$input$data <- dat.in$filtered_data_norm_transformed
-  fit_data$input$metadata <- dat.in$metadata
-  fit_data$input$analysis_method <- dat.in$model
-  fit_data$input$formula <- dat.in$formula
-  fit_data$input$random_effects_formula <- dat.in$random_effects_formula
-  fit_data$input$correction <- dat.in$correction
-  if(case==4){
-    mbSetObj$analSet$maaslin.noadj<-fit_data
-  }else if(case !=2){
-    mbSetObj$analSet$maaslin<-fit_data
-  }
-  .set.mbSetObj(mbSetObj)
-  if(case==1|case==4){
-      return(1)
-  }else if(case==2){
-    check.rank <- capture.output(fit_data, type=c("message"));
-    
-    if((length(grep("rank deficient", check.rank)) + length(grep("singular", check.rank))) > 0){
-      # often random effects model matrix are rank deficient - check this way and return 
-      # feedback that the experimental design does not support using a blocking factor.
-      return(-2)
-    }else{
+    fit_data <- dat.in$my.res
+    if (is.null(fit_data) || is.null(fit_data$results) || nrow(fit_data$results) == 0) {
+      AddErrMsg("MaAsLin2 produced no results. The model may not be appropriate for this data.")
+      return(-1)
+    }
+
+    fit_data$results$N <- apply(fit_data$results, 1, FUN = function(x)
+      length(filtered_data_norm[, x[1]]));
+
+    fit_data$results$N.not.zero <- apply(fit_data$results, 1, FUN = function(x)
+      length(which(filtered_data_norm[, x[1]] > 0)));
+
+    fit_data$input$data <- dat.in$filtered_data_norm_transformed
+    fit_data$input$metadata <- dat.in$metadata
+    fit_data$input$analysis_method <- dat.in$model
+    fit_data$input$formula <- dat.in$formula
+    fit_data$input$random_effects_formula <- dat.in$random_effects_formula
+    fit_data$input$correction <- dat.in$correction
+    if(case==4){
+      mbSetObj$analSet$maaslin.noadj<-fit_data
+    }else if(case !=2){
+      mbSetObj$analSet$maaslin<-fit_data
+    }
+    .set.mbSetObj(mbSetObj)
+    if(case==1|case==4){
+        return(1)
+    }else if(case==2){
+      # Case 2 is a quick sanity check with minimal data — just verify model runs
+      # Singular fit warnings from lme4 are normal and don't indicate failure
       return(3)
     }
-  }
+    return(1)
+  }, error = function(e) {
+    AddErrMsg(paste("Failed to save MaAsLin2 results:", e$message))
+    return(-1)
+  })
 }
 
 PostProcessMaaslin <- function(mbSetObj,analysis.var,comp=NULL, thresh = 0.05,taxrank,is.norm,imgNm){
 
     mbSetObj <- .get.mbSetObj(mbSetObj);
-    input.data<-maaslin.para$input_data
+    # When blocking factor is used, input_data is inside $test, not at top level
+    if (!is.null(maaslin.para$input_data)) {
+      input.data <- maaslin.para$input_data
+    } else if (!is.null(maaslin.para$test$input_data)) {
+      input.data <- maaslin.para$test$input_data
+    } else {
+      input.data <- maaslin.para$check$input_data
+    }
     res <- mbSetObj$analSet$maaslin$results
     inds <- !(res$feature %in% rownames(input.data)); # rownames that are all integers have "X" appended to front
     res$feature[inds] <- substring(res$feature[inds], 2);

@@ -637,7 +637,7 @@ doMaAslin <- function(input.data,thresh = 0.05,adj.bool=F){
   require(R.utils);
   if(.on.public.web){
     # make this lazy load
-    if(!exists(".prepare.maaslin2")){ # public web on same user dir
+    if(!exists(".prepare.maaslin2")){
       .load.scripts.on.demand("utils_maaslin.Rc");    
     }
   }
@@ -2684,7 +2684,7 @@ tuneKOmap <- function(){
 
 
 DoDimensionReductionIntegrative <- function(mbSetObj, reductionOpt, method="globalscore", dimn,analysisVar,diabloPar=0.2){
-  if(!exists("my.reduce.dimension")){ # public web on same user dir
+  if(!exists("my.reduce.dimension")){
     .load.scripts.on.demand("utils_dimreduction.Rc");
   }
   if(analysisVar=="null"){
@@ -2788,7 +2788,7 @@ ApplyMofaFactorSelection <- function(){
 
 doScatterJsonPair <- function(filenm,analysisVar,taxrank="genus"){
    
-  if(!exists("my.json.scatter.pair")){ # public web on same user dir
+  if(!exists("my.json.scatter.pair")){
     .load.scripts.on.demand("utils_scatter_json.Rc");    
   }
   
@@ -3674,13 +3674,19 @@ PlotCorrHistogram <- function(imgNm, dpi=default.dpi, format="png"){
       xlim(-1,1) +
       theme_bw()
   }
-  library(Cairo)
-  library(ggpubr)
-  Cairo(file=imgNm, width=10, height=8, unit="in", type="png", bg="white", dpi=dpi);
-  p1 <- ggarrange(plotlist=fig.list, ncol = 1, labels=c("Between-omics correlation", "Intra-omics correlation"))
-  print(p1)
-  dev.off();
-  
+  # ggpubr quarantined — isolate ggarrange in subprocess
+  rsclient_isolated_exec(
+    func_body = function(d) {
+      require(ggpubr)
+      Cairo::Cairo(file = d$imgNm, width = 10, height = 8, unit = "in", type = "png", bg = "white", dpi = d$dpi)
+      p1 <- ggpubr::ggarrange(plotlist = d$fig_list, ncol = 1, labels = c("Between-omics correlation", "Intra-omics correlation"))
+      print(p1)
+      dev.off()
+    },
+    input_data = list(imgNm = imgNm, dpi = dpi, fig_list = fig.list),
+    packages = c("ggpubr", "Cairo", "qs"), timeout = 120, output_type = "qs"
+  )
+
 }
 
 
@@ -3692,12 +3698,13 @@ PlotDiagnostic <- function(imgName, dpi=default.dpi, format="png",alg, taxrank="
   if(alg %in% c("snf", "spectrum") ){
     h=8
     fig.list <- list()
-    library(ggpubr);
   }else{
     h=8
   }
   
-  Cairo(file=imgNm, width=10, height=h, type=format,unit="in", bg="white", dpi=dpi);
+  if(alg != "diablo") {
+    Cairo(file=imgNm, width=10, height=h, type=format,unit="in", bg="white", dpi=dpi);
+  }
   if(alg == "procrustes"){
     procrustes.res <- qs::qread("procrustes.res.qs")
     if(length(procrustes.res$dim.res) == 1){
@@ -3785,48 +3792,22 @@ PlotDiagnostic <- function(imgName, dpi=default.dpi, format="png",alg, taxrank="
     }
     mbSetObj$imgSet$mofa$diagnostic <- imgNm
   }
-  dev.off();
+  if(alg != "diablo") dev.off();
   .set.mbSetObj(mbSetObj)
   return(1);
 }
 
 
 PlotDiagnosticPca <- function(imgNm, dpi=default.dpi, format="png",type="diablo", taxrank="OTU"){
-  #save.image("diag.RData");
+  tryCatch({
   mbSetObj <- .get.mbSetObj(mbSetObj);
   require("Cairo");
   library(ggplot2);
   dpi<-as.numeric(dpi)
   imgNm<- paste(imgNm, ".", format, sep="");
   fig.list <- list()
-  if(type == "diablo"){ 
-    library(grid)
-    library(gridExtra)
-    library(gridGraphics);
-    library(cowplot)
-    diablo.res <- qs::qread("diablo.res.qs")
-    if(length(diablo.res$dim.res) == 1){
-        dim.res <- diablo.res$dim.res[[length(diablo.res$dim.res)]]
-    }else{
-        dim.res <- diablo.res$dim.res[[taxrank]]
-    }
-    fig.list[[1]] <- as_grob(function(){
-      plotDiablo(dim.res, ncomp = 1)
-    })
-    
-    fig.list[[2]] <- as_grob(function(){
-      plotDiablo(dim.res, ncomp = 2)
-    })
-    
-    fig.list[[3]] <- as_grob(function(){
-      plotDiablo(dim.res, ncomp = 3)
-    })
-    h<-8*round(length(fig.list))
-    
-    Cairo(file=imgNm, width=10, height=h, type=format, bg="white", unit="in", dpi=dpi);
-    
-    grid.arrange(grobs =fig.list, nrow=length(fig.list))
-    dev.off(); 
+  if(type == "diablo"){
+    # Image already generated during DoDimensionReductionIntegrative
     mbSetObj$imgSet$diablo$pca <- imgNm;
   }else if(type == "procrustes"){
     library(ggplot2)
@@ -3875,6 +3856,8 @@ PlotDiagnosticPca <- function(imgNm, dpi=default.dpi, format="png",type="diablo"
     mbSetObj$imgSet$mofa$pca <- imgNm
   }
   .set.mbSetObj(mbSetObj)
+  }, error = function(e) { message("[PlotDiagnosticPca] error: ", e$message) })
+  return(1)
 }
 
 
@@ -4502,31 +4485,37 @@ ComputeEncasingDiablo <- function(filenm, type, names.vec, level=0.95, omics="NA
     pos.xyz = procrustes.res$pos.xyz[[taxalvl]]
   }
   
-  inx = rownames(pos.xyz) %in% names;
-  
-  coords = as.matrix(pos.xyz[inx,c(1:3)])
-  mesh = list()
-  if(type == "alpha"){
-    library(alphashape3d)
-    library(rgl)
-    sh=ashape3d(coords, 1.0, pert = FALSE, eps = 1e-09);
-    mesh[[1]] = as.mesh3d(sh, triangles=T);
-  }else if(type == "ellipse"){
-    library(rgl);
-    pos=cov(coords, y = NULL, use = "everything");
-    mesh[[1]] = ellipse3d(x=as.matrix(pos), level=level);
-  }else{
-    library(ks);
-    res=kde(coords);
-    r = plot(res, cont=level*100, display="rgl");
-    sc = scene3d();
-    mesh = sc$objects;
-  }
-  library(RJSONIO);
-  sink(filenm);
-  cat(toJSON(mesh));
-  sink();
-  return(filenm);
+  inx = rownames(pos.xyz) %in% names
+  coords = as.matrix(pos.xyz[inx, c(1:3)])
+
+  tryCatch({
+    if (nrow(coords) < 4) {
+      sink(filenm); cat(RJSONIO::toJSON(list())); sink()
+      return(filenm)
+    }
+    mesh <- rsclient_isolated_exec(
+      func_body = function(input_data) {
+        Sys.setenv(RGL_USE_NULL = TRUE)
+        pos <- cov(input_data$coords, y = NULL, use = "everything")
+        center <- colMeans(input_data$coords)
+        t_val <- sqrt(qchisq(input_data$level, 3))
+        mesh <- list()
+        mesh[[1]] <- rgl::ellipse3d(x = as.matrix(pos), centre = center, t = t_val)
+        mesh
+      },
+      input_data = list(coords = coords, level = level),
+      packages = c("rgl", "qs"),
+      timeout = 120,
+      output_type = "qs"
+    )
+    if (!is.list(mesh) || !isFALSE(mesh$success)) {
+      sink(filenm); cat(RJSONIO::toJSON(mesh)); sink()
+    }
+  }, error = function(e) {
+    message("[ComputeEncasingDiablo] ", e$message)
+    sink(filenm); cat("{}"); sink()
+  })
+  return(filenm)
 }
 
 #' Compute Encasing for Multiple Groups (Batch Version) - Diablo
@@ -4573,59 +4562,49 @@ ComputeEncasingBatchDiablo <- function(filenm, type, groups_json, level = 0.95, 
     pos.xyz = procrustes.res$pos.xyz[[taxalvl]]
   }
 
-  result_list <- vector("list", length(groups_list))
+  # Parse groups and extract coords in master
+  group_data <- lapply(seq_along(groups_list), function(i) {
+    g <- groups_list[[i]]
+    if (is.character(g)) { gn <- unname(g["group"]); ids <- unname(g["ids"]) }
+    else if (is.data.frame(g)) { gn <- g$group[1]; ids <- g$ids[1] }
+    else { gn <- g$group; ids <- g$ids }
+    nms <- strsplit(ids, "; ")[[1]]
+    inx <- rownames(pos.xyz) %in% nms
+    list(group = gn, coords = as.matrix(pos.xyz[inx, c(1:3)]))
+  })
 
-  for (i in seq_along(groups_list)) {
-    group_info <- groups_list[[i]]
-    if (is.character(group_info)) {
-      group_name <- unname(group_info["group"])
-      names_vec <- unname(group_info["ids"])
-    } else if (is.data.frame(group_info)) {
-      group_name <- group_info$group[1]
-      names_vec <- group_info$ids[1]
+  tryCatch({
+    result_list <- rsclient_isolated_exec(
+      func_body = function(input_data) {
+        Sys.setenv(RGL_USE_NULL = TRUE)
+        lapply(input_data$groups, function(g) {
+          coords <- g$coords
+          if (nrow(coords) < 4) return(list(group = g$group, mesh = list(), error = "Insufficient points"))
+          tryCatch({
+            pos <- cov(coords, y = NULL, use = "everything")
+            center <- colMeans(coords)
+            t_val <- sqrt(qchisq(input_data$level, 3))
+            mesh <- list()
+            mesh[[1]] <- rgl::ellipse3d(x = as.matrix(pos), centre = center, t = t_val)
+            list(group = g$group, mesh = mesh, error = NULL)
+          }, error = function(e) {
+            list(group = g$group, mesh = list(), error = e$message)
+          })
+        })
+      },
+      input_data = list(groups = group_data, level = level),
+      packages = c("rgl", "qs"),
+      timeout = 120,
+      output_type = "qs"
+    )
+    if (!is.list(result_list) || isFALSE(result_list$success)) {
+      sink(filenm); cat("{}"); sink()
     } else {
-      group_name <- group_info$group
-      names_vec <- group_info$ids
+      sink(filenm); cat(RJSONIO::toJSON(result_list)); sink()
     }
-
-    names <- strsplit(names_vec, "; ")[[1]]
-    inx <- rownames(pos.xyz) %in% names
-    coords <- as.matrix(pos.xyz[inx, c(1:3)])
-
-    if (nrow(coords) < 4 && type == "contour") {
-      result_list[[i]] <- list(group = group_name, mesh = list(), error = "Insufficient points")
-      next
-    }
-
-    mesh <- list()
-    tryCatch({
-      if (type == "alpha") {
-        library(alphashape3d)
-        library(rgl)
-        sh <- ashape3d(coords, 1.0, pert = FALSE, eps = 1e-09)
-        mesh[[1]] <- as.mesh3d(sh, triangles = TRUE)
-      } else if (type == "ellipse") {
-        library(rgl)
-        pos <- cov(coords, y = NULL, use = "everything")
-        mesh[[1]] <- ellipse3d(x = as.matrix(pos), level = level)
-      } else {
-        library(ks)
-        res <- kde(coords)
-        r <- plot(res, cont = level * 100, display = "rgl")
-        sc <- scene3d()
-        mesh <- sc$objects
-      }
-
-      result_list[[i]] <- list(group = group_name, mesh = mesh, error = NULL)
-    }, error = function(e) {
-      result_list[[i]] <- list(group = group_name, mesh = list(), error = e$message)
-    })
-  }
-
-  library(RJSONIO)
-  sink(filenm)
-  cat(RJSONIO::toJSON(result_list))
-  sink()
-
+  }, error = function(e) {
+    message("[ComputeEncasingBatchDiablo] ", e$message)
+    sink(filenm); cat("{}"); sink()
+  })
   return(filenm)
 }

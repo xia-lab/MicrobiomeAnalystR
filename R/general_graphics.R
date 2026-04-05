@@ -30,7 +30,7 @@
 #' @import vegan
 
 PCoA3D.Anal <- function(mbSetObj, ordMeth, distName, taxrank, colopt, variable, taxa, alphaopt, jsonNm) {
-  if (!exists("my.pcoa.3d")) { # public web on same user dir
+  if (!exists("my.pcoa.3d")) {
     .load.scripts.on.demand("utils_pcoa3d.Rc")
   }
 
@@ -1048,8 +1048,8 @@ CreateStaticHeatmap <- function(data1sc, fzAnno, colors, nrows, x_start, y_start
   color_breaks <- seq(-max_abs, max_abs, length.out = n_colors + 1)
 
   # Prepare clustering if needed
-  clustering_distance_rows <- if(doclust == "T") smplDist else "none"
-  clustering_distance_cols <- if(doclust == "T") clstDist else "none"
+  # smplDist = distance measure (euclidean, correlation, etc.)
+  # clstDist = clustering method (ward.D, complete, average, etc.)
 
   # Create the heatmap
   p <- pheatmap(data1sc,
@@ -1057,8 +1057,9 @@ CreateStaticHeatmap <- function(data1sc, fzAnno, colors, nrows, x_start, y_start
            breaks = color_breaks,
            cluster_rows = doclust == "T",
            cluster_cols = doclust == "T",
-           clustering_distance_rows = clustering_distance_rows,
-           clustering_distance_cols = clustering_distance_cols,
+           clustering_distance_rows = if(doclust == "T") smplDist else "euclidean",
+           clustering_distance_cols = if(doclust == "T") smplDist else "euclidean",
+           clustering_method = if(doclust == "T") clstDist else "complete",
            fontsize = fzAnno, # Set the font size for annotations
            fontsize_row = fzRow,
            fontsize_col = fzCol,

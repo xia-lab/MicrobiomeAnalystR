@@ -9,11 +9,12 @@
 #procrustes or diablo
 my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="globalscore", dimn=10,analysisVar, diabloPar=0.2){
   mbSetObj <- .get.mbSetObj(mbSetObj);
+  message("[my.reduce.dimension] reductionOpt=", reductionOpt, " method=", method)
   if(method == ""){
     method="globalscore"
   }
   dimn = as.numeric(dimn);
-  
+
   d.list = vector("list",length = 2)
   names(d.list) <- c("mic","met")
   omics.type = vector();
@@ -50,7 +51,10 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
   
   d.list[["met"]] = list()
   d.list[["met"]][["data.proc"]] = if(!is.null(current.proc$met$data.norm)) current.proc$met$data.norm else current.proc$met$data.proc
-  d.list[["met"]][["comp.res"]] =   current.proc$met$res_deAnal[,c(1:3), drop=FALSE] #comp.res
+  met_de <- current.proc$met$res_deAnal
+  if (is.null(met_de) || !is.data.frame(met_de)) met_de <- data.frame(matrix(0, nrow=1, ncol=3))
+  ncols <- min(3, ncol(met_de))
+  d.list[["met"]][["comp.res"]] = met_de[, 1:ncols, drop=FALSE]
   d.list[["met"]][["enrich.nms"]] = rownames(current.proc$met$res_deAnal)
   d.list[["met"]][["meta"]] = data.frame(mbSetObj$dataSet$sample_data)
   
@@ -176,22 +180,165 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
       pos.xyz[[l]] <- res[[l]]$variates[[1]]
       pos.xyz2[[l]] <- res[[l]]$variates[[2]]
 
-      for(i in 1:length(res[[l]]$loadings)){
-        pos = as.data.frame(res[[l]]$loadings[[i]])
-        rn <- rownames(res[[l]]$loadings[[i]])
-        pos <- unitAutoScale(pos);
-        res[[l]]$loadings[[i]] <- pos
-        rownames(res[[l]]$loadings[[i]]) <- rn
-      }
-      loading.pos.xyz[[l]] <- rbind(res[[l]]$loadings[[1]], res[[l]]$loadings[[2]])
+      qs::qsave(list(dats = dats[[l]], Y = Y, ncomp = ncomp, design = design,
+                      meta_type = diablo.meta.type,
+                      pca_img = file.path(work_dir, img.names$pca),
+                      loading_img = file.path(work_dir, img.names$loading),
+                      diag_img = file.path(work_dir, img.names$diag),
+                      circos_img = file.path(work_dir, img.names$circos)), "diablo_input.qs")
+      diablo_result <- run_func_via_rsclient(
+        func = function(work_dir) {
+          setwd(work_dir)
+          suppressPackageStartupMessages({
+            require(mixOmics); require(Cairo); require(grid)
+            require(gridExtra); require(gridGraphics); require(cowplot)
+          })
+          input <- qs::qread("diablo_input.qs")
+          if (input$meta_type == "disc") {
+            model <- mixOmics::block.splsda(X = input$dats, Y = input$Y,
+                                            ncomp = input$ncomp, design = input$design, near.zero.var = TRUE)
+          } else {
+            model <- mixOmics::block.spls(X = input$dats, Y = input$Y,
+                                          ncomp = input$ncomp, design = input$design, mode = "regression", near.zero.var = TRUE)
+          }
+          # Extract plain data
+          pos.xyz <- model$variates[[1]]
+          pos.xyz2 <- model$variates[[2]]
+          loadings <- lapply(model$loadings, function(x) {
+            pos <- as.data.frame(x); rn <- rownames(x)
+            for (i in 1:ncol(pos)) {
+              col_min <- min(pos[, i], na.rm = TRUE); col_max <- max(pos[, i], na.rm = TRUE)
+              if (col_max - col_min > 0) pos[, i] <- (pos[, i] - col_min) / (col_max - col_min) - 0.5
+            }
+            rownames(pos) <- rn; pos
+          })
+          loading.pos.xyz <- rbind(loadings[[1]], loadings[[2]])
+          var.vec <- if ("prop_expl_var" %in% names(model)) model$prop_expl_var
+                     else if ("explained_variance" %in% names(model)) model$explained_variance
+                     else list(mic = 0, met = 0)
 
-      if("prop_expl_var" %in% names(res[[l]])){
-        var.vec <- res[[l]]$prop_expl_var
-      }else if("explained_variance" %in% names(res[[l]])){
-        var.vec <- res[[l]]$explained_variance
-      }else{
-        var.vec <- list(mic = 0, met = 0);
+          # Save diablo.res.qs for scatter viewer
+          diablo.res <- list(dim.res = setNames(list(model), names(input$dats)[1]))
+          qs::qsave(diablo.res, "diablo.res.qs")
+          # Save raw model separately for perf() — avoids double qs corruption
+          qs::qsave(model, "diablo_model.qs")
+
+          # Generate ALL diagnostic plots while model is in memory
+          # Helper to safely generate a plot
+          .safe_plot <- function(img_file, width, height, plot_fn) {
+            tryCatch({
+              Cairo(file = img_file, width = width, height = height, type = "png", bg = "white", unit = "in", dpi = 96)
+              plot_fn()
+              dev.off()
+            }, error = function(e) {
+              tryCatch(dev.off(), error = function(e2) NULL)
+              message("[DIABLO plot] ", e$message)
+            })
+          }
+
+          # 1. plotDiablo (PCA diagnostic) — only plot components that exist
+          .safe_plot(input$pca_img, 8, 15, function() {
+            ncomp_max <- min(3, model$ncomp[1])
+            fig.list <- list()
+            for (nc in 1:ncomp_max) {
+              local_nc <- nc
+              fig.list[[nc]] <- tryCatch(
+                as_grob(function() { plotDiablo(model, ncomp = local_nc) }),
+                error = function(e) { message("[plotDiablo ncomp=", local_nc, "] ", e$message); NULL }
+              )
+            }
+            fig.list <- fig.list[!sapply(fig.list, is.null)]
+            if (length(fig.list) > 0) {
+              grid.arrange(grobs = fig.list, nrow = length(fig.list))
+            } else {
+              plot.new(); text(0.5, 0.5, "plotDiablo failed for all components", cex = 1.2)
+            }
+          })
+
+          # 2. plotLoadings — only plot components that exist
+          .safe_plot(input$loading_img, 13, 24, function() {
+            ncomp_max <- min(3, model$ncomp[1])
+            fig.list2 <- list()
+            for (nc in 1:ncomp_max) {
+              local_nc <- nc
+              fig.list2[[nc]] <- tryCatch(
+                as_grob(function() plotLoadings(model, ndisplay=10, comp=local_nc, contrib="max", method="median", size.name=1.1, legend=TRUE)),
+                error = function(e) { message("[plotLoadings comp=", local_nc, "] ", e$message); NULL }
+              )
+            }
+            fig.list2 <- fig.list2[!sapply(fig.list2, is.null)]
+            if (length(fig.list2) > 0) {
+              grid.arrange(grobs = fig.list2, nrow = length(fig.list2))
+            } else {
+              plot.new(); text(0.5, 0.5, "plotLoadings failed for all components", cex = 1.2)
+            }
+          })
+
+          # 3. perf — skipped here, runs in separate PlotDiagnostic call (clean environment)
+          diablo.comp <- NA
+
+          # 4. circos JSON for interactive chord viewer
+          tryCatch({
+            # Compute cross-block correlations from projected data
+            block_names <- names(model$X)
+            X_proj <- lapply(model$X, function(x) {
+              x[, which(apply(x, 2, var) > 0), drop = FALSE]
+            })
+            cor_cross <- cor(X_proj[[1]], X_proj[[2]])
+            cutoff <- 0.5
+            sig_idx <- which(abs(cor_cross) > cutoff, arr.ind = TRUE)
+            if (nrow(sig_idx) > 0) {
+              edges <- lapply(1:nrow(sig_idx), function(i) {
+                list(source = rownames(cor_cross)[sig_idx[i,1]],
+                     target = colnames(cor_cross)[sig_idx[i,2]],
+                     corr = round(cor_cross[sig_idx[i,1], sig_idx[i,2]], 4),
+                     type1 = block_names[1], type2 = block_names[2],
+                     label1 = rownames(cor_cross)[sig_idx[i,1]],
+                     label2 = colnames(cor_cross)[sig_idx[i,2]])
+              })
+            } else {
+              # If no edges above cutoff, use top 50 by absolute correlation
+              top_n <- min(50, length(cor_cross))
+              top_idx <- order(abs(cor_cross), decreasing = TRUE)[1:top_n]
+              sig_idx <- arrayInd(top_idx, dim(cor_cross))
+              edges <- lapply(1:nrow(sig_idx), function(i) {
+                list(source = rownames(cor_cross)[sig_idx[i,1]],
+                     target = colnames(cor_cross)[sig_idx[i,2]],
+                     corr = round(cor_cross[sig_idx[i,1], sig_idx[i,2]], 4),
+                     type1 = block_names[1], type2 = block_names[2],
+                     label1 = rownames(cor_cross)[sig_idx[i,1]],
+                     label2 = colnames(cor_cross)[sig_idx[i,2]])
+              })
+            }
+            circos_json <- list(DIABLO = edges)
+            jsonlite::write_json(circos_json, "diablo_circos.json", auto_unbox = TRUE, pretty = FALSE)
+          }, error = function(e) message("[DIABLO circosJSON] ", e$message))
+
+          # Also generate static circos PNG as fallback
+          .safe_plot(input$circos_img, 10, 10, function() {
+            circosPlot(model, cutoff = 0.5, size.variables = 0.25, showIntraLinks = FALSE)
+          })
+
+          gc(verbose = FALSE, full = TRUE)
+          list(pos.xyz = pos.xyz, pos.xyz2 = pos.xyz2,
+               loading.pos.xyz = loading.pos.xyz, loadings = loadings,
+               var.vec = var.vec, diablo.comp = diablo.comp)
+        },
+        args = list(work_dir = work_dir),
+        timeout_sec = 600
+      )
+      unlink("diablo_input.qs")
+      if (!is.null(diablo_result$diablo.comp) && !is.na(diablo_result$diablo.comp)) {
+        diablo.comp <<- diablo_result$diablo.comp
       }
+
+      # Model stays in diablo.res.qs (single qs, never read into master)
+      # Read back for dim.res field needed by diablo.res structure
+      res[[l]] <- qs::qread("diablo.res.qs")$dim.res[[1]]
+      pos.xyz[[l]] <- diablo_result$pos.xyz
+      pos.xyz2[[l]] <- diablo_result$pos.xyz2
+      loading.pos.xyz[[l]] <- diablo_result$loading.pos.xyz
+      var.vec <- diablo_result$var.vec
 
       loadingNames[[l]]=rownames(loading.pos.xyz[[l]])
       names = lapply(pos.xyz, function(x) rownames(x))
@@ -203,32 +350,46 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
     }
 
   }else if(reductionOpt == "procrustes"){
-    require(vegan)
-
+    # vegan quarantined — matching original callr pattern
     mic_data_list <- d.list$mic$data.proc
     met_data <- d.list$met$data.proc
+    work_dir <- getwd()
+    qs::qsave(list(mic = mic_data_list, met = met_data), "procrustes_input.qs")
 
-    ndat1 <- lapply(mic_data_list, function(x) decostand(t(x), method = "standardize"))
-    pca.dat1 <- lapply(ndat1, function(x) rda(x))
-    ndat2 <- decostand(t(met_data), method = "standardize")
-    pca.dat2 <- rda(ndat2)
+    proc_result <- run_func_via_rsclient(
+      func = function(work_dir) {
+        setwd(work_dir)
+        require(vegan)
+        input <- qs::qread("procrustes_input.qs")
+        ndat1 <- lapply(input$mic, function(x) vegan::decostand(t(x), method = "standardize"))
+        pca.dat1 <- lapply(ndat1, function(x) vegan::rda(x))
+        ndat2 <- vegan::decostand(t(input$met), method = "standardize")
+        pca.dat2 <- vegan::rda(ndat2)
+        proc_res <- lapply(pca.dat1, function(x) vegan::procrustes(x, pca.dat2, choices = c(1,2,3), symmetric = TRUE, scale = TRUE))
+        prot_res <- lapply(pca.dat1, function(x) vegan::protest(X = x, Y = pca.dat2, scores = "sites", permutations = 999))
+        misc <- lapply(prot_res, function(x) list(`Sum of Squares` = x$ss, Significance = x$signif, Correlation = x$scale))
+        pos.xyz <- lapply(proc_res, function(x) rbind(x$X, x$Yrot))
+        gc(verbose = FALSE, full = TRUE)
+        list(proc_res = proc_res, prot_res = prot_res, misc = misc, pos.xyz = pos.xyz)
+      },
+      args = list(work_dir = work_dir),
+      timeout_sec = 300
+    )
+    unlink("procrustes_input.qs")
 
-    res <- lapply(pca.dat1, function(x) procrustes(x, pca.dat2, choices = c(1,2,3), symmetric = TRUE, scale = TRUE))
-    res2 <- lapply(pca.dat1, function(x) protest(X = x, Y = pca.dat2, scores = "sites", permutations = 999))
+    misc <- proc_result$misc
+    pos.xyz <- proc_result$pos.xyz
 
-    misc <- lapply(res2, function(x) list(`Sum of Squares` = x$ss, Significance = x$signif, Correlation = x$scale))
-    pos.xyz <- lapply(res, function(x) rbind(x$X, x$Yrot))
-
-    names = lapply(pos.xyz,function(x) make.unique(as.character(rownames(x))))
+    names = lapply(pos.xyz, function(x) make.unique(as.character(rownames(x))))
     newmeta$omics[c(1:(length(names[[1]])/2))] = "microbiome"
-    newmeta$omics[c( ((length(names[[1]])/2)+1) : (length(names[[1]])))] = "metabolomics"
-    dim.res <- vector("list",length=length(res))
-    names(dim.res) <- names(misc) <- names(res)
+    newmeta$omics[c(((length(names[[1]])/2)+1):(length(names[[1]])))] = "metabolomics"
+    dim.res <- vector("list", length=length(proc_result$proc_res))
+    names(dim.res) <- names(misc) <- names(proc_result$proc_res)
     for(i in 1:length(dim.res)){
-      dim.res[[i]] <- list(res[[i]],res2[[i]])
+      dim.res[[i]] <- list(proc_result$proc_res[[i]], proc_result$prot_res[[i]])
     }
 
-    procrustes.res <- list(misc=misc,dim.res=dim.res)
+    procrustes.res <- list(misc=misc, dim.res=dim.res)
     procrustes.res$pos.xyz = lapply(pos.xyz,function(x) unitAutoScale(x))
     procrustes.res$newmeta = newmeta
     combined.res$meta = newmeta
@@ -293,7 +454,7 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
   if(reductionOpt == "diablo"){
     loading.pos.xyz = lapply(loading.pos.xyz,as.data.frame)
     loading.pos.xyz <- lapply(loading.pos.xyz,unitAutoScale);
-    
+
     diablo.res$dim.res <- res
     diablo.res$pos.xyz <- pos.xyz
     diablo.res$pos.xyz2 <- pos.xyz2
