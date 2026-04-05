@@ -152,33 +152,12 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
                       dimnames = list(names(dats[[l]]), names(dats[[l]])));
       diag(design) = 0;
 
-      library(mixOmics)
-
-      # Determine if we can use near.zero.var (requires sufficient samples for internal CV)
-      # near.zero.var uses internal 10-fold CV by default
-      use_nzv <- TRUE
-      if(isTRUE(diablo.meta.type == "disc")){
-        min_class_size <- min(table(Y))
-        # Need at least 10 samples per class for default 10-fold CV
-        if(n_samples < 10 || min_class_size < 10) {
-          use_nzv <- FALSE
-          message("[DIABLO] Disabling near-zero variance filtering due to small sample size (n=", n_samples, ", min class=", min_class_size, ")")
-        }
-      } else {
-        # For regression, need at least 10 total samples
-        if(n_samples < 10) {
-          use_nzv <- FALSE
-          message("[DIABLO] Disabling near-zero variance filtering due to small sample size (n=", n_samples, ")")
-        }
-      }
-
-      if(isTRUE(diablo.meta.type == "disc")){
-        res[[l]] = block.splsda(X = dats[[l]], Y = Y, ncomp = ncomp, design = design, near.zero.var = use_nzv)
-      } else {
-        res[[l]] = block.spls(X = dats[[l]], Y = Y, ncomp = ncomp, design = design, mode = "regression", near.zero.var = use_nzv)
-      }
-      pos.xyz[[l]] <- res[[l]]$variates[[1]]
-      pos.xyz2[[l]] <- res[[l]]$variates[[2]]
+      # mixOmics quarantined — run in RSclient, matching original callr pattern exactly
+      work_dir <- getwd()
+      # Image names set by Java via diablo.img.names global
+      img.names <- if (exists("diablo.img.names")) diablo.img.names else list(
+        pca="diagnostic_pca_diablo_0.png", loading="diagnostic_loading_0.png",
+        diag="diagnostic_components_diablo_0.png", circos="diagnostic_circos_diablo_0.png")
 
       qs::qsave(list(dats = dats[[l]], Y = Y, ncomp = ncomp, design = design,
                       meta_type = diablo.meta.type,
