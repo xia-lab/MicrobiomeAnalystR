@@ -187,44 +187,44 @@ ApplyMetaAutoScale <- function(apply="true"){
 }
 
 PerformBatchCorrection <- function(){
-    .prepare.batch();
-    .perform.computing(heavy = TRUE);  # MMUPHin is HEAVY - uses 2 permits
-    return(dataSets);
-}
+    # MMUPHin batch correction — runs in isolated subprocess for memory safety
+    bridge_in <- paste0(tempdir(), "/bridge_", paste0(sample(letters,6,replace=TRUE), collapse=""), "_in.qs")
+    bridge_out <- sub("_in.qs", "_out.qs", bridge_in)
+    qs::qsave(list(placeholder = TRUE), bridge_in, preset = "fast")
+    on.exit(unlink(c(bridge_in, bridge_out)), add = TRUE)
 
+    run_func_via_rsclient(
+      func = function(wd, bridge_in, bridge_out) {
+        setwd(wd)
+        require(MMUPHin)
+        require(phyloseq)
+        phyobj <- qs::qread("merged.data.qs")
+        sam.data <- as.data.frame(as.matrix(sample_data(phyobj)))
 
-.prepare.batch<-function(){
-  my.fun <- function(){
-    require('MMUPHin');
-    require('phyloseq');
-    phyobj <- qs::qread("merged.data.qs");
-    #phyobj <- subsetPhyloseqByDataset(NA, phyobj);
-    sam.data <- as.data.frame(as.matrix(sample_data(phyobj)));
-    
-    cov <- colnames(sam.data)[1];
-    otu.tbl <- otu_table(phyobj);
-    #print(cov);
+        cov <- colnames(sam.data)[1]
+        otu.tbl <- otu_table(phyobj)
 
-    microbiome.meta <- qs::qread("microbiome_meta.qs");
-    data.lbl <- microbiome.meta$data.lbl;
-    
-    fit_adjust_batch <- adjust_batch(feature_abd = otu.tbl,
-                                     batch = "dataset",
-                                     covariates = cov,
-                                     data = sam.data,
-                                     control = list(verbose = FALSE))
-    
-    adj.otu.tbl <- fit_adjust_batch$feature_abd_adj;
-    phyobj@otu_table <- otu_table(adj.otu.tbl, taxa_are_rows = TRUE);
-    
-    shadow_save(phyobj, "merged.data.norm.qs");
-    microbiome.meta$data <- adj.otu.tbl;
-    shadow_save(microbiome.meta, "microbiome_meta.qs");
-    merged.data <- transform_sample_counts(phyobj, function(x) x / sum(x) );
-    shadow_save(merged.data, "merged.data.qs");
-  }
-  dat.in <- list(my.fun=my.fun);
-  qs:::qsave(dat.in, file="dat.in.qs");
-  return(1);
+        microbiome.meta <- qs::qread("microbiome_meta.qs")
+
+        fit_adjust_batch <- adjust_batch(feature_abd = otu.tbl,
+                                         batch = "dataset",
+                                         covariates = cov,
+                                         data = sam.data,
+                                         control = list(verbose = FALSE))
+
+        adj.otu.tbl <- fit_adjust_batch$feature_abd_adj
+        phyobj@otu_table <- otu_table(adj.otu.tbl, taxa_are_rows = TRUE)
+
+        qs::qsave(phyobj, "merged.data.norm.qs")
+        microbiome.meta$data <- adj.otu.tbl
+        qs::qsave(microbiome.meta, "microbiome_meta.qs")
+        merged.data <- transform_sample_counts(phyobj, function(x) x / sum(x))
+        qs::qsave(merged.data, "merged.data.qs")
+        qs::qsave(TRUE, bridge_out, preset = "fast")
+      },
+      args = list(wd = getwd(), bridge_in = bridge_in, bridge_out = bridge_out),
+      timeout_sec = 600
+    )
+    return(1);
 }
 

@@ -1725,15 +1725,13 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
       tuneKOmap()
       contain = "bac"
     }
-    .prepare.global.tune(mbSetObj, dataType, category, file.nm,contain);
-    .perform.computing();
-    
+    gt.result <- .run.global.tune(mbSetObj, dataType, category, file.nm, contain);
+
     if(dataType=="ko"){
-      mbSetObj = .save.global.res();
+      mbSetObj <- .finalize.global.ko.res(gt.result);
       taxalvl = "ko"
     }else if(dataType=="metabolite"){
-      
-      mbSetObj=enrich2json()
+      mbSetObj <- .finalize.global.met.res(gt.result);
     }
     
   }else if(enrich.type =="mummichog"){
@@ -1752,54 +1750,42 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
 }
 
 
-.prepare.global.tune<-function(mbSetObj, dataType,category, file.nm,contain){
-  
+.run.global.tune <- function(mbSetObj, dataType, category, file.nm, contain){
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  
   phenotype <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[selected.meta.data]]);
-  
+
   if(dataType=="metabolite"){
-    
     if(contain=="bac"){
       current.set <- qs::qread(paste0(lib.path.mmp,"kegg_bac_mummichog.qs"))$pathways$cpds
-      
     }else if(contain=="hsabac"){
       current.set <- qs::qread(paste0(lib.path.mmp,"kegg_hsa_bac_mummichog.qs"))$pathways$cpds
-      
     }else if(contain=="hsa"){
       current.set <- qs::qread(paste0(lib.path.mmp,"kegg_hsa_mummichog.qs"))$pathways$cpds
-      
     }else if(contain=="all"){
       current.set <- qs::qread(paste0(lib.path.mmp,"kegg_all_mummichog.qs"))$pathways$cpds
-      
     }else{
       current.set <- qs::qread(paste0(taxalvl,".current.lib.qs"))
-      
     }
-    
 
-    metmat <-  t(current.proc$met$data.proc)          
-    met.map <-  qs::qread("keggNet.met.map.qs")
+    metmat <- t(current.proc$met$data.proc)
+    met.map <- qs::qread("keggNet.met.map.qs")
     met.map <- met.map[!(is.na(met.map$Node)),]
     met.map$include = ifelse(met.map$Match %in% unique(unlist(current.set)),T,F)
     shadow_save(met.map,"keggNet.met.map.qs")
     colnames(metmat) <- met.map$Match[match(colnames(metmat),met.map$Query)]
     datmat <- metmat[,which(colnames(metmat)!='')]
-    
+
     hits <- lapply(current.set, function(x){x[x %in% colnames(datmat)]});
     set.num <- unlist(lapply(current.set, length), use.names = FALSE);
-    dat.in <- list(cls=phenotype, data=datmat, subsets=hits, set.num=set.num, filenm=file.nm, category=category);
 
   }else if(dataType=="ko"){
     if(contain=="bac"){
       current.set <- qs::qread(paste0(lib.path.mmp,"ko_set_bac.qs"))
-      
     }else if(contain=="hsabac"){
       current.set <- qs::qread(paste0(lib.path.mmp,"ko_set_hsa_bac.qs"))
-      
     }else if(contain=="hsa"){
       current.set <- qs::qread(paste0(lib.path.mmp,"ko_set_hsa.qs"))
-      
     }else if(contain=="all"){
       kegg.anot <- .read.microbiomeanalyst.lib.rds("ko_pathways.rds", "ko")
       current.setlink <- kegg.anot$link;
@@ -1807,78 +1793,103 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
     }else{
       current.set <- qs::qread(paste0(lib.path.mmp,"ko_set_bac.qs"))
     }
-    
-    set2nm <-  qs::qread(paste0(rpath, "libs/mmp/set2nm.qs")[["pathway"]]);
+
+    set2nm <- qs::qread(paste0(rpath, "libs/mmp/set2nm.qs")[["pathway"]]);
     set.ids <- names(current.set);
-    names(set.ids) <- names(current.set)<-  set2nm[set.ids];
-    
-    current.setids <<-  set.ids;
-    
-    datmat <- as.data.frame(t(otu_table(mbSetObj$dataSet$norm.phyobj)),check.names=FALSE);
-    # first, get the matched entries from current.set
-    
+    names(set.ids) <- names(current.set) <- set2nm[set.ids];
+    current.setids <<- set.ids;
+
+    datmat <- as.data.frame(t(otu_table(mbSetObj$dataSet$norm.phyobj)), check.names=FALSE);
     hits <- lapply(current.set, function(x){x[x %in% colnames(datmat)]});
     set.num <- unlist(lapply(current.set, length), use.names = FALSE);
-    dat.in <- list(cls=phenotype, data=datmat, subsets=hits, set.num=set.num, filenm=file.nm, category=category);
   }
 
+  bridge_in <- paste0(tempdir(), "/bridge_", paste0(sample(letters,6,replace=TRUE), collapse=""), "_in.qs")
+  bridge_out <- sub("_in.qs", "_out.qs", bridge_in)
+  qs::qsave(list(cls=phenotype, data=datmat, subsets=hits, set.num=set.num, hits=hits),
+            bridge_in, preset = "fast")
+  on.exit(unlink(c(bridge_in, bridge_out)), add = TRUE)
 
-  my.fun <- function(){
-    gt.obj <- globaltest::gt(dat.in$cls, dat.in$data, subsets=dat.in$subsets);
-    gt.res <- globaltest::result(gt.obj);
-    
-    match.num <- gt.res[,5];
-    
-    if(sum(match.num>0)==0){
-      return(NA);
-    }
-    raw.p <- gt.res[,1];
-    
-    # add adjust p values
-    bonf.p <- p.adjust(raw.p, "holm");
-    fdr.p <- p.adjust(raw.p, "fdr");
-    
-    res.mat <- cbind(set.num, match.num, gt.res[,2], gt.res[,3], raw.p, bonf.p, fdr.p);
-    rownames(res.mat) <- names(hits);
-    colnames(res.mat) <- c("Size", "Hits", "Statistic Q", "Expected Q", "Pval", "Holm p", "FDR");
-    hit.inx <- res.mat[,2]>0;
-    res.mat <- res.mat[hit.inx, ];
-    ord.inx <- order(res.mat[,5]);
-    res.mat <- res.mat[ord.inx,];
-    
-    return(res.mat);
-  }
-  
-  
-  dat.in <- list(cls=phenotype, data=datmat, subsets=hits, set.num=set.num, filenm=file.nm, category=category, my.fun=my.fun);
-  
-  shadow_save(dat.in, file="dat.in.qs");
-  return(1);
+  run_func_via_rsclient(
+    func = function(wd, bridge_in, bridge_out) {
+      setwd(wd)
+      input <- qs::qread(bridge_in)
+      gt.obj <- globaltest::gt(input$cls, input$data, subsets=input$subsets)
+      gt.res <- globaltest::result(gt.obj)
+      match.num <- gt.res[,5]
+      if(sum(match.num>0)==0) {
+        qs::qsave(NA, bridge_out, preset = "fast")
+        return(invisible(NULL))
+      }
+      raw.p <- gt.res[,1]
+      bonf.p <- p.adjust(raw.p, "holm")
+      fdr.p <- p.adjust(raw.p, "fdr")
+      res.mat <- cbind(input$set.num, match.num, gt.res[,2], gt.res[,3], raw.p, bonf.p, fdr.p)
+      rownames(res.mat) <- names(input$hits)
+      colnames(res.mat) <- c("Size", "Hits", "Statistic Q", "Expected Q", "Pval", "Holm p", "FDR")
+      hit.inx <- res.mat[,2]>0
+      res.mat <- res.mat[hit.inx, ]
+      ord.inx <- order(res.mat[,5])
+      res.mat <- res.mat[ord.inx,]
+      qs::qsave(res.mat, bridge_out, preset = "fast")
+    },
+    args = list(wd = getwd(), bridge_in = bridge_in, bridge_out = bridge_out),
+    timeout_sec = 300
+  )
+
+  my.res <- if (file.exists(bridge_out)) qs::qread(bridge_out) else NULL
+
+  return(list(my.res=my.res, subsets=hits, filenm=file.nm, category=category, curr.mset=current.set))
 }
 
-enrich2json <- function(){
-  dat.in <- qs::qread("dat.in.qs"); 
-  hits = dat.in$subsets
-  file.nm = dat.in$filenm;
-  my.res <- dat.in$my.res;
+.finalize.global.ko.res <- function(gt.result){
+  mbSetObj <- .get.mbSetObj("NA");
+  my.res <- gt.result$my.res
+  hits <- gt.result$subsets
+  file.nm <- gt.result$filenm
+  curr.mset <- gt.result$curr.mset
+
+  if(all(c(length(my.res)==1, is.na(my.res)))){
+    AddErrMsg("No match was found to the selected metabolite set library!");
+    return(0);
+  }
+
+  nms <- rownames(my.res);
+  hits <- hits[nms];
+
+  if(exists("moduleType") && moduleType == "mmp"){
+    enr.key <- "mmp_mic";
+  } else {
+    enr.key <- if(!is.null(mbSetObj$paramSet$koProj.type)) mbSetObj$paramSet$koProj.type else "global";
+  }
+  lib.name <- if(!is.null(gt.result$category)) paste0("KEGG ", tools::toTitleCase(gt.result$category)) else "KEGG";
+  mbSetObj <- recordEnrTable(mbSetObj, enr.key, my.res, lib.name, "Global Test", curr.mset, hits);
+  mbSetObj <- Save2KEGGJSON(mbSetObj, hits, my.res, file.nm);
+  return(.set.mbSetObj(mbSetObj));
+}
+
+.finalize.global.met.res <- function(gt.result){
+  my.res <- gt.result$my.res
+  hits <- gt.result$subsets
+  file.nm <- gt.result$filenm
+
   if(all(c(length(my.res)==1, is.na(my.res)))){
     AddErrMsg("No match was found to the selected metabolite set library!");
     return(0);
   }
   nms <- rownames(my.res);
   hits <- hits[nms];
-  resTable <- data.frame(Pathway=rownames(my.res), my.res,check.names=FALSE);
+  resTable <- data.frame(Pathway=rownames(my.res), my.res, check.names=FALSE);
   current.msg <<- "Functional enrichment analysis was completed";
-  met.map <-  qs::qread("keggNet.met.map.qs")
+  met.map <- qs::qread("keggNet.met.map.qs")
   hits.met <- lapply(hits, function(x){
-    x=met.map$Name[match(x,met.map$Match)]  
+    x=met.map$Name[match(x,met.map$Match)]
     return(x)
   })
   hits.node <- lapply(hits, function(x){
-    x=met.map$Node[match(x,met.map$Match)]  
+    x=met.map$Node[match(x,met.map$Match)]
     return(x)
   })
-  # write json 
   path.pval = resTable$Pval; if(length(path.pval) ==1) { path.pval <- matrix(path.pval) };
   hit.num = paste0(resTable$Hits,"/",resTable$Size); if(length(hit.num) ==1) { hit.num <- matrix(hit.num) };
   path.nms <- resTable$Pathway; if(length(path.nms) ==1) { path.nms <- matrix(path.nms) };
@@ -1899,7 +1910,7 @@ enrich2json <- function(){
                    hits.node = convert2JsonList(hits.node),
                    expr.mat=convert2JsonList(expr.mat),
                    sig.path=sig.path );
-  
+
   json.mat <- RJSONIO::toJSON(json.res);
   json.nm <- paste(file.nm, ".json", sep="");
   sink(json.nm)
@@ -1910,7 +1921,6 @@ enrich2json <- function(){
   enr.key <- if(!is.null(mbSetObj$paramSet$koProj.type)) mbSetObj$paramSet$koProj.type else "mmp_met";
   mbSetObj <- recordEnrTable(mbSetObj, enr.key, resTable, "KEGG", "Global Test");
 
-  # write csv
   fast.write(resTable, file=paste(file.nm, ".csv", sep=""), row.names=F);
   return(mbSetObj)
 }

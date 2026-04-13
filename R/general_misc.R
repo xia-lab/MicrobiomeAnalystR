@@ -770,13 +770,33 @@ assert_equal_type <- function(
   stop(sprintf("%smust be type %s, not %s", header, typeof(template), typeof(x)))
 }
 
-# in public web, this is done by microservice
-.perform.computing <- function(){
-    dat.in <- qs::qread("dat.in.qs"); 
-    dat.in$my.res <- dat.in$my.fun();
-    shadow_save(dat.in, file="dat.in.qs");    
+#' Execute function in isolated RSclient fork
+#' @param func Function to run in forked Rserve child
+#' @param args List of arguments passed via do.call
+#' @param timeout_sec Hard timeout before child is killed
+#' @return Result of do.call(func, args)
+run_func_via_rsclient <- function(func, args = list(), timeout_sec = 60) {
+  conn <- RSclient::RS.connect(host = "localhost", port = 6311)
+  on.exit(try(RSclient::RS.close(conn), silent = TRUE))
+  RSclient::RS.assign(conn, ".exec_wd", getwd())
+  RSclient::RS.assign(conn, ".exec_func", func)
+  RSclient::RS.assign(conn, ".exec_args", args)
+  RSclient::RS.assign(conn, ".exec_timeout", timeout_sec)
+  RSclient::RS.eval(conn, quote({
+    setwd(.exec_wd)
+    setTimeLimit(elapsed = .exec_timeout, transient = TRUE)
+    on.exit(setTimeLimit(elapsed = Inf))
+    do.call(.exec_func, .exec_args)
+  }))
 }
 
+#' Execute heavy package function in isolated RSclient fork
+#' @param func_body Function(input_data) to run in child
+#' @param input_data List serialized via qs to child
+#' @param packages Packages to load in child before execution
+#' @param timeout Timeout in seconds
+#' @param output_type "qs" for complex objects, "arrow" for data frames
+#' @return Result from child process
 
 fast.write <- function(dat, file, row.names=TRUE, quote="auto"){
 
