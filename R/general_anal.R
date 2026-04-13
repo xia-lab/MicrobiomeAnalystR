@@ -1184,9 +1184,8 @@ PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="defaul
 PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, fc.thresh=0, comp1=1, comp2=2){
 
   if(opts=="DESeq2"){
-    .prepare.deseq(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, fc.thresh, comp1, comp2);
-    .perform.computing();
-    res = .save.deseq.res();
+    .run.deseq(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, fc.thresh, comp1, comp2);
+    res = 1;
   }else{
     data <- .prepare_rnaseq(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, fc.thresh, comp1, comp2)
     res <- .perform_edger(variable, data, p.lvl, fc.thresh, comp1, comp2)
@@ -1194,101 +1193,89 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, f
   return(1)
 }
 
-.prepare.deseq<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank,fc.thresh=0, comp1=1, comp2=2){
-  data <- .prepare_rnaseq(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank,fc.thresh, comp1, comp2)
+.run.deseq<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, fc.thresh=0, comp1=1, comp2=2){
+  data <- .prepare_rnaseq(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, fc.thresh, comp1, comp2)
   mbSetObj = .get.mbSetObj(mbSetObj);
   claslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   if(length(claslbl) > 120){
     AddErrMsg("Only EdgeR is supported for sample size over 120.");
     return(0);
-  }else{
-    dat.in <- list(data=data, variable=variable);
-    my.fun <- function(){
-      # create formula based on user selection
-      variable <- dat.in$variable;
-      my.formula <- as.formula(paste("~", variable));
-      #converting from phyloslim object to deseq
-      library(phyloseq);
-      library(DESeq2);
-      diagdds <- phyloseq_to_deseq2(dat.in$data, my.formula);
-      geoMeans <- apply(counts(diagdds), 1, 
-                        function(x, na.rm=TRUE){exp(sum(log(x[x > 0]), na.rm=na.rm) / length(x))}
-      );
-      diagdds <- estimateSizeFactors(diagdds, geoMeans = geoMeans);
-      diagdds <- DESeq(diagdds, test="Wald", fitType="parametric");
-
-      if(comp1 %in% claslbl && comp2 %in% claslbl ){
-      res <- results(diagdds, independentFiltering = FALSE, cooksCutoff = Inf, contrast=c(variable, comp1,comp2));
-      }else{
-      res <- results(diagdds, independentFiltering = FALSE, cooksCutoff = Inf);
-      }
-      # make sure it is basic R, not DESeq2 obj
-      resTable <- data.frame(res[,c("log2FoldChange" ,"lfcSE","pvalue","padj")],check.names=FALSE); 
-      return(resTable);
-    }
-    dat.in <- list(data=data, variable=variable, my.fun=my.fun);
-    shadow_save(dat.in, file="dat.in.qs");
-    return(1)
   }
-return(1)
-}
 
-.save.deseq.res <- function(){
-  mbSetObj <-.get.mbSetObj("NA");
-  dat3t<- mbSetObj$analSet$rnaseq$data.rnaseq
-  
-  dat.in <- qs::qread("dat.in.qs"); 
-  variable = dat.in$variable
-  claslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]])
+  bridge_in <- paste0(tempdir(), "/bridge_", paste0(sample(letters,6,replace=TRUE), collapse=""), "_in.qs")
+  bridge_out <- sub("_in.qs", "_out.qs", bridge_in)
+  qs::qsave(list(data=data, variable=variable, claslbl=as.character(claslbl),
+                  comp1=comp1, comp2=comp2), bridge_in, preset = "fast")
+  on.exit(unlink(c(bridge_in, bridge_out)), add = TRUE)
+
+  run_func_via_rsclient(
+    func = function(wd, bridge_in, bridge_out) {
+      setwd(wd)
+      library(phyloseq)
+      library(DESeq2)
+      input <- qs::qread(bridge_in)
+      my.formula <- as.formula(paste("~", input$variable))
+      diagdds <- phyloseq_to_deseq2(input$data, my.formula)
+      geoMeans <- apply(counts(diagdds), 1,
+                        function(x, na.rm=TRUE){exp(sum(log(x[x > 0]), na.rm=na.rm) / length(x))})
+      diagdds <- estimateSizeFactors(diagdds, geoMeans = geoMeans)
+      diagdds <- DESeq(diagdds, test="Wald", fitType="parametric")
+
+      if(input$comp1 %in% input$claslbl && input$comp2 %in% input$claslbl){
+        res <- results(diagdds, independentFiltering = FALSE, cooksCutoff = Inf,
+                       contrast=c(input$variable, input$comp1, input$comp2))
+      }else{
+        res <- results(diagdds, independentFiltering = FALSE, cooksCutoff = Inf)
+      }
+      result <- data.frame(res[,c("log2FoldChange","lfcSE","pvalue","padj")], check.names=FALSE)
+      qs::qsave(result, bridge_out, preset = "fast")
+    },
+    args = list(wd = getwd(), bridge_in = bridge_in, bridge_out = bridge_out),
+    timeout_sec = 300
+  )
+
+  resTable <- if (file.exists(bridge_out)) qs::qread(bridge_out) else NULL
+
+  # Process results (what .save.deseq.res did)
+  dat3t <- mbSetObj$analSet$rnaseq$data.rnaseq
   p.lvl <- mbSetObj$analSet$rnaseq.plvl
   fc.thresh <- mbSetObj$analSet$rnaseq.fcthresh
-  
-  resTable <- dat.in$my.res;
-  resTable <- signif(data.matrix(resTable), digits=5);
-  colnames(resTable) <- c("log2FC","lfcSE","Pvalues","FDR");
-  mbSetObj$analSet$anal.type <- "deseq";
-  
-  resTable <- as.data.frame(resTable,check.names=FALSE);
-  sigHits <- resTable$FDR < p.lvl & abs(resTable$log2FC) > fc.thresh;
-  de.Num <- length(which(sigHits));
+
+  resTable <- signif(data.matrix(resTable), digits=5)
+  colnames(resTable) <- c("log2FC","lfcSE","Pvalues","FDR")
+  mbSetObj$analSet$anal.type <- "deseq"
+
+  resTable <- as.data.frame(resTable, check.names=FALSE)
+  sigHits <- resTable$FDR < p.lvl & abs(resTable$log2FC) > fc.thresh
+  de.Num <- length(which(sigHits))
   if(de.Num == 0){
-    current.msg <<- "No significant features were identified using the given p value cutoff.";
+    current.msg <<- "No significant features were identified using the given p value cutoff."
   }else{
-    current.msg <<- paste("A total of", de.Num, "significant features were identified!");
+    current.msg <<- paste("A total of", de.Num, "significant features were identified!")
   }
-  print(current.msg);
-  
-  ord.inx <- order(-sigHits, resTable$Pvalues);
-  resTable <- resTable[ord.inx, , drop=FALSE];
+  print(current.msg)
 
- if(mbSetObj[["module.type"]]=="sdp"){
-  ko_names <- doGene2KONameMapping(rownames(resTable));
-  output <- cbind(name=ko_names, resTable)
-  mbSetObj$analSet$rnaseq$resTableNames <- mbSetObj$analSet$resTable <- ko_names;
-  fast.write(output, file="rnaseq_de.csv");
- }else{
-  fast.write(resTable, file="rnaseq_de.csv")
+  ord.inx <- order(-sigHits, resTable$Pvalues)
+  resTable <- resTable[ord.inx, , drop=FALSE]
+
+  if(mbSetObj[["module.type"]]=="sdp"){
+    ko_names <- doGene2KONameMapping(rownames(resTable))
+    output <- cbind(name=ko_names, resTable)
+    mbSetObj$analSet$rnaseq$resTableNames <- mbSetObj$analSet$resTable <- ko_names
+    fast.write(output, file="rnaseq_de.csv")
+  }else{
+    fast.write(resTable, file="rnaseq_de.csv")
   }
 
-  
-  if(nrow(resTable) > 500){
-    resTable<-resTable[1:500, ]; 
-  }
-  
+  if(nrow(resTable) > 500) resTable <- resTable[1:500, ]
 
-  mbSetObj$analSet$rnaseq$resTable <- mbSetObj$analSet$resTable <- as.data.frame(resTable,check.names=FALSE);
-  
-  #only getting the names of DE features
+  mbSetObj$analSet$rnaseq$resTable <- mbSetObj$analSet$resTable <- as.data.frame(resTable, check.names=FALSE)
   diff_ft <<- rownames(resTable)[sigHits]
-  #individual boxplot for features
-  sigfeat <- rownames(resTable);
-  box_data <- as.data.frame(dat3t,check.names=FALSE);
- #colnames(box_data) <- sigfeat;
-  box_data$class <- claslbl;
-  
-  mbSetObj$analSet$boxdata <- box_data;
-  mbSetObj$analSet$sig.count <- de.Num;      
-  tree_data <<- data;
+  box_data <- as.data.frame(dat3t, check.names=FALSE)
+  box_data$class <- claslbl
+  mbSetObj$analSet$boxdata <- box_data
+  mbSetObj$analSet$sig.count <- de.Num
+  tree_data <<- data
   .set.mbSetObj(mbSetObj)
   return(1)
 }
