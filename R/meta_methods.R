@@ -72,30 +72,29 @@ PerformMetaEffectSize <- function(mbSetObj=NA, imgName="", taxrank="OTU", selMet
   #concensus_feat <- unname(meta.obj$gene.symbls);
   #data <- data[concensus_feat,]
   #}
-  library(MMUPHin);
-  
-    if(identical(cov, character(0))){
-      fit_lm_meta <- lm_meta(feature_abd = data,
-                             batch = "dataset",
-                             exposure = selMeta,
-                             data = metadata,
-                             control = list(verbose = FALSE, normalization="NONE", 
-                            #transform="NONE", 
-                            rma_method=ef.method, analysis_method=de.method));
-    }else{
-      fit_lm_meta <- lm_meta(feature_abd = data,
-                             batch = "dataset",
-                             exposure = selMeta,
-                             data = metadata,
-                             covariates = cov,
-                             control = list(verbose = FALSE, normalization="NONE", 
-                          #  transform="NONE", 
-                            rma_method=ef.method, analysis_method=de.method));
-    }
-  
-  
-  
-  
+  # MMUPHin::lm_meta — quarantined, isolate in subprocess
+  lm_meta_args <- list(
+    feature_abd = data, batch = "dataset", exposure = selMeta,
+    data = metadata,
+    control = list(verbose = FALSE, normalization = "NONE",
+                   rma_method = ef.method, analysis_method = de.method)
+  )
+  if (!identical(cov, character(0))) {
+    lm_meta_args$covariates <- cov
+  }
+
+  fit_lm_meta <- rsclient_isolated_exec(
+    func_body = function(input_data) {
+      require(MMUPHin)
+      do.call(MMUPHin::lm_meta, input_data$args)
+    },
+    input_data = list(args = lm_meta_args),
+    packages = c("MMUPHin", "qs"),
+    timeout = 300,
+    output_type = "qs"
+  )
+  if (is.list(fit_lm_meta) && isFALSE(fit_lm_meta$success)) { AddErrMsg(fit_lm_meta$message); return(0) }
+
   res <- fit_lm_meta$meta_fits;
   nms <- rownames(res);
   es.mat <- data.frame(Coefficient=res$coef, Pval=res$pval, adj_Pval=res$qval.fdr);
@@ -231,6 +230,8 @@ SetupMetaStats <- function(BHth, paramSet,analSet){
 CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank="Family", view.mode="ratio", format="png", dpi=default.dpi) {
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
+  err.vec <<- "";
+  current.msg <<- "";
   mdata.all <- mbSetObj$mdata.all;
   sel.nms <- names(mdata.all)[mdata.all==1];
   
@@ -238,6 +239,7 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
     AddErrMsg("Need to select at least one summary statistics!");
     return(0);
   }
+  message("[MetaAlphaDBG] selected metrics: ", paste(summary.stat.vec, collapse=","));
   
   #print(summary.stat.vec);
   
@@ -260,10 +262,60 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
     
     tryCatch(
       {
-        res <- estimate_richness(data@otu_table, measures=summary.stat.vec);
+        # estimate_richness uses vegan internally — isolate in subprocess
+        otu_mat <- as(data@otu_table, "matrix")
+        taxa_rows <- phyloseq::taxa_are_rows(data)
+        # Standardize to samples x taxa for vegan::diversity/estimateR and metadata joins.
+        if (isTRUE(taxa_rows)) {
+          otu_mat <- t(otu_mat)
+        }
+        message("[MetaAlphaDBG] Study=", Study, " | taxa_are_rows=", taxa_rows,
+                " | otu dim(samples x taxa)=", nrow(otu_mat), "x", ncol(otu_mat),
+                " | sam_data rows=", nrow(data@sam_data))
+        res <- rsclient_isolated_exec(
+          func_body = function(input_data) {
+            require(vegan)
+            x <- input_data$otu_mat
+            if (!any(x == 1)) warning("No singletons — richness estimates may be unreliable")
+            outlist <- list()
+            measures <- input_data$measures
+            if (any(c("Chao1","ACE","Observed") %in% measures))
+              outlist <- c(outlist, list(t(data.frame(vegan::estimateR(x), check.names=FALSE))))
+            if ("Shannon" %in% measures)
+              outlist <- c(outlist, list(shannon = vegan::diversity(x, index="shannon")))
+            if ("Simpson" %in% measures)
+              outlist <- c(outlist, list(simpson = vegan::diversity(x, index="simpson")))
+            if ("InvSimpson" %in% measures)
+              outlist <- c(outlist, list(invsimpson = vegan::diversity(x, index="invsimpson")))
+            if ("Fisher" %in% measures)
+              outlist <- c(outlist, list(fisher = tryCatch(vegan::fisher.alpha(x), error=function(e) rep(NA, nrow(x)))))
+            erDF <- as.data.frame(do.call(cbind, outlist))
+            renamevec <- c(Observed="S.obs",Chao1="S.chao1",ACE="S.ACE",Shannon="shannon",Simpson="simpson",InvSimpson="invsimpson",Fisher="fisher")
+            for (old in names(renamevec)) if (renamevec[old] %in% colnames(erDF)) colnames(erDF)[colnames(erDF)==renamevec[old]] <- old
+            # estimateR/diversity are computed from x with samples as rows.
+            # Use sample IDs as rownames for downstream metadata joins.
+            if (nrow(erDF) == nrow(x)) {
+              rownames(erDF) <- rownames(x)
+            } else if (nrow(erDF) == ncol(x)) {
+              rownames(erDF) <- colnames(x)
+            } else {
+              message("[MetaAlphaDBG] Unexpected richness row count for ", input_data$study_name,
+                      ": nrow(erDF)=", nrow(erDF), ", nrow(x)=", nrow(x), ", ncol(x)=", ncol(x))
+            }
+            erDF
+          },
+          input_data = list(otu_mat = otu_mat, measures = summary.stat.vec, study_name = Study),
+          packages = c("vegan", "qs"),
+          timeout = 120,
+          output_type = "qs"
+        )
+        if (is.list(res) && isFALSE(res$success)) {
+          AddErrMsg(res$message)
+          return(0)
+        }
       },
       error = function(e) {
-        print(e);
+        message("[PerformMetaAlphaDiversity] ", e$message);
         if(grepl( "uniroot(", e, fixed = TRUE)){
           AddErrMsg(paste0("Fisher alpha estimation fails for ", Study, ". Please try with other metrics or unselect this dataset.", collapse=" "));
         }
@@ -275,42 +327,144 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
         res <- res
       })    
     
-    if("ACE" %in% colnames(res)){
-      if(all(res$ACE %in% NaN)){
-        AddErrMsg(paste0("ACE estimation fails for ", Study, ". Please try with other metrics or unselect this dataset."));
-        return(0);
+    message("[MetaAlphaDBG] Study=", Study,
+            " | ACE selected=", ("ACE" %in% summary.stat.vec),
+            " | ACE column=", ("ACE" %in% colnames(res)))
+    if("ACE" %in% summary.stat.vec && "ACE" %in% colnames(res)){
+      # Some studies do not satisfy ACE assumptions (e.g., sparse/singleton patterns).
+      # Skip ACE for that study instead of aborting the whole alpha-meta run.
+      if(all(is.nan(res$ACE) | is.na(res$ACE) | is.infinite(res$ACE))){
+        msg <- paste0("ACE estimation fails for ", Study, ". ACE is skipped for this dataset and other selected metrics will continue.")
+        message("[MetaAlphaDBG] ", msg)
+        if(!exists("current.msg") || is.null(current.msg) || identical(current.msg, "null")){
+          current.msg <<- msg
+        }else if(nchar(paste(current.msg, collapse="; ")) == 0){
+          current.msg <<- msg
+        }else{
+          current.msg <<- paste(paste(current.msg, collapse="; "), msg, sep="; ")
+        }
+        res$ACE <- NULL
       }
     }
     
     #data <- bf_ratio(data);
-    data@sam_data$dataset <- rep(Study, nrow(data@sam_data));
-    data@sam_data$sample_id <- gsub("-", ".", data@sam_data$sample_id);
-    
-    
-    res <- res %>% tibble::rownames_to_column("sample_id") %>%
-      select(sample_id, everything()) %>% 
-      left_join(data@sam_data[, c("sample_id")]) %>%
-      as_tibble() %>%
-      tidyr::gather(-sample_id, key="Metric", value="Diversity") %>%
-      left_join(data@sam_data[,c("sample_id",sel.meta, "dataset")]) %>%
-      dplyr::select(sample_id, dataset, matches(sel.meta), Metric, Diversity);
-    
-    colnames(res)[which(colnames(res) == sel.meta)] <- "study_condition";
+    sam_df <- as.data.frame(data@sam_data, check.names = FALSE, stringsAsFactors = FALSE)
+    if(!("sample_id" %in% colnames(sam_df))){
+      sam_df$sample_id <- rownames(sam_df)
+      message("[MetaAlphaDBG] Study=", Study, " | sample_id column missing in sam_data; using rownames.")
+    }
+    if(!(sel.meta %in% colnames(sam_df))){
+      msg <- paste0("Dataset ", Study, " does not contain selected metadata column '", sel.meta, "' and is skipped.")
+      message("[MetaAlphaDBG] ", msg)
+      if(!exists("current.msg") || is.null(current.msg) || identical(current.msg, "null")){
+        current.msg <<- msg
+      }else if(nchar(paste(current.msg, collapse="; ")) == 0){
+        current.msg <<- msg
+      }else{
+        current.msg <<- paste(paste(current.msg, collapse="; "), msg, sep="; ")
+      }
+      next
+    }
+    sam_df$dataset <- Study
+    sam_df$sample_id <- gsub("-", ".", as.character(sam_df$sample_id))
+
+    meta_tbl <- sam_df %>%
+      dplyr::select(sample_id, dplyr::all_of(sel.meta), dataset) %>%
+      as_tibble()
+    colnames(meta_tbl)[which(colnames(meta_tbl) == sel.meta)] <- "study_condition"
+    meta_tbl <- meta_tbl %>%
+      mutate(
+        sample_id_meta = as.character(sample_id),
+        sample_id_norm = make.names(gsub("-", ".", trimws(sample_id)))
+      ) %>%
+      dplyr::select(sample_id_norm, sample_id_meta, study_condition, dataset)
+
+    res <- res %>%
+      tibble::rownames_to_column("sample_id") %>%
+      mutate(
+        sample_id = as.character(sample_id),
+        sample_id_norm = make.names(gsub("-", ".", trimws(sample_id)))
+      ) %>%
+      tidyr::gather(-sample_id, -sample_id_norm, key = "Metric", value = "Diversity") %>%
+      left_join(meta_tbl, by = "sample_id_norm") %>%
+      mutate(sample_id = dplyr::coalesce(sample_id_meta, sample_id)) %>%
+      dplyr::select(sample_id, dataset, study_condition, Metric, Diversity)
+    res$study_condition <- factor(res$study_condition)
+    matched_n <- sum(!is.na(res$study_condition))
+    message("[MetaAlphaDBG] Study=", Study, " | matched metadata rows=", matched_n, "/", nrow(res))
+    if(matched_n == 0){
+      msg <- paste0("Dataset ", Study, " has no sample-id matches between alpha results and metadata after normalization and is skipped.")
+      message("[MetaAlphaDBG] ", msg)
+      res_preview <- paste(head(unique(res$sample_id_norm), 5), collapse=",")
+      meta_preview <- paste(head(unique(meta_tbl$sample_id_norm), 5), collapse=",")
+      message("[MetaAlphaDBG] Study=", Study, " | sample_id_norm preview from alpha=", res_preview)
+      message("[MetaAlphaDBG] Study=", Study, " | sample_id_norm preview from metadata=", meta_preview)
+      if(!exists("current.msg") || is.null(current.msg) || identical(current.msg, "null")){
+        current.msg <<- msg
+      }else if(nchar(paste(current.msg, collapse="; ")) == 0){
+        current.msg <<- msg
+      }else{
+        current.msg <<- paste(paste(current.msg, collapse="; "), msg, sep="; ")
+      }
+      next
+    }
+    res <- res[!is.na(res$study_condition),]
  
-    #R package conflict with rename
-    res <-
-      res %>%
-      left_join(
-        res %>%
-          group_by(Metric, study_condition) %>%
-          summarize(mean=mean(log2(Diversity))) %>%
-          tidyr::spread(key=study_condition, value=mean) %>%
-          dplyr::rename(mean_log2Control := !!quo_name(levels(res$study_condition)[1]), mean_log2Exp := !!quo_name(levels(res$study_condition)[2]))
-      )  %>%
-      plyr::mutate(log2FC=log2(Diversity)-mean_log2Control);
+    cond_levels <- levels(res$study_condition)
+    if(length(cond_levels) < 2){
+      msg <- paste0("Dataset ", Study, " has fewer than two condition levels after preprocessing and is skipped.")
+      message("[MetaAlphaDBG] ", msg)
+      if(!exists("current.msg") || is.null(current.msg) || identical(current.msg, "null")){
+        current.msg <<- msg
+      }else if(nchar(paste(current.msg, collapse="; ")) == 0){
+        current.msg <<- msg
+      }else{
+        current.msg <<- paste(paste(current.msg, collapse="; "), msg, sep="; ")
+      }
+      next
+    }
+    control_col <- cond_levels[1]
+    exp_col <- cond_levels[2]
+
+    mean_tbl <- res %>%
+      group_by(Metric, study_condition) %>%
+      summarize(mean = mean(log2(Diversity)), .groups = "drop") %>%
+      tidyr::pivot_wider(names_from = study_condition, values_from = mean)
+
+    if(!(control_col %in% colnames(mean_tbl)) || !(exp_col %in% colnames(mean_tbl))){
+      msg <- paste0("Dataset ", Study, " is missing expected condition columns after reshaping (expected: ", control_col, ", ", exp_col, ") and is skipped.")
+      message("[MetaAlphaDBG] ", msg)
+      if(!exists("current.msg") || is.null(current.msg) || identical(current.msg, "null")){
+        current.msg <<- msg
+      }else if(nchar(paste(current.msg, collapse="; ")) == 0){
+        current.msg <<- msg
+      }else{
+        current.msg <<- paste(paste(current.msg, collapse="; "), msg, sep="; ")
+      }
+      next
+    }
+
+    mean_tbl$mean_log2Control <- mean_tbl[[control_col]]
+    mean_tbl$mean_log2Exp <- mean_tbl[[exp_col]]
+    mean_tbl <- mean_tbl[, c("Metric", "mean_log2Control", "mean_log2Exp")]
+
+    res <- res %>%
+      left_join(mean_tbl, by = "Metric") %>%
+      plyr::mutate(log2FC = log2(Diversity) - mean_log2Control);
     
     
     res <- res[!is.na(res$log2FC),];
+    if(nrow(res) == 0){
+      msg <- paste0("No valid alpha-diversity values remain for ", Study, " after filtering invalid estimates; this dataset is skipped.")
+      if(!exists("current.msg") || is.null(current.msg) || identical(current.msg, "null")){
+        current.msg <<- msg
+      }else if(nchar(paste(current.msg, collapse="; ")) == 0){
+        current.msg <<- msg
+      }else{
+        current.msg <<- paste(paste(current.msg, collapse="; "), msg, sep="; ")
+      }
+      next
+    }
     
     PS$AlphaDiversity <- res;
     PS$AlphaDiversity_Stats <- 
@@ -342,11 +496,20 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
     res.list[[Study]] <- PS;  
   }
   
+  if(length(res.list) == 0){
+    AddErrMsg("No valid datasets remained for alpha-diversity meta-analysis after preprocessing and metadata alignment.");
+    return(0);
+  }
+
   mod<-lapply(res.list, function(x) x$AlphaDiversity) %>%
     do.call(bind_rows, .) %>%
     plyr::mutate(study_condition=factor(study_condition)) %>%
     group_by(Metric)
   mod <- mod %>% filter(!is.na(log2FC) & !is.infinite(log2FC))
+  if(nrow(mod) == 0){
+    AddErrMsg("No valid alpha-diversity observations remained after filtering; unable to run meta-analysis.");
+    return(0);
+  }
   # OPTIMIZED: Pre-allocate list to avoid O(n²) bind_rows in loop (10-50x faster for multiple metrics)
   control_level <- levels(mod$study_condition)[1];
   non_control_level <- levels(mod$study_condition)[2];
@@ -505,7 +668,6 @@ PlotBetaSummary <- function(mbSetObj, plotNm,taxalvl, sel.meta, alg, format="png
   sel.nms <- names(mdata.all)[mdata.all==1];
 
   dist.vec <- c("jaccard", "jsd", "bray");#"wunifrac", "unifrac",
-  require(vegan)
 
   res.list <- list()
   data.nms.vec <- character(length(sel.nms) * length(dist.vec))
@@ -527,34 +689,61 @@ PlotBetaSummary <- function(mbSetObj, plotNm,taxalvl, sel.meta, alg, format="png
         otu_t <- t(otu_mat)
         otu_t <- sweep(otu_t, 1, rowSums(otu_t), "/")
 
-        if (dist_method == "jsd") {
-          physeq_otu <- otu_table(t(otu_t), taxa_are_rows = TRUE)
-          data.dist <- distance(physeq_otu, method = "jsd")
-        } else if (dist_method == "jaccard") {
-          data.dist <- vegdist(otu_t, method = "jaccard", binary = TRUE)
-        } else {
-          data.dist <- vegdist(otu_t, method = dist_method)
-        }
+        # vegan distance + stats — isolate in subprocess
+        stat.info.vec <- rsclient_isolated_exec(
+          func_body = function(input_data) {
+            require(vegan)
+            otu_t <- input_data$otu_t
+            dist_method <- input_data$dist_method
+            alg <- input_data$alg
+            sampledf <- input_data$sampledf
+            sel.meta <- input_data$sel_meta
+            group <- sampledf[[sel.meta]]
 
-        group <- sampledf[[sel.meta]]
-        stat.info.vec <- NULL
+            if (dist_method == "jaccard") {
+              data.dist <- vegan::vegdist(otu_t, method = "jaccard", binary = TRUE)
+            } else if (dist_method == "jsd") {
+              # JSD: use manual computation
+              mat <- otu_t
+              n <- nrow(mat)
+              dm <- matrix(0, n, n)
+              for (ii in 1:(n-1)) for (jj in (ii+1):n) {
+                m <- (mat[ii,] + mat[jj,]) / 2
+                p1 <- mat[ii,] * log(mat[ii,] / m); p1[!is.finite(p1)] <- 0
+                p2 <- mat[jj,] * log(mat[jj,] / m); p2[!is.finite(p2)] <- 0
+                dm[jj, ii] <- sum((p1 + p2) / 2, na.rm = TRUE)
+              }
+              rownames(dm) <- colnames(dm) <- rownames(mat)
+              data.dist <- as.dist(dm)
+            } else {
+              data.dist <- vegan::vegdist(otu_t, method = dist_method)
+            }
 
-        if (alg == "adonis") {
-          f <- as.formula(paste("data.dist ~", sel.meta))
-          res <- adonis2(formula = f, data = sampledf)
-          resTab <- res[1, ]
-          stat.info.vec <- c(signif(resTab$F, 5), signif(resTab$R2, 5), signif(resTab$`Pr(>F)`, 5))
-          names(stat.info.vec) <- c("F-value", "R-squared", "p-value")
-        } else if (alg == "anosim") {
-          anosim_res <- anosim(data.dist, group = group)
-          stat.info.vec <- c(signif(anosim_res$statistic, 5), signif(anosim_res$signif, 5))
-          names(stat.info.vec) <- c("R", "p-value")
-        } else if (alg == "permdisp") {
-          beta <- betadisper(data.dist, group = group)
-          resTab <- anova(beta)
-          stat.info.vec <- c(signif(resTab$"F value"[1], 5), signif(resTab$"Pr(>F)"[1], 5))
-          names(stat.info.vec) <- c("F-value", "p-value")
-        }
+            if (alg == "adonis") {
+              f <- as.formula(paste("data.dist ~", sel.meta))
+              res <- vegan::adonis2(formula = f, data = sampledf)
+              resTab <- res[1, ]
+              sv <- c(signif(resTab$F, 5), signif(resTab$R2, 5), signif(resTab$`Pr(>F)`, 5))
+              names(sv) <- c("F-value", "R-squared", "p-value")
+            } else if (alg == "anosim") {
+              anosim_res <- vegan::anosim(data.dist, group = group)
+              sv <- c(signif(anosim_res$statistic, 5), signif(anosim_res$signif, 5))
+              names(sv) <- c("R", "p-value")
+            } else if (alg == "permdisp") {
+              beta <- vegan::betadisper(data.dist, group = group)
+              resTab <- anova(beta)
+              sv <- c(signif(resTab$"F value"[1], 5), signif(resTab$"Pr(>F)"[1], 5))
+              names(sv) <- c("F-value", "p-value")
+            }
+            sv
+          },
+          input_data = list(otu_t = otu_t, dist_method = dist_method, alg = alg,
+                            sampledf = sampledf, sel_meta = sel.meta),
+          packages = c("vegan", "qs"),
+          timeout = 180,
+          output_type = "qs"
+        )
+        if (is.list(stat.info.vec) && isFALSE(stat.info.vec$success)) { AddErrMsg(stat.info.vec$message); return(0) }
 
         res.list[[dataName]][[dist_method]] <- stat.info.vec
         data.nms.vec[vec_idx] <- dataName
@@ -601,144 +790,185 @@ PlotDiscreteDiagnostic <- function(mbSetObj, fileName, metadata, format="png", d
   mdata.all <- mbSetObj$mdata.all;
   sel.nms <- names(mdata.all)[mdata.all==1];
 
-  require(MMUPHin);
-  require(ggpubr);
-  require(vegan);
-
   data  <- qs::qread("merged.data.raw.qs");
   data <- subsetPhyloseqByDataset(mbSetObj, data);
 
   sam_data <- as.data.frame(as.matrix(sample_data(data)));
-
   meta_groups <- unique(sam_data[, metadata])
 
-  plot.list <- list();
-  i <- 1;
-  for(meta.grp in meta_groups){
-    sub_sam_data <- sam_data[which(sam_data[, metadata] == meta.grp), ]
-    sub_data <- data@otu_table[, rownames(sub_sam_data)]
+  # Batch all vegan+MMUPHin computations in one subprocess
+  otu_subsets <- lapply(meta_groups, function(grp) {
+    sub_sam <- sam_data[sam_data[, metadata] == grp, ]
+    as.matrix(data@otu_table[, rownames(sub_sam)])
+  })
+  names(otu_subsets) <- meta_groups
+  sam_subsets <- lapply(meta_groups, function(grp) {
+    sam_data[sam_data[, metadata] == grp, ]
+  })
+  names(sam_subsets) <- meta_groups
 
-    dist_data <- vegdist(t(as.matrix(sub_data)), method = "bray")
+  fit_results <- rsclient_isolated_exec(
+    func_body = function(input_data) {
+      require(vegan); require(MMUPHin)
+      results <- list()
+      for (grp in input_data$meta_groups) {
+        dist_data <- vegan::vegdist(t(input_data$otu_subsets[[grp]]), method = "bray")
+        fit <- MMUPHin::discrete_discover(D = dist_data, batch = "dataset",
+                 data = input_data$sam_subsets[[grp]],
+                 control = list(k_max = 8, verbose = FALSE))
+        results[[grp]] <- list(internal_mean = fit$internal_mean, internal_se = fit$internal_se,
+                               external_mean = fit$external_mean, external_se = fit$external_se)
+      }
+      results
+    },
+    input_data = list(meta_groups = meta_groups, otu_subsets = otu_subsets, sam_subsets = sam_subsets),
+    packages = c("vegan", "MMUPHin", "qs"),
+    timeout = 300,
+    output_type = "qs"
+  )
+  if (is.list(fit_results) && isFALSE(fit_results$success)) { AddErrMsg(fit_results$message); return(0) }
 
-    fit_discrete <- discrete_discover(D = dist_data,
-                                      batch = "dataset",
-                                      data = sub_sam_data,
-                                      control = list(k_max = 8, verbose = F));
-    nms <- sel.nms;
-    res.list <- list();
-    for(study_id in nms){
-
-    internal <- data.frame(K = 2:8,
-                           statistic = fit_discrete$internal_mean,
-                           se = fit_discrete$internal_se,
-                           type = "internal")
-
-    external <- data.frame(K = 2:8,
-                           statistic = fit_discrete$external_mean,
-                           se = fit_discrete$external_se,
-                           type = "external")
-
-    df <- rbind(internal, external);
-    df$dataset <- rep(study_id, nrow(df));
-    res.list[[paste0(metadata, meta.grp, sep="-")]] <- df;
+  # Build ggplot objects in Master (ggplot2 is not quarantined)
+  plot.list <- list()
+  i <- 1
+  for (meta.grp in meta_groups) {
+    fit_disc <- fit_results[[meta.grp]]
+    res.list <- list()
+    for (study_id in sel.nms) {
+      internal <- data.frame(K = 2:8, statistic = fit_disc$internal_mean, se = fit_disc$internal_se, type = "internal")
+      external <- data.frame(K = 2:8, statistic = fit_disc$external_mean, se = fit_disc$external_se, type = "external")
+      df <- rbind(internal, external)
+      df$dataset <- rep(study_id, nrow(df))
+      res.list[[paste0(metadata, meta.grp, sep = "-")]] <- df
     }
-    res <- do.call("rbind", res.list);
+    res <- do.call("rbind", res.list)
 
     p <- ggplot2::ggplot(res, aes(x = K, y = statistic, color = type)) +
       geom_point(position = position_dodge(width = 0.5)) +
       geom_line(position = position_dodge(width = 0.5)) +
       geom_errorbar(aes(ymin = statistic - se, ymax = statistic + se),
                     position = position_dodge(width = 0.5), width = 0.5) +
-      facet_wrap(as.formula(paste0("~dataset")), scales="free", ncol= 1) +
-      ggtitle(label=paste0(metadata, "-", meta.grp));
+      facet_wrap(as.formula(paste0("~dataset")), scales = "free", ncol = 1) +
+      ggtitle(label = paste0(metadata, "-", meta.grp))
 
-    if(i == 1){
-      p <- p + theme(legend.position = "none")
-    }
-
-    plot.list[[meta.grp]] <- p;
-    i <- i + 1;
+    if (i == 1) p <- p + theme(legend.position = "none")
+    plot.list[[meta.grp]] <- p
+    i <- i + 1
   }
 
-  imgName = paste(fileName, ".", format, sep="");
-  
-  Cairo::Cairo(file=imgName, unit="in", dpi=96, width=9.7, height=16.7, type=format, bg="white");
-  p <- ggarrange(plotlist=plot.list, ncol = length(unique(sam_data[,metadata])));
-  print(p);
-  dev.off();
+  # ggarrange (ggpubr) — quarantined, isolate with Cairo
+  imgName <- paste(fileName, ".", format, sep = "")
+  rsclient_isolated_exec(
+    func_body = function(input_data) {
+      require(ggpubr)
+      Cairo::Cairo(file = input_data$imgName, unit = "in", dpi = 96, width = 9.7, height = 16.7, type = input_data$format, bg = "white")
+      p <- ggpubr::ggarrange(plotlist = input_data$plot_list, ncol = input_data$ncol)
+      print(p)
+      dev.off()
+      TRUE
+    },
+    input_data = list(imgName = imgName, format = format, plot_list = plot.list, ncol = length(meta_groups)),
+    packages = c("ggpubr", "Cairo", "qs"),
+    timeout = 120,
+    output_type = "qs"
+  )
+  # plot failure is non-fatal — log but don't block
+
   return(.set.mbSetObj(mbSetObj))
 }
 
 PlotContinuousPopulation <- function(mbSetObj, loadingName, ordinationName, metadata, format="png", dpi=default.dpi){
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
-  require(MMUPHin);
-  require(vegan);
   require(dplyr); require(ggplot2);
-
-  loading.list <- list();
-  ordination.list <- list();
 
   data <- qs::qread("merged.data.qs");
   data <- subsetPhyloseqByDataset(mbSetObj, data);
-
   sam_data <- as.data.frame(as.matrix(sample_data(data)));
-
   meta_groups <- unique(sam_data[, metadata])
 
-  for(meta.grp in meta_groups){
-    sub_sam_data <- sam_data[which(sam_data[, metadata] == meta.grp), ]
-    sub_data <- data@otu_table[, rownames(sub_sam_data)];
+  # Batch vegan+MMUPHin for all meta groups in one subprocess
+  otu_subsets <- lapply(meta_groups, function(grp) {
+    sub_sam <- sam_data[sam_data[, metadata] == grp, ]
+    as.matrix(data@otu_table[, rownames(sub_sam)])
+  })
+  names(otu_subsets) <- meta_groups
+  sam_subsets <- lapply(meta_groups, function(grp) {
+    sam_data[sam_data[, metadata] == grp, ]
+  })
+  names(sam_subsets) <- meta_groups
 
-    dist.data <- vegdist(t(as.matrix(sub_data)), method = "bray")
+  fit_results <- rsclient_isolated_exec(
+    func_body = function(input_data) {
+      require(vegan); require(MMUPHin)
+      results <- list()
+      for (grp in input_data$meta_groups) {
+        sub_data <- input_data$otu_subsets[[grp]]
+        sub_sam <- input_data$sam_subsets[[grp]]
+        dist.data <- vegan::vegdist(t(sub_data), method = "bray")
+        fit <- MMUPHin::continuous_discover(feature_abd = sub_data, batch = "dataset",
+                 data = sub_sam, control = list(var_perc_cutoff = 0.5, verbose = FALSE))
+        mds <- cmdscale(d = dist.data)
+        colnames(mds) <- c("Axis1", "Axis2")
+        results[[grp]] <- list(
+          consensus_loadings = fit$consensus_loadings,
+          consensus_scores = fit$consensus_scores,
+          mds = as.data.frame(mds)
+        )
+      }
+      results
+    },
+    input_data = list(meta_groups = meta_groups, otu_subsets = otu_subsets, sam_subsets = sam_subsets),
+    packages = c("vegan", "MMUPHin", "qs"),
+    timeout = 300,
+    output_type = "qs"
+  )
+  if (is.list(fit_results) && isFALSE(fit_results$success)) { AddErrMsg(fit_results$message); return(0) }
 
-    fit_continuous <- continuous_discover(feature_abd = sub_data,
-                                          batch = "dataset",
-                                          data = sub_sam_data,
-                                          control = list(var_perc_cutoff = 0.5,
-                                                         verbose = FALSE));
-
-    loading <- data.frame(feature = rownames(fit_continuous$consensus_loadings),
-                          loading1 = fit_continuous$consensus_loadings[, 1])
-
+  # Build ggplot objects in Master
+  loading.list <- list()
+  ordination.list <- list()
+  for (meta.grp in meta_groups) {
+    fit_cont <- fit_results[[meta.grp]]
+    loading <- data.frame(feature = rownames(fit_cont$consensus_loadings),
+                          loading1 = fit_cont$consensus_loadings[, 1])
     p <- loading %>%
-      arrange(-abs(loading1)) %>%
-      slice(1:20) %>%
-      arrange(loading1) %>%
+      arrange(-abs(loading1)) %>% slice(1:20) %>% arrange(loading1) %>%
       plyr::mutate(feature = factor(feature, levels = feature)) %>%
-      ggplot(aes(x = feature, y = loading1)) +
-      geom_bar(stat = "identity") +
-      coord_flip() +
-      ggtitle(label=paste0(metadata, "-", meta.grp));
+      ggplot(aes(x = feature, y = loading1)) + geom_bar(stat = "identity") +
+      coord_flip() + ggtitle(label = paste0(metadata, "-", meta.grp))
+    loading.list[[as.character(meta.grp)]] <- p
 
-    loading.list[[as.character(meta.grp)]] <- p;
-
-    mds <- cmdscale(d = dist.data)
-    colnames(mds) <- c("Axis1", "Axis2");
-    mds <- as.data.frame(mds);
-    mds$score1 <- fit_continuous$consensus_scores[, 1];
-
+    mds <- fit_cont$mds
+    mds$score1 <- fit_cont$consensus_scores[, 1]
     p2 <- ggplot(mds, aes(x = Axis1, y = Axis2)) +
-      geom_point(aes(colour = score1), size=2, shape=16) +
-      scale_colour_gradient2() +
-      coord_fixed()
-
-    ordination.list[[as.character(meta.grp)]] <- p2;
+      geom_point(aes(colour = score1), size = 2, shape = 16) +
+      scale_colour_gradient2() + coord_fixed()
+    ordination.list[[as.character(meta.grp)]] <- p2
   }
-  
-  
-  
-  loadingName <-paste(loadingName, ".", format, sep="");
-  Cairo::Cairo(file=loadingName, unit="in", dpi=96, width=9.7, height=16.7, type=format, bg="white");
-  pl1 <- ggarrange(plotlist=loading.list, nrow = length(unique(sam_data[,metadata])));
-  print(pl1);
-  dev.off();
-  
-  ordinationName <-paste(ordinationName, ".", format, sep="");
-  Cairo::Cairo(file=ordinationName, unit="in", dpi=96, width=9.7, height=16.7, type=format, bg="white");
-  pl2 <- ggarrange(plotlist=ordination.list, nrow = length(unique(sam_data[,metadata])));
-  print(pl2);
-  dev.off();
-  
+
+  # ggarrange (ggpubr) — quarantined, isolate with Cairo
+  ngrp <- length(meta_groups)
+  loadingName <- paste(loadingName, ".", format, sep = "")
+  ordinationName <- paste(ordinationName, ".", format, sep = "")
+
+  rsclient_isolated_exec(
+    func_body = function(input_data) {
+      require(ggpubr)
+      Cairo::Cairo(file = input_data$loadingName, unit = "in", dpi = 96, width = 9.7, height = 16.7, type = input_data$format, bg = "white")
+      print(ggpubr::ggarrange(plotlist = input_data$loading_list, nrow = input_data$ngrp))
+      dev.off()
+      Cairo::Cairo(file = input_data$ordinationName, unit = "in", dpi = 96, width = 9.7, height = 16.7, type = input_data$format, bg = "white")
+      print(ggpubr::ggarrange(plotlist = input_data$ordination_list, nrow = input_data$ngrp))
+      dev.off()
+      TRUE
+    },
+    input_data = list(loadingName = loadingName, ordinationName = ordinationName, format = format,
+                      loading_list = loading.list, ordination_list = ordination.list, ngrp = ngrp),
+    packages = c("ggpubr", "Cairo", "qs"),
+    timeout = 120,
+    output_type = "qs"
+  )
+
   return(.set.mbSetObj(mbSetObj));
 }

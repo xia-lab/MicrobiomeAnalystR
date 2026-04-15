@@ -5,7 +5,7 @@
 ## Part of the Rserve/qs to Apache Arrow migration
 ###################################################
 
-#' Read a qs file (alias for qs::qread, matches Pro shadow_qread)
+#' Read a qs file (alias for qs::qread, matches shadow_qread)
 #' @param file Path to qs file
 #' @return The deserialized R object
 #' @export

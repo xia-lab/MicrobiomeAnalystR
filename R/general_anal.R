@@ -521,7 +521,6 @@ PerformUnivarTest <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, t
 PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank, model,comp1,comp2, fc.thresh=0){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  suppressMessages(library(metagenomeSeq));
   current.msg<<-"null"
  
   sample_table <- sample_data(mbSetObj$dataSet$norm.phyobj, errorIfNULL=TRUE);
@@ -570,66 +569,86 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
   tree_data <<- data;
  
   data <- phyloseq_to_metagenomeSeq(data);
-  data <- cumNorm(data, p=cumNormStat(data));
-  mod <- model.matrix(~phenoData(data)@data[,variable]);
- 
-  if(model=="zigfit"){
-    tryCatch(
-      {
-        fit <- fitZig(data, mod);  
-      }, warning = function(w){ print() },
-      error = function(e) {
-        AddErrMsg("fitZig model failed to fit to your data! Consider a different model or further filtering your dataset!");
-      }, finally = {
-        if(!exists("fit")){
-          return(0);
-        }
-        fit <- fit
-      })
-  }else{ # fitFeature
-    if(length(levels(cls)) > 2){
-      AddErrMsg("More than two groups present in your experimental factor. This model can only be used with two groups.");
-      return(0);
-    }else{
-      
-        fit <- tryCatch({
-        # Capture warnings as they occur and continue execution
-        result <- withCallingHandlers(
-            expr = {
-                fitFeatureModel(data, mod)
-            },
-            warning = function(w) {
-            # Print the warning message
-            invokeRestart("muffleWarning")  # Muffle the warning and continue
-            }
-        )
-        result  # Return the result from the try block
-        },error = function(e) {
-            AddErrMsg("fitFeatureModel model failed to fit to your data! Consider a different model or further filtering your dataset!")
-            return(NULL)
-        })
 
-        # Check if fit was successful
-        if (is.null(fit)) {
-            return(0)
+  # metagenomeSeq quarantined — isolate cumNorm + model fitting + result extraction
+  mgs_result <- rsclient_isolated_exec(
+    func_body = function(input_data) {
+      require(metagenomeSeq)
+      require(Biobase)
+      data <- input_data$data
+      variable <- input_data$variable
+      model <- input_data$model
+      n_cls_levels <- input_data$n_cls_levels
+
+      data <- metagenomeSeq::cumNorm(data, p = metagenomeSeq::cumNormStat(data))
+      mod <- model.matrix(~Biobase::phenoData(data)@data[, variable])
+
+      fit <- NULL
+      err_msg <- NULL
+
+      if (model == "zigfit") {
+        tryCatch({
+          fit <- metagenomeSeq::fitZig(data, mod)
+        }, warning = function(w) {},
+        error = function(e) {
+          err_msg <<- "fitZig model failed to fit to your data! Consider a different model or further filtering your dataset!"
+        })
+      } else {
+        if (n_cls_levels > 2) {
+          err_msg <- "More than two groups present in your experimental factor. This model can only be used with two groups."
+        } else {
+          tryCatch({
+            fit <- withCallingHandlers(
+              expr = metagenomeSeq::fitFeatureModel(data, mod),
+              warning = function(w) invokeRestart("muffleWarning")
+            )
+          }, error = function(e) {
+            err_msg <<- "fitFeatureModel model failed to fit to your data! Consider a different model or further filtering your dataset!"
+          })
         }
-     }
+      }
+
+      if (is.null(fit)) {
+        return(list(success = FALSE, err_msg = err_msg))
+      }
+
+      x <- metagenomeSeq::MRfulltable(fit, number = nrow(Biobase::assayData(data)$counts))
+      x <- x[!is.na(rownames(x)), ]
+      rownames(x) <- gsub(":1", "", x = rownames(x), fixed = TRUE)
+      x$OTUnames <- as.character(rownames(x))
+
+      # Extract MRcounts for boxplot data
+      box_counts <- metagenomeSeq::MRcounts(data)
+      pdata_col <- Biobase::pData(data)[, variable]
+
+      # Check for taxonomy
+      has_tax <- !is.null(tryCatch(tax_table(data, errorIfNULL = FALSE), error = function(e) NULL))
+      tax_df <- NULL
+      if (has_tax) {
+        tax_df <- data.frame(tax_table(data), check.names = FALSE)
+        tax_df$OTUnames <- as.character(rownames(tax_df))
+      }
+
+      return(list(success = TRUE, x = x, box_counts = box_counts,
+                  pdata_col = pdata_col, tax_df = tax_df))
+    },
+    input_data = list(data = data, variable = variable, model = model,
+                      n_cls_levels = length(levels(cls))),
+    packages = c("metagenomeSeq", "Biobase", "phyloseq", "qs"),
+    timeout = 300,
+    output_type = "qs"
+  )
+
+  if (is.list(mgs_result) && isFALSE(mgs_result$success)) {
+    AddErrMsg(if (!is.null(mgs_result$err_msg)) mgs_result$err_msg else if (!is.null(mgs_result$message)) mgs_result$message else "metagenomeSeq analysis failed")
+    return(0)
   }
 
-  x <- MRfulltable(fit, number = nrow(assayData(data)$counts));
-  x <- x[!is.na(rownames(x)), ];
-  
-  rownames(x) <- gsub(":1", "", x = rownames(x), fixed = TRUE);
-  x$OTUnames <- as.character(rownames(x))
-    
-
-  if (!is.null(tax_table(data, errorIfNULL = FALSE))) {
-    #Attach the bacterial taxonomy to the table, if available
-    TAX = data.frame(tax_table(data),check.names=FALSE);
-    TAX$OTUnames <- as.character(rownames(TAX));
-    res = merge(x, TAX, by = "OTUnames")
+  x <- mgs_result$x
+  if (!is.null(mgs_result$tax_df)) {
+    res <- merge(x, mgs_result$tax_df, by = "OTUnames")
   } else {
-    res = x;
+    res <- x
   }
  
   if(model=="ffm"){
@@ -660,13 +679,28 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
   claslbl <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]])
   
   dge <- phyloseq_to_edgeR(tree_data, variable)
-  if(comp1 %in% claslbl && comp2 %in% claslbl ){
-    et <- edgeR::exactTest(dge, c(comp1,comp2))
-   }else{
-    et <- edgeR::exactTest(dge)
-  }
-  tt <- edgeR::topTags(et, n=nrow(dge$table), adjust.method="BH", sort.by="PValue")
-   res <- tt@.Data[[1]]
+  # edgeR quarantined — isolate exactTest + topTags in subprocess
+  res <- rsclient_isolated_exec(
+    func_body = function(input_data) {
+      require(edgeR)
+      dge <- input_data$dge
+      comp1 <- input_data$comp1
+      comp2 <- input_data$comp2
+      claslbl <- input_data$claslbl
+      if (comp1 %in% claslbl && comp2 %in% claslbl) {
+        et <- edgeR::exactTest(dge, c(comp1, comp2))
+      } else {
+        et <- edgeR::exactTest(dge)
+      }
+      tt <- edgeR::topTags(et, n = nrow(dge$table), adjust.method = "BH", sort.by = "PValue")
+      data.frame(tt@.Data[[1]], check.names = FALSE)
+    },
+    input_data = list(dge = dge, comp1 = comp1, comp2 = comp2, claslbl = as.character(claslbl)),
+    packages = c("edgeR", "qs"),
+    timeout = 180,
+    output_type = "qs"
+  )
+  if (is.list(res) && isFALSE(res$success)) { AddErrMsg(res$message); return(0) }
 
   if(model=="ffm"){
    resTable_logFC <- res[match(rownames(resTable), rownames(res)), 'logFC']
@@ -702,17 +736,15 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
   diff_ft <<- rownames(resTable)[1:de.Num];
   sigfeat <- rownames(resTable);
   
-  #prepare individual boxplot
-  box_data <- MRcounts(data);
-  #subset only diff. Abundant features
-  #box_data <- box_data[sigfeat, ];
-  
+  #prepare individual boxplot (MRcounts + pData already extracted from subprocess)
+  box_data <- mgs_result$box_counts;
+
   #samples in rows
   box_data <- t(box_data);
   box_data <- data.frame(box_data,check.names=FALSE);
   colnames(box_data) <- sigfeat;
-  
-  claslbl <- pData(data)[ ,variable];
+
+  claslbl <- mgs_result$pdata_col;
   box_data$class <- unlist(claslbl);
 
   mbSetObj$analSet$boxdata <- box_data;
@@ -1395,397 +1427,6 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, f
 
 ########################################################
 ########### LinDA (Linear DA) ##########################
-########################################################
-
-# Winsorization helper for LinDA
-.linda_winsor <- function(Y, quan) {
-  N <- colSums(Y)
-  P <- t(t(Y) / N)
-  cut <- apply(P, 1, quantile, quan)
-  Cut <- matrix(rep(cut, ncol(Y)), nrow(Y))
-  ind <- P > Cut
-  P[ind] <- Cut[ind]
-  Y <- round(t(t(P) * N))
-  return(Y)
-}
-
-# Core LinDA algorithm with fixed-effect and mixed-effect support
-# Based on: Zhou et al. LinDA: Linear Models for Differential Abundance
-# Analysis of Microbiome Compositional Data. Genome Biology 23:95, 2022.
-.linda_core <- function(otu.tab, meta, formula, type = 'count',
-                        adaptive = TRUE, imputation = FALSE, pseudo.cnt = 0.5, corr.cut = 0.1,
-                        p.adj.method = 'BH', alpha = 0.05,
-                        prev.cut = 0, lib.cut = 1, winsor.quan = NULL) {
-
-  if(any(is.na(otu.tab))) stop('The OTU table contains NAs!')
-
-  allvars <- all.vars(as.formula(formula))
-  Z <- as.data.frame(meta[, allvars, drop = FALSE])
-
-  # Detect random effects
-  random.effect <- grepl('\\(', formula)
-
-  # Preprocessing: filter samples and taxa
-  keep.sam <- which(colSums(otu.tab) >= lib.cut & rowSums(is.na(Z)) == 0)
-  Y <- otu.tab[, keep.sam, drop = FALSE]
-  Z <- as.data.frame(Z[keep.sam, , drop = FALSE])
-  names(Z) <- allvars
-
-  n <- ncol(Y)
-  keep.tax <- which(rowSums(Y > 0) / n >= prev.cut)
-  Y <- Y[keep.tax, , drop = FALSE]
-  m <- nrow(Y)
-
-  if(any(colSums(Y) == 0)) {
-    ind <- which(colSums(Y) > 0)
-    Y <- Y[, ind, drop = FALSE]
-    Z <- as.data.frame(Z[ind, , drop = FALSE])
-    names(Z) <- allvars
-    keep.sam <- keep.sam[ind]
-    n <- ncol(Y)
-  }
-
-  # Scale numeric variables
-  ind <- sapply(1:ncol(Z), function(i) is.numeric(Z[, i]))
-  if(any(ind)) Z[, ind] <- scale(Z[, ind])
-
-  if(!is.null(winsor.quan)) Y <- .linda_winsor(Y, winsor.quan)
-
-  taxa.name <- if(is.null(rownames(otu.tab))) (1:nrow(otu.tab))[keep.tax] else rownames(otu.tab)[keep.tax]
-  samp.name <- if(is.null(rownames(meta))) (1:nrow(meta))[keep.sam] else rownames(meta)[keep.sam]
-
-  # Handle zeros
-  if(type == 'count') {
-    if(any(Y == 0)) {
-      N <- colSums(Y)
-      if(adaptive) {
-        logN <- log(N)
-        if(random.effect) {
-          tmp <- lmerTest::lmer(as.formula(paste0('logN', formula)), Z)
-        } else {
-          tmp <- lm(as.formula(paste0('logN', formula)), Z)
-        }
-        corr.pval <- coef(summary(tmp))[-1, "Pr(>|t|)"]
-        if(any(corr.pval <= corr.cut)) {
-          imputation <- TRUE
-        } else {
-          imputation <- FALSE
-        }
-      }
-      if(imputation) {
-        N.mat <- matrix(rep(N, m), nrow = m, byrow = TRUE)
-        N.mat[Y > 0] <- 0
-        tmp <- N[max.col(N.mat)]
-        Y <- Y + N.mat / tmp
-      } else {
-        Y <- Y + pseudo.cnt
-      }
-    }
-  }
-
-  # CLR transformation
-  logY <- log2(Y)
-  W <- t(logY) - colMeans(logY)
-
-  # Fit models
-  oldw <- getOption('warn')
-  options(warn = -1)
-
-  if(!random.effect) {
-    suppressMessages(fit <- lm(as.formula(paste0('W', formula)), Z))
-    res <- do.call(rbind, coef(summary(fit)))
-    d <- ncol(model.matrix(fit))
-    df <- rep(n - d, m)
-  } else {
-    # Mixed-effect: fit per-taxon lmer
-    suppressMessages({
-      tmp <- lapply(1:m, function(i) {
-        w <- W[, i]
-        fit <- lmerTest::lmer(as.formula(paste0('w', formula)), Z)
-        coef(summary(fit))
-      })
-    })
-    res <- do.call(rbind, tmp)
-    # df from Satterthwaite approximation (column 3 of lmerTest summary)
-    df.vec <- unlist(lapply(tmp, function(x) x[, 3]))
-  }
-
-  options(warn = oldw)
-
-  # Intercept processing for baseMean
-  res.intc <- res[which(rownames(res) == '(Intercept)'), , drop = FALSE]
-  rownames(res.intc) <- NULL
-
-  oldw <- getOption('warn')
-  options(warn = -1)
-  suppressMessages(bias.intc <- modeest::mlv(sqrt(n) * res.intc[, 1],
-                                             method = 'meanshift', kernel = 'gaussian') / sqrt(n))
-  options(warn = oldw)
-  baseMean <- 2 ^ (res.intc[, 1] - bias.intc)
-  baseMean <- baseMean / sum(baseMean) * 1e6
-
-  # Process each variable
-  variables <- unique(rownames(res))[-1]
-  output <- list()
-  bias <- rep(NA, length(variables))
-
-  for(i in seq_along(variables)) {
-    x <- variables[i]
-    res.voi <- res[which(rownames(res) == x), , drop = FALSE]
-    rownames(res.voi) <- NULL
-
-    if(random.effect) {
-      df <- res.voi[, 3]
-    }
-
-    log2FoldChange <- res.voi[, 1]
-    lfcSE <- res.voi[, 2]
-
-    oldw <- getOption('warn')
-    options(warn = -1)
-    suppressMessages(bias[i] <- modeest::mlv(sqrt(n) * log2FoldChange,
-                                             method = 'meanshift', kernel = 'gaussian') / sqrt(n))
-    options(warn = oldw)
-    log2FoldChange <- log2FoldChange - bias[i]
-    stat <- log2FoldChange / lfcSE
-    pvalue <- 2 * pt(-abs(stat), df)
-    padj <- p.adjust(pvalue, method = p.adj.method)
-    reject <- padj <= alpha
-
-    output[[i]] <- data.frame(baseMean = baseMean, log2FoldChange = log2FoldChange,
-                              lfcSE = lfcSE, stat = stat, pvalue = pvalue,
-                              padj = padj, reject = reject, df = df,
-                              row.names = taxa.name, check.names = FALSE)
-  }
-  names(output) <- variables
-
-  rownames(Y) <- taxa.name
-  colnames(Y) <- samp.name
-  rownames(Z) <- samp.name
-
-  return(list(variables = variables, bias = bias, output = output))
-}
-
-#'Perform LinDA for covariate-adjusted differential abundance analysis
-#'@description LinDA uses centered log2-ratio transformation with bias correction
-#'on linear (or mixed-effect) models. Supports covariates and blocking factors.
-#'@param mbSetObj Input the name of the mbSetObj.
-#'@param analysis.var Primary metadata variable.
-#'@param is.norm Whether data is already normalized.
-#'@param comp Comparison group.
-#'@param ref Reference group.
-#'@param block Blocking factor (random effect). "NA" if none.
-#'@param taxrank Taxonomic level.
-#'@param imgNm Image name for visualization.
-#'@param thresh Adjusted p-value cutoff.
-#'@export
-PerformLinDA <- function(mbSetObj, analysis.var, is.norm = "false",
-                         comp = NULL, ref = NULL, block = "NA",
-                         taxrank = "NA", imgNm = "NA", thresh = 0.05) {
-
-  mbSetObj <- .get.mbSetObj(mbSetObj)
-  thresh <- as.numeric(thresh)
-
-  # Determine covariates
-  if(!exists('adj.vec')) {
-    adj.bool <- FALSE
-    adj.vars <- character(0)
-  } else {
-    adj.vars <- adj.vec
-    adj.bool <- length(adj.vars) > 0 && !all(adj.vars == "")
-    if(!adj.bool) adj.vars <- character(0)
-  }
-
-  mbSetObj$analSet$adj.bool <- adj.bool
-  mbSetObj$analSet$block <- block
-
-  # Get OTU table at the requested taxonomy level
-  if(mbSetObj$module.type == "sdp") {
-    taxrank <- "OTU"
-  }
-
-  if(is.norm == "false") {
-    phyloseq_objs <- qs::qread("phyloseq_prenorm_objs.qs")
-  } else {
-    phyloseq_objs <- qs::qread("phyloseq_objs.qs")
-  }
-
-  if(taxrank == "OTU") {
-    input.data <- as.data.frame(phyloseq_objs$count_tables$OTU)
-  } else {
-    taxrank.inx <- which(names(phyloseq_objs$count_tables) %in% taxrank)
-    input.data <- as.data.frame(phyloseq_objs$count_tables[[taxrank.inx]])
-  }
-
-  # Build metadata
-  meta.nms <- colnames(mbSetObj$dataSet$sample_data)
-  input.meta <- as.data.frame(mbSetObj$dataSet$sample_data@.Data)
-  colnames(input.meta) <- meta.nms
-  rownames(input.meta) <- input.meta$sample_id
-
-  # Align samples
-  common.samples <- intersect(colnames(input.data), rownames(input.meta))
-  input.data <- input.data[, common.samples, drop = FALSE]
-  input.meta <- input.meta[common.samples, , drop = FALSE]
-
-  # Determine analysis type (discrete or continuous)
-  fixed.effects <- if(adj.bool) c(analysis.var, adj.vars) else analysis.var
-  fixed.types <- mbSetObj$dataSet$meta.types[names(mbSetObj$dataSet$meta.types) %in% fixed.effects]
-  analysis.type <- fixed.types[analysis.var]
-  mbSetObj$analSet$analysis.type <- analysis.type
-
-  # For discrete primary variable, subset to comparison groups and set reference
-  if(analysis.type == "disc") {
-    input.meta[[analysis.var]] <- factor(input.meta[[analysis.var]])
-    if(!is.null(ref) && ref != "NA" && !is.null(comp) && comp != "NA") {
-      keep <- input.meta[[analysis.var]] %in% c(comp, ref)
-      input.data <- input.data[, keep, drop = FALSE]
-      input.meta <- input.meta[keep, , drop = FALSE]
-      input.meta[[analysis.var]] <- factor(input.meta[[analysis.var]], levels = c(ref, comp))
-    }
-  }
-
-  # Ensure discrete covariates are factors
-  for(v in fixed.effects) {
-    if(v %in% names(fixed.types) && fixed.types[v] == "disc") {
-      input.meta[[v]] <- factor(input.meta[[v]])
-    }
-  }
-
-  # Build LinDA formula
-  formula.parts <- fixed.effects
-  if(block != "NA") {
-    input.meta[[block]] <- factor(input.meta[[block]])
-    formula.str <- paste0("~", paste(formula.parts, collapse = "+"), "+(1|", block, ")")
-  } else {
-    formula.str <- paste0("~", paste(formula.parts, collapse = "+"))
-  }
-
-  # Run LinDA (adjusted)
-  linda.res <- .linda_core(input.data, input.meta, formula = formula.str,
-                           prev.cut = 0, lib.cut = 1, winsor.quan = 0.97)
-
-  # Find the variable corresponding to the primary metadata
-  # For discrete variables, LinDA creates coefficients like "varNameLevel"
-  all.vars.out <- linda.res$variables
-  if(analysis.type == "disc" && !is.null(comp) && comp != "NA") {
-    var.match <- grep(paste0("^", analysis.var), all.vars.out, value = TRUE)[1]
-  } else {
-    var.match <- all.vars.out[1]
-  }
-  adj.output <- linda.res$output[[var.match]]
-
-  # Run LinDA (unadjusted) for comparison plot if covariates/blocking exist
-  if(adj.bool || block != "NA") {
-    formula.noadj <- paste0("~", analysis.var)
-    linda.noadj <- .linda_core(input.data, input.meta, formula = formula.noadj,
-                               prev.cut = 0, lib.cut = 1, winsor.quan = 0.97)
-    noadj.var <- grep(paste0("^", analysis.var), linda.noadj$variables, value = TRUE)[1]
-    noadj.output <- linda.noadj$output[[noadj.var]]
-  } else {
-    noadj.output <- adj.output
-  }
-
-  # Format results - match PostProcessMaaslin column names
-  if(analysis.type == "disc") {
-    res <- data.frame(
-      Log2FC = signif(adj.output$log2FoldChange, 3),
-      St.Error = signif(adj.output$lfcSE, 3),
-      `P-value` = signif(adj.output$pvalue, 3),
-      FDR = signif(adj.output$padj, 3),
-      row.names = rownames(adj.output),
-      check.names = FALSE
-    )
-    res.noadj <- data.frame(
-      Log2FC = signif(noadj.output$log2FoldChange, 3),
-      `St. Error` = signif(noadj.output$lfcSE, 3),
-      `P-value` = signif(noadj.output$pvalue, 3),
-      FDR = signif(noadj.output$padj, 3),
-      row.names = rownames(noadj.output),
-      check.names = FALSE
-    )
-  } else {
-    res <- data.frame(
-      Coefficient = signif(adj.output$log2FoldChange, 3),
-      St.Error = signif(adj.output$lfcSE, 3),
-      `P-value` = signif(adj.output$pvalue, 3),
-      FDR = signif(adj.output$padj, 3),
-      row.names = rownames(adj.output),
-      check.names = FALSE
-    )
-    res.noadj <- data.frame(
-      Coefficient = signif(noadj.output$log2FoldChange, 3),
-      `St.Error` = signif(noadj.output$lfcSE, 3),
-      `P-value` = signif(noadj.output$pvalue, 3),
-      FDR = signif(noadj.output$padj, 3),
-      row.names = rownames(noadj.output),
-      check.names = FALSE
-    )
-  }
-
-  # Write CSV
-  fast.write(res, file = "multifac_output.csv")
-
-  # Significance
-  sigfeat <- rownames(res)[res$FDR < thresh]
-  sig.count <- length(sigfeat)
-  if(sig.count == 0) {
-    current.msg <<- "No significant features were identified using the given p value cutoff."
-  } else {
-    current.msg <<- paste("A total of", sig.count, "significant features were identified!")
-  }
-
-  # Boxplot data
-  claslbl <- as.factor(input.meta[[analysis.var]])
-  nm <- rownames(input.data)
-  dat3t <- as.data.frame(t(input.data), check.names = FALSE)
-  colnames(dat3t) <- nm
-  box_data <- dat3t
-  box_data$class <- claslbl
-  box_data$norm <- is.norm
-
-  # Adjusted vs unadjusted comparison (for visualization JSON)
-  adj.mat <- res[, c("P-value", "FDR")]
-  noadj.mat <- res.noadj[, c("P-value", "FDR")]
-  colnames(adj.mat) <- c("pval.adj", "fdr.adj")
-  colnames(noadj.mat) <- c("pval.no", "fdr.no")
-  both.mat <- merge(adj.mat, noadj.mat, by = "row.names")
-  both.mat$pval.adj <- -log10(both.mat$pval.adj)
-  both.mat$fdr.adj <- -log10(both.mat$fdr.adj)
-  both.mat$pval.no <- -log10(both.mat$pval.no)
-  both.mat$fdr.no <- -log10(both.mat$fdr.no)
-  rownames(both.mat) <- both.mat[, 1]
-
-  jsonNm <- gsub(".png", ".json", imgNm)
-  jsonObj <- RJSONIO::toJSON(both.mat)
-  sink(jsonNm)
-  cat(jsonObj)
-  sink()
-
-  # Store results matching PostProcessMaaslin structure
-  mbSetObj$analSet$cov.mat <- both.mat
-  mbSetObj$analSet$multiboxdata <- box_data
-  mbSetObj$analSet$sig.count <- sig.count
-  mbSetObj$analSet$cov <- list()
-  mbSetObj$analSet$cov$resTable <- mbSetObj$analSet$resTable <- res
-  mbSetObj$analSet$maas.resnoadj <- res.noadj
-
-  mbSetObj$paramSet$cov <- list(
-    primaryMeta = analysis.var,
-    covariates = if(adj.bool) adj.vars else "NA",
-    block = block,
-    taxrank = taxrank,
-    model = "LinDA",
-    comparison = comp,
-    reference = ref,
-    p.lvl = thresh
-  )
-
-  .set.mbSetObj(mbSetObj)
-  return(1)
-}
-
-########### LinDA (Linear DA) ##########################
 
 .linda_winsor <- function(Y, quan) {
   N <- colSums(Y)
@@ -2181,37 +1822,54 @@ PerformLinDA <- function(mbSetObj, analysis.var, is.norm = "false",
                                  permutations = 999,
                                  method = 'bray',
                                  padj = 'fdr', ...) {
-  require(vegan)
-  f <- grp
-  if (!all(table(f) > 1)) warning('factor has singletons! perhaps lump them?')
+  # vegan quarantined — isolate vegdist + adonis2 in subprocess
+  out <- rsclient_isolated_exec(
+    func_body = function(input_data) {
+      require(vegan)
+      x <- input_data$x
+      f <- input_data$grp
+      permutations <- input_data$permutations
+      method <- input_data$method
+      padj <- input_data$padj
 
-  if (!inherits(x, 'dist')) {
-    D <- vegdist(x, method = method)
-  } else {
-    D <- x
-  }
+      if (!all(table(f) > 1)) warning('factor has singletons! perhaps lump them?')
 
-  f <- as.factor(f)
-  co <- combn(levels(f), 2)
-  nco <- ncol(co)
-  pairs <- character(nco)
-  F.Model <- numeric(nco)
-  R2 <- numeric(nco)
-  p.value <- numeric(nco)
+      if (!inherits(x, 'dist')) {
+        D <- vegan::vegdist(x, method = method)
+      } else {
+        D <- x
+      }
 
-  for (j in 1:nco) {
-    pair_idx <- which(f %in% co[, j])
-    Dij <- as.dist(as.matrix(D)[pair_idx, pair_idx])
-    fij <- data.frame(g = factor(f[pair_idx]))
-    a <- adonis2(Dij ~ g, data = fij, permutations = permutations, ...)
-    pairs[j] <- paste(co[1, j], 'vs', co[2, j])
-    F.Model[j] <- a$F[1]
-    R2[j] <- a$R2[1]
-    p.value[j] <- a$`Pr(>F)`[1]
-  }
+      f <- as.factor(f)
+      co <- combn(levels(f), 2)
+      nco <- ncol(co)
+      pairs <- character(nco)
+      F.Model <- numeric(nco)
+      R2 <- numeric(nco)
+      p.value <- numeric(nco)
 
-  out <- data.frame(pairs = pairs, F.Model = F.Model, R2 = R2, pval = p.value, stringsAsFactors = FALSE)
-  out$p.adj <- p.adjust(out$pval, method = padj)
+      for (j in 1:nco) {
+        pair_idx <- which(f %in% co[, j])
+        Dij <- as.dist(as.matrix(D)[pair_idx, pair_idx])
+        fij <- data.frame(g = factor(f[pair_idx]))
+        a <- vegan::adonis2(Dij ~ g, data = fij, permutations = permutations)
+        pairs[j] <- paste(co[1, j], 'vs', co[2, j])
+        F.Model[j] <- a$F[1]
+        R2[j] <- a$R2[1]
+        p.value[j] <- a$`Pr(>F)`[1]
+      }
+
+      out <- data.frame(pairs = pairs, F.Model = F.Model, R2 = R2, pval = p.value, stringsAsFactors = FALSE)
+      out$p.adj <- p.adjust(out$pval, method = padj)
+      return(out)
+    },
+    input_data = list(x = x, grp = grp, permutations = permutations,
+                      method = method, padj = padj),
+    packages = c("vegan", "qs"),
+    timeout = 300,
+    output_type = "qs"
+  )
+  if (is.list(out) && isFALSE(out$success)) { AddErrMsg(out$message); return(0) }
   return(out)
 }
 
@@ -2729,7 +2387,7 @@ ProcessMaaslin <- function(
 
   if(.on.public.web){
     # make this lazy load
-    if(!exists(".perform.my.maaslin")){ # public web on same user dir
+    if(!exists(".perform.my.maaslin")){
       .load.scripts.on.demand("utils_maaslin.Rc");    
     }
   }
@@ -2779,14 +2437,23 @@ TSSnorm = function(features) {
   features_norm = as.matrix(features)
   dd <- colnames(features_norm)
   
-  # TSS Normalizing the Data
-  features_TSS <-
-    decostand(
-      features_norm,
-      method = "total",
-      MARGIN = 1,
-      na.rm = TRUE)
-  
+  # TSS Normalizing the Data — vegan quarantined, isolate decostand
+  features_TSS <- rsclient_isolated_exec(
+    func_body = function(input_data) {
+      require(vegan)
+      vegan::decostand(
+        input_data$features_norm,
+        method = "total",
+        MARGIN = 1,
+        na.rm = TRUE)
+    },
+    input_data = list(features_norm = features_norm),
+    packages = c("vegan", "qs"),
+    timeout = 180,
+    output_type = "qs"
+  )
+  if (is.list(features_TSS) && isFALSE(features_TSS$success)) { AddErrMsg(features_TSS$message); return(0) }
+
   # Convert back to data frame
   features_TSS <- as.data.frame(features_TSS)
   
@@ -2831,7 +2498,7 @@ RunFastSpar_mem <- function(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, 
 #'@export
 RunFastSpar <- function(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, output="network", opt="corr"){
   
-    if(!exists("my.fast.spar")){ # public web on same user dir
+    if(!exists("my.fast.spar")){
         .load.scripts.on.demand("utils_fastspar.Rc");    
     }
     return(my.fast.spar(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, output, opt));
@@ -2897,9 +2564,7 @@ gm_mean = function(x, na.rm=TRUE){
 
 # helper function
 phyloseq_to_edgeR = function(physeq, group, method="RLE", ...){
-  
-  suppressMessages(library(edgeR));
-  
+
   # Enforce orientation.
   if( !taxa_are_rows(physeq) ){ physeq <- t(physeq) }
   x = as(otu_table(physeq), "matrix")
@@ -2916,11 +2581,22 @@ phyloseq_to_edgeR = function(physeq, group, method="RLE", ...){
     taxonomy = data.frame(as(taxonomy, "matrix"),check.names=FALSE);
   }
   
-  # Now turn into a DGEList
-  y = edgeR::DGEList(counts=x, group=group, genes=taxonomy, remove.zeros = TRUE, ...)
-  z = edgeR::calcNormFactors(y, method="RLE");
-  # Estimate dispersions
-  return(edgeR::estimateTagwiseDisp(edgeR::estimateCommonDisp(z)))
+  # edgeR quarantined — isolate DGEList + calcNormFactors + dispersion in subprocess
+  result <- rsclient_isolated_exec(
+    func_body = function(input_data) {
+      require(edgeR)
+      y <- edgeR::DGEList(counts = input_data$x, group = input_data$group,
+                          genes = input_data$taxonomy, remove.zeros = TRUE)
+      z <- edgeR::calcNormFactors(y, method = "RLE")
+      edgeR::estimateTagwiseDisp(edgeR::estimateCommonDisp(z))
+    },
+    input_data = list(x = x, group = group, taxonomy = taxonomy),
+    packages = c("edgeR", "qs"),
+    timeout = 180,
+    output_type = "qs"
+  )
+  if (is.list(result) && isFALSE(result$success)) { AddErrMsg(result$message); return(0) }
+  return(result)
 }
 
 phyloseq_to_metagenomeSeq = function (physeq, ...) 
@@ -2942,18 +2618,29 @@ phyloseq_to_metagenomeSeq = function (physeq, ...)
   }else {
     TDF = Biobase::AnnotatedDataFrame(data.frame(OTUname = taxa_names(physeq), row.names = taxa_names(physeq),check.names=FALSE));
   }
-  if (requireNamespace("metagenomeSeq")) {
-    mrobj = metagenomeSeq::newMRexperiment(counts = countData, 
-                                           phenoData = ADF, featureData = TDF, ...)
-    if (sum(colSums(countData > 0) > 1) < ncol(countData)) {
-      p = suppressMessages(metagenomeSeq::cumNormStat(mrobj))
-    }
-    else {
-      p = suppressMessages(metagenomeSeq::cumNormStatFast(mrobj))
-    }
-    mrobj = metagenomeSeq::cumNorm(mrobj, p = p)
-    return(mrobj)
-  }
+  # metagenomeSeq quarantined — isolate newMRexperiment + cumNorm in subprocess
+  mrobj <- rsclient_isolated_exec(
+    func_body = function(input_data) {
+      require(metagenomeSeq)
+      require(Biobase)
+      mrobj <- metagenomeSeq::newMRexperiment(counts = input_data$countData,
+                                              phenoData = input_data$ADF,
+                                              featureData = input_data$TDF)
+      if (sum(colSums(input_data$countData > 0) > 1) < ncol(input_data$countData)) {
+        p <- suppressMessages(metagenomeSeq::cumNormStat(mrobj))
+      } else {
+        p <- suppressMessages(metagenomeSeq::cumNormStatFast(mrobj))
+      }
+      mrobj <- metagenomeSeq::cumNorm(mrobj, p = p)
+      return(mrobj)
+    },
+    input_data = list(countData = countData, ADF = ADF, TDF = TDF),
+    packages = c("metagenomeSeq", "Biobase", "qs"),
+    timeout = 180,
+    output_type = "qs"
+  )
+  if (is.list(mrobj) && isFALSE(mrobj$success)) { AddErrMsg(mrobj$message); return(0) }
+  return(mrobj)
 }
 
 # Helper function

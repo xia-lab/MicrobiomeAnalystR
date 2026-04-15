@@ -849,7 +849,7 @@ importTax4FunReferenceData <- function(folder){
   referenceData$SilvaToKEGGMappingMat <- tmpReferenceData
   tmpReferenceData <- readRDS(paste(pathReferenceData,"SilvaIDs.RData",sep=""))
   referenceData$SilvaIDs <- tmpReferenceData
-  tmpReferenceData <- readRDS("../../libs/tax4fun/SilvaTaxmat.RData")
+  tmpReferenceData <- readRDS(paste(pathReferenceData,"SilvaTaxmat.RData",sep=""))
   referenceData$SilvaTaxmat <- tmpReferenceData
 
   return(referenceData)

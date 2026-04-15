@@ -11,7 +11,7 @@
 #'@export
 AddErrMsg <- function(msg){
   err.vec <<- c(err.vec, msg);
-  print(msg);
+  message("[ERROR] ", msg);
 }
 
 #' Gets the error message
@@ -1013,7 +1013,16 @@ if(grp.num <= 18){ # update color and respect default
 
 .load.scripts.on.demand <- function(fileName=""){
     complete.path <- paste0(rpath, "rscripts/MicrobiomeAnalystR/R/", fileName);
-    compiler::loadcmp(complete.path);
+    if (file.exists(complete.path)) {
+      compiler::loadcmp(complete.path);
+    } else {
+      r.path <- sub("\\.Rc$", ".R", complete.path);
+      if (file.exists(r.path)) {
+        source(r.path, local = FALSE);
+      } else {
+        warning(paste("Script not found:", complete.path, "or", r.path));
+      }
+    }
 }
 
 SetCurrentMetaData <- function(meta.data, type){
@@ -1127,40 +1136,49 @@ rescale2NewRange <- function(qvec, new_min, new_max) {
   return(new_vec)
 }
 
-# for 3D bubble
+# for 3D ellipsoid — rgl quarantined, run in subprocess for memory control
 ComputeEncasing <- function(filenm, type, names.vec, level=0.95, omics="NA"){
-  
-  level <- as.numeric(level)
-  names = strsplit(names.vec, "; ")[[1]]
-  
-  pos.xyz <- qs::qread("pos.xyz.qs");
-  #print(head(pos.xyz));
-  inx = rownames(pos.xyz) %in% names;
-  coords = as.matrix(pos.xyz[inx,c(1:3)])
-  mesh = list()
-  if(type == "alpha"){
-    library(alphashape3d)
-    library(rgl)
-    sh=ashape3d(coords, 1.0, pert = FALSE, eps = 1e-09);
-    mesh[[1]] = as.mesh3d(sh, triangles=T);
-  }else if(type == "ellipse"){
-    library(rgl);
-    n = nrow(coords);
-    pos=cov(coords, y = NULL, use = "everything");
-    t_val = sqrt(qchisq(level, 3));
-    mesh[[1]] = ellipse3d(x=as.matrix(pos), t=t_val);
-  }else{
-    library(ks);
-    res=kde(coords);
-    r = plot(res, cont=level*100, display="rgl");
-    sc = scene3d();
-    mesh = sc$objects;
-  }
-  library(RJSONIO);
-  sink(filenm);
-  cat(toJSON(mesh));
-  sink();
-  return(filenm);
+  tryCatch({
+    level <- as.numeric(level)
+    names = strsplit(names.vec, "; ")[[1]]
+
+    if (!file.exists("pos.xyz.qs")) {
+      sink(filenm); cat("{}"); sink()
+      return(filenm)
+    }
+    pos.xyz <- qs::qread("pos.xyz.qs")
+    inx = rownames(pos.xyz) %in% names
+    coords = as.matrix(pos.xyz[inx, c(1:3)])
+
+    if (nrow(coords) < 4) {
+      sink(filenm); cat(RJSONIO::toJSON(list())); sink()
+      return(filenm)
+    }
+
+    mesh <- rsclient_isolated_exec(
+      func_body = function(input_data) {
+        Sys.setenv(RGL_USE_NULL = TRUE)
+        pos <- cov(input_data$coords, y = NULL, use = "everything")
+        center <- colMeans(input_data$coords)
+        t_val <- sqrt(qchisq(input_data$level, 3))
+        mesh <- list()
+        mesh[[1]] <- rgl::ellipse3d(x = as.matrix(pos), centre = center, t = t_val)
+        mesh
+      },
+      input_data = list(coords = coords, level = level),
+      packages = c("rgl", "qs"),
+      timeout = 120,
+      output_type = "qs"
+    )
+
+    if (!is.list(mesh) || !isFALSE(mesh$success)) {
+      sink(filenm); cat(RJSONIO::toJSON(mesh)); sink()
+    }
+  }, error = function(e) {
+    message("[ComputeEncasing] ", e$message)
+    sink(filenm); cat("{}"); sink()
+  })
+  return(filenm)
 }
 
 AddFeatureToReport <- function(mbSetObj=NA, id, imgName){

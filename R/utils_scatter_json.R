@@ -126,6 +126,7 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
       pos.xyz.length = nrow(pos.xyz)
       edge.mat <- cbind(id=c(1:(pos.xyz.length)), source=names[c(1:(pos.xyz.length/2))], target=names[c(((pos.xyz.length/2)+1):pos.xyz.length) ], opacity = 0);
       procrustes.res$pos.xyz[[tax]] = pos.xyz;
+      shadow_save(pos.xyz, "pos.xyz.qs");
       modules = "NA";
       # save node table
       ellipse ="NA"
