@@ -1947,33 +1947,7 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
 
   if(all(c(length(my.res)==1, is.na(my.res)))){
     AddErrMsg("No match was found to the selected metabolite set library!");
-
-    # Create empty results to ensure JSON is generated
-    resTable <- data.frame(Pathway=character(0), Size=numeric(0), Hits=numeric(0),
-                          `Statistic Q`=numeric(0), `Expected Q`=numeric(0),
-                          Pval=numeric(0), `Holm p`=numeric(0), FDR=numeric(0),
-                          check.names=FALSE);
-
-    # Write empty JSON
-    json.res <- list(hits.query = list(),
-                     path.nms = list(),
-                     path.pval = list(),
-                     hit.num = list(),
-                     path.fdr = list(),
-                     hits.query.nm = list(),
-                     hits.node = list(),
-                     expr.mat = list(),
-                     sig.path = 0);
-    json.mat <- RJSONIO::toJSON(json.res);
-    json.nm <- paste(file.nm, ".json", sep="");
-    sink(json.nm); cat(json.mat); sink();
-
-    # Write empty CSV
-    fast.write(resTable, file=paste(file.nm, ".csv", sep=""), row.names=F);
-
-    enr.key <- if(!is.null(mbSetObj$paramSet$koProj.type)) mbSetObj$paramSet$koProj.type else "mmp_met";
-    mbSetObj <- recordEnrTable(mbSetObj, enr.key, resTable, "KEGG", "Global Test");
-    return(mbSetObj);
+    return(0);
   }
 
   nms <- rownames(my.res);
