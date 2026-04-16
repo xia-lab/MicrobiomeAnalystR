@@ -38,6 +38,8 @@ PerformSeqCheck <- function(home_dir = ""){
 
 PerformSeqImport <- function(home_dir = ""){
   write.table(1.0, file = "log_progress.txt", quote = F, row.names = F, col.names = F, append = F)
+  MessageOutput(paste0("Working directory: ", getwd()))
+  MessageOutput(paste0("Import home_dir: ", home_dir))
   MessageOutput(paste0("<b>Loading R pacakge dada2, version: ", packageVersion("dada2"), " ...</b>"), " ")
   require(dada2)
   require(ggplot2)
@@ -481,6 +483,8 @@ sweaveRScript4exec <- function(users.path){
   str <- paste0(str, ";\n", "setwd(\'", getwd(), "\')");
   # Source seq_proc.R directly
   str <- paste0(str, ";\n", "source('", seq_proc_abs, "')");
+  str <- paste0(str, ";\n", "MessageOutput(paste0('Working directory: ', getwd()))");
+  str <- paste0(str, ";\n", "MessageOutput(paste0('dataObj_param.rda exists here: ', file.exists('dataObj_param.rda')))");
   str <- paste0(str, ";\n", "load('dataObj_param.rda')");
   str <- paste0(str, ";\n", "dataObj <<- dataObj");
 
@@ -514,6 +518,8 @@ sweaveBash4exec <- function(users.path){
   
   # Set working dir & funcs to be used
   str <- paste0(str, ";\n", "setwd(\'",users.path,"\')");
+  str <- paste0(str, ";\n", "MessageOutput(paste0('Working directory: ', getwd()))");
+  str <- paste0(str, ";\n", "MessageOutput(paste0('dataObj_param.rda exists here: ', file.exists('dataObj_param.rda')))");
   str <- paste0(str, ";\n", "load('dataObj_param.rda')");
   str <- paste0(str, ";\n", "dataObj <<- dataObj");
   str <- paste0(str, ";\n", "MessageOutput <- dataObj[['funs']][['MessageOutput']]");
@@ -594,6 +600,8 @@ sweaveBash4execPro <- function(users.path, isfromGoogle = FALSE, source_path){
   str <- paste0(str, ";\n", "setwd(\'",users.path,"\')");
   str <- paste0(str, ";\n", "default.dpi <- 150");
   str <- paste0(str, ";\n", "source('", seq_proc_path, "')");
+  str <- paste0(str, ";\n", "MessageOutput(paste0('Working directory: ', getwd()))");
+  str <- paste0(str, ";\n", "MessageOutput(paste0('dataObj_param.rda exists here: ', file.exists('dataObj_param.rda')))");
   str <- paste0(str, ";\n", "load('dataObj_param.rda')");
   str <- paste0(str, ";\n", "dataObj <<- dataObj");
 
