@@ -251,9 +251,27 @@ scale_range <- function(x, new_min = 0, new_max = 1) {
   (x - old_min) / (old_max - old_min) * (new_max - new_min) + new_min
 }
 
-gg_color_hue <- function(n) {
-  hues = seq(15, 375, length = n + 1)
-  hcl(h = hues, l = 65, c = 100)[1:n]
+gg_color_hue <- function(grp.num, type="green", filenm=NULL) {
+  grp.num <- as.numeric(grp.num)
+  if(type == "green"){
+    pal18 <- c("#e6194B", "#3cb44b", "#4363d8", "#ffff00", "#f032e6", "#ffe119", "#911eb4", "#f58231", "#bfef45", "#fabebe", "#469990", "#e6beff", "#9A6324", "#800000", "#aaffc3", "#808000", "#ffd8b1", "#000075");
+  }else{
+    pal18 <- c( "#4363d8","#e6194B" , "#3cb44b", "#f032e6", "#ffe119", "#e6194B", "#f58231", "#bfef45", "#fabebe", "#469990", "#e6beff", "#9A6324", "#800000", "#aaffc3", "#808000", "#ffd8b1", "#42d4f4","#000075", "#ff4500");
+  }
+  if(grp.num <= 18){
+    colArr <- pal18[1:grp.num];
+  }else{
+    colArr <- colorRampPalette(pal18)(grp.num);
+  }
+  if(is.null(filenm)){
+    return(colArr);
+  }else{
+    library(RJSONIO)
+    sink(filenm);
+    cat(toJSON(colArr));
+    sink();
+    return(filenm);
+  }
 }
 
 generateColorGradient <- function(values, low="green", high="red") {

@@ -230,6 +230,8 @@ SetupMetaStats <- function(BHth, paramSet,analSet){
 CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank="Family", view.mode="ratio", format="png", dpi=default.dpi) {
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
+  err.vec <<- "";
+  current.msg <<- "";
   mdata.all <- mbSetObj$mdata.all;
   sel.nms <- names(mdata.all)[mdata.all==1];
   
@@ -237,6 +239,7 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
     AddErrMsg("Need to select at least one summary statistics!");
     return(0);
   }
+  message("[MetaAlphaDBG] selected metrics: ", paste(summary.stat.vec, collapse=","));
   
   #print(summary.stat.vec);
   
@@ -261,6 +264,14 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
       {
         # estimate_richness uses vegan internally — isolate in subprocess
         otu_mat <- as(data@otu_table, "matrix")
+        taxa_rows <- phyloseq::taxa_are_rows(data)
+        # Standardize to samples x taxa for vegan::diversity/estimateR and metadata joins.
+        if (isTRUE(taxa_rows)) {
+          otu_mat <- t(otu_mat)
+        }
+        message("[MetaAlphaDBG] Study=", Study, " | taxa_are_rows=", taxa_rows,
+                " | otu dim(samples x taxa)=", nrow(otu_mat), "x", ncol(otu_mat),
+                " | sam_data rows=", nrow(data@sam_data))
         res <- rsclient_isolated_exec(
           func_body = function(input_data) {
             require(vegan)
@@ -281,10 +292,19 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
             erDF <- as.data.frame(do.call(cbind, outlist))
             renamevec <- c(Observed="S.obs",Chao1="S.chao1",ACE="S.ACE",Shannon="shannon",Simpson="simpson",InvSimpson="invsimpson",Fisher="fisher")
             for (old in names(renamevec)) if (renamevec[old] %in% colnames(erDF)) colnames(erDF)[colnames(erDF)==renamevec[old]] <- old
-            rownames(erDF) <- rownames(x)
+            # estimateR/diversity are computed from x with samples as rows.
+            # Use sample IDs as rownames for downstream metadata joins.
+            if (nrow(erDF) == nrow(x)) {
+              rownames(erDF) <- rownames(x)
+            } else if (nrow(erDF) == ncol(x)) {
+              rownames(erDF) <- colnames(x)
+            } else {
+              message("[MetaAlphaDBG] Unexpected richness row count for ", input_data$study_name,
+                      ": nrow(erDF)=", nrow(erDF), ", nrow(x)=", nrow(x), ", ncol(x)=", ncol(x))
+            }
             erDF
           },
-          input_data = list(otu_mat = otu_mat, measures = summary.stat.vec),
+          input_data = list(otu_mat = otu_mat, measures = summary.stat.vec, study_name = Study),
           packages = c("vegan", "qs"),
           timeout = 120,
           output_type = "qs"
@@ -307,42 +327,144 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
         res <- res
       })    
     
-    if("ACE" %in% colnames(res)){
-      if(all(res$ACE %in% NaN)){
-        AddErrMsg(paste0("ACE estimation fails for ", Study, ". Please try with other metrics or unselect this dataset."));
-        return(0);
+    message("[MetaAlphaDBG] Study=", Study,
+            " | ACE selected=", ("ACE" %in% summary.stat.vec),
+            " | ACE column=", ("ACE" %in% colnames(res)))
+    if("ACE" %in% summary.stat.vec && "ACE" %in% colnames(res)){
+      # Some studies do not satisfy ACE assumptions (e.g., sparse/singleton patterns).
+      # Skip ACE for that study instead of aborting the whole alpha-meta run.
+      if(all(is.nan(res$ACE) | is.na(res$ACE) | is.infinite(res$ACE))){
+        msg <- paste0("ACE estimation fails for ", Study, ". ACE is skipped for this dataset and other selected metrics will continue.")
+        message("[MetaAlphaDBG] ", msg)
+        if(!exists("current.msg") || is.null(current.msg) || identical(current.msg, "null")){
+          current.msg <<- msg
+        }else if(nchar(paste(current.msg, collapse="; ")) == 0){
+          current.msg <<- msg
+        }else{
+          current.msg <<- paste(paste(current.msg, collapse="; "), msg, sep="; ")
+        }
+        res$ACE <- NULL
       }
     }
     
     #data <- bf_ratio(data);
-    data@sam_data$dataset <- rep(Study, nrow(data@sam_data));
-    data@sam_data$sample_id <- gsub("-", ".", data@sam_data$sample_id);
-    
-    
-    res <- res %>% tibble::rownames_to_column("sample_id") %>%
-      select(sample_id, everything()) %>% 
-      left_join(data@sam_data[, c("sample_id")]) %>%
-      as_tibble() %>%
-      tidyr::gather(-sample_id, key="Metric", value="Diversity") %>%
-      left_join(data@sam_data[,c("sample_id",sel.meta, "dataset")]) %>%
-      dplyr::select(sample_id, dataset, matches(sel.meta), Metric, Diversity);
-    
-    colnames(res)[which(colnames(res) == sel.meta)] <- "study_condition";
+    sam_df <- as.data.frame(data@sam_data, check.names = FALSE, stringsAsFactors = FALSE)
+    if(!("sample_id" %in% colnames(sam_df))){
+      sam_df$sample_id <- rownames(sam_df)
+      message("[MetaAlphaDBG] Study=", Study, " | sample_id column missing in sam_data; using rownames.")
+    }
+    if(!(sel.meta %in% colnames(sam_df))){
+      msg <- paste0("Dataset ", Study, " does not contain selected metadata column '", sel.meta, "' and is skipped.")
+      message("[MetaAlphaDBG] ", msg)
+      if(!exists("current.msg") || is.null(current.msg) || identical(current.msg, "null")){
+        current.msg <<- msg
+      }else if(nchar(paste(current.msg, collapse="; ")) == 0){
+        current.msg <<- msg
+      }else{
+        current.msg <<- paste(paste(current.msg, collapse="; "), msg, sep="; ")
+      }
+      next
+    }
+    sam_df$dataset <- Study
+    sam_df$sample_id <- gsub("-", ".", as.character(sam_df$sample_id))
+
+    meta_tbl <- sam_df %>%
+      dplyr::select(sample_id, dplyr::all_of(sel.meta), dataset) %>%
+      as_tibble()
+    colnames(meta_tbl)[which(colnames(meta_tbl) == sel.meta)] <- "study_condition"
+    meta_tbl <- meta_tbl %>%
+      mutate(
+        sample_id_meta = as.character(sample_id),
+        sample_id_norm = make.names(gsub("-", ".", trimws(sample_id)))
+      ) %>%
+      dplyr::select(sample_id_norm, sample_id_meta, study_condition, dataset)
+
+    res <- res %>%
+      tibble::rownames_to_column("sample_id") %>%
+      mutate(
+        sample_id = as.character(sample_id),
+        sample_id_norm = make.names(gsub("-", ".", trimws(sample_id)))
+      ) %>%
+      tidyr::gather(-sample_id, -sample_id_norm, key = "Metric", value = "Diversity") %>%
+      left_join(meta_tbl, by = "sample_id_norm") %>%
+      mutate(sample_id = dplyr::coalesce(sample_id_meta, sample_id)) %>%
+      dplyr::select(sample_id, dataset, study_condition, Metric, Diversity)
+    res$study_condition <- factor(res$study_condition)
+    matched_n <- sum(!is.na(res$study_condition))
+    message("[MetaAlphaDBG] Study=", Study, " | matched metadata rows=", matched_n, "/", nrow(res))
+    if(matched_n == 0){
+      msg <- paste0("Dataset ", Study, " has no sample-id matches between alpha results and metadata after normalization and is skipped.")
+      message("[MetaAlphaDBG] ", msg)
+      res_preview <- paste(head(unique(res$sample_id_norm), 5), collapse=",")
+      meta_preview <- paste(head(unique(meta_tbl$sample_id_norm), 5), collapse=",")
+      message("[MetaAlphaDBG] Study=", Study, " | sample_id_norm preview from alpha=", res_preview)
+      message("[MetaAlphaDBG] Study=", Study, " | sample_id_norm preview from metadata=", meta_preview)
+      if(!exists("current.msg") || is.null(current.msg) || identical(current.msg, "null")){
+        current.msg <<- msg
+      }else if(nchar(paste(current.msg, collapse="; ")) == 0){
+        current.msg <<- msg
+      }else{
+        current.msg <<- paste(paste(current.msg, collapse="; "), msg, sep="; ")
+      }
+      next
+    }
+    res <- res[!is.na(res$study_condition),]
  
-    #R package conflict with rename
-    res <-
-      res %>%
-      left_join(
-        res %>%
-          group_by(Metric, study_condition) %>%
-          summarize(mean=mean(log2(Diversity))) %>%
-          tidyr::spread(key=study_condition, value=mean) %>%
-          dplyr::rename(mean_log2Control := !!quo_name(levels(res$study_condition)[1]), mean_log2Exp := !!quo_name(levels(res$study_condition)[2]))
-      )  %>%
-      plyr::mutate(log2FC=log2(Diversity)-mean_log2Control);
+    cond_levels <- levels(res$study_condition)
+    if(length(cond_levels) < 2){
+      msg <- paste0("Dataset ", Study, " has fewer than two condition levels after preprocessing and is skipped.")
+      message("[MetaAlphaDBG] ", msg)
+      if(!exists("current.msg") || is.null(current.msg) || identical(current.msg, "null")){
+        current.msg <<- msg
+      }else if(nchar(paste(current.msg, collapse="; ")) == 0){
+        current.msg <<- msg
+      }else{
+        current.msg <<- paste(paste(current.msg, collapse="; "), msg, sep="; ")
+      }
+      next
+    }
+    control_col <- cond_levels[1]
+    exp_col <- cond_levels[2]
+
+    mean_tbl <- res %>%
+      group_by(Metric, study_condition) %>%
+      summarize(mean = mean(log2(Diversity)), .groups = "drop") %>%
+      tidyr::pivot_wider(names_from = study_condition, values_from = mean)
+
+    if(!(control_col %in% colnames(mean_tbl)) || !(exp_col %in% colnames(mean_tbl))){
+      msg <- paste0("Dataset ", Study, " is missing expected condition columns after reshaping (expected: ", control_col, ", ", exp_col, ") and is skipped.")
+      message("[MetaAlphaDBG] ", msg)
+      if(!exists("current.msg") || is.null(current.msg) || identical(current.msg, "null")){
+        current.msg <<- msg
+      }else if(nchar(paste(current.msg, collapse="; ")) == 0){
+        current.msg <<- msg
+      }else{
+        current.msg <<- paste(paste(current.msg, collapse="; "), msg, sep="; ")
+      }
+      next
+    }
+
+    mean_tbl$mean_log2Control <- mean_tbl[[control_col]]
+    mean_tbl$mean_log2Exp <- mean_tbl[[exp_col]]
+    mean_tbl <- mean_tbl[, c("Metric", "mean_log2Control", "mean_log2Exp")]
+
+    res <- res %>%
+      left_join(mean_tbl, by = "Metric") %>%
+      plyr::mutate(log2FC = log2(Diversity) - mean_log2Control);
     
     
     res <- res[!is.na(res$log2FC),];
+    if(nrow(res) == 0){
+      msg <- paste0("No valid alpha-diversity values remain for ", Study, " after filtering invalid estimates; this dataset is skipped.")
+      if(!exists("current.msg") || is.null(current.msg) || identical(current.msg, "null")){
+        current.msg <<- msg
+      }else if(nchar(paste(current.msg, collapse="; ")) == 0){
+        current.msg <<- msg
+      }else{
+        current.msg <<- paste(paste(current.msg, collapse="; "), msg, sep="; ")
+      }
+      next
+    }
     
     PS$AlphaDiversity <- res;
     PS$AlphaDiversity_Stats <- 
@@ -374,11 +496,20 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
     res.list[[Study]] <- PS;  
   }
   
+  if(length(res.list) == 0){
+    AddErrMsg("No valid datasets remained for alpha-diversity meta-analysis after preprocessing and metadata alignment.");
+    return(0);
+  }
+
   mod<-lapply(res.list, function(x) x$AlphaDiversity) %>%
     do.call(bind_rows, .) %>%
     plyr::mutate(study_condition=factor(study_condition)) %>%
     group_by(Metric)
   mod <- mod %>% filter(!is.na(log2FC) & !is.infinite(log2FC))
+  if(nrow(mod) == 0){
+    AddErrMsg("No valid alpha-diversity observations remained after filtering; unable to run meta-analysis.");
+    return(0);
+  }
   # OPTIMIZED: Pre-allocate list to avoid O(n²) bind_rows in loop (10-50x faster for multiple metrics)
   control_level <- levels(mod$study_condition)[1];
   non_control_level <- levels(mod$study_condition)[2];
