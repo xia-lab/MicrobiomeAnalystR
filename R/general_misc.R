@@ -1129,7 +1129,7 @@ rescale2NewRange <- function(qvec, new_min, new_max) {
 
 # for 3D bubble
 ComputeEncasing <- function(filenm, type, names.vec, level=0.95, omics="NA"){
-  
+  Sys.setenv(RGL_USE_NULL = TRUE)
   level <- as.numeric(level)
   names = strsplit(names.vec, "; ")[[1]]
   

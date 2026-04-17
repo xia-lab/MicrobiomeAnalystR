@@ -13,6 +13,7 @@
 #' @return JSON filename
 #' @export
 ComputeEncasingBatch <- function(filenm, type, groups_json, level = 0.95, omics = "NA") {
+  Sys.setenv(RGL_USE_NULL = TRUE)
   level <- as.numeric(level)
 
   groups_list <- RJSONIO::fromJSON(groups_json)
@@ -46,8 +47,8 @@ ComputeEncasingBatch <- function(filenm, type, groups_json, level = 0.95, omics 
       next
     }
 
-    mesh <- list()
-    tryCatch({
+    result_list[[i]] <- tryCatch({
+      mesh <- list()
       if (type == "alpha") {
         library(alphashape3d)
         library(rgl)
@@ -64,10 +65,9 @@ ComputeEncasingBatch <- function(filenm, type, groups_json, level = 0.95, omics 
         sc <- scene3d()
         mesh <- sc$objects
       }
-
-      result_list[[i]] <- list(group = group_name, mesh = mesh, error = NULL)
+      list(group = group_name, mesh = mesh, error = NULL)
     }, error = function(e) {
-      result_list[[i]] <- list(group = group_name, mesh = list(), error = e$message)
+      list(group = group_name, mesh = list(), error = e$message)
     })
   }
 
