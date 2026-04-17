@@ -7,8 +7,8 @@
 my.pcoa.3d <- function(mbSetObj, ordMeth, distName, taxrank, colopt, variable, taxa, alphaopt, jsonNm){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  require(vegan);
 
+  # vegan/ape calls within are isolated at leaf level via rsclient_isolated_exec
   variable <<- variable;
 
   if(!exists("phyloseq_objs")){

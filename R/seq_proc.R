@@ -10,22 +10,27 @@ MessageOutput <- function(msg, eol = "\n"){
 }
 
 PerformSeqCheck <- function(home_dir = ""){
-  require(dada2)
-  
+
   path <- home_dir
-  list.files(path)
   fnFs <- sort(list.files(paste0(path, "/upload"), pattern="_R1.fastq", full.names = TRUE))
   fnRs <- sort(list.files(paste0(path, "/upload"), pattern="_R2.fastq", full.names = TRUE))
-  
-  if(length(fnRs)>=2){
+
+  if (length(fnFs) == 0) {
+    stop("No FASTQ files found in ", paste0(path, "/upload"))
+  }
+
+  # Raw data processing runs on local/Docker/SLURM — no memory isolation needed
+  require(dada2)
+  if (length(fnRs) >= 2) {
     p1 <- plotQualityProfile(c(fnFs[1:2], fnRs[1:2]))
-  } else if(length(fnRs)==1){
+  } else if (length(fnRs) == 1) {
     p1 <- plotQualityProfile(c(fnFs[1], fnRs[1]))
   } else {
-    p1 <- plotQualityProfile(fnFs[1:2])
+    p1 <- plotQualityProfile(fnFs[1:min(2, length(fnFs))])
   }
+
   shadow_save(p1, "diagnotics_plot_src.qs");
-  Cairo::Cairo(file = paste0("diagnotics.png"), unit = "in", dpi = 96, width = 22.2, height = 17.4, type = "png", bg = "white")
+  Cairo::Cairo(file = "diagnotics.png", unit = "in", dpi = 96, width = 22.2, height = 17.4, type = "png", bg = "white")
   print(p1)
   dev.off()
   return(1)
@@ -33,6 +38,8 @@ PerformSeqCheck <- function(home_dir = ""){
 
 PerformSeqImport <- function(home_dir = ""){
   write.table(1.0, file = "log_progress.txt", quote = F, row.names = F, col.names = F, append = F)
+  MessageOutput(paste0("Working directory: ", getwd()))
+  MessageOutput(paste0("Import home_dir: ", home_dir))
   MessageOutput(paste0("<b>Loading R pacakge dada2, version: ", packageVersion("dada2"), " ...</b>"), " ")
   require(dada2)
   require(ggplot2)
@@ -115,12 +122,12 @@ PerformSeqProcessing <- function(){
    MessageOutput("Start Sequencing data filtering and triming2 ... ")
 
   if(params$is_paired){
-    out <- filterAndTrim(fnFs, filtFs, fnRs, filtRs, truncLen=truncLen, 
+    out <- filterAndTrim(fnFs, filtFs, fnRs, filtRs, truncLen=truncLen,
                  trimLeft = trimLeft, trimRight = trimRight,
                  maxN=maxN, maxEE=maxEE, truncQ=truncQ, rm.phix=rm.phix,
                  compress=TRUE, multithread=TRUE) # On Windows set multithread=FALSE
   } else {
-    out <- filterAndTrim(fnFs, filtFs, truncLen=truncLen, 
+    out <- filterAndTrim(fnFs, filtFs, truncLen=truncLen,
                          trimLeft = trimLeft, trimRight = trimRight,
                          maxN=maxN, maxEE=maxEE, truncQ=truncQ, rm.phix=rm.phix,
                          compress=TRUE, multithread=TRUE) # On Windows set multithread=FALSE
@@ -142,13 +149,13 @@ PerformSeqProcessing <- function(){
     msg_d1 <- capture.output(derepF1 <- derepFastq(filtFs, verbose=TRUE), type = "message")
     sapply(msg_d1, MessageOutput)
   }
-  
+
   MessageOutput("OK, done!")
   write.table(20.0, file = "log_progress.txt", quote = F, row.names = F, col.names = F, append = F)
   ##Learn the error rates
   MessageOutput("Step 4: Perform sequencing data dereplicating ... ")
   if(params$is_paired){
-    msg_d3 <- capture.output(errF <- learnErrors(derepF1, multithread=TRUE)) 
+    msg_d3 <- capture.output(errF <- learnErrors(derepF1, multithread=TRUE))
     msg_d4 <- capture.output(errR <- learnErrors(derepR1, multithread=TRUE))
     sapply(msg_d3, MessageOutput)
     sapply(msg_d4, MessageOutput)
@@ -176,7 +183,7 @@ PerformSeqProcessing <- function(){
   }
 
   MessageOutput("OK, done!")
-  
+
   ###Denoise
   MessageOutput("Step 5: Perform sequencing data denoising ... ")
   if(params$is_paired){
@@ -192,7 +199,7 @@ PerformSeqProcessing <- function(){
   }
 
   MessageOutput("OK, done!")
-  
+
   ####merge
   if(params$is_paired){
     MessageOutput("Step 6: Perform sequencing data merging ... ")
@@ -209,13 +216,13 @@ PerformSeqProcessing <- function(){
     MessageOutput("OK, done!")
     write.table(60.0, file = "log_progress.txt", quote = F, row.names = F, col.names = F, append = F)
   }
-  
+
   ####
   #####Remove chimeras
   MessageOutput("Step 7: Perform sequencing chimeras removal ... ")
   msg_d8 <- capture.output(seqtab.nochim <- removeBimeraDenovo(seqtab,
-                                                               method="consensus", 
-                                                               multithread=TRUE, 
+                                                               method="consensus",
+                                                               multithread=TRUE,
                                                                verbose=TRUE), type = "message")
   sapply(msg_d8, MessageOutput)
   MessageOutput("OK, done!")
@@ -455,27 +462,37 @@ composeParamFun <- function(trimLeft, trimRight,
   
   dataObj$funs <- funs;
   dataObj <<- dataObj;
+  # Save to standard home (getwd) — pipeline script also uses standard home as wd
   save(dataObj, file = "dataObj_param.rda")
   return(1);
 }
 
 sweaveRScript4exec <- function(users.path){
+  # Resolve absolute path to seq_proc.R for the external R process
+  seq_proc_abs <- NULL
+  if (exists(".rscripts.abs.path", envir = .GlobalEnv)) {
+    seq_proc_abs <- file.path(.rscripts.abs.path, "MicrobiomeAnalystR", "R", "seq_proc.R")
+  }
+  if (is.null(seq_proc_abs) || !file.exists(seq_proc_abs)) {
+    seq_proc_abs <- normalizePath("../../rscripts/MicrobiomeAnalystR/R/seq_proc.R", mustWork = FALSE)
+  }
+
   str <- paste0('library(dada2)');
-  
-  # Set working dir & funcs to be used
-  str <- paste0(str, ";\n", "setwd(\'",users.path,"\')");
+
+  # Working dir = standard home (where output and upload/ symlinks are)
+  str <- paste0(str, ";\n", "setwd(\'", getwd(), "\')");
+  # Source seq_proc.R directly
+  str <- paste0(str, ";\n", "source('", seq_proc_abs, "')");
+  str <- paste0(str, ";\n", "MessageOutput(paste0('Working directory: ', getwd()))");
+  str <- paste0(str, ";\n", "MessageOutput(paste0('dataObj_param.rda exists here: ', file.exists('dataObj_param.rda')))");
   str <- paste0(str, ";\n", "load('dataObj_param.rda')");
   str <- paste0(str, ";\n", "dataObj <<- dataObj");
-  str <- paste0(str, ";\n", "MessageOutput <- dataObj[['funs']][['MessageOutput']]");
-  str <- paste0(str, ";\n", "PerformSeqCheck <- dataObj[['funs']][['PerformSeqCheck']]");
-  str <- paste0(str, ";\n", "PerformSeqImport <- dataObj[['funs']][['PerformSeqImport']]");
-  str <- paste0(str, ";\n", "PerformSeqProcessing <- dataObj[['funs']][['PerformSeqProcessing']]");
-  
+
   ## Construct the exec pipeline
-  str <- paste0(str, ';\n',  "PerformSeqImport('.')")
+  str <- paste0(str, ';\n',  "PerformSeqImport('", getwd(), "')")
   str <- paste0(str, ';\n',  "PerformSeqProcessing()")
-  
-  # sink command for running
+
+  # Write script to standard home (getwd)
   sink("ExecuteRaw16Seq.R");
   cat(str);
   sink();
@@ -501,6 +518,8 @@ sweaveBash4exec <- function(users.path){
   
   # Set working dir & funcs to be used
   str <- paste0(str, ";\n", "setwd(\'",users.path,"\')");
+  str <- paste0(str, ";\n", "MessageOutput(paste0('Working directory: ', getwd()))");
+  str <- paste0(str, ";\n", "MessageOutput(paste0('dataObj_param.rda exists here: ', file.exists('dataObj_param.rda')))");
   str <- paste0(str, ";\n", "load('dataObj_param.rda')");
   str <- paste0(str, ";\n", "dataObj <<- dataObj");
   str <- paste0(str, ";\n", "MessageOutput <- dataObj[['funs']][['MessageOutput']]");
@@ -512,14 +531,15 @@ sweaveBash4exec <- function(users.path){
   str <- paste0(str, ';\n',  "PerformSeqImport('.')")
   str <- paste0(str, ';\n',  "PerformSeqProcessing()")
   
-  # sink command for running
-  sink("ExecuteRaw16Seq.sh");
-  
+  # Write bash script to raw data folder (NOT current getwd)
+  script_path <- file.path(users.path, "ExecuteRaw16Seq.sh")
+  sink(script_path);
+
   cat(conf_inf);
   cat(paste0("\nsrun R -e \"\n", str, "\n\""));
-  
+
   sink();
-  
+
   return(1)
 }
 
@@ -571,7 +591,7 @@ sweaveBash4execPro <- function(users.path, isfromGoogle = FALSE, source_path){
 
 
   ## Prepare R script for running
-  # Source original seq_proc.R to get non-wrapper functions (Pro wrappers need callr which isn't available here)
+  # Source original seq_proc.R to get non-wrapper functions (wrappers not available in external process)
   seq_proc_path <- file.path(source_path, "MicrobiomeAnalystR", "R", "seq_proc.R")
 
   str <- paste0('library(dada2)');
@@ -580,6 +600,8 @@ sweaveBash4execPro <- function(users.path, isfromGoogle = FALSE, source_path){
   str <- paste0(str, ";\n", "setwd(\'",users.path,"\')");
   str <- paste0(str, ";\n", "default.dpi <- 150");
   str <- paste0(str, ";\n", "source('", seq_proc_path, "')");
+  str <- paste0(str, ";\n", "MessageOutput(paste0('Working directory: ', getwd()))");
+  str <- paste0(str, ";\n", "MessageOutput(paste0('dataObj_param.rda exists here: ', file.exists('dataObj_param.rda')))");
   str <- paste0(str, ";\n", "load('dataObj_param.rda')");
   str <- paste0(str, ";\n", "dataObj <<- dataObj");
 
@@ -587,8 +609,9 @@ sweaveBash4execPro <- function(users.path, isfromGoogle = FALSE, source_path){
   str <- paste0(str, ';\n',  "PerformSeqImport('.')")
   str <- paste0(str, ';\n',  "PerformSeqProcessing()")
 
-  # sink command for running
-  sink("ExecuteRaw16Seq.sh");
+  # Write bash script to raw data folder (NOT current getwd)
+  script_path <- file.path(users.path, "ExecuteRaw16Seq.sh")
+  sink(script_path);
 
   cat(conf_inf);
   if(download_script!=""){

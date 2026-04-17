@@ -447,7 +447,7 @@ GetResMetabo <- function(){
 GetMetaInfo <- function(mbSetObj, type="disc"){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   if(mbSetObj$module.type == "meta"){
-    microbiome.meta <- qs:::qread("microbiome_meta.qs");
+    microbiome.meta <- qs::qread("microbiome_meta.qs");
     meta.types <- microbiome.meta$meta.types;
   }else{
     meta.types <- mbSetObj$dataSet$meta.types
@@ -674,9 +674,8 @@ UtilMakeCountTables <- function(phyloseq.obj, taxrank){
 saveSet <- function(obj=NA, set="", output=1){
 
   if(globalConfig$anal.mode == "api"){
-    qs:::qsave(obj, paste0(set, ".qs"));
-    # CRITICAL: Prevent race condition - allow file system to sync before Java reads
-    Sys.sleep(0.15);
+    qs::qsave(obj, paste0(set, ".qs"));
+    Sys.sleep(0.05);
     return(output)
   }else{
     if(set == "dataSet"){
@@ -713,7 +712,7 @@ readSet <- function(obj=NA, set=""){
     if(path != ""){
       obj <- load_qs(paste0(path, set, ".qs"));
     }else{
-      obj <- qs:::qread(paste0(set, ".qs"));
+      obj <- qs::qread(paste0(set, ".qs"));
     }
   }
   return(obj);
@@ -728,7 +727,7 @@ readDataset <- function(fileName="", obj=NA){
       path <- user.path;
       dat <- load_qs(paste0(path, fileName));
     }else{
-      dat <- qs:::qread(fileName);
+      dat <- qs::qread(fileName);
     }
   }else{
     if(!is.na(obj)){

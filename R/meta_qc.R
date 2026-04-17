@@ -10,7 +10,6 @@
 
 PlotMetaPCA <- function(imgNm, dpi, format, factor="NA"){
   require('ggplot2');
-  require('ggpubr');
   require('ggsci');
 
   microbiome.meta <- qs::qread("microbiome_meta.qs");
@@ -77,10 +76,18 @@ PlotMetaPCA <- function(imgNm, dpi, format, factor="NA"){
   nrows <- length(valid_datasets) + 1
   h <- 4 * nrows
 
-  Cairo(file=imgNm, width=10, height=h, type=format, bg="white", unit="in", dpi=96);
-  p <- ggarrange(plotlist=fig.list, ncol=2, nrow=nrows, common.legend=TRUE, legend="bottom")
-  print(p)
-  dev.off()
+  # ggpubr quarantined — ggarrange in subprocess
+  rsclient_isolated_exec(
+    func_body = function(d) {
+      require(ggpubr)
+      Cairo::Cairo(file = d$imgNm, width = 10, height = d$h, type = d$format, bg = "white", unit = "in", dpi = 96)
+      p <- ggpubr::ggarrange(plotlist = d$fig_list, ncol = 2, nrow = d$nrows, common.legend = TRUE, legend = "bottom")
+      print(p)
+      dev.off()
+    },
+    input_data = list(imgNm = imgNm, h = h, format = format, fig_list = fig.list, nrows = nrows),
+    packages = c("ggpubr", "Cairo", "qs"), timeout = 120, output_type = "qs"
+  )
 }
 
 #'Plot density plot of datasets in meta-analysis module
@@ -95,7 +102,6 @@ PlotMetaPCA <- function(imgNm, dpi, format, factor="NA"){
 #'
 PlotMetaDensity <- function(imgNm, dpi=default.dpi, format="png", factor=""){
   require("ggplot2")
-  require("ggpubr")
 
   microbiome.meta <- qs::qread("microbiome_meta.qs");
   x <- microbiome.meta$data;
@@ -161,10 +167,17 @@ PlotMetaDensity <- function(imgNm, dpi=default.dpi, format="png", factor=""){
   nrows <- length(valid_datasets) + 1
   h <- 3.5 * nrows
 
-  Cairo(file=imgNm, width=10, height=h, type=format, bg="white", dpi=96, unit="in");
-  p <- ggarrange(plotlist=fig.list, ncol=2, nrow=nrows, common.legend=TRUE, legend="bottom")
-  print(p)
-  dev.off()
+  rsclient_isolated_exec(
+    func_body = function(d) {
+      require(ggpubr)
+      Cairo::Cairo(file = d$imgNm, width = 10, height = d$h, type = d$format, bg = "white", dpi = 96, unit = "in")
+      p <- ggpubr::ggarrange(plotlist = d$fig_list, ncol = 2, nrow = d$nrows, common.legend = TRUE, legend = "bottom")
+      print(p)
+      dev.off()
+    },
+    input_data = list(imgNm = imgNm, h = h, format = format, fig_list = fig.list, nrows = nrows),
+    packages = c("ggpubr", "Cairo", "qs"), timeout = 120, output_type = "qs"
+  )
 }
 
 

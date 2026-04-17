@@ -1,80 +1,74 @@
 ##################################################
-## Batch Encasing Computation
-## Optimized to compute multiple groups in single R call
+## Batch Encasing Computation — ellipsoid only
 ##################################################
 
-#' Compute Encasing for Multiple Groups (Batch Version)
-#' @description Processes all groups in a single R call instead of N separate calls
-#' @param filenm Base output filename
-#' @param type Encasing type ("alpha", "ellipse", "contour")
-#' @param groups_json JSON string containing array of groups with their sample IDs
+#' Compute ellipsoid encasing for multiple groups in single subprocess call
+#' @param filenm Output JSON filename
+#' @param type Encasing type (always "ellipse")
+#' @param groups_json JSON string with group info
 #' @param level Confidence level (default 0.95)
 #' @param omics Omics type (default "NA")
 #' @return JSON filename
 #' @export
 ComputeEncasingBatch <- function(filenm, type, groups_json, level = 0.95, omics = "NA") {
-  Sys.setenv(RGL_USE_NULL = TRUE)
-  level <- as.numeric(level)
+  tryCatch({
+    level <- as.numeric(level)
 
-  groups_list <- RJSONIO::fromJSON(groups_json)
-  if (is.data.frame(groups_list)) {
-    groups_list <- split(groups_list, seq_len(nrow(groups_list)))
-  }
+    if (!file.exists("pos.xyz.qs")) {
+      sink(filenm); cat("{}"); sink()
+      return(filenm)
+    }
+    pos.xyz <- qs::qread("pos.xyz.qs")
 
-  pos.xyz <- qs::qread("pos.xyz.qs")
-
-  result_list <- vector("list", length(groups_list))
-
-  for (i in seq_along(groups_list)) {
-    group_info <- groups_list[[i]]
-    if (is.character(group_info)) {
-      group_name <- unname(group_info["group"])
-      names_vec <- unname(group_info["ids"])
-    } else if (is.data.frame(group_info)) {
-      group_name <- group_info$group[1]
-      names_vec <- group_info$ids[1]
-    } else {
-      group_name <- group_info$group
-      names_vec <- group_info$ids
+    groups_list <- RJSONIO::fromJSON(groups_json)
+    if (is.data.frame(groups_list)) {
+      groups_list <- split(groups_list, seq_len(nrow(groups_list)))
     }
 
-    names <- strsplit(names_vec, "; ")[[1]]
-    inx <- rownames(pos.xyz) %in% names
-    coords <- as.matrix(pos.xyz[inx, c(1:3)])
-
-    if (nrow(coords) < 4 && type == "contour") {
-      result_list[[i]] <- list(group = group_name, mesh = list(), error = "Insufficient points")
-      next
-    }
-
-    result_list[[i]] <- tryCatch({
-      mesh <- list()
-      if (type == "alpha") {
-        library(alphashape3d)
-        library(rgl)
-        sh <- ashape3d(coords, 1.0, pert = FALSE, eps = 1e-09)
-        mesh[[1]] <- as.mesh3d(sh, triangles = TRUE)
-      } else if (type == "ellipse") {
-        library(rgl)
-        pos <- cov(coords, y = NULL, use = "everything")
-        mesh[[1]] <- ellipse3d(x = as.matrix(pos), level = level)
-      } else {
-        library(ks)
-        res <- kde(coords)
-        r <- plot(res, cont = level * 100, display = "rgl")
-        sc <- scene3d()
-        mesh <- sc$objects
-      }
-      list(group = group_name, mesh = mesh, error = NULL)
-    }, error = function(e) {
-      list(group = group_name, mesh = list(), error = e$message)
+    # Parse groups and extract coords in master
+    group_data <- lapply(seq_along(groups_list), function(i) {
+      g <- groups_list[[i]]
+      if (is.character(g)) { gn <- unname(g["group"]); ids <- unname(g["ids"]) }
+      else if (is.data.frame(g)) { gn <- g$group[1]; ids <- g$ids[1] }
+      else { gn <- g$group; ids <- g$ids }
+      nms <- strsplit(ids, "; ")[[1]]
+      inx <- rownames(pos.xyz) %in% nms
+      list(group = gn, coords = as.matrix(pos.xyz[inx, c(1:3)]))
     })
-  }
 
-  library(RJSONIO)
-  sink(filenm)
-  cat(RJSONIO::toJSON(result_list))
-  sink()
+    # Compute all ellipsoids in single subprocess
+    result_list <- rsclient_isolated_exec(
+      func_body = function(input_data) {
+        Sys.setenv(RGL_USE_NULL = TRUE)
+        lapply(input_data$groups, function(g) {
+          coords <- g$coords
+          if (nrow(coords) < 4) return(list(group = g$group, mesh = list(), error = "Insufficient points"))
+          tryCatch({
+            pos <- cov(coords, y = NULL, use = "everything")
+            center <- colMeans(coords)
+            t_val <- sqrt(qchisq(input_data$level, 3))
+            mesh <- list()
+            mesh[[1]] <- rgl::ellipse3d(x = as.matrix(pos), centre = center, t = t_val)
+            list(group = g$group, mesh = mesh, error = NULL)
+          }, error = function(e) {
+            list(group = g$group, mesh = list(), error = e$message)
+          })
+        })
+      },
+      input_data = list(groups = group_data, level = level),
+      packages = c("rgl", "qs"),
+      timeout = 120,
+      output_type = "qs"
+    )
 
+    if (!is.list(result_list) || isFALSE(result_list$success)) {
+      sink(filenm); cat("{}"); sink()
+    } else {
+      sink(filenm); cat(RJSONIO::toJSON(result_list)); sink()
+    }
+  }, error = function(e) {
+    message("[ComputeEncasingBatch] ", e$message)
+    sink(filenm); cat("{}"); sink()
+  })
   return(filenm)
 }

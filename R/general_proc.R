@@ -404,9 +404,16 @@ ApplyVarianceFilter <- function(mbSetObj, filtopt, filtPerct){
 
   mbSetObj$dataSet$var.filtered <- FALSE
 
-  if(filtPerct==0){# remove constant (zero-variance) variables only
-    vars <- apply(data, 1, var, na.rm=TRUE);
-    remain <- !is.na(vars) & vars > 0;
+  # Always remove zero-variance features first (essential for downstream methods like DIABLO)
+  vars <- apply(data, 1, var, na.rm=TRUE);
+  zero.var <- is.na(vars) | vars == 0;
+  if(any(zero.var)) {
+    message(paste0("Removed ", sum(zero.var), " zero-variance features"))
+    data <- data[!zero.var, , drop=FALSE];
+  }
+
+  if(filtPerct==0){# only zero-variance removal (already done above)
+    remain <- rep(TRUE, nrow(data));
   }else{
     mbSetObj$dataSet$var.filtered <- TRUE
 
@@ -486,14 +493,19 @@ ApplyMetaboFilter <- function(mbSetObj=NA, filter,  rsd){
     int.mat <- int.mat[, !all_na, drop=FALSE];
   }
 
+  # Always remove zero-variance features first (essential for downstream methods like DIABLO)
+  vars <- apply(int.mat, 2, var, na.rm=TRUE);
+  zero.var <- is.na(vars) | vars == 0;
+  if(any(zero.var)) {
+    int.mat <- int.mat[, !zero.var, drop=FALSE];
+  }
+
   feat.num <- ncol(int.mat);
   feat.nms <- colnames(int.mat);
   nm <- NULL;
   msg <- "";
   if(filter == "none") {
-    # Always remove constant (zero-variance) variables
-    vars <- apply(int.mat, 2, var, na.rm=TRUE);
-    remain <- !is.na(vars) & vars > 0;
+    remain <- rep(TRUE, feat.num);
     n.removed <- sum(!remain);
     if(n.removed > 0) {
       msg <- paste(msg, "Removed", n.removed, "constant variables (zero variance).");
@@ -734,19 +746,37 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
           msg <- c(msg, paste("Performed ```total sum scaling``` normalization."));
         }
       }else if(scale.opt=="upperquartile"){
-        suppressMessages(library(edgeR));
-        otuUQ <- edgeRnorm(data,method="upperquartile");
+        # edgeR quarantined — isolate calcNormFactors in subprocess
+        otuUQ <- rsclient_isolated_exec(
+          func_body = function(input_data) {
+            require(edgeR)
+            x <- input_data$counts + 1
+            y <- edgeR::DGEList(counts = x, remove.zeros = TRUE)
+            edgeR::calcNormFactors(y, method = input_data$method)
+          },
+          input_data = list(counts = data, method = "upperquartile"),
+          packages = c("edgeR", "qs"), timeout = 120, output_type = "qs"
+        )
+        if (is.list(otuUQ) && isFALSE(otuUQ$success)) { AddErrMsg(otuUQ$message); return(0) }
         data <- as.matrix(otuUQ$counts);
         if(i==1){
           msg <- c(msg, paste("Performed ```upper quartile``` normalization"));
         }
       }else if(scale.opt=="CSS"){
-        suppressMessages(library(metagenomeSeq));
-        #biom and mothur data also has to be in class(matrix only not in phyloseq:otu_table)
-        data1 <- as(data,"matrix");
-        dataMR <- newMRexperiment(data1);
-        data <- cumNorm(dataMR,p=cumNormStat(dataMR));
-        data <- MRcounts(data,norm = T);
+        # metagenomeSeq quarantined — isolate in subprocess
+        css_result <- rsclient_isolated_exec(
+          func_body = function(input_data) {
+            require(metagenomeSeq)
+            data1 <- as(input_data$counts, "matrix")
+            dataMR <- metagenomeSeq::newMRexperiment(data1)
+            dataMR <- metagenomeSeq::cumNorm(dataMR, p = metagenomeSeq::cumNormStat(dataMR))
+            metagenomeSeq::MRcounts(dataMR, norm = TRUE)
+          },
+          input_data = list(counts = data),
+          packages = c("metagenomeSeq", "qs"), timeout = 120, output_type = "qs"
+        )
+        if (is.list(css_result) && isFALSE(css_result$success)) { AddErrMsg(css_result$message); return(0) }
+        data <- css_result
         if(i==1){
           msg <- c(msg, paste("Performed ```cumulative sum scaling``` normalization"));
         }
@@ -762,19 +792,23 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
     }
     
     if(transform.opt != "none"){
-      if(transform.opt=="rle"){
-        suppressMessages(library(edgeR));
-        otuRLE <- edgeRnorm(data,method="RLE");
-        data <- as.matrix(otuRLE$counts);
-        if(i==1){        
-          msg <- c(msg, paste("Performed ```RLE``` Normalization"));
-        }
-      }else if(transform.opt=="TMM"){
-        suppressMessages(library(edgeR));
-        otuTMM <- edgeRnorm(data,method="TMM");
-        data <- as.matrix(otuTMM$counts);
-        if(i==1){        
-          msg <- c(msg, paste("Performed ```TMM``` Normalization"));
+      if(transform.opt %in% c("rle", "TMM")){
+        # edgeR quarantined — isolate calcNormFactors in subprocess
+        edger_method <- if (transform.opt == "rle") "RLE" else "TMM"
+        otuNorm <- rsclient_isolated_exec(
+          func_body = function(input_data) {
+            require(edgeR)
+            x <- input_data$counts + 1
+            y <- edgeR::DGEList(counts = x, remove.zeros = TRUE)
+            edgeR::calcNormFactors(y, method = input_data$method)
+          },
+          input_data = list(counts = data, method = edger_method),
+          packages = c("edgeR", "qs"), timeout = 120, output_type = "qs"
+        )
+        if (is.list(otuNorm) && isFALSE(otuNorm$success)) { AddErrMsg(otuNorm$message); return(0) }
+        data <- as.matrix(otuNorm$counts);
+        if(i==1){
+          msg <- c(msg, paste0("Performed ```", edger_method, "``` Normalization"));
         }
       }else if(transform.opt=="clr"){
         data <- apply(data, 2, clr_transform);
@@ -1163,16 +1197,13 @@ PlotRareCurve <- function(mbSetObj, graphName, variable){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   set.seed(13789);
-  require(vegan);
 
   data <- data.matrix(mbSetObj$dataSet$filt.data);
   rarefaction_curve_data<-as.matrix(otu_table(data));
-  
-  Cairo::Cairo(file=graphName, unit="in", dpi=96, width=12.5, height=6.7, type="png", bg="white");
-  
+
   #sample-wise
   subsmpl=50;
-  
+
   if (ncol(rarefaction_curve_data)>subsmpl) {
     ss  = sample(ncol(rarefaction_curve_data), subsmpl);
     rarefaction_curve_data = rarefaction_curve_data[,ss,drop=FALSE];
@@ -1181,47 +1212,81 @@ PlotRareCurve <- function(mbSetObj, graphName, variable){
   } else {
     rarefaction_curve_data = rarefaction_curve_data;
   }
-  
+
   sam_data<-sample_data(data);
   raremax <- min(rowSums(t(rarefaction_curve_data)));
-  
+
   #getting colors
   grp.num <- length(levels(as.factor(sam_data[[variable]])));
-  
+
   if(grp.num<9){
     dist.cols <- 1:grp.num + 1;
     lvs <- levels(as.factor(sam_data[[variable]]));
     colors <- vector(mode="character", length=length(as.factor(sam_data[[variable]])));
-    
+
     for(i in 1:length(lvs)){
       colors[as.factor(sam_data[[variable]]) == lvs[i]] <- dist.cols[i];
     }
   }else{
     colors<-"blue";
   }
-  
-  rarecurve(t(rarefaction_curve_data), step = 20, sample = raremax, col = colors, cex = 0.6, xlab = "Sequencing depth", ylab = "Observed Species");
-  legend("bottomright",lvs,lty = rep(1,grp.num),col = dist.cols);
-  
+
+  # Pre-compute group-level data (lightweight, no quarantined packages)
   plot.data <- rarefaction_curve_data;
-  sam_data <- sample_data(data);
   cls.lbls <- as.factor(sam_data[[variable]]);
   grp.lvls <- levels(cls.lbls);
-  grp.num <- length(grp.lvls);
+  grp.num.grp <- length(grp.lvls);
   grp.data <- list();
-  
+
   for(lvl in grp.lvls){
-    grp.data[[lvl]] <- rowSums(plot.data[, cls.lbls == lvl])
+    grp.data[[lvl]] <- rowSums(plot.data[, cls.lbls == lvl, drop = FALSE])
   }
-  
-  raremax <- min(unlist(lapply(grp.data, sum)));
+
+  raremax.grp <- min(unlist(lapply(grp.data, sum)));
   grp.data <- data.frame(grp.data,check.names=FALSE);
-  dist.cols <- 1:grp.num + 1;
-  # now plot
-  rarecurve(t(grp.data), step = 20, sample = raremax, col = dist.cols, lwd = 2, cex=1.5, xlab = "Sequencing depth", ylab = "Observed Species");
-  legend("bottomright",grp.lvls,lty = rep(1,grp.num),col = dist.cols);
-  
-  dev.off();
+  dist.cols.grp <- 1:grp.num.grp + 1;
+
+  # rarecurve requires vegan — isolate in subprocess
+  tryCatch({
+    rsclient_isolated_exec(
+      func_body = function(input_data) {
+        require(vegan)
+        Cairo::Cairo(file = input_data$graphName, unit = "in", dpi = 96,
+                     width = 12.5, height = 6.7, type = "png", bg = "white")
+        # Sample-level rarecurve
+        vegan::rarecurve(t(input_data$rc_data), step = 20, sample = input_data$raremax,
+                         col = input_data$colors, cex = 0.6,
+                         xlab = "Sequencing depth", ylab = "Observed Species")
+        if (!is.null(input_data$lvs)) {
+          legend("bottomright", input_data$lvs,
+                 lty = rep(1, input_data$grp_num), col = input_data$dist_cols)
+        }
+        # Group-level rarecurve
+        vegan::rarecurve(t(input_data$grp_data), step = 20, sample = input_data$raremax_grp,
+                         col = input_data$dist_cols_grp, lwd = 2, cex = 1.5,
+                         xlab = "Sequencing depth", ylab = "Observed Species")
+        legend("bottomright", input_data$grp_lvls,
+               lty = rep(1, input_data$grp_num_grp), col = input_data$dist_cols_grp)
+        dev.off()
+        return(TRUE)
+      },
+      input_data = list(
+        graphName = graphName, rc_data = rarefaction_curve_data,
+        raremax = raremax, colors = colors,
+        lvs = if (exists("lvs")) lvs else NULL,
+        grp_num = grp.num, dist_cols = if (exists("dist.cols")) dist.cols else NULL,
+        grp_data = grp.data, raremax_grp = raremax.grp,
+        dist_cols_grp = dist.cols.grp, grp_lvls = grp.lvls, grp_num_grp = grp.num.grp
+      ),
+      packages = c("vegan", "Cairo", "qs"),
+      timeout = 180,
+      output_type = "qs"
+    )
+  }, error = function(e) {
+    AddErrMsg(paste("PlotRareCurve failed:", e$message))
+    return(0)
+  })
+
   return(.set.mbSetObj(mbSetObj))
 }
 
@@ -1476,7 +1541,6 @@ PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=default.d
 
 PlotPCAView <- function(imgName, format="png", dpi=default.dpi, init=0){
   require("ggsci")
-  require("ggpubr")
 
   imgName = paste(imgName,".", format, sep="");
 
@@ -1560,12 +1624,19 @@ PlotPCAView <- function(imgName, format="png", dpi=default.dpi, init=0){
   pca.list$pct2 <- pct
   shadow_save(pca.list, file="pca.scatter.qs")
 
-  # Always 2x2: top = Microbiome (before, after), bottom = Metabolomics (before, after)
-  Cairo::Cairo(file=imgName, width=14, height=12, type=format, bg="white", unit="in", dpi=96)
-  p1 <- ggarrange(fig.list[[1]], fig.list[[2]], fig.list[[3]], fig.list[[4]],
-                   ncol=2, nrow=2, common.legend=TRUE, legend="bottom")
-  print(p1)
-  dev.off()
+  # ggpubr quarantined — ggarrange in subprocess
+  rsclient_isolated_exec(
+    func_body = function(d) {
+      require(ggpubr)
+      Cairo::Cairo(file = d$imgName, width = 14, height = 12, type = d$format, bg = "white", unit = "in", dpi = 96)
+      p1 <- ggpubr::ggarrange(d$figs[[1]], d$figs[[2]], d$figs[[3]], d$figs[[4]],
+                               ncol = 2, nrow = 2, common.legend = TRUE, legend = "bottom")
+      print(p1)
+      dev.off()
+    },
+    input_data = list(imgName = imgName, format = format, figs = fig.list),
+    packages = c("ggpubr", "Cairo", "qs"), timeout = 120, output_type = "qs"
+  )
   return(1)
 
 }
