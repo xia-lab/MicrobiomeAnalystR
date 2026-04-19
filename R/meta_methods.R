@@ -29,7 +29,7 @@ PerformMetaEffectSize <- function(mbSetObj=NA, imgName="", taxrank="OTU", selMet
   mdata.all <- mbSetObj$mdata.all;
   sel.nms <- names(mdata.all)[mdata.all==1];
   
-  dat <- qs::qread("merged.data.qs");
+  dat <- ov_qs_read("merged.data.qs");
   dat <- subsetPhyloseqByDataset(mbSetObj, dat);
   
   if(taxrank!="OTU"){      
@@ -66,7 +66,7 @@ PerformMetaEffectSize <- function(mbSetObj=NA, imgName="", taxrank="OTU", selMet
   analSet$meta.mat <- meta.stat <<- NULL;
   
   shadow_save(dat, "metaanal_phyobj.qs");
-  #meta.obj <- qs::qread("microbiome_meta.qs");
+  #meta.obj <- ov_qs_read("microbiome_meta.qs");
   
   #if(taxrank=="OTU"){     
   #concensus_feat <- unname(meta.obj$gene.symbls);
@@ -143,7 +143,7 @@ SetupMetaStats <- function(BHth, paramSet,analSet){
   meta.mat <- analSet$meta.mat.all;
   paramSet$BHth <- BHth;
   #all common genes
-  dat <- qs::qread("merged.data.qs");
+  dat <- ov_qs_read("merged.data.qs");
   dat <- subsetPhyloseqByDataset(mbSetObj, dat);
   
   meta.res.obj <- analSet$meta.res.obj;
@@ -661,7 +661,7 @@ bf_ratio <- function(phylo){
 #'@export
 PlotBetaSummary <- function(mbSetObj, plotNm,taxalvl, sel.meta, alg, format="png", dpi=default.dpi){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  data.obj <- qs::qread("merged.data.qs");
+  data.obj <- ov_qs_read("merged.data.qs");
   data.obj <- subsetPhyloseqByDataset(mbSetObj, data.obj);
 
   mdata.all <- mbSetObj$mdata.all;
@@ -790,7 +790,7 @@ PlotDiscreteDiagnostic <- function(mbSetObj, fileName, metadata, format="png", d
   mdata.all <- mbSetObj$mdata.all;
   sel.nms <- names(mdata.all)[mdata.all==1];
 
-  data  <- qs::qread("merged.data.raw.qs");
+  data  <- ov_qs_read("merged.data.raw.qs");
   data <- subsetPhyloseqByDataset(mbSetObj, data);
 
   sam_data <- as.data.frame(as.matrix(sample_data(data)));
@@ -882,7 +882,7 @@ PlotContinuousPopulation <- function(mbSetObj, loadingName, ordinationName, meta
 
   require(dplyr); require(ggplot2);
 
-  data <- qs::qread("merged.data.qs");
+  data <- ov_qs_read("merged.data.qs");
   data <- subsetPhyloseqByDataset(mbSetObj, data);
   sam_data <- as.data.frame(as.matrix(sample_data(data)));
   meta_groups <- unique(sam_data[, metadata])

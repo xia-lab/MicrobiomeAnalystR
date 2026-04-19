@@ -10,7 +10,7 @@ my.secom.anal<-function(mbSetObj,taxrank,R,corr_cut, max_p,mode,method='pearson'
   #print(mode)
   mbSetObj <- .get.mbSetObj(mbSetObj);
    if(!exists("phyloseq_prenorm_objs")){
-     phyloseq_prenorm_objs <- qs::qread("phyloseq_prenorm_objs.qs")
+     phyloseq_prenorm_objs <- ov_qs_read("phyloseq_prenorm_objs.qs")
    }
   
   feature_table <- phyloseq_prenorm_objs$count_tables[[taxrank]]

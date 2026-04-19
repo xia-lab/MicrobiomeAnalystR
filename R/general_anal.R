@@ -58,7 +58,7 @@ RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank, impM
     data1 <- as.data.frame(t(otu_table(data)),check.names=FALSE);
   }else{
     if(!exists("phyloseq_objs")){
-      phyloseq_objs <- qs::qread("phyloseq_objs.qs")
+      phyloseq_objs <- ov_qs_read("phyloseq_objs.qs")
     }
 
     if(taxrank=="OTU"){
@@ -341,7 +341,7 @@ PerformUnivarTest <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, t
     data1 <- as.data.frame(t(otu_table(data)),check.names=FALSE);
   }else{
     if(!exists("phyloseq_objs")){
-      phyloseq_objs <- qs::qread("phyloseq_objs.qs")
+      phyloseq_objs <- ov_qs_read("phyloseq_objs.qs")
     }
     data = phyloseq_objs[["merged_obj"]][[taxrank]]
     if(taxrank=="OTU"){
@@ -802,7 +802,7 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
     dat3t <- as.data.frame(t(otu_table(data)),check.names=FALSE);
   }else{
     if(!exists("phyloseq_objs")){
-      phyloseq_objs <- qs::qread("phyloseq_objs.qs")
+      phyloseq_objs <- ov_qs_read("phyloseq_objs.qs")
     }
     if(taxrank=="OTU"){
       dat3t <- t(phyloseq_objs$count_tables$OTU)
@@ -1204,7 +1204,7 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, f
 
   bridge_in <- paste0(tempdir(), "/bridge_", paste0(sample(letters,6,replace=TRUE), collapse=""), "_in.qs")
   bridge_out <- sub("_in.qs", "_out.qs", bridge_in)
-  qs::qsave(list(data=data, variable=variable, claslbl=as.character(claslbl),
+  ov_qs_save(list(data=data, variable=variable, claslbl=as.character(claslbl),
                   comp1=comp1, comp2=comp2), bridge_in, preset = "fast")
   on.exit(unlink(c(bridge_in, bridge_out)), add = TRUE)
 
@@ -1213,7 +1213,7 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, f
       setwd(wd)
       library(phyloseq)
       library(DESeq2)
-      input <- qs::qread(bridge_in)
+      input <- ov_qs_read(bridge_in)
       my.formula <- as.formula(paste("~", input$variable))
       diagdds <- phyloseq_to_deseq2(input$data, my.formula)
       geoMeans <- apply(counts(diagdds), 1,
@@ -1228,13 +1228,13 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, f
         res <- results(diagdds, independentFiltering = FALSE, cooksCutoff = Inf)
       }
       result <- data.frame(res[,c("log2FoldChange","lfcSE","pvalue","padj")], check.names=FALSE)
-      qs::qsave(result, bridge_out, preset = "fast")
+      ov_qs_save(result, bridge_out, preset = "fast")
     },
     args = list(wd = getwd(), bridge_in = bridge_in, bridge_out = bridge_out),
     timeout_sec = 300
   )
 
-  resTable <- if (file.exists(bridge_out)) qs::qread(bridge_out) else NULL
+  resTable <- if (file.exists(bridge_out)) ov_qs_read(bridge_out) else NULL
 
   # Process results (what .save.deseq.res did)
   dat3t <- mbSetObj$analSet$rnaseq$data.rnaseq
@@ -1633,9 +1633,9 @@ PerformLinDA <- function(mbSetObj, analysis.var, is.norm = "false",
   }
 
   if(is.norm == "false") {
-    phyloseq_objs <- qs::qread("phyloseq_prenorm_objs.qs")
+    phyloseq_objs <- ov_qs_read("phyloseq_prenorm_objs.qs")
   } else {
-    phyloseq_objs <- qs::qread("phyloseq_objs.qs")
+    phyloseq_objs <- ov_qs_read("phyloseq_objs.qs")
   }
 
   if(taxrank == "OTU") {
@@ -2026,7 +2026,7 @@ PlotCorr <- function(mbSetObj, imgName, format="png", dpi=default.dpi,appendnm, 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   variable <- mbSetObj$analSet$pattern.var;
-  data <- qs::qread("match_data.qs")
+  data <- ov_qs_read("match_data.qs")
   sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
   
   if(is.null(variable)){
@@ -2248,7 +2248,7 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, 
  
   if(mbSetObj$module.type=="mdp"){
     if(!exists("phyloseq_objs")){
-      phyloseq_objs <- qs::qread("phyloseq_objs.qs")
+      phyloseq_objs <- ov_qs_read("phyloseq_objs.qs")
     }
     
     if(taxrank=="OTU"){
@@ -2371,7 +2371,7 @@ Match.Pattern <- function(mbSetObj, dist.name="pearson", pattern=NULL, taxrank, 
 # There is no way of ensuring this from current tool design. User must choose either TSS or LOG, or they could choose none for both. 
 # We could take original data, but then it is not filtered and Maaslin takes a long time to run.
 # Best case: have filtered but raw data, and enforce both TSS and LOG in this function
-# filt.data.orig <- qs::qread("filt.data.orig")@.Data %>% as.data.frame() <- this is what we want for OTU. Trying to find something similar for other taxa.
+# filt.data.orig <- ov_qs_read("filt.data.orig")@.Data %>% as.data.frame() <- this is what we want for OTU. Trying to find something similar for other taxa.
 # See note on general_io.R -> "JE note" etc. Filtered, unnormalized tables do not exist other than OTU. Not sure if this is correct.
 ProcessMaaslin <- function(
     mbSetObj,

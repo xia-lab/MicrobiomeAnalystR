@@ -84,7 +84,7 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
 
 }else{
     if(!exists("phyloseq_objs")){
-      phyloseq_objs <- qs::qread("phyloseq_objs.qs")
+      phyloseq_objs <- ov_qs_read("phyloseq_objs.qs")
     }
  
     if(taxrank=="OTU"){
@@ -194,9 +194,9 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
   match.inx <- which(fc$tax_name %in% clean_feats_used)
  
   if(cor.method=="sparcc"){
-    abund_data <- qs::qread("sparcc_data.qs")
+    abund_data <- ov_qs_read("sparcc_data.qs")
   }else if(cor.method %in% c("secom_p1","secom_p2","secom_dist")){
-   abund_data <- qs::qread("secom_data.qs")
+   abund_data <- ov_qs_read("secom_data.qs")
    }else{
     abund_data <- t(as.matrix(mbSetObj$analSet$netcorr_data))
   }

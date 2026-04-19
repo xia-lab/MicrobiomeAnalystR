@@ -12,7 +12,7 @@ PlotMetaPCA <- function(imgNm, dpi, format, factor="NA"){
   require('ggplot2');
   require('ggsci');
 
-  microbiome.meta <- qs::qread("microbiome_meta.qs");
+  microbiome.meta <- ov_qs_read("microbiome_meta.qs");
   x <- microbiome.meta[["data"]];
   dpi <- as.numeric(dpi);
   imgNm <- paste(imgNm, ".", format, sep="");
@@ -45,7 +45,7 @@ PlotMetaPCA <- function(imgNm, dpi, format, factor="NA"){
   idx <- 1
 
   if(file.exists("microbiome_meta_prenorm.qs")){
-    meta.before <- qs::qread("microbiome_meta_prenorm.qs")
+    meta.before <- ov_qs_read("microbiome_meta_prenorm.qs")
   } else {
     meta.before <- microbiome.meta  # fallback: before = after
   }
@@ -103,7 +103,7 @@ PlotMetaPCA <- function(imgNm, dpi, format, factor="NA"){
 PlotMetaDensity <- function(imgNm, dpi=default.dpi, format="png", factor=""){
   require("ggplot2")
 
-  microbiome.meta <- qs::qread("microbiome_meta.qs");
+  microbiome.meta <- ov_qs_read("microbiome_meta.qs");
   x <- microbiome.meta$data;
   imgNm <- paste(imgNm, ".", format, sep="");
   dpi <- as.numeric(dpi);
@@ -133,7 +133,7 @@ PlotMetaDensity <- function(imgNm, dpi=default.dpi, format="png", factor=""){
   }
 
   if(file.exists("microbiome_meta_prenorm.qs")){
-    meta.before <- qs::qread("microbiome_meta_prenorm.qs")
+    meta.before <- ov_qs_read("microbiome_meta_prenorm.qs")
   } else {
     meta.before <- microbiome.meta  # fallback: before = after
   }
@@ -189,7 +189,7 @@ PlotMetaDensity <- function(imgNm, dpi=default.dpi, format="png", factor=""){
 #'@export
 #'
 ApplyMetaAutoScale <- function(apply="true"){
-  microbiome.meta <- qs::qread("microbiome_meta.qs");
+  microbiome.meta <- ov_qs_read("microbiome_meta.qs");
   if(apply == "true"){
     microbiome.meta$data <- t(scale(t(microbiome.meta$data), center=TRUE, scale=TRUE))
     # Replace NaN from zero-variance features with 0
@@ -203,7 +203,7 @@ PerformBatchCorrection <- function(){
     # MMUPHin batch correction — runs in isolated subprocess for memory safety
     bridge_in <- paste0(tempdir(), "/bridge_", paste0(sample(letters,6,replace=TRUE), collapse=""), "_in.qs")
     bridge_out <- sub("_in.qs", "_out.qs", bridge_in)
-    qs::qsave(list(placeholder = TRUE), bridge_in, preset = "fast")
+    ov_qs_save(list(placeholder = TRUE), bridge_in, preset = "fast")
     on.exit(unlink(c(bridge_in, bridge_out)), add = TRUE)
 
     run_func_via_rsclient(
@@ -211,13 +211,13 @@ PerformBatchCorrection <- function(){
         setwd(wd)
         require(MMUPHin)
         require(phyloseq)
-        phyobj <- qs::qread("merged.data.qs")
+        phyobj <- ov_qs_read("merged.data.qs")
         sam.data <- as.data.frame(as.matrix(sample_data(phyobj)))
 
         cov <- colnames(sam.data)[1]
         otu.tbl <- otu_table(phyobj)
 
-        microbiome.meta <- qs::qread("microbiome_meta.qs")
+        microbiome.meta <- ov_qs_read("microbiome_meta.qs")
 
         fit_adjust_batch <- adjust_batch(feature_abd = otu.tbl,
                                          batch = "dataset",
@@ -228,12 +228,12 @@ PerformBatchCorrection <- function(){
         adj.otu.tbl <- fit_adjust_batch$feature_abd_adj
         phyobj@otu_table <- otu_table(adj.otu.tbl, taxa_are_rows = TRUE)
 
-        qs::qsave(phyobj, "merged.data.norm.qs")
+        ov_qs_save(phyobj, "merged.data.norm.qs")
         microbiome.meta$data <- adj.otu.tbl
-        qs::qsave(microbiome.meta, "microbiome_meta.qs")
+        ov_qs_save(microbiome.meta, "microbiome_meta.qs")
         merged.data <- transform_sample_counts(phyobj, function(x) x / sum(x))
-        qs::qsave(merged.data, "merged.data.qs")
-        qs::qsave(TRUE, bridge_out, preset = "fast")
+        ov_qs_save(merged.data, "merged.data.qs")
+        ov_qs_save(TRUE, bridge_out, preset = "fast")
       },
       args = list(wd = getwd(), bridge_in = bridge_in, bridge_out = bridge_out),
       timeout_sec = 600

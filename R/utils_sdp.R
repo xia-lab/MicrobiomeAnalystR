@@ -373,12 +373,12 @@ PlotFunctionStack <-function(mbSetObj, summaryplot, functionlvl, abundcal, genei
   }
   output <- result
   if(functionlvl=="KEGG pathways"){
-    set2nm <- qs::qread(paste0(rpath, "libs/mmp/set2nm.qs")) 
+    set2nm <- ov_qs_read(paste0(rpath, "libs/mmp/set2nm.qs")) 
   nms = unname(set2nm[["pathway"]][match(rownames(output),names(set2nm[["pathway"]]))])
   output = cbind(name=nms,output)
 
   }else if(functionlvl=="KEGG modules"){
-  set2nm <- qs::qread(paste0(rpath, "libs/mmp/set2nm.qs"))
+  set2nm <- ov_qs_read(paste0(rpath, "libs/mmp/set2nm.qs"))
    nms = unname(set2nm[["module"]][match(rownames(output),names(set2nm[["module"]]))])
   output = cbind(name=nms,output)
  }
@@ -583,7 +583,7 @@ PrepareQueryJson <- function(mbSetObj){
   names(query.res) <- eids; # named by edge
   filtKOmap(query.ko, includeInfoNm)
   
- labels <- qs::qread(paste0(rpath, "libs/ko/ko_lbs.qs"))
+ labels <- ov_qs_read(paste0(rpath, "libs/ko/ko_lbs.qs"))
  labels <-labels[labels$info %in% query.ko,c(3,4)]
  labels <- aggregate(labels$info,list(labels$id_edge),function(x) paste(x,collapse = ","))
 
@@ -597,7 +597,7 @@ PrepareQueryJson <- function(mbSetObj){
 }
 
 filtKOmap <- function(include, fileName){
-  edges.ko = qs::qread(paste0(rpath, "libs/mmp/ko.info.qs"))
+  edges.ko = ov_qs_read(paste0(rpath, "libs/mmp/ko.info.qs"))
   edges.ko = edges.ko[which(edges.ko$ko %in% include),]
   
   includeInfo = list(edges=edges.ko)
@@ -645,19 +645,19 @@ PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",fi
 
   bridge_in <- paste0(tempdir(), "/bridge_", paste0(sample(letters,6,replace=TRUE), collapse=""), "_in.qs")
   bridge_out <- sub("_in.qs", "_out.qs", bridge_in)
-  qs::qsave(list(cls=phenotype, data=genemat, subsets=hits, set.num=set.num, hits=hits),
+  ov_qs_save(list(cls=phenotype, data=genemat, subsets=hits, set.num=set.num, hits=hits),
             bridge_in, preset = "fast")
   on.exit(unlink(c(bridge_in, bridge_out)), add = TRUE)
 
   run_func_via_rsclient(
     func = function(wd, bridge_in, bridge_out) {
       setwd(wd)
-      input <- qs::qread(bridge_in)
+      input <- ov_qs_read(bridge_in)
       gt.obj <- globaltest::gt(input$cls, input$data, subsets=input$subsets)
       gt.res <- globaltest::result(gt.obj)
       match.num <- gt.res[,5]
       if(sum(match.num>0)==0) {
-        qs::qsave(NA, bridge_out, preset = "fast")
+        ov_qs_save(NA, bridge_out, preset = "fast")
         return(invisible(NULL))
       }
       raw.p <- gt.res[,1]
@@ -670,13 +670,13 @@ PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",fi
       res.mat <- res.mat[hit.inx, ]
       ord.inx <- order(res.mat[,5])
       res.mat <- res.mat[ord.inx,]
-      qs::qsave(res.mat, bridge_out, preset = "fast")
+      ov_qs_save(res.mat, bridge_out, preset = "fast")
     },
     args = list(wd = getwd(), bridge_in = bridge_in, bridge_out = bridge_out),
     timeout_sec = 300
   )
 
-  my.res <- if (file.exists(bridge_out)) qs::qread(bridge_out) else NULL
+  my.res <- if (file.exists(bridge_out)) ov_qs_read(bridge_out) else NULL
 
   # Process results (what .save.global.res did)
   if(all(c(length(my.res)==1, is.na(my.res)))){
@@ -704,19 +704,19 @@ LoadKEGGKO_lib<-function(category,contain="all"){
   if(category == "module"){
        current.setlink <- "http://www.genome.jp/kegg-bin/show_module?";
        if(contain=="bac"){
-            current.mset <- qs::qread(paste0(rpath, "libs/ko/module_bac.qs"))
+            current.mset <- ov_qs_read(paste0(rpath, "libs/ko/module_bac.qs"))
       
         }else if(contain=="hsabac"){
-            current.mset <- qs::qread(paste0(rpath, "libs/ko/module_hsa_bac.qs"))
+            current.mset <- ov_qs_read(paste0(rpath, "libs/ko/module_hsa_bac.qs"))
       
         }else if(contain=="hsa"){
-            current.mset <- qs::qread(paste0(rpath, "libs/ko/module_hsa.qs"))
+            current.mset <- ov_qs_read(paste0(rpath, "libs/ko/module_hsa.qs"))
       
         }else if(contain=="all"){
             kegg.anot <- .read.microbiomeanalyst.lib.rds("ko_modules.rds", "ko")
             current.mset <- kegg.anot$sets$"Pathway module";
         }else{
-            current.mset <- qs::qread(paste0(rpath, "libs/ko/module_bac.qs")) ## filter users' data based on bacterial metabolism
+            current.mset <- ov_qs_read(paste0(rpath, "libs/ko/module_bac.qs")) ## filter users' data based on bacterial metabolism
             if(enrich.type != "hyper"){
                 current.mset <-  lapply(current.mset, function(x) x[x %in% query.ko])
                 current.mset <- current.mset[unlist(lapply(current.mset,function(x) length(x)))>1]
@@ -725,19 +725,19 @@ LoadKEGGKO_lib<-function(category,contain="all"){
    }else{
         current.setlink <- "http://www.genome.jp/kegg-bin/show_pathway?";
         if(contain=="bac"){
-            current.mset <- qs::qread(paste0(rpath, "libs/mmp/ko_set_bac.qs"))
+            current.mset <- ov_qs_read(paste0(rpath, "libs/mmp/ko_set_bac.qs"))
       
         }else if(contain=="hsabac"){
-            current.mset <- qs::qread(paste0(rpath, "libs/mmp/ko_set_hsa_bac.qs"))
+            current.mset <- ov_qs_read(paste0(rpath, "libs/mmp/ko_set_hsa_bac.qs"))
       
         }else if(contain=="hsa"){
-            current.mset <- qs::qread(paste0(rpath, "libs/mmp/ko_set_hsa.qs"))
+            current.mset <- ov_qs_read(paste0(rpath, "libs/mmp/ko_set_hsa.qs"))
       
         }else if(contain=="all"){
             kegg.anot <- .read.microbiomeanalyst.lib.rds("ko_pathways.rds", "ko")
             current.mset <- kegg.anot$sets$Metabolism;
         }else{
-            current.mset <- qs::qread(paste0(rpath, "libs/mmp/ko_set_bac.qs")) ## filter users' data based on bacterial metabolism
+            current.mset <- ov_qs_read(paste0(rpath, "libs/mmp/ko_set_bac.qs")) ## filter users' data based on bacterial metabolism
             if(enrich.type != "hyper"){
                 current.mset <-  lapply(current.mset, function(x) x[x %in% query.ko])
                 current.mset <- current.mset[unlist(lapply(current.mset,function(x) length(x)))>1]
@@ -762,7 +762,7 @@ LoadKEGGKO_lib<-function(category,contain="all"){
   mset.ln <- lapply(current.mset, length);
   current.mset <- current.mset[mset.ln > 0];
   set.ids <- names(current.mset);
-  set2nm <- qs::qread(paste0(rpath, "libs/mmp/set2nm.qs"))[[category]];
+  set2nm <- ov_qs_read(paste0(rpath, "libs/mmp/set2nm.qs"))[[category]];
   names(set.ids) <- names(current.mset) <- set2nm[set.ids];
 
   current.setlink <<-  current.setlink;

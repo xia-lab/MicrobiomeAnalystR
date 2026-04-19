@@ -11,7 +11,7 @@ PrepareMergedData <- function(mbSetObj, metadata, keepfeat){
   
   set.seed(1315);
   metadata <<- metadata;
-  data<- qs::qread("merged.data.qs");
+  data<- ov_qs_read("merged.data.qs");
   if(mbSetObj$module.type == "meta"){
       data <- subsetPhyloseqByDataset(mbSetObj, data);
   }
@@ -97,7 +97,7 @@ PerformRefDataMapping <- function(mbSetObj, refdataNm, taxo_type, sample_var, bi
     
     if(.on.public.web){
       lib.path <- get.fun.lib.path("picrust12");
-      otu.dic <<- qs::qread(paste0(picrust_path, "/greengenes_taxmap.qs"));
+      otu.dic <<- ov_qs_read(paste0(picrust_path, "/greengenes_taxmap.qs"));
     }else{
       otu.dic <<- readRDS("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/picrust/greengenes_taxmap.rds");
     }

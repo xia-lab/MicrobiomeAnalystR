@@ -41,8 +41,8 @@ performPeakEnrich <- function(lib){
   
 if(lib=="usrbac"|lib=="sigbac"){
 
-pathways = qs::qread(paste0(taxalvl,".current.lib.qs"))
-allmet = qs::qread(paste0(lib.path.mmp,"keggmet_allpathway.qs"))
+pathways = ov_qs_read(paste0(taxalvl,".current.lib.qs"))
+allmet = ov_qs_read(paste0(lib.path.mmp,"keggmet_allpathway.qs"))
 
 cpd.lib = allmet[!is.na(allmet$mw) & allmet$id %in% unique(unlist(pathways)),]
 
@@ -54,7 +54,7 @@ cpd.lib <- list(
 
 create.adducts(cpd.lib)
 
-lib <- qs::qread("cmn_compound_lib.qs")
+lib <- ov_qs_read("cmn_compound_lib.qs")
 mummichog.lib<-list()
 mummichog.lib$pathways$cpds <- pathways
 mummichog.lib$pathways$name <- names(pathways)
@@ -76,7 +76,7 @@ shadow_save(mummichog.lib,"current_mummichog_lib.qs")
 
 
 }
-  mummichog.lib <- qs::qread(filenm);
+  mummichog.lib <- ov_qs_read(filenm);
 
 }
 
@@ -606,7 +606,7 @@ shadow_save(mummichog.lib,"current_mummichog_lib.qs")
   
   print(paste('Resampling, ', permNum, 'permutations to estimate background ...'));
   permutation_hits <- permutation_record <- vector("list", permNum);
-  matched_res <- qs::qread("mum_res.qs");
+  matched_res <- ov_qs_read("mum_res.qs");
   set.seed(123)
   for(i in 1:permNum){ # for each permutation, create list of input emp compounds and calculate pvalues for each pathway
     input_mzlist <- unlist(sample(current.proc$ref_mz, length(current.proc$sig.feat)))
@@ -797,7 +797,7 @@ ComputeMummichogRTPermPvals <- function(input_ecpdlist, total_matched_ecpds, pat
   hits.sig <- cpds_feats[hit.inx];  
   path.nms <- names(current.proc$pathways$emp_cpds)[hit.inx];
   
-  metInfo <- qs::qread(paste0(lib.path.mmp,"general_kegg2name.qs"));
+  metInfo <- ov_qs_read(paste0(lib.path.mmp,"general_kegg2name.qs"));
   hits.nms <- lapply(hits.all, function(x){
   x=metInfo$Name[match(x,metInfo$ID)]  
   return(x)
@@ -823,7 +823,7 @@ ComputeMummichogRTPermPvals <- function(input_ecpdlist, total_matched_ecpds, pat
   current.proc$path.nms <- path.nms[ord.inx]
   current.proc$path.hits <- convert2JsonList(hits.all[ord.inx])
   current.proc$path.pval <- as.numeric(res.mat[,5])
-  matched_res <- qs::qread("mum_res.qs");
+  matched_res <- ov_qs_read("mum_res.qs");
   expr.mat <- lapply(current.proc$cpd_exp_dict,function(x) mean(as.numeric(x)))
   
   json.res <- list(
@@ -977,7 +977,7 @@ ComputeMummichogRTPermPvals <- function(input_ecpdlist, total_matched_ecpds, pat
   current.proc$path.nms <- path.nms[ord.inx]
   current.proc$path.hits <- convert2JsonList(hits.all[ord.inx])
   current.proc$path.pval <- as.numeric(res.mat[,9])
-  matched_res <- qs::qread("mum_res.qs"); 
+  matched_res <- ov_qs_read("mum_res.qs"); 
     json.res <- list(
     hits.query = hits.all[ord.inx],
     path.nms = path.nms[ord.inx],

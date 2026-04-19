@@ -10,7 +10,7 @@
 #' @return The deserialized R object
 #' @export
 shadow_qread <- function(file) {
-  qs::qread(file)
+  ov_qs_read(file)
 }
 
 #' Sync file to disk and verify existence (Safe-Handshake pattern)
@@ -151,7 +151,7 @@ validateColumns <- function(tab, required, context = "") {
 #' @export
 shadow_save <- function(obj, file, compress = "uncompressed") {
     # Always save to qs for R compatibility
-    qs::qsave(obj, file)
+    ov_qs_save(obj, file)
 
     # Generate Arrow path
     arrow_path <- sub("\\.qs$", ".arrow", file)
@@ -207,7 +207,7 @@ shadow_save <- function(obj, file, compress = "uncompressed") {
 #' @export
 shadow_save_mixed <- function(obj, file, compress = "uncompressed") {
     # Always save qs format for backward compatibility
-    qs::qsave(obj, file)
+    ov_qs_save(obj, file)
 
     # Derive Arrow path
     arrow_path <- sub("\\.qs$", ".arrow", file)

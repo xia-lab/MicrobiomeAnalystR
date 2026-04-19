@@ -153,20 +153,20 @@ GetMetaSummary<- function(mbSetObj=NA){
     mdata.all <- mbSetObj$mdata.all;
     sel.nms <- names(mdata.all)[mdata.all==1];
     sel.nms <- paste(sel.nms, collapse="; ")
-    merged.data <- qs::qread("merged.data.raw.qs");
+    merged.data <- ov_qs_read("merged.data.raw.qs");
     cls.lbls <- sort(unname(unique(as.matrix(as.data.frame(sample_data(merged.data)))[,1])))
     cls.lbls <- paste(cls.lbls, collapse="; ")
     return(c(total.col.num, feat.nums.by.dat, sel.nms, cls.lbls));
 }
 
 GetDatasetNamesString <- function(){
-    microbiome.meta <- qs::qread("microbiome_meta.qs");
+    microbiome.meta <- ov_qs_read("microbiome_meta.qs");
     paste(unique(microbiome.meta$data.lbl), collapse="||");
 }
 
 ##Single matrix
 GetSampleNumber <-function(){
-  data.proc <- qs::qread("data.proc.qs");
+  data.proc <- ov_qs_read("data.proc.qs");
   return(ncol(data.proc));
 }
 
@@ -193,7 +193,7 @@ GetMetaSigGeneCount <- function(){
 
 
 GetMetaGeneIDType<-function(){
-  microbiome.meta <- qs::qread("microbiome_meta.qs");
+  microbiome.meta <- ov_qs_read("microbiome_meta.qs");
   return(microbiome.meta$id.type);
 }
 
@@ -216,7 +216,7 @@ GetMetaResultGeneSymbols<-function(){
   if(length(ids) > 1000){
     ids <- ids[1:1000];
   }
-  microbiome.meta <- qs::qread("microbiome_meta.qs");
+  microbiome.meta <- ov_qs_read("microbiome_meta.qs");
   if(microbiome.meta$id.type == "entrez"){ # row name gene symbols
     ids <- microbiome.meta$gene.symbls[ids];
   }
@@ -335,7 +335,7 @@ PlotSelectedFeature<-function(mbSetObj, imgName, feat.id, format="png", sel.meta
   imgName <- paste(imgName,".", format, sep="");
   singleCol <- F;
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  phyobj <- qs::qread("metaanal_phyobj.qs");
+  phyobj <- ov_qs_read("metaanal_phyobj.qs");
   
   plot.data <- as.data.frame(as.matrix(otu_table(phyobj)))[feat.id,];
   a <- as.numeric(plot.data);

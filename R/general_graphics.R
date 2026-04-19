@@ -104,7 +104,7 @@ PlotTreeGraph <- function(mbSetObj, plotNm, distnm, clstDist, metadata,
 
   # must call distance within the phyloslim package
   if (distnm == "unifrac" | distnm == "wunifrac") {
-    pg_tree <- qs::qread("tree.qs")
+    pg_tree <- ov_qs_read("tree.qs")
     pg_tb <- tax_table(data)
     pg_ot <- otu_table(data)
     pg_sd <- sample_data(data)

@@ -133,7 +133,7 @@ SanityCheckData <- function(mbSetObj, filetype, preFilter = "sample", rmConstant
   
   if(mbSetObj$tree.uploaded){
     tree_exist <- 1;
-    tree <- qs::qread("tree.qs");
+    tree <- ov_qs_read("tree.qs");
 
    # if(identical(rownames(data.proc),tree$tip.label)){
     # no need to be identical, as long as tree can be superset of feature names
@@ -316,7 +316,7 @@ ApplyAbundanceFilter <- function(mbSetObj, filt.opt, count, smpl.perc){
   dataName <- mbSetObj$dataSet$name;
   module.type <- mbSetObj$module.type;
   data <- readDataQs("data.prefilt", module.type, dataName);
-  #data <- qs::qread("data.prefilt");
+  #data <- ov_qs_read("data.prefilt");
   
   #this data is used for sample categorial comparision further
   rmn_feat <- nrow(data);
@@ -600,8 +600,8 @@ UpdateSampleItems <- function(mbSetObj){
   }
   
   # read from saved original copy
-  data.proc.orig  <- qs::qread("data.proc.orig");
-  proc.phyobj.orig <- qs::qread("proc.phyobj.orig");
+  data.proc.orig  <- ov_qs_read("data.proc.orig");
+  proc.phyobj.orig <- ov_qs_read("proc.phyobj.orig");
   hit.inx <- colnames(data.proc.orig) %in% smpl.nm.vec;
   
   #preserving the rownames
@@ -1548,7 +1548,7 @@ PlotPCAView <- function(imgName, format="png", dpi=default.dpi, init=0){
   pca.list <- list()
   pct <- list()
 
-  metaFile <- qs::qread("data.sample_data")
+  metaFile <- ov_qs_read("data.sample_data")
   Factor <- metaFile[,1]
 
   .make_pca_plot <- function(x, xlabel, ylabel, title){
@@ -1915,7 +1915,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
           
           # update tree file if uploaded
           if(mbSetObj$tree.uploaded & mbSetObj$dataSet$tree_tip==1){
-            pg_tree <- qs::qread("tree.qs");
+            pg_tree <- ov_qs_read("tree.qs");
             pg_tree$tip.label <- new.nms[pg_tree$tip.label];
             shadow_save(pg_tree, "tree.qs");
           }
@@ -2102,7 +2102,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
     proc.tree <- NULL;
     if(mbSetObj$tree.uploaded) {
       proc.tree <- tryCatch({
-        tr <- qs::qread("tree.qs");
+        tr <- ov_qs_read("tree.qs");
         common.tips <- intersect(tr$tip.label, taxa_names(data.proc));
         if(length(common.tips) >= 2) ape::keep.tip(tr, common.tips) else NULL
       }, error = function(e) NULL);
@@ -2371,7 +2371,7 @@ GetSampleNamesaftNorm<-function(mbSetObj, dataName){
     if(dataName != ""){
       data <- readDataset(dataName);
     }else{
-      data <- qs::qread("merged.data.raw.qs");
+      data <- ov_qs_read("merged.data.raw.qs");
       data <- subsetPhyloseqByDataset(mbSetObj, data);
     }
     return(sample_names(data));

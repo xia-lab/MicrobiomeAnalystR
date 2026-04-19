@@ -173,7 +173,7 @@ PlotBoxDataCorr<-function(mbSetObj, boxplotName, feat, format="png", sel.meta=""
   suppressMessages(library(grid));
   suppressMessages(library(gridExtra));
   if(mbSetObj$module.type == "meta"){
-    merged <- qs::qread("merged.data.qs");
+    merged <- ov_qs_read("merged.data.qs");
     merged <- subsetPhyloseqByDataset(mbSetObj, merged);
     data <- t(as.data.frame(as(otu_table(merged), "matrix"),check.names=FALSE));
     data <- as.data.frame(data);
@@ -1674,7 +1674,7 @@ PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName, metadata,
   module.type <- mbSetObj$module.type;
   
   if(module.type == "meta"){
-    data <- qs::qread("merged.data.raw.qs");
+    data <- ov_qs_read("merged.data.raw.qs");
     data <- subsetPhyloseqByDataset(mbSetObj, data);
 
   }else{
@@ -1712,7 +1712,7 @@ PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName, metadata,
 
   if(distName == "PD") {
     # Faith's Phylogenetic Diversity: read tree directly from tree.qs (same as PlotPhylogeneticTree)
-    tree <- tryCatch(qs::qread("tree.qs"), error = function(e) NULL);
+    tree <- tryCatch(ov_qs_read("tree.qs"), error = function(e) NULL);
     if(is.null(tree)) {
       AddErrMsg("Phylogenetic Diversity (PD) requires a phylogenetic tree, but none is available in the current dataset. Please select a different alpha diversity measure.");
       return(0);
@@ -1816,7 +1816,7 @@ PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(mbSetObj$module.type == "meta"){
-    merged <- qs::qread("merged.data.qs");
+    merged <- ov_qs_read("merged.data.qs");
     data <- subsetPhyloseqByDataset(mbSetObj, merged);
   }else{
     #using filtered data
@@ -2174,8 +2174,8 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
       mbSetObj$dataSet <- readDataset(dataName);
     }
     if(all(c(module.type == "meta", combined))){
-      proc.phyobj <- qs::qread("merged.data.raw.qs");
-      norm.phyobj <- qs::qread("merged.data.qs");
+      proc.phyobj <- ov_qs_read("merged.data.raw.qs");
+      norm.phyobj <- ov_qs_read("merged.data.qs");
       proc.phyobj <- subsetPhyloseqByDataset(mbSetObj, proc.phyobj);
       norm.phyobj <- subsetPhyloseqByDataset(mbSetObj, norm.phyobj);
 
@@ -2234,7 +2234,7 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
       colnames(sample_data(data))[indx] <- alphaopt;
     }else if(colopt=="continuous") {
       # vegan/MMUPHin quarantined — isolate in subprocess
-      proc.phyobj <- qs::qread("merged.data.raw.qs");
+      proc.phyobj <- ov_qs_read("merged.data.raw.qs");
       data1 <- proc.phyobj;
       sub_sam_data <- data.frame(sample_data(data1), check.names = FALSE)
       sub_data <- as.matrix(data1@otu_table[, rownames(sub_sam_data)])
@@ -2266,7 +2266,7 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
     if(distName=="wunifrac"){
       
       suppressMessages(library(ape));
-      pg_tree <- qs::qread("tree.qs");
+      pg_tree <- ov_qs_read("tree.qs");
       pg_tb <- tax_table(data);
       pg_ot <- otu_table(data);
       pg_sd <- sample_data(data);
@@ -2289,7 +2289,7 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
     } else if (distName=="unifrac") {
       
       suppressMessages(library(ape));      
-      pg_tree <- qs::qread("tree.qs");
+      pg_tree <- ov_qs_read("tree.qs");
       pg_tb <- tax_table(data);
       pg_ot <- otu_table(data);
       pg_sd <- sample_data(data);
@@ -2370,7 +2370,7 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
     }else{
       colNum=1;
     }
-    merged.data <- qs::qread("merged.data.qs");
+    merged.data <- ov_qs_read("merged.data.qs");
     merged.data <- subsetPhyloseqByDataset(mbSetObj, merged.data);
     sam_data <- sample_data(merged.data);
     pdataframe = plyr::ldply(ord.list, function(x){
@@ -2503,7 +2503,7 @@ PlotFunAnotSummary<-function(mbSetObj, imgName, format="png",funanno, dpi=defaul
   }
   
   if(is.null(mbSetObj$analSet[[func.file]])){
-    result <- qs::qread(func.file);
+    result <- ov_qs_read(func.file);
   }else{
     result <- mbSetObj$analSet[[func.file]];
     shadow_save(mbSetObj$analSet[[func.file]], file=func.file);
@@ -2562,7 +2562,7 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
       AddErrMsg("Taxa area can not be plotted for merged samples.");
       return(0);
     }
-    data1 <- qs::qread("merged.data.raw.qs");
+    data1 <- ov_qs_read("merged.data.raw.qs");
     data1 <- subsetPhyloseqByDataset(mbSetObj, data1);
 
     sample_table <- sample_data(data1);
@@ -2874,7 +2874,7 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   if(mbSetObj$module.type == "meta"){
-    data1 <- qs::qread("merged.data.raw.qs");
+    data1 <- ov_qs_read("merged.data.raw.qs");
     data1 <- subsetPhyloseqByDataset(mbSetObj, data1);
     sample_table <- sample_data(data1);
     data <- as.data.frame(otu_table(data1),check.names=FALSE);
@@ -3180,7 +3180,7 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pai
 
   # Data loading (Master — phyloseq functions available via _script_loader.R)
   if(distnm %in% c("wunifrac", "unifrac")) {
-    data <- qs::qread("data_unifra.qs");
+    data <- ov_qs_read("data_unifra.qs");
   } else {
      if(!(exists("phyloseq_objs"))){
       phyloseq_objs <- readDataQs("phyloseq_objs.qs",mbSetObj$module.type,mbSetObj$dataSet$name)
@@ -3416,7 +3416,7 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
   suppressMessages(library(viridis));
   
   if(mbSetObj$module.type == "meta"){
-    data1 <- qs::qread("merged.data.raw.qs");
+    data1 <- ov_qs_read("merged.data.raw.qs");
     sample_table <- sample_data(data1);
     data <- as.data.frame(t(otu_table(data1)),check.names=FALSE);
     #if(facet2 == "none"){
@@ -3733,7 +3733,7 @@ PlotRarefactionCurve <- function(mbSetObj, data.src, linecolor, linetype, facet,
   mbSetObj <- .get.mbSetObj(mbSetObj);
   # should use unfiltered data
   if(data.src == "orig"){
-    data_rare <- qs::qread("orig.phyobj");
+    data_rare <- ov_qs_read("orig.phyobj");
   }else{
     data_rare <- mbSetObj$dataSet$proc.phyobj;
   }
@@ -3837,7 +3837,7 @@ PlotPhylogeneticTree <-function(mbSetObj, color, shape, taxa, treeshape, imgName
   }
   
   data1 <- merge_phyloseq(data,tax_table(mbSetObj$dataSet$proc.phyobj), sample_table);
-  pg_tree <- qs::qread("tree.qs");
+  pg_tree <- ov_qs_read("tree.qs");
   pg_tb <- tax_table(data1);
   pg_ot <- otu_table(data1);
   pg_sd <- sample_data(data1);
@@ -4178,7 +4178,7 @@ PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, co
   # metacoder heat_tree uses R5 NSE — must create taxmap AND plot in SAME subprocess
   # Save the raw OTU data used to create taxmap, let subprocess recreate it
   work_dir <- getwd()
-  qs::qsave(list(dm_obj_cmf = dm_obj_cmf, color_new = color_new, colorMode = colorMode,
+  ov_qs_save(list(dm_obj_cmf = dm_obj_cmf, color_new = color_new, colorMode = colorMode,
                   wilcox_cutoff = wilcox.cutoff, showLabels = showLabels,
                   layoutOpt = layoutOpt, comparison = comparison,
                   imgFile = file.path(work_dir, paste0(imgName, ".", format)), format = format),
@@ -4188,7 +4188,7 @@ PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, co
     func = function(work_dir) {
       setwd(work_dir)
       require(metacoder); require(Cairo)
-      input <- qs::qread("heattree_plot_input.qs")
+      input <- ov_qs_read("heattree_plot_input.qs")
       dm_obj_cmf <- input$dm_obj_cmf
       color_new <- input$color_new
       wilcox.cutoff <- input$wilcox_cutoff

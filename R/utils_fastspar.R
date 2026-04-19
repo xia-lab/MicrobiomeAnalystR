@@ -33,7 +33,7 @@ system(my.cmd);
   suppressMessages(library(igraph));
   
   if(opt == "pattern"){
-    data1 <- qs::qread("pattern_data.qs")
+    data1 <- ov_qs_read("pattern_data.qs")
   }else{
     # first get OTU table to BIOM TSV format
     if(mbSetObj$module.type=="sdp"){
@@ -41,7 +41,7 @@ system(my.cmd);
       taxrank <- "OTU";
     }else if(mbSetObj$module.type=="mdp"){
       if(!exists("phyloseq_objs")){
-        phyloseq_objs <- qs::qread("phyloseq_objs.qs")
+        phyloseq_objs <- ov_qs_read("phyloseq_objs.qs")
       }
       
       if(taxrank=="OTU"){

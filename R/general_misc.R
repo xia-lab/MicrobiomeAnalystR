@@ -795,21 +795,21 @@ rsclient_isolated_exec <- function(func_body, input_data, packages = character(0
   uid <- paste0(sample(letters, 6), collapse = "")
   input_path <- file.path(bridge_tmp, paste0(uid, "_in.qs"))
   output_path <- file.path(bridge_tmp, paste0(uid, "_out.qs"))
-  qs::qsave(input_data, input_path, preset = "fast"); Sys.sleep(0.02)
+  ov_qs_save(input_data, input_path, preset = "fast"); Sys.sleep(0.02)
   on.exit({ for (p in c(input_path, output_path)) if (file.exists(p)) unlink(p) }, add = TRUE)
   result <- run_func_via_rsclient(
     func = function(input_path, output_path, func_body, pkgs) {
       tryCatch({
         for (pkg in pkgs) suppressPackageStartupMessages(library(pkg, character.only = TRUE))
-        res <- func_body(qs::qread(input_path))
-        qs::qsave(res, output_path, preset = "fast"); Sys.sleep(0.02)
+        res <- func_body(ov_qs_read(input_path))
+        ov_qs_save(res, output_path, preset = "fast"); Sys.sleep(0.02)
         list(success = TRUE)
       }, error = function(e) list(success = FALSE, message = e$message))
     },
     args = list(input_path = input_path, output_path = output_path,
                 func_body = func_body, pkgs = packages),
     timeout_sec = timeout)
-  if (isTRUE(result$success) && file.exists(output_path)) return(qs::qread(output_path))
+  if (isTRUE(result$success) && file.exists(output_path)) return(ov_qs_read(output_path))
   msg <- if (!is.null(result$message)) result$message else "RSclient subprocess failed"
   message("[rsclient_isolated_exec] ", msg)
   return(list(success = FALSE, message = msg))
@@ -820,9 +820,9 @@ rsclient_isolated_exec <- function(func_body, input_data, packages = character(0
   run_func_via_rsclient(
     func = function(wd) {
       setwd(wd)
-      dat.in <- qs::qread("dat.in.qs")
+      dat.in <- ov_qs_read("dat.in.qs")
       dat.in$my.res <- dat.in$my.fun()
-      qs::qsave(dat.in, file = "dat.in.qs")
+      ov_qs_save(dat.in, file = "dat.in.qs")
     },
     args = list(wd = getwd()),
     timeout_sec = 300
@@ -1178,7 +1178,7 @@ ComputeEncasing <- function(filenm, type, names.vec, level=0.95, omics="NA"){
       sink(filenm); cat("{}"); sink()
       return(filenm)
     }
-    pos.xyz <- qs::qread("pos.xyz.qs")
+    pos.xyz <- ov_qs_read("pos.xyz.qs")
     inx = rownames(pos.xyz) %in% names
     coords = as.matrix(pos.xyz[inx, c(1:3)])
 

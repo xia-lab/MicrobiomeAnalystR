@@ -89,9 +89,9 @@ my.sparcc.net <- function(mbSetObj=NULL, corr.net.name, networkType="static", ne
     smpl <- data.frame(sample_data(mbSetObj$dataSet$proc.phyobj),check.names=FALSE);
     subsmpl <- smpl[mbSetObj$dataSet$selected.grps,,drop=FALSE]
     if(mbSetObj$dataSet$cor.method == "sparcc"){
-      abund_data <- qs::qread("sparcc_data.qs")
+      abund_data <- ov_qs_read("sparcc_data.qs")
     }else if(mbSetObj$dataSet$cor.method %in% c("secom_p1","secom_p2","secom_dist")){
-      abund_data <- qs::qread("secom_data.qs")
+      abund_data <- ov_qs_read("secom_data.qs")
     }else{
       abund_data <- t(as.matrix(mbSetObj$analSet$netcorr_data))
     }

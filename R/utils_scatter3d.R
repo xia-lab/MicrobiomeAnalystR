@@ -72,7 +72,7 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
   
   if("facB" %in% names(res)){
     meta.vec2 <- res$facB
-    phyobjdata <- qs::qread("merged.data.qs");
+    phyobjdata <- ov_qs_read("merged.data.qs");
     metadf <- as.matrix(sample_data(phyobjdata));
     metadf <- as.data.frame(metadf);
     shape <- vector();
@@ -122,7 +122,7 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
                     ticks=ticks,
                     metaCol = legendData);
   }else{
-    res2 <- qs::qread("loading3d.qs");
+    res2 <- ov_qs_read("loading3d.qs");
     
     if(ncol(res2$xyz) > nrow(res2$xyz)){
       orig.load.xyz <- t(res2$xyz);

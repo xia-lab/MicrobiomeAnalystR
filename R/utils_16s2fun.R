@@ -8,7 +8,7 @@ my.16sfun.anot<-function(mbSetObj, type, pipeline,ggversion) {
   #print(c(type,pipeline,ggversion))
   mbSetObj <- .get.mbSetObj(mbSetObj);
   mbSetObj$dataSet$type <- type;
-  merge.otu <- qs::qread("data.orig");
+  merge.otu <- ov_qs_read("data.orig");
  
   merge.otu <- apply(merge.otu, 2, as.numeric);
   current.msg<<- "null"
@@ -22,7 +22,7 @@ my.16sfun.anot<-function(mbSetObj, type, pipeline,ggversion) {
     if(nrow(merge.otu)<2000){
       seqInput<- as.list(rownames(mbSetObj$dataSet$data.orig))
     }else{
-      merge.otu <- qs::qread("filt.data.orig")
+      merge.otu <- ov_qs_read("filt.data.orig")
      ASV_ID_mapping <- data.frame(mbSetObj$dataSet$master.nms)
       seqInput<- as.list(ASV_ID_mapping$OriginalID[match(rownames(merge.otu),ASV_ID_mapping$NewID)])
     }
@@ -113,7 +113,7 @@ my.16sfun.anot<-function(mbSetObj, type, pipeline,ggversion) {
             merge.otu <- cbind(a,merge.otu)
             colnames(merge.otu)[1]<-"X.OTU_IDs";
       
-            otu.dic <<- qs::qread(paste0(picrust_path, "/greengenes_tax.qs"));
+            otu.dic <<- ov_qs_read(paste0(picrust_path, "/greengenes_tax.qs"));
 
             merge.otu[,1]<-as.character(merge.otu[,1]);
             merge.otu[,1]<-otu.dic[match(merge.otu$X.OTU_IDs,otu.dic$Greengenes),1];
@@ -128,7 +128,7 @@ my.16sfun.anot<-function(mbSetObj, type, pipeline,ggversion) {
         samplenm<-colnames(query);
     
         #normalizing by 16S copy number
-        copyno <- qs::qread(paste0(picrust_path, "/16S_copyno.qs"));
+        copyno <- ov_qs_read(paste0(picrust_path, "/16S_copyno.qs"));
         result2<-merge(query,copyno, by ="row.names");
         index1<-match(samplenm,colnames(result2), nomatch = NA_integer_, incomparables = NULL);
         result2[index1]<-result2[index1]/result2[['X16S_rRNA_Count']];
@@ -141,75 +141,75 @@ my.16sfun.anot<-function(mbSetObj, type, pipeline,ggversion) {
         res <- data.frame(matrix(0, nrow=nrow(result2), ncol= 6909),check.names=FALSE);
         row.names(res) <- row.names(result2);
     
-        pc.lib <- qs::qread(paste0(picrust_path, "/picrust_part1.qs"));
+        pc.lib <- ov_qs_read(paste0(picrust_path, "/picrust_part1.qs"));
     
         row.hits <- match(row.names(result2), rownames(pc.lib));
         res[, 1:500] <- pc.lib[row.hits,];
         colnames(res)[1:500] <- colnames(pc.lib);
     
-        pc.lib <- qs::qread(paste0(picrust_path, "/picrust_part2.qs"));
+        pc.lib <- ov_qs_read(paste0(picrust_path, "/picrust_part2.qs"));
     
         res[, 501:1000] <- pc.lib[row.hits,];
         colnames(res)[501:1000] <- colnames(pc.lib);
      
-        pc.lib <- qs::qread(paste0(picrust_path, "/picrust_part3.qs"));
+        pc.lib <- ov_qs_read(paste0(picrust_path, "/picrust_part3.qs"));
     
         res[, 1001:1500] <- pc.lib[row.hits,];
         colnames(res)[1001:1500] <- colnames(pc.lib);
     
-        pc.lib <- qs::qread(paste0(picrust_path, "/picrust_part4.qs"));
+        pc.lib <- ov_qs_read(paste0(picrust_path, "/picrust_part4.qs"));
     
         res[, 1501:2000] <- pc.lib[row.hits,];
         colnames(res)[1501:2000] <- colnames(pc.lib);
     
-        pc.lib <- qs::qread(paste0(picrust_path, "/picrust_part5.qs"));
+        pc.lib <- ov_qs_read(paste0(picrust_path, "/picrust_part5.qs"));
     
         res[, 2001:2500] <- pc.lib[row.hits,];
         colnames(res)[2001:2500] <- colnames(pc.lib);
 
-        pc.lib <- qs::qread(paste0(picrust_path, "/picrust_part6.qs"));
+        pc.lib <- ov_qs_read(paste0(picrust_path, "/picrust_part6.qs"));
     
         row.hits <- match(row.names(result2), rownames(pc.lib));
         res[, 2501:3000] <- pc.lib[row.hits,];
         colnames(res)[2501:3000] <- colnames(pc.lib);
     
-        pc.lib <- qs::qread(paste0(picrust_path, "/picrust_part7.qs"));
+        pc.lib <- ov_qs_read(paste0(picrust_path, "/picrust_part7.qs"));
     
         res[, 3001:3500] <- pc.lib[row.hits,];
         colnames(res)[3001:3500] <- colnames(pc.lib);
     
-        pc.lib <- qs::qread(paste0(picrust_path, "/picrust_part8.qs"));
+        pc.lib <- ov_qs_read(paste0(picrust_path, "/picrust_part8.qs"));
     
         res[, 3501:4000] <- pc.lib[row.hits,];
         colnames(res)[3501:4000] <- colnames(pc.lib);
     
-        pc.lib <- qs::qread(paste0(picrust_path, "/picrust_part9.qs"));
+        pc.lib <- ov_qs_read(paste0(picrust_path, "/picrust_part9.qs"));
     
         res[, 4001:4500] <- pc.lib[row.hits,];
         colnames(res)[4001:4500] <- colnames(pc.lib);
     
-        pc.lib <- qs::qread(paste0(picrust_path, "/picrust_part10.qs"));
+        pc.lib <- ov_qs_read(paste0(picrust_path, "/picrust_part10.qs"));
     
         res[, 4501:5000] <- pc.lib[row.hits,];
         colnames(res)[4501:5000] <- colnames(pc.lib);
 
-        pc.lib <- qs::qread(paste0(picrust_path, "/picrust_part11.qs"));
+        pc.lib <- ov_qs_read(paste0(picrust_path, "/picrust_part11.qs"));
     
         row.hits <- match(row.names(result2), rownames(pc.lib));
         res[, 5001:5500] <- pc.lib[row.hits,];
         colnames(res)[5001:5500] <- colnames(pc.lib);
     
-        pc.lib <- qs::qread(paste0(picrust_path, "/picrust_part12.qs"));
+        pc.lib <- ov_qs_read(paste0(picrust_path, "/picrust_part12.qs"));
     
         res[, 5501:6000] <- pc.lib[row.hits,];
         colnames(res)[5501:6000] <- colnames(pc.lib);
     
-        pc.lib <- qs::qread(paste0(picrust_path, "/picrust_part13.qs"));
+        pc.lib <- ov_qs_read(paste0(picrust_path, "/picrust_part13.qs"));
     
         res[, 6001:6500] <- pc.lib[row.hits,];
         colnames(res)[6001:6500] <- colnames(pc.lib);
     
-        pc.lib <- qs::qread(paste0(picrust_path, "/picrust_part14.qs"));
+        pc.lib <- ov_qs_read(paste0(picrust_path, "/picrust_part14.qs"));
     
         res[, 6501:6910] <- pc.lib[row.hits,];
         colnames(res)[6501:6909] <- colnames(pc.lib);
@@ -228,7 +228,7 @@ my.16sfun.anot<-function(mbSetObj, type, pipeline,ggversion) {
             merge.otu <- cbind(a,merge.otu)
             colnames(merge.otu)[1]<-"X.OTU_IDs";
       
-            otu.dic <<- qs::qread(paste0(picrust_path, "/greengenes_taxmap.qs"));
+            otu.dic <<- ov_qs_read(paste0(picrust_path, "/greengenes_taxmap.qs"));
 
             merge.otu[,1]<-as.character(merge.otu[,1]);
             merge.otu[,1]<-otu.dic[match(merge.otu$X.OTU_IDs,otu.dic$Greengenes),1];
@@ -243,7 +243,7 @@ my.16sfun.anot<-function(mbSetObj, type, pipeline,ggversion) {
         samplenm<-colnames(query);
     
         #normalizing by 16S copy number
-        copyno <- qs::qread(paste0(picrust_path, "/16S_copyno.qs"));
+        copyno <- ov_qs_read(paste0(picrust_path, "/16S_copyno.qs"));
         result2<-merge(query,copyno, by ="row.names");
         index1<-match(samplenm,colnames(result2), nomatch = NA_integer_, incomparables = NULL);
         result2[index1]<-result2[index1]/result2[['X16S_rRNA_Count']];
@@ -255,28 +255,28 @@ my.16sfun.anot<-function(mbSetObj, type, pipeline,ggversion) {
         res <- data.frame(matrix(0, nrow=nrow(result2), ncol= 6885),check.names=FALSE);
         row.names(res) <- row.names(result2);
     
-        pc.lib <- qs::qread(paste0(picrust_path, "/picrust_part1.qs"));
+        pc.lib <- ov_qs_read(paste0(picrust_path, "/picrust_part1.qs"));
     
         row.hits <- match(row.names(result2), rownames(pc.lib));
         res[, 1:1377] <- pc.lib[row.hits,];
         colnames(res)[1:1377] <- colnames(pc.lib);
     
-        pc.lib <- qs::qread(paste0(picrust_path, "/picrust_part2.qs"));
+        pc.lib <- ov_qs_read(paste0(picrust_path, "/picrust_part2.qs"));
     
         res[, 1378:2754] <- pc.lib[row.hits,];
         colnames(res)[1378:2754] <- colnames(pc.lib);
     
-        pc.lib <- qs::qread(paste0(picrust_path, "/picrust_part3.qs"));
+        pc.lib <- ov_qs_read(paste0(picrust_path, "/picrust_part3.qs"));
     
         res[, 2755:4131] <- pc.lib[row.hits,];
         colnames(res)[2755:4131] <- colnames(pc.lib);
     
-        pc.lib <- qs::qread(paste0(picrust_path, "/picrust_part4.qs"));
+        pc.lib <- ov_qs_read(paste0(picrust_path, "/picrust_part4.qs"));
     
         res[, 4132:5508] <- pc.lib[row.hits,];
         colnames(res)[4132:5508] <- colnames(pc.lib);
     
-        pc.lib <- qs::qread(paste0(picrust_path, "/picrust_part5.qs"));
+        pc.lib <- ov_qs_read(paste0(picrust_path, "/picrust_part5.qs"));
     
         res[, 5509:6885] <- pc.lib[row.hits,];
         colnames(res)[5509:6885] <- colnames(pc.lib);

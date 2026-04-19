@@ -18,7 +18,7 @@ ComputeEncasingBatch <- function(filenm, type, groups_json, level = 0.95, omics 
       sink(filenm); cat("{}"); sink()
       return(filenm)
     }
-    pos.xyz <- qs::qread("pos.xyz.qs")
+    pos.xyz <- ov_qs_read("pos.xyz.qs")
 
     groups_list <- RJSONIO::fromJSON(groups_json)
     if (is.data.frame(groups_list)) {

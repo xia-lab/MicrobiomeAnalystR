@@ -24,7 +24,7 @@ test_arrow_parity <- function(qs_path) {
   }
 
   # Read both formats
-  qs_data <- qs::qread(qs_path)
+  qs_data <- ov_qs_read(qs_path)
   arrow_data <- arrow::read_feather(arrow_path)
 
   # Convert qs data to comparable format

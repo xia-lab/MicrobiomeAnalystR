@@ -447,7 +447,7 @@ GetResMetabo <- function(){
 GetMetaInfo <- function(mbSetObj, type="disc"){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   if(mbSetObj$module.type == "meta"){
-    microbiome.meta <- qs::qread("microbiome_meta.qs");
+    microbiome.meta <- ov_qs_read("microbiome_meta.qs");
     meta.types <- microbiome.meta$meta.types;
   }else{
     meta.types <- mbSetObj$dataSet$meta.types
@@ -474,7 +474,7 @@ GetMetaTaxaInfo <- function(mbSetObj){
 
   if(mbSetObj$module.type == "meta"){
     if(file.exists("merged.data.qs")){
-     proc.phyobj <- qs::qread("merged.data.qs");
+     proc.phyobj <- ov_qs_read("merged.data.qs");
      proc.phyobj <- subsetPhyloseqByDataset(mbSetObj, proc.phyobj);
      }
   }
@@ -674,7 +674,7 @@ UtilMakeCountTables <- function(phyloseq.obj, taxrank){
 saveSet <- function(obj=NA, set="", output=1){
 
   if(globalConfig$anal.mode == "api"){
-    qs::qsave(obj, paste0(set, ".qs"));
+    ov_qs_save(obj, paste0(set, ".qs"));
     Sys.sleep(0.05);
     return(output)
   }else{
@@ -712,7 +712,7 @@ readSet <- function(obj=NA, set=""){
     if(path != ""){
       obj <- load_qs(paste0(path, set, ".qs"));
     }else{
-      obj <- qs::qread(paste0(set, ".qs"));
+      obj <- ov_qs_read(paste0(set, ".qs"));
     }
   }
   return(obj);
@@ -727,7 +727,7 @@ readDataset <- function(fileName="", obj=NA){
       path <- user.path;
       dat <- load_qs(paste0(path, fileName));
     }else{
-      dat <- qs::qread(fileName);
+      dat <- ov_qs_read(fileName);
     }
   }else{
     if(!is.na(obj)){
@@ -753,17 +753,17 @@ saveDataQs <-function(data, name, module.nm, dataName){
   # Use qs::qsave directly for internal R workflow files
   # (shadow_save with Arrow is only needed for R-Java data exchange)
   if(module.nm == "meta"){
-    qs::qsave(data, file=paste0(dataName, "_data/", name));
+    ov_qs_save(data, file=paste0(dataName, "_data/", name));
   }else{
-    qs::qsave(data, file=name);
+    ov_qs_save(data, file=name);
   }
 }
 
 readDataQs <-function(name, module.nm, dataName){
   if(module.nm == "meta"){
-    dat <- qs::qread(file=paste0(dataName, "_data/", name));
+    dat <- ov_qs_read(file=paste0(dataName, "_data/", name));
   }else{
-    dat <- qs::qread(file=name);
+    dat <- ov_qs_read(file=name);
   }
   return(dat);
 }

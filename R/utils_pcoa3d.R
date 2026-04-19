@@ -53,7 +53,7 @@ my.pcoa.3d <- function(mbSetObj, ordMeth, distName, taxrank, colopt, variable, t
   }
 
   if(distName=="wunifrac"){
-    pg_tree <- qs::qread("tree.qs");
+    pg_tree <- ov_qs_read("tree.qs");
     pg_tb <- tax_table(data);
     pg_ot <- otu_table(data);
     pg_sd <- sample_data(data);
@@ -65,7 +65,7 @@ my.pcoa.3d <- function(mbSetObj, ordMeth, distName, taxrank, colopt, variable, t
       GP.ord <- ordinate(data, ordMeth, "unifrac", weighted=TRUE);
     }
   } else if (distName=="unifrac"){
-    pg_tree <- qs::qread("tree.qs");
+    pg_tree <- ov_qs_read("tree.qs");
     pg_tb <- tax_table(data);
     pg_ot <- otu_table(data);
     pg_sd <- sample_data(data);

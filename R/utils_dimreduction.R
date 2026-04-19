@@ -24,7 +24,7 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
   omics.type <- c("microbiome","metabolomics")
   
   if(!exists("phyloseq_objs")){
-    phyloseq_objs <- qs::qread("phyloseq_objs.qs")
+    phyloseq_objs <- ov_qs_read("phyloseq_objs.qs")
   }
   
   d.list[["mic"]] = list()
@@ -195,7 +195,7 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
         pca="diagnostic_pca_diablo_0.png", loading="diagnostic_loading_0.png",
         diag="diagnostic_components_diablo_0.png", circos="diagnostic_circos_diablo_0.png")
 
-      qs::qsave(list(dats = dats[[l]], Y = Y, ncomp = ncomp, design = design,
+      ov_qs_save(list(dats = dats[[l]], Y = Y, ncomp = ncomp, design = design,
                       meta_type = diablo.meta.type,
                       pca_img = file.path(work_dir, img.names$pca),
                       loading_img = file.path(work_dir, img.names$loading),
@@ -208,7 +208,7 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
             require(mixOmics); require(Cairo); require(grid)
             require(gridExtra); require(gridGraphics); require(cowplot)
           })
-          input <- qs::qread("diablo_input.qs")
+          input <- ov_qs_read("diablo_input.qs")
           message("[DIABLO] Starting model fitting with ", input$ncomp, " components...")
           start_time <- Sys.time()
           if (input$meta_type == "disc") {
@@ -237,9 +237,9 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
 
           # Save diablo.res.qs for scatter viewer
           diablo.res <- list(dim.res = setNames(list(model), names(input$dats)[1]))
-          qs::qsave(diablo.res, "diablo.res.qs")
+          ov_qs_save(diablo.res, "diablo.res.qs")
           # Save raw model separately for perf() — avoids double qs corruption
-          qs::qsave(model, "diablo_model.qs")
+          ov_qs_save(model, "diablo_model.qs")
 
           # Generate ALL diagnostic plots while model is in memory
           # Helper to safely generate a plot
@@ -484,7 +484,7 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
 
       # Model stays in diablo.res.qs (single qs, never read into master)
       # Read back for dim.res field needed by diablo.res structure
-      res[[l]] <- qs::qread("diablo.res.qs")$dim.res[[1]]
+      res[[l]] <- ov_qs_read("diablo.res.qs")$dim.res[[1]]
       pos.xyz[[l]] <- diablo_result$pos.xyz
       pos.xyz2[[l]] <- diablo_result$pos.xyz2
       loading.pos.xyz[[l]] <- diablo_result$loading.pos.xyz
@@ -504,13 +504,13 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
     mic_data_list <- d.list$mic$data.proc
     met_data <- d.list$met$data.proc
     work_dir <- getwd()
-    qs::qsave(list(mic = mic_data_list, met = met_data), "procrustes_input.qs")
+    ov_qs_save(list(mic = mic_data_list, met = met_data), "procrustes_input.qs")
 
     proc_result <- run_func_via_rsclient(
       func = function(work_dir) {
         setwd(work_dir)
         require(vegan)
-        input <- qs::qread("procrustes_input.qs")
+        input <- ov_qs_read("procrustes_input.qs")
         ndat1 <- lapply(input$mic, function(x) vegan::decostand(t(x), method = "standardize"))
         pca.dat1 <- lapply(ndat1, function(x) vegan::rda(x))
         ndat2 <- vegan::decostand(t(input$met), method = "standardize")

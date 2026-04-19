@@ -735,14 +735,14 @@ CheckMetaDataIntegrity <- function(mbSetObj, taxo_type="OTU", sample_var="NA"){
     if(length(sel.nms)>2){
       for(i in 3:length(sel.nms)){
         dataX <- mbSetObj$dataSets[[i]];
-        merged.data <- qs::qread("merged.data.raw.qs");
+        merged.data <- ov_qs_read("merged.data.raw.qs");
         orig.proc <-  mbSetObj$dataSet$proc.phyobj ;
         mbSetObj$dataSet$proc.phyobj <- merged.data;
         PerformDataMerging(mbSetObj, mbSetObj$dataSet, dataX, taxo_type, sample_var, F);
         mbSetObj$dataSet$proc.phyobj <- orig.proc;
       }
     }
-    merged.data <- qs::qread("merged.data.raw.qs");
+    merged.data <- ov_qs_read("merged.data.raw.qs");
   }else{
     samdata <- as.data.frame(as.matrix(sample_data(mbSetObj$dataSet$proc.phyobj)));
     samdata$dataset <- rep(mbSetObj$dataSet$name,nrow(sample_data(mbSetObj$dataSet$proc.phyobj)));
@@ -761,11 +761,11 @@ CheckMetaDataIntegrity <- function(mbSetObj, taxo_type="OTU", sample_var="NA"){
       if(res == 0){
         return(0);
       }
-      mbSetObj$dataSet$proc.phyobj <- qs::qread("merged.data.raw.qs");
+      mbSetObj$dataSet$proc.phyobj <- ov_qs_read("merged.data.raw.qs");
       .set.mbSetObj(mbSetObj)
     }
   }
-  #merged.data <- qs::qread("merged.data.raw.qs");
+  #merged.data <- ov_qs_read("merged.data.raw.qs");
   
   meta.keep.inx <- sapply(sample_data(merged.data), function(col) length(unique(col))) > 1;
   merged.data@sam_data<- sample_data(merged.data)[, meta.keep.inx];
@@ -895,8 +895,8 @@ MergeDatasets <- function(mbSetObj, taxo_type, sample_var){
     if(length(sel.nms)>2){
       for(i in 3:length(sel.nms)){
         dataX <- mbSetObj$dataSets[[i]];
-        merged.data <- qs::qread("merged.data.norm.qs");
-        merged.data.raw <- qs::qread("merged.data.raw.qs");
+        merged.data <- ov_qs_read("merged.data.norm.qs");
+        merged.data.raw <- ov_qs_read("merged.data.raw.qs");
 
         orig.norm <-  mbSetObj$dataSet$norm.phyobj;
         orig.proc <-  mbSetObj$dataSet$proc.phyobj;
@@ -912,8 +912,8 @@ MergeDatasets <- function(mbSetObj, taxo_type, sample_var){
       }
     }
 
-    phyobj <- qs::qread("merged.data.norm.qs");
-    microbiome.meta <- qs::qread("microbiome_meta.qs");
+    phyobj <- ov_qs_read("merged.data.norm.qs");
+    microbiome.meta <- ov_qs_read("microbiome_meta.qs");
     microbiome.meta$data <- as.data.frame(otu_table(phyobj));
     shadow_save(microbiome.meta, "microbiome_meta.qs");
 
@@ -936,11 +936,11 @@ MergeDatasets <- function(mbSetObj, taxo_type, sample_var){
       if(res == 0){
         return(0);
       }
-      mbSetObj$dataSet$proc.phyobj <- qs::qread("merged.data.raw.qs");
+      mbSetObj$dataSet$proc.phyobj <- ov_qs_read("merged.data.raw.qs");
       .set.mbSetObj(mbSetObj)
     }
   }
-  merged.data <- qs::qread("merged.data.raw.qs");
+  merged.data <- ov_qs_read("merged.data.raw.qs");
 
   sam_data <- as.data.frame(as.matrix(merged.data@sam_data));
   rownames(sam_data) <- rownames(sample_data(merged.data));
@@ -983,7 +983,7 @@ current.sample <- current.refset@sam_data
     #taxonomy mapping file
     
     if(.on.public.web){
-      otu.dic <<- qs::qread(paste0(rpath, "libs/picrust/greengenes_taxmap.qs"));
+      otu.dic <<- ov_qs_read(paste0(rpath, "libs/picrust/greengenes_taxmap.qs"));
     }else{
       otu.dic <<- readRDS("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/picrust/greengenes_taxmap.rds");
     }

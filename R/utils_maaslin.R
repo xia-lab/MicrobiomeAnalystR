@@ -39,15 +39,15 @@
   if (mbSetObj$module.type=="sdp"){
     taxrank<-"OTU";
     if (is.norm == "false"){
-      phyloseq_objs <- qs::qread("phyloseq_prenorm_objs.qs")
+      phyloseq_objs <- ov_qs_read("phyloseq_prenorm_objs.qs")
       input.data <- phyloseq_objs$count_tables$OTU %>% as.data.frame()
     } else {
-      phyloseq_objs <- qs::qread("phyloseq_objs.qs")
+      phyloseq_objs <- ov_qs_read("phyloseq_objs.qs")
       input.data <- phyloseq_objs$count_tables$OTU %>% as.data.frame()
     }
   } else {
     if (is.norm == "false"){
-      phyloseq_objs <- qs::qread("phyloseq_prenorm_objs.qs")
+      phyloseq_objs <- ov_qs_read("phyloseq_prenorm_objs.qs")
       
       if (taxrank=="OTU"){
         input.data <- phyloseq_objs$count_tables$OTU %>% as.data.frame()
@@ -56,7 +56,7 @@
         input.data <- phyloseq_objs$count_tables[[taxrank.inx]] %>% as.data.frame()
       } 
     } else {
-      phyloseq_objs <- qs::qread("phyloseq_objs.qs")
+      phyloseq_objs <- ov_qs_read("phyloseq_objs.qs")
       if (taxrank=="OTU") {
         input.data <- phyloseq_objs$count_tables$OTU %>% as.data.frame()
       } else {
@@ -516,7 +516,7 @@ if(case==1){
   # Run MaAsLin2 computation via bridge
   bridge_in <- paste0(tempdir(), "/bridge_", paste0(sample(letters,6,replace=TRUE), collapse=""), "_in.qs")
   bridge_out <- sub("_in.qs", "_out.qs", bridge_in)
-  qs::qsave(list(features=dat.in$features, metadata=dat.in$metadata,
+  ov_qs_save(list(features=dat.in$features, metadata=dat.in$metadata,
                   model=dat.in$model, formula=dat.in$formula,
                   random_effects_formula=dat.in$random_effects_formula,
                   correction=dat.in$correction, cores=dat.in$cores),
@@ -526,7 +526,7 @@ if(case==1){
   run_func_via_rsclient(
     func = function(wd, bridge_in, bridge_out) {
       setwd(wd)
-      input <- qs::qread(bridge_in)
+      input <- ov_qs_read(bridge_in)
       features <- input$features
       metadata <- input$metadata
       model <- input$model
@@ -817,13 +817,13 @@ if(case==1){
       } else {
         result <- list("results" = paras)
       }
-      qs::qsave(result, bridge_out, preset = "fast")
+      ov_qs_save(result, bridge_out, preset = "fast")
     },
     args = list(wd = getwd(), bridge_in = bridge_in, bridge_out = bridge_out),
     timeout_sec = 600
   )
 
-  dat.in$my.res <- if (file.exists(bridge_out)) qs::qread(bridge_out) else NULL
+  dat.in$my.res <- if (file.exists(bridge_out)) ov_qs_read(bridge_out) else NULL
 
   shadow_save(dat.in, file="dat.in.qs");
   return(1);
@@ -832,7 +832,7 @@ if(case==1){
 .save.maaslin.res <- function(mbSetObj,case){
   tryCatch({
     mbSetObj <- .get.mbSetObj(mbSetObj);
-    dat.in <- qs::qread("dat.in.qs");
+    dat.in <- ov_qs_read("dat.in.qs");
     filtered_data_norm <- dat.in$filtered_data_norm
 
     fit_data <- dat.in$my.res

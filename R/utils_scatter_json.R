@@ -10,7 +10,7 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
   
   library(RJSONIO)
   if(!exists("phyloseq_objs")){
-    phyloseq_objs <- qs::qread("phyloseq_objs.qs")
+    phyloseq_objs <- ov_qs_read("phyloseq_objs.qs")
   }
   
   metdat <- current.proc$met$data.proc
@@ -38,25 +38,25 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
   
   if(reductionOptGlobal == "procrustes"){
     if(!exists("procrustes.res")){
-      procrustes.res <- qs::qread("procrustes.res.qs")
+      procrustes.res <- ov_qs_read("procrustes.res.qs")
     }
     pos.xyz.all =  procrustes.res$pos.xyz
     metadf = procrustes.res$newmeta
   }else if(reductionOptGlobal == "diablo"){
     if(!exists("diablo.res")){
-      diablo.res <- qs::qread("diablo.res.qs")
+      diablo.res <- ov_qs_read("diablo.res.qs")
     }
     if(!exists("combined.res")){
-      combined.res <- qs::qread("combined.res.qs")
+      combined.res <- ov_qs_read("combined.res.qs")
     }
     pos.xyz.all =  diablo.res$pos.xyz
     metadf = diablo.res$newmeta
   }else if(reductionOptGlobal == "mofa"){
     if(!exists("mofa.res")){
-      mofa.res <- qs::qread("mofa.res.qs")
+      mofa.res <- ov_qs_read("mofa.res.qs")
     }
     if(!exists("combined.res")){
-      combined.res <- qs::qread("combined.res.qs")
+      combined.res <- ov_qs_read("combined.res.qs")
     }
     pos.xyz.all = mofa.res$pos.xyz
     metadf = mofa.res$newmeta

@@ -323,9 +323,9 @@ GetSanityVec <- function(paired){
   read_vec <- vapply(allUPFiles, calculate_Reads, FUN.VALUE = integer(1L));
   # 4. Pairing the name if they are paired-ended (paired == 2)
   if(file.exists("meta_info.qs")){
-    meta_df <- qs::qread("meta_info.qs")
+    meta_df <- ov_qs_read("meta_info.qs")
   } else if(file.exists("meta_its.qs")){
-    meta_df <-qs::qread("meta_its.qs")
+    meta_df <-ov_qs_read("meta_its.qs")
   }else{
     meta_df <- data.frame()
   }
@@ -448,7 +448,7 @@ composeParamFun <- function(trimLeft, trimRight,
   
   # meta section
   if(file.exists("meta_info.qs")){
-    meta_df <- qs::qread("meta_info.qs")
+    meta_df <- ov_qs_read("meta_info.qs")
   } else {
     meta_df <- NA;
   }
@@ -926,7 +926,7 @@ libSizeQuickView <- function(dataObj = NULL, format = "png", dpi = default.dpi){
     otu_table <- otu_table[,-1]
     otu_table <- apply(otu_table, 2, as.numeric)
     rownames(otu_table) <- rownms
-    #data.proc <- qs::qread("data.proc");
+    #data.proc <- ov_qs_read("data.proc");
     data_bef <- data.matrix(otu_table);
     smpl.sums <- colSums(data_bef);
     names(smpl.sums) <- colnames(data_bef);
@@ -959,7 +959,7 @@ libSizeQuickView <- function(dataObj = NULL, format = "png", dpi = default.dpi){
 
 plotSeqDiagnotics <- function(imageName = "diagnotics", format = "png", dpi = 120){
     if(file.exists("diagnotics_plot_src.qs")){
-        p1 <- qs::qread("diagnotics_plot_src.qs")
+        p1 <- ov_qs_read("diagnotics_plot_src.qs")
         Cairo::Cairo(file = paste0(imageName, ".",format), unit = "in", dpi = 96, width = 22.2, height = 17.4, type = format, bg = "white")
         print(p1)
         dev.off()            
