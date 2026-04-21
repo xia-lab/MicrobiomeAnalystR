@@ -479,6 +479,11 @@ sweaveRScript4exec <- function(users.path){
 
   str <- paste0('library(dada2)');
 
+  # Re-assert default.dpi for the detached R process. The session-level
+  # assignment in _script_loader.R only applies to the master Rserve session;
+  # this R -e runs in a fresh subprocess that doesn't inherit it.
+  str <- paste0(str, ";\n", "default.dpi <- 150");
+
   # Working dir = standard home (where output and upload/ symlinks are)
   str <- paste0(str, ";\n", "setwd(\'", getwd(), "\')");
   # Source seq_proc.R directly
