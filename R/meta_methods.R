@@ -16,6 +16,11 @@
 #'
 PerformMetaEffectSize <- function(mbSetObj=NA, imgName="", taxrank="OTU", selMeta, BHth=0.05, de.method="LM", ef.method="REML", format="png", dpi=default.dpi){
 
+  # Reset err.vec so the Java caller's GetErrMsg() fetches only errors from
+  # THIS run. Without this, stale errors from prior analyses leak through and
+  # mislead the user. Matches the pattern used by CompareSummaryStats().
+  err.vec <<- "";
+
   if(exists('cov.meta.eff')){
     cov <- cov.meta.eff;
   }
@@ -348,7 +353,11 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
     }
     
     #data <- bf_ratio(data);
-    sam_df <- as.data.frame(data@sam_data, check.names = FALSE, stringsAsFactors = FALSE)
+    # phyloseq sample_data extends data.frame via S4; as.data.frame() does NOT
+    # strip the "sample_data" class, which trips vctrs/tidyselect inside
+    # dplyr::select (eval_select_impl() rejects the outer S3 class as a
+    # scalar list). Use the S4 coerce — it rebuilds a plain data.frame from @.Data.
+    sam_df <- as(phyloseq::sample_data(data), "data.frame")
     if(!("sample_id" %in% colnames(sam_df))){
       sam_df$sample_id <- rownames(sam_df)
       message("[MetaAlphaDBG] Study=", Study, " | sample_id column missing in sam_data; using rownames.")
