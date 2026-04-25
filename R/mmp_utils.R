@@ -610,6 +610,11 @@ performLimma <-function(data,sample_data,sample_type,analysisVar){
 
     fit <- eBayes(lmFit(feature_table, design));
     rest <- topTable(fit, number = Inf, coef = analysis.var);
+    # Strip the "ID" column newer limma topTable prepends when rownames(fit)
+    # is non-null. Without this, the rename below targets the wrong column
+    # and downstream abs(logfc.mat) crashes with "non-numeric-alike
+    # variable(s) in data frame: ID".
+    if (!is.null(rest$ID)) { rownames(rest) <- rest$ID; rest$ID <- NULL; }
     colnames(rest)[1] <- analysis.var;
     ### get results with no adjustment
     # design <- model.matrix(formula(paste0("~ 0", paste0(" + ", analysis.var, collapse = ""))), data = covariates);
