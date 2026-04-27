@@ -848,34 +848,39 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
   # it seems lda add ` around names containing dash "-", need to strip this off
   rawNms <- rownames(resTable);
   rownames(resTable) <- gsub("`", '', rawNms);
+
+  # Significance is the AND of two filters (p-value AND |LDAscore|), but the
+  # table was previously sorted by p-value alone. The Java front-end highlights
+  # the first sig.count rows as "significant", so when the LDA cutoff excludes
+  # a top-p feature the orange ended up on the wrong row. Compute the mask
+  # once and use it both to count AND to order — sig features come first, so
+  # positional highlighting in the UI matches the actual sig set.
   if(pvalOpt == "raw"){
-    de.Num <- sum(rawpvalues<=p.lvl & abs(ldamean$LDAscore)>=lda.lvl)
+    sig_mask <- rawpvalues <= p.lvl & abs(ldamean$LDAscore) >= lda.lvl
   }else{
-    de.Num <- sum(clapvalues<=p.lvl & abs(ldamean$LDAscore)>=lda.lvl)
+    sig_mask <- clapvalues <= p.lvl & abs(ldamean$LDAscore) >= lda.lvl
   }
-  
+  de.Num <- sum(sig_mask)
+
   if(de.Num == 0){
     current.msg <<- "No significant features were identified with given criteria.";
   }else{
     current.msg <<- paste("A total of", de.Num, "significant features with given criteria.")
   }
-  
-  # sort by p value
-  ord.inx <- order(resTable$Pvalues, rev(abs(resTable$LDAscore)));
+
+  # sort: sig features first (by p-value asc, |LDA| desc within),
+  # then non-sig (same secondary order)
+  ord.inx <- order(!sig_mask, resTable$Pvalues, -abs(resTable$LDAscore));
   resTable <- resTable[ord.inx, ,drop=FALSE];
   #p-values column to appear first; then FDR and then others
   resTable <- resTable[,c(ncol(resTable),1:(ncol(resTable)-1))];
   resTable <- resTable[,c(ncol(resTable),1:(ncol(resTable)-1))];
-  
+
   # need to control digits
   resTable <- signif(resTable, 5);
-  
-  #only getting the names of DE features
-  if(pvalOpt == "raw"){
-    diff_ft <<- rownames(resTable)[(abs(resTable$LDAscore) > lda.lvl & resTable$Pvalues < p.lvl)]
-  }else{
-    diff_ft <<- rownames(resTable)[(abs(resTable$LDAscore) > lda.lvl & resTable$FDR < p.lvl)]
-  }
+
+  # diff_ft is now exactly the first de.Num rows after the sig-first sort
+  diff_ft <<- if (de.Num > 0) rownames(resTable)[seq_len(de.Num)] else character(0)
 
   resTable$max <- resTable$min <- NULL;
   #if only two groups are present in sample variable
