@@ -929,8 +929,13 @@ PostProcessMaaslin <- function(mbSetObj,analysis.var,comp=NULL, thresh = 0.05,ta
     fileName <- "multifac_output.csv";
     fast.write(res, file = fileName);
     thresh <- as.numeric(thresh);
+    # Sort sig-first so positional highlighting in the UI matches the sig set.
+    sig_mask <- !is.na(res$FDR) & res$FDR < thresh
+    ord.inx <- order(!sig_mask, res$`P-value`)
+    res <- res[ord.inx, , drop=FALSE]
+    res.noadj <- res.noadj[match(rownames(res), rownames(res.noadj)), , drop=FALSE]
     # put results in mbSetObj, learn pattern of analysis set
-    sigfeat <- rownames(res)[res$FDR < thresh];
+    sigfeat <- rownames(res)[seq_len(sum(sig_mask))];
     sig.count <- length(sigfeat);
     if(sig.count == 0){
         current.msg <<- "No significant features were identified using the given p value cutoff.";

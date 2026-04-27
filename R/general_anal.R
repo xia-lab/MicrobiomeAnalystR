@@ -1275,7 +1275,10 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, f
   if(nrow(resTable) > 500) resTable <- resTable[1:500, ]
 
   mbSetObj$analSet$rnaseq$resTable <- mbSetObj$analSet$resTable <- as.data.frame(resTable, check.names=FALSE)
-  diff_ft <<- rownames(resTable)[sigHits]
+  # resTable is already sig-first sorted (order(-sigHits, Pvalues)), so the
+  # first de.Num rows are the sig set. Old code indexed rownames with the
+  # pre-sort sigHits, which mis-named features after the reorder.
+  diff_ft <<- rownames(resTable)[seq_len(min(de.Num, nrow(resTable)))]
   box_data <- as.data.frame(dat3t, check.names=FALSE)
   box_data$class <- claslbl
   mbSetObj$analSet$boxdata <- box_data
@@ -1756,11 +1759,16 @@ PerformLinDA <- function(mbSetObj, analysis.var, is.norm = "false",
     )
   }
 
-  # Write CSV
+  # Write CSV (full LinDA output, unsorted as produced)
   fast.write(res, file = "multifac_output.csv")
 
-  # Significance
-  sigfeat <- rownames(res)[res$FDR < thresh]
+  # Significance + sig-first sort so the front-end's positional highlight
+  # ("first sig.count rows") matches the actual significant set.
+  sig_mask <- !is.na(res$FDR) & res$FDR < thresh
+  ord.inx <- order(!sig_mask, res$`P-value`)
+  res <- res[ord.inx, , drop=FALSE]
+  res.noadj <- res.noadj[match(rownames(res), rownames(res.noadj)), , drop=FALSE]
+  sigfeat <- rownames(res)[seq_len(sum(sig_mask))]
   sig.count <- length(sigfeat)
   if(sig.count == 0) {
     current.msg <<- "No significant features were identified using the given p value cutoff."

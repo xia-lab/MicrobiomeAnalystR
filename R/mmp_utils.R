@@ -466,9 +466,13 @@ CompareMet <- function(mbSetObj, analysisVar,alg="limma",plvl=0.05,ref, compr, s
   metdat.de <- performLimma(metdat,sample_data,sample_type,analysisVar)
 
   fast.write(metdat.de, file="limma_output.csv");
+  # Sort sig-first so positional highlighting in the UI matches the sig set.
+  sig_mask <- !is.na(metdat.de$P_value) & metdat.de$P_value < plvl
+  ord.inx <- order(!sig_mask, metdat.de$P_value)
+  metdat.de <- metdat.de[ord.inx, , drop=FALSE]
   current.proc$met$res_deAnal <<- metdat.de
   mbSetObj$dataSet$metabolomics$resTable <- metdat.de
-  sigfeat <- rownames(metdat.de)[metdat.de$P_value < plvl];
+  sigfeat <- rownames(metdat.de)[seq_len(sum(sig_mask))];
   sig.count <- length(sigfeat);
   if(sig.count == 0){
     current.msg <<- "No significant metabolomic features were identified using the given p value cutoff.";
