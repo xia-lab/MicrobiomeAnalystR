@@ -466,8 +466,9 @@ CompareMet <- function(mbSetObj, analysisVar,alg="limma",plvl=0.05,ref, compr, s
   metdat.de <- performLimma(metdat,sample_data,sample_type,analysisVar)
 
   fast.write(metdat.de, file="limma_output.csv");
-  # Sort sig-first so positional highlighting in the UI matches the sig set.
-  sig_mask <- !is.na(metdat.de$P_value) & metdat.de$P_value < plvl
+  # The UI cutoff field is labelled "Adjusted p-value cutoff" — sig uses FDR,
+  # not raw P_value. Sort sig-first so positional highlighting matches.
+  sig_mask <- !is.na(metdat.de$FDR) & metdat.de$FDR < plvl
   ord.inx <- order(!sig_mask, metdat.de$P_value)
   metdat.de <- metdat.de[ord.inx, , drop=FALSE]
   current.proc$met$res_deAnal <<- metdat.de
@@ -801,22 +802,28 @@ ProcessMaaslinRes <- function(mbSetObj,taxalvl,analysis.var,thresh){
     colnames(res) <- c("Coefficient", "St.Error", "P_value", "FDR");
   }
   
-  res = res[order(res$P_value),] 
-  # write out/save results
+  # write out/save results (full table, before any sig-first reorder)
   fileName <-paste0(taxalvl,"_maaslin_output.csv");
   fast.write(res, file = fileName);
-  
+
   plvl<- current.proc$mic$plvl
- 
+
+  # The UI cutoff field is labelled "Adjusted p-value cutoff" — sig must use
+  # FDR, not raw P_value. Sort sig-first so the front-end's positional
+  # highlight ("first sig.count rows") matches the actual FDR-sig set.
+  sig_mask <- !is.na(res$FDR) & res$FDR < plvl
+  ord.inx <- order(!sig_mask, res$P_value)
+  res <- res[ord.inx, , drop=FALSE]
+
   if(micDataType=="ko"){
     current.proc$mic$res_deAnal <<- res
-    current.proc$mic$sigfeat <<-  rownames(current.proc$mic$res_deAnal)[current.proc$mic$res_deAnal$P_value< plvl]
-  }else{ 
+    current.proc$mic$sigfeat <<- rownames(res)[seq_len(sum(sig_mask))]
+  }else{
     phyloseq_objs <- ov_qs_read("phyloseq_objs.qs")
     phyloseq_objs$res_deAnal[[taxalvl]] <- res
-    phyloseq_objs$sigfeat[[taxalvl]] <- rownames(phyloseq_objs$res_deAnal[[taxalvl]])[phyloseq_objs$res_deAnal[[taxalvl]]$P_value< plvl]
+    phyloseq_objs$sigfeat[[taxalvl]] <- rownames(res)[seq_len(sum(sig_mask))]
     shadow_save(phyloseq_objs,"phyloseq_objs.qs")
-    
+
   }
    mbSetObj$analSet$maaslin$taxalvl <- "OTU"
   return(.set.mbSetObj(mbSetObj))
