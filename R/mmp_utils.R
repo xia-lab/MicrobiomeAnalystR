@@ -3741,6 +3741,53 @@ PlotDiagnosticPca <- function(imgNm, dpi=default.dpi, format="png",type="diablo"
   return(1)
 }
 
+# MOFA cumulative R² diagnostic — variance explained accumulated across
+# factors, one line per view. Called by IntegrationBean when visOpt="mofa"
+# during updateDiagnostics(). var.exp is stored in mofa.res$misc[[1]]$var.exp
+# as a factors × views matrix in [0,1] (or 0–100 already as %).
+PlotMofaCumR2 <- function(imgName, dpi = default.dpi, format = "png") {
+  tryCatch({
+    mofa.res <- ov_qs_read("mofa.res.qs")
+    var.exp <- mofa.res$misc[[1]]$var.exp
+    if (is.null(var.exp) || nrow(var.exp) == 0) {
+      message("[PlotMofaCumR2] var.exp not available — skipping")
+      return(invisible(NULL))
+    }
+    if (max(var.exp, na.rm = TRUE) <= 1) var.exp <- var.exp * 100  # to %
+
+    n_factor <- nrow(var.exp)
+    views <- colnames(var.exp)
+    if (is.null(views)) views <- paste0("View", seq_len(ncol(var.exp)))
+
+    cum <- apply(var.exp, 2, cumsum)
+    df <- data.frame(
+      Factor = rep(seq_len(n_factor), times = ncol(cum)),
+      View   = rep(views, each = n_factor),
+      CumR2  = as.vector(cum)
+    )
+
+    dpi <- as.numeric(dpi)
+    imgNm <- paste0(imgName, "_dpi", dpi, ".", format)
+    library(ggplot2); require("Cairo")
+    Cairo::Cairo(file = imgNm, unit = "in", dpi = dpi,
+                 width = 8, height = 5, type = format, bg = "white")
+    p <- ggplot(df, aes(x = Factor, y = CumR2, color = View, group = View)) +
+      geom_line(linewidth = 1.1) + geom_point(size = 2) +
+      scale_x_continuous(breaks = seq_len(n_factor)) +
+      labs(x = "MOFA factor", y = "Cumulative R² (%)",
+           title = "MOFA — cumulative variance explained per view") +
+      theme_bw(base_size = 12)
+    print(p)
+    dev.off()
+
+    mbSetObj <- .get.mbSetObj(NA)
+    if (is.null(mbSetObj$imgSet$mofa)) mbSetObj$imgSet$mofa <- list()
+    mbSetObj$imgSet$mofa$cumr2 <- imgNm
+    .set.mbSetObj(mbSetObj)
+  }, error = function(e) { message("[PlotMofaCumR2] error: ", e$message) })
+  return(invisible(NULL))
+}
+
 
 PlotDiagnosticLoading <- function(imgNm, dpi=default.dpi, format="png",type="diablo",taxrank="OTU"){
   mbSetObj <- .get.mbSetObj(mbSetObj);
