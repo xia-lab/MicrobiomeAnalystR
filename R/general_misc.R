@@ -771,6 +771,44 @@ assert_equal_type <- function(
 }
 
 # =============================================================================
+# qs read/save/exists wrappers (master session)
+# =============================================================================
+# Master-session counterparts of the helpers injected into Rserve subprocesses
+# below. Many master-session callers invoke these directly, so they must exist
+# as top-level definitions — not only inside the RS.eval block (which only
+# reaches the subprocess R session).
+
+ov_qs_read <- function(file, ...) {
+  if (file.exists(file)) {
+    r <- try(qs2::qs_read(file, ...), silent = TRUE)
+    if (!inherits(r, "try-error")) return(r)
+    return(qs::qread(file, ...))
+  }
+  if (endsWith(tolower(file), ".qs")) {
+    v2 <- paste0(substr(file, 1, nchar(file) - 3L), ".qs2")
+    if (file.exists(v2)) { r <- try(qs2::qs_read(v2, ...), silent = TRUE); if (!inherits(r, "try-error")) return(r); return(qs::qread(v2, ...)) }
+  } else if (endsWith(tolower(file), ".qs2")) {
+    v1 <- paste0(substr(file, 1, nchar(file) - 4L), ".qs")
+    if (file.exists(v1)) { r <- try(qs2::qs_read(v1, ...), silent = TRUE); if (!inherits(r, "try-error")) return(r); return(qs::qread(v1, ...)) }
+  }
+  stop("ov_qs_read: neither .qs2 nor .qs found for: ", file, call. = FALSE)
+}
+
+ov_qs_save <- function(obj, file, ...) {
+  .args <- list(...)
+  for (.k in c("preset", "nthreads", "check_hash")) .args[[.k]] <- NULL
+  do.call(qs2::qs_save, c(list(object = obj, file = file), .args))
+  invisible(file)
+}
+
+ov_qs_exists <- function(file) {
+  if (file.exists(file)) return(TRUE)
+  if (endsWith(tolower(file), ".qs"))  return(file.exists(paste0(substr(file, 1, nchar(file) - 3L), ".qs2")))
+  if (endsWith(tolower(file), ".qs2")) return(file.exists(paste0(substr(file, 1, nchar(file) - 4L), ".qs")))
+  FALSE
+}
+
+# =============================================================================
 # RSclient subprocess execution (Rserve fork) — available on all deployments
 # =============================================================================
 run_func_via_rsclient <- function(func, args = list(), timeout_sec = 60) {
