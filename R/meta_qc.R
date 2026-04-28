@@ -36,7 +36,7 @@ PlotMetaPCA <- function(imgNm, dpi, format, factor="NA"){
       scale_color_npg() +
       xlab(xl) + ylab(yl) + ggtitle(title) +
       theme_bw() +
-      theme(plot.title=element_text(size=11, face="bold"))
+      theme(plot.title=element_text(size=11, face="bold", hjust=0.5))
   }
 
   # Two columns: Before (individual) | After (individual from merged)
@@ -129,7 +129,7 @@ PlotMetaDensity <- function(imgNm, dpi=default.dpi, format="png", factor=""){
       geom_line(aes(color=class), stat="density", alpha=0.6, linewidth=1) +
       ggtitle(title) +
       theme_bw() +
-      theme(plot.title=element_text(size=11, face="bold"))
+      theme(plot.title=element_text(size=11, face="bold", hjust=0.5))
   }
 
   if(file.exists("microbiome_meta_prenorm.qs")){
