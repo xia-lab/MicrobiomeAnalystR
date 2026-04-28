@@ -1039,12 +1039,17 @@ CreatPathwayLib <- function(contain){
     current.lib[[p]] =unique(unlist(pth))
   }
   
-  includeInfo = list(nodes=unique(unlist(current.lib)))
+  # Coerce NULL -> character(0) so rjson emits "[]" instead of "null". The
+  # network JS reads this as ind.nodes and calls .indexOf() on it; null
+  # crashes the page with "Cannot read properties of null".
+  nodes_val <- unique(unlist(current.lib))
+  if (is.null(nodes_val)) nodes_val <- character(0)
+  includeInfo = list(nodes = nodes_val)
   edges.bc = ov_qs_read(paste0(lib.path.mmp,"edge.bac.qs"))
   edges  = data.frame(edge=edges.bc$id_rxn,cpd = edges.bc$met)
   edges = edges[which(edges$cpd %in% includeInfo$nodes),]
   edges = edges.bc[which(edges.bc$id_rxn %in% edges$edge),]
-  
+
   includeInfo$edges = edges
   
   shadow_save(current.lib,paste0(taxalvl,".current.lib.qs"))
@@ -1892,6 +1897,23 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
     set.num <- unlist(lapply(current.set, length), use.names = FALSE);
   }
 
+  # Pre-flight: drop pathways with no overlap to data. globaltest::gt errors
+  # deep in its internals ("subscript out of bounds" on subsets[[i]]) when
+  # given empty subsets, and that exception kills the whole subprocess
+  # before any diagnostic can be surfaced to the front-end.
+  non.empty <- lengths(hits) > 0
+  hits      <- hits[non.empty]
+  set.num   <- set.num[non.empty]
+  if (length(hits) == 0) {
+    AddErrMsg("No pathways have any features overlapping with the data; check ID mapping or library selection.")
+    return(list(my.res=NA, subsets=hits, filenm=file.nm, category=category, curr.mset=current.set))
+  }
+
+  if (nlevels(droplevels(phenotype)) < 2 || min(table(phenotype)) < 2) {
+    AddErrMsg("Global enrichment requires at least two phenotype groups with two or more samples each.")
+    return(list(my.res=NA, subsets=hits, filenm=file.nm, category=category, curr.mset=current.set))
+  }
+
   bridge_in <- paste0(tempdir(), "/bridge_", paste0(sample(letters,6,replace=TRUE), collapse=""), "_in.qs")
   bridge_out <- sub("_in.qs", "_out.qs", bridge_in)
   ov_qs_save(list(cls=phenotype, data=datmat, subsets=hits, set.num=set.num, hits=hits),
@@ -1902,7 +1924,14 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
     func = function(wd, bridge_in, bridge_out) {
       setwd(wd)
       input <- ov_qs_read(bridge_in)
-      gt.obj <- globaltest::gt(input$cls, input$data, subsets=input$subsets)
+      gt.obj <- tryCatch(
+        globaltest::gt(input$cls, input$data, subsets=input$subsets),
+        error = function(e) {
+          # Surface the original message rather than letting "subscript out
+          # of bounds" propagate up as the only signal.
+          stop("globaltest::gt failed: ", conditionMessage(e), call. = FALSE)
+        }
+      )
       gt.res <- globaltest::result(gt.obj)
       match.num <- gt.res[,5]
       if(sum(match.num>0)==0) {
