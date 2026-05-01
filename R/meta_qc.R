@@ -21,6 +21,12 @@ PlotMetaPCA <- function(imgNm, dpi, format, factor="NA"){
   Datasets <- factor(microbiome.meta$data.lbl);
   dataset_names <- levels(Datasets);
 
+  # Wrap the bottom legend across multiple rows when there are many groups
+  # (~6 entries fit per row at the default text size and 10-inch canvas
+  # width). Avoids the legend overrunning the plot edge with >6 conditions.
+  n_groups <- length(levels(Conditions))
+  legend_rows <- max(1L, ceiling(n_groups / 6L))
+
   .make_pca <- function(dat, conditions, title){
     dat <- na.omit(dat)
     vars <- apply(dat, 1, var, na.rm=TRUE)
@@ -35,6 +41,7 @@ PlotMetaPCA <- function(imgNm, dpi, format, factor="NA"){
       geom_point(size=3, alpha=0.7) +
       scale_color_npg() +
       xlab(xl) + ylab(yl) + ggtitle(title) +
+      guides(color = guide_legend(nrow = legend_rows, byrow = TRUE)) +
       theme_bw() +
       theme(plot.title=element_text(size=11, face="bold", hjust=0.5))
   }
@@ -74,7 +81,9 @@ PlotMetaPCA <- function(imgNm, dpi, format, factor="NA"){
   fig.list[[idx]] <- .make_pca(x, Conditions, "Combined (After)")
 
   nrows <- length(valid_datasets) + 1
-  h <- 4 * nrows
+  # Add 0.4 in per legend row so the bottom legend never gets clipped
+  # at the canvas edge when there are many conditions.
+  h <- 4 * nrows + 0.4 * legend_rows
 
   # ggpubr quarantined — ggarrange in subprocess
   rsclient_isolated_exec(
