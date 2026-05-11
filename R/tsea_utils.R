@@ -429,6 +429,34 @@ SetTaxonSetLib <- function(mbSetObj, tset.type){
 
   mbSetObj$dataSet$tset.type <- tset.type
   
+  if(tset.type == "bugsigdb_humangut"){
+    if(.on.public.web){
+      rdsPath <- paste0(rpath, "libs/tsea/BugSigDB_humangut_v1.rds");
+    }else{
+      rdsPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/tsea/BugSigDB_humangut_v1.rds";
+    }
+    bsdb <- readRDS(rdsPath);
+    set.key <- paste0(bsdb$Condition, " (", bsdb$abund_change, ")");
+    pmid.map <- tapply(bsdb$PMID, set.key, function(p) {
+      ids <- unique(p[!is.na(p)]);
+      if(length(ids) == 0) return("");
+      paste0("<a href='https://pubmed.ncbi.nlm.nih.gov/", ids[1], "' target='_blank'>PubMed</a>")
+    });
+    members.map <- tapply(bsdb$member, set.key, function(m) paste(unique(m[!is.na(m)]), collapse="; "));
+    set.names <- names(members.map);
+    current.msetlib <<- data.frame(
+      name      = set.names,
+      member    = as.character(members.map),
+      reference = as.character(pmid.map[set.names]),
+      stringsAsFactors = FALSE
+    );
+    ms.list <- strsplit(current.msetlib$member, "; ");
+    names(ms.list) <- current.msetlib$name;
+    current.mset <<- ms.list;
+    uniq.count <<- length(unique(unlist(current.mset, use.names = FALSE)));
+    return(.set.mbSetObj(mbSetObj))
+  }
+
   if(.on.public.web){
     if(tset.type=="host_int"){
       libPath <- paste0(rpath, "libs/tsea/tsea_host_int.csv");
