@@ -349,7 +349,7 @@ PrepareCorrExpValues <- function(mbSetObj, meta, taxalvl, color, layoutOpt, comp
     PrepareBoxPlot(mbSetObj, taxalvl, mbSetObj$dataSet$meta);
     return(1)
   }else{
-    mbSetObj <- PrepareBoxPlot(mbSetObj, taxalvl, mbSetObj$dataSet$meta);
+    if(.on.public.web){ PrepareBoxPlot(NA, taxalvl, mbSetObj$dataSet$meta); mbSetObj <- mbSet } else { mbSetObj <- PrepareBoxPlot(mbSetObj, taxalvl, mbSetObj$dataSet$meta) };
     return(.set.mbSetObj(mbSetObj));
   }
 }

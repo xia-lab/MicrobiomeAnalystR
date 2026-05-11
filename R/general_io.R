@@ -759,11 +759,10 @@ saveDataQs <-function(data, name, module.nm, dataName){
   }
 }
 
-readDataQs <-function(name, module.nm, dataName){
-  if(module.nm == "meta"){
-    dat <- ov_qs_read(file=paste0(dataName, "_data/", name));
-  }else{
-    dat <- ov_qs_read(file=name);
-  }
-  return(dat);
+readDataQs <- function(name, module.nm, dataName) {
+  # Return NULL on missing file — chained passes start in a fresh home
+  # without MDP-shape qs files. Callers already guard on is.null().
+  fpath <- if (module.nm == "meta") paste0(dataName, "_data/", name) else name
+  if (!ov_qs_exists(fpath)) return(NULL)
+  ov_qs_read(file = fpath)
 }

@@ -30,7 +30,7 @@ Read16SAbundData <- function(mbSetObj, dataName, format, taxa_type, ismetafile, 
       }
     }else{
       # offline
-      mbSetObj <- Read16STabData(mbSetObj, dataName)
+      if(.on.public.web){ Read16STabData(NA, dataName); mbSetObj <- mbSet } else { mbSetObj <- Read16STabData(mbSetObj, dataName) }
       if(!mbSetObj$dataSet$read){
         return(0);
       }

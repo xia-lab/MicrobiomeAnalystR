@@ -653,6 +653,14 @@ GetShortNames<-function(nm.vec, max.len= 45){
   new.nms <- vector(mode="character", length=length(nm.vec));
   for(i in 1:length(nm.vec)){
     nm <- nm.vec[i];
+    # NA-safe: nchar(NA) is NA_integer_ which makes `if (NA <= max.len)`
+    # throw "missing value where TRUE/FALSE needed" — happens when the
+    # taxon-set library has NA-rownamed entries that propagate into
+    # mbSet$analSet$ora.mat. Substitute a placeholder and continue.
+    if(is.na(nm) || is.null(nm)){
+      new.nms[i] <- "(unnamed)";
+      next;
+    }
     if(nchar(nm) <= max.len){
       new.nms[i] <- nm;
     }else{
