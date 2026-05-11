@@ -1826,6 +1826,159 @@ PerformLinDA <- function(mbSetObj, analysis.var, is.norm = "false",
   return(1)
 }
 
+#'Single-factor LinDA differential abundance test
+#'@description Wraps .linda_core for use on the Single-factor (UnivariateTests)
+#'page. Two-group factors return per-coefficient log2FC + p-value; multi-group
+#'factors return an omnibus F-test p-value (no log2FC) so points render as
+#'circles, matching the t-test/ANOVA convention.
+#'@export
+PerformLinDAUni <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, taxrank, fc.thresh=0) {
+  mbSetObj <- .get.mbSetObj(mbSetObj)
+  p.lvl <- as.numeric(p.lvl)
+  fc.thresh <- as.numeric(fc.thresh)
+
+  if(mbSetObj$module.type == "sdp") {
+    taxrank <- "OTU"
+    data <- mbSetObj$dataSet$norm.phyobj
+    data1 <- as.matrix(otu_table(data))
+  } else {
+    if(!exists("phyloseq_objs")) {
+      phyloseq_objs <- ov_qs_read("phyloseq_objs.qs")
+    }
+    if(taxrank == "OTU") {
+      data1 <- as.matrix(phyloseq_objs$count_tables$OTU)
+    } else {
+      taxrank.inx <- which(names(phyloseq_objs$count_tables) %in% taxrank)
+      data1 <- as.matrix(phyloseq_objs$count_tables[[taxrank.inx]])
+    }
+  }
+
+  meta_df <- as.data.frame(sample_data(mbSetObj$dataSet$norm.phyobj))
+  cls <- factor(meta_df[colnames(data1), variable])
+  lvl <- nlevels(cls)
+  if(lvl < 2) {
+    AddErrMsg("LinDA requires at least 2 groups in the experimental factor.")
+    return(0)
+  }
+
+  meta_lin <- data.frame(grp = cls)
+  colnames(meta_lin) <- variable
+  rownames(meta_lin) <- colnames(data1)
+
+  linda.res <- .linda_core(data1, meta_lin, formula = paste0("~", variable),
+                           prev.cut = 0, lib.cut = 1, winsor.quan = 0.97)
+  vars_out <- linda.res$variables
+  feats <- rownames(linda.res$output[[vars_out[1]]])
+  baseMean <- linda.res$output[[vars_out[1]]]$baseMean
+
+  if(lvl == 2) {
+    out_i <- linda.res$output[[vars_out[1]]]
+    resTable <- data.frame(
+      log2FC     = signif(out_i$log2FoldChange, 5),
+      Statistics = signif(out_i$stat, 5),
+      Pvalues    = signif(out_i$pvalue, 5),
+      FDR        = signif(out_i$padj, 5),
+      logCPM     = signif(log2(baseMean + 1), 5),
+      row.names  = feats,
+      check.names = FALSE
+    )
+    sigHits <- !is.na(resTable$FDR) & resTable$FDR < p.lvl & abs(resTable$log2FC) > fc.thresh
+  } else {
+    # Multi-group omnibus: refit lm on the same CLR-transformed W per feature
+    Y <- data1[feats, intersect(colnames(data1), rownames(meta_lin)), drop = FALSE]
+    if(any(Y == 0)) Y <- Y + 0.5
+    logY <- log2(Y)
+    W <- t(logY) - colMeans(logY)
+    grp <- meta_lin[colnames(Y), variable]
+    fmat <- do.call(rbind, lapply(seq_len(ncol(W)), function(i) {
+      fit <- lm(W[, i] ~ grp)
+      fs <- summary(fit)$fstatistic
+      if(is.null(fs)) c(NA_real_, NA_real_) else c(unname(fs[1]),
+        pf(fs[1], fs[2], fs[3], lower.tail = FALSE))
+    }))
+    f.stats <- fmat[, 1]; f.pvals <- fmat[, 2]
+    fdr <- p.adjust(f.pvals, method = "BH")
+    resTable <- data.frame(
+      Statistics = signif(f.stats, 5),
+      Pvalues    = signif(f.pvals, 5),
+      FDR        = signif(fdr, 5),
+      logCPM     = signif(log2(baseMean + 1), 5),
+      row.names  = feats,
+      check.names = FALSE
+    )
+    sigHits <- !is.na(resTable$FDR) & resTable$FDR < p.lvl
+  }
+
+  resTable <- resTable[complete.cases(resTable), , drop = FALSE]
+  sigHits  <- sigHits[match(rownames(resTable), feats)]
+  ord.inx  <- order(!sigHits, resTable$Pvalues)
+  resTable <- resTable[ord.inx, , drop = FALSE]
+  de.Num   <- sum(sigHits, na.rm = TRUE)
+
+  if(de.Num == 0) {
+    current.msg <<- "No significant features were identified using the given p value cutoff."
+  } else {
+    current.msg <<- paste("A total of", de.Num, "significant features were identified!")
+  }
+
+  fast.write(resTable, file = "univar_test_output.csv")
+  if(nrow(resTable) > 500) resTable <- resTable[1:500, , drop = FALSE]
+
+  # Boxplot data — mirrors PerformUnivarTest preparation
+  taxrank_boxplot <- if(mbSetObj$module.type == "sdp") "OTU" else taxrank
+  filt.dataphy <- mbSetObj$dataSet$filt.data
+  filt.dataphy <- apply(filt.dataphy, 2, as.integer)
+  filt.dataphy <- otu_table(filt.dataphy, taxa_are_rows = TRUE)
+  sample_table_boxplot <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL = TRUE)
+  filt.dataphy <- merge_phyloseq(filt.dataphy, sample_table_boxplot)
+  taxa_names(filt.dataphy) <- rownames(mbSetObj$dataSet$filt.data)
+  data_boxplot <- filt.dataphy
+  if(mbSetObj$module.type == "mdp") {
+    mbSetObj$dataSet$taxa_table <- tax_table(mbSetObj$dataSet$proc.phyobj)
+    data_boxplot <- merge_phyloseq(data_boxplot, mbSetObj$dataSet$taxa_table)
+  }
+  if(taxrank_boxplot != "OTU") {
+    data_boxplot <- fast_tax_glom_mem(data_boxplot, taxrank_boxplot)
+    if(is.null(data_boxplot)) {
+      AddErrMsg("Errors in projecting to the selected taxanomy level!")
+      return(0)
+    }
+    nm_boxplot <- as.character(tax_table(data_boxplot)[, taxrank_boxplot])
+    nm_boxplot[is.na(nm_boxplot)] <- "Not_Assigned"
+    d1b <- as.matrix(otu_table(data_boxplot))
+    rownames(d1b) <- nm_boxplot
+    d1b <- rowsum(d1b, rownames(d1b))
+    data_boxplot <- merge_phyloseq(otu_table(d1b, taxa_are_rows = TRUE), sample_data(data_boxplot))
+  }
+  dat3t_boxplot <- as.data.frame(t(otu_table(data_boxplot)), check.names = FALSE)
+  colnames(dat3t_boxplot) <- taxa_names(data_boxplot)
+  box_data <- data.frame(dat3t_boxplot, check.names = FALSE)
+  box_data$class <- factor(meta_df[rownames(box_data), variable])
+  mbSetObj$analSet$boxdata <- box_data
+  fast.write(t(box_data), "uni_abund_data.csv")
+
+  diff_ft <<- rownames(resTable)[seq_len(de.Num)]
+
+  mbSetObj$analSet$anal.type <- "linda"
+  mbSetObj$analSet$var.type <- variable
+  mbSetObj$analSet$sig.count <- de.Num
+  mbSetObj$analSet$id.type <- shotgunid
+  mbSetObj$analSet$linda$resTable <- mbSetObj$analSet$resTable <- resTable
+  mbSetObj$analSet$linda.taxalvl <- taxrank
+
+  mbSetObj$paramSet$linda <- list(
+    exp.factor = variable,
+    anal.type  = "LinDA",
+    method     = "linda",
+    taxalvl    = taxrank,
+    p.lvl      = p.lvl,
+    fc.thresh  = fc.thresh,
+    multigroup = (lvl > 2)
+  )
+
+  return(.set.mbSetObj(mbSetObj))
+}
+
 ########################################################
 ###########)Permanova_Pairwise##########################
 ########################################################
@@ -2847,6 +3000,13 @@ GenerateCompJson <- function(mbSetObj = NA, fileName, format,type, mode = 1, tax
     mbSetObj$imgSet$rnaseq.manhattan <- gsub("json",format,fileName);
     mbSetObj$imgSet$rnaseq.manhattan.plotly <- gsub("json","rda",fileName);
     mbSetObj$imgSet$rnaseq.manhattan.json <- fileName;
+  } else if (type == "linda") {
+    resTable <- mbSetObj$analSet$linda$resTable
+    resTable$id <- rownames(resTable)
+    resList <- list(data = resTable, param = mbSetObj$paramSet$linda)
+    mbSetObj$imgSet$linda.manhattan <- gsub("json",format,fileName);
+    mbSetObj$imgSet$linda.manhattan.plotly <- gsub("json","rda",fileName);
+    mbSetObj$imgSet$linda.manhattan.json <- fileName;
   }
   
   if(mbSetObj[["module.type"]]=="mdp"){
@@ -2879,7 +3039,7 @@ GenerateCompJson <- function(mbSetObj = NA, fileName, format,type, mode = 1, tax
                         arrange(parent, len) %>%
                         mutate(BPcum = len + tot))
     #print(type)
-    if (type %in% c("EdgeR", "DESeq2","ffm")) {
+    if (type %in% c("EdgeR", "DESeq2", "ffm") || (type == "linda" && "log2FC" %in% names(don))) {
       don$shape <- ifelse(don$log2FC > 0, "triangle-up", "triangle-down")
       don$shape[don$FDR > sigLevel | abs(don$log2FC) < fcLevel] <- "circle"
       resList$param$multigroup <- FALSE

@@ -1777,7 +1777,7 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
   if(enrich.type == "hyper"){
     tryCatch({
       if(dataType=="metabolite"){
-        mbSetObj <- PerformMetListEnrichment(mbSetObj, contain, file.nm);
+        if(.on.public.web){ PerformMetListEnrichment(NA, contain, file.nm); mbSetObj <- mbSet } else { mbSetObj <- PerformMetListEnrichment(mbSetObj, contain, file.nm) };
       }else{
         LoadKEGGKO_lib(category);
         PerformKOEnrichAnalysis_List(mbSetObj, file.nm);
@@ -1980,7 +1980,7 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
     enr.key <- if(!is.null(mbSetObj$paramSet$koProj.type)) mbSetObj$paramSet$koProj.type else "global";
   }
   lib.name <- if(!is.null(gt.result$category)) paste0("KEGG ", tools::toTitleCase(gt.result$category)) else "KEGG";
-  mbSetObj <- recordEnrTable(mbSetObj, enr.key, my.res, lib.name, "Global Test", curr.mset, hits);
+  if(.on.public.web){ recordEnrTable(NA, enr.key, my.res, lib.name, "Global Test", curr.mset, hits); mbSetObj <- mbSet } else { mbSetObj <- recordEnrTable(mbSetObj, enr.key, my.res, lib.name, "Global Test", curr.mset, hits) };
   mbSetObj <- Save2KEGGJSON(mbSetObj, hits, my.res, file.nm);
   return(.set.mbSetObj(mbSetObj));
 }
@@ -2037,7 +2037,7 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
 
   mbSetObj <- .get.mbSetObj(NA);
   enr.key <- if(!is.null(mbSetObj$paramSet$koProj.type)) mbSetObj$paramSet$koProj.type else "mmp_met";
-  mbSetObj <- recordEnrTable(mbSetObj, enr.key, resTable, "KEGG", "Global Test");
+  if(.on.public.web){ recordEnrTable(NA, enr.key, resTable, "KEGG", "Global Test"); mbSetObj <- mbSet } else { mbSetObj <- recordEnrTable(mbSetObj, enr.key, resTable, "KEGG", "Global Test") };
 
   fast.write(resTable, file=paste(file.nm, ".csv", sep=""), row.names=F);
   return(mbSetObj)
@@ -3023,7 +3023,7 @@ PerformMetListEnrichment <- function(mbSetObj, contain,file.nm){
   })
   
   enr.key <- if(!is.null(mbSetObj$paramSet$koProj.type)) mbSetObj$paramSet$koProj.type else "mmp_met";
-  mbSetObj <- recordEnrTable(mbSetObj, enr.key, resTable, "KEGG", "Overrepresentation Analysis", current.set, hits.query);
+  if(.on.public.web){ recordEnrTable(NA, enr.key, resTable, "KEGG", "Overrepresentation Analysis", current.set, hits.query); mbSetObj <- mbSet } else { mbSetObj <- recordEnrTable(mbSetObj, enr.key, resTable, "KEGG", "Overrepresentation Analysis", current.set, hits.query) };
  
   json.res <- list(hits.query =convert2JsonList(hits.query),
                    path.nms = path.nms,

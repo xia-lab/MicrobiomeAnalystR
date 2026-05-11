@@ -850,7 +850,7 @@ ComputeMummichogRTPermPvals <- function(input_ecpdlist, total_matched_ecpds, pat
 
   mbSetObj <- .get.mbSetObj(mbSet);
   enr.key <- if(!is.null(mbSetObj$paramSet$koProj.type)) mbSetObj$paramSet$koProj.type else "mmp_met";
-  mbSetObj <- recordEnrTable(mbSetObj, enr.key, res.mat, "KEGG", "Mummichog");
+  if(.on.public.web){ recordEnrTable(NA, enr.key, res.mat, "KEGG", "Mummichog"); mbSetObj <- mbSet } else { mbSetObj <- recordEnrTable(mbSetObj, enr.key, res.mat, "KEGG", "Mummichog") };
   mbSetObj <- .set.mbSetObj(mbSetObj);
 
   return(current.proc);
@@ -999,7 +999,7 @@ ComputeMummichogRTPermPvals <- function(input_ecpdlist, total_matched_ecpds, pat
 
   mbSetObj <- .get.mbSetObj(mbSet);
   enr.key <- if(!is.null(mbSetObj$paramSet$koProj.type)) mbSetObj$paramSet$koProj.type else "mmp_met";
-  mbSetObj <- recordEnrTable(mbSetObj, enr.key, res.mat, "KEGG", "Mummichog");
+  if(.on.public.web){ recordEnrTable(NA, enr.key, res.mat, "KEGG", "Mummichog"); mbSetObj <- mbSet } else { mbSetObj <- recordEnrTable(mbSetObj, enr.key, res.mat, "KEGG", "Mummichog") };
   mbSetObj <- .set.mbSetObj(mbSetObj);
 
   return(current.proc);

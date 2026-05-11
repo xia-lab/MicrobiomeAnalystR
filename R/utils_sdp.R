@@ -620,16 +620,37 @@ filtKOmap <- function(include, fileName){
 #'@export
 PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",file.nm){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  # Ensure enrichment key is set for microbiome
-  mbSetObj$paramSet$koProj.type <- "mmp_mic";
+  # Pick the enrichment key matching the module so downstream readers find
+  # the table. MMP (cross-omics) stores under "mmp_mic"; SDP (KO-only)
+  # stores under "global" — that's the key both CheckResTableExists("koEnr")
+  # and GetKOEnrichmentResTable("koEnr") look up. The original code
+  # unconditionally set "mmp_mic" for SDP too, which left the SDP result
+  # page's Enrichment panel always empty.
+  mbSetObj$paramSet$koProj.type <-
+    if (!is.null(mbSetObj$module.type) && mbSetObj$module.type == "mmp") "mmp_mic"
+    else "global";
   .set.mbSetObj(mbSetObj);
   if(enrich.type == "hyper"){
-  LoadKEGGKO_lib(category,contain);
-    mbSetObj<-PerformKOEnrichAnalysis_List(mbSetObj, file.nm);
+    LoadKEGGKO_lib(category,contain);
+    if(.on.public.web){
+      # bare call: PerformKOEnrichAnalysis_List ends with .set.mbSetObj
+      # which writes new state to global mbSet via <<- and returns 1L
+      # on public web. Assigning 1L back to mbSetObj would corrupt the
+      # local then propagate via the trailing .set.mbSetObj.
+      PerformKOEnrichAnalysis_List(NA, file.nm);
+    } else {
+      mbSetObj <- PerformKOEnrichAnalysis_List(mbSetObj, file.nm);
+    }
   }else{
-    mbSetObj <- .run.global.enrich(mbSetObj, category, contain, file.nm);
+    if(.on.public.web){
+      .run.global.enrich(NA, category, contain, file.nm);
+    } else {
+      mbSetObj <- .run.global.enrich(mbSetObj, category, contain, file.nm);
+    }
   }
-  .set.mbSetObj(mbSetObj)
+  if(!.on.public.web){
+    .set.mbSetObj(mbSetObj)
+  }
   return(1);
 }
 
@@ -687,13 +708,18 @@ PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",fi
   nms <- rownames(my.res);
   hits <- hits[nms];
 
-  if(exists("moduleType") && moduleType == "mmp"){
-    enr.key <- "mmp_mic";
-  } else {
-    enr.key <- if(!is.null(mbSetObj$paramSet$koProj.type)) mbSetObj$paramSet$koProj.type else "global";
-  }
+  # Storage key derived from module.type, NOT from paramSet$koProj.type.
+  # PerformKOEnrichAnalysis_KO01100 unconditionally sets koProj.type =
+  # "mmp_mic" up-front, so the old fallback always picked "mmp_mic" for
+  # SDP runs too. SDP's downstream readers — CheckResTableExists("koEnr")
+  # and GetKOEnrichmentResTable("koEnr") — look up enrTables[["global"]],
+  # so the table needs to land there. MMP cross-omics still gets
+  # "mmp_mic" (its readers expect that key).
+  enr.key <- if (!is.null(mbSetObj$module.type) && mbSetObj$module.type == "mmp") "mmp_mic"
+             else if (exists("moduleType") && moduleType == "mmp") "mmp_mic"
+             else "global";
   lib.name <- paste0("KEGG ", tools::toTitleCase(category));
-  mbSetObj <- recordEnrTable(mbSetObj, enr.key, my.res, lib.name, "Global Test", current.mset, hits);
+  if(.on.public.web){ recordEnrTable(NA, enr.key, my.res, lib.name, "Global Test", current.mset, hits); mbSetObj <- mbSet } else { mbSetObj <- recordEnrTable(mbSetObj, enr.key, my.res, lib.name, "Global Test", current.mset, hits) };
   mbSetObj <- Save2KEGGJSON(mbSetObj, hits, my.res, file.nm);
   return(.set.mbSetObj(mbSetObj));
 }
@@ -918,15 +944,18 @@ PerformKOEnrichAnalysis_List <- function(mbSetObj, file.nm){
     
     if(sum(imp.inx) < 10){ # too little left, give the top ones
       topn <- ifelse(nrow(res.mat) > 10, 10, nrow(res.mat));
-      res.mat <- res.mat[1:topn,];
+      # drop=FALSE — preserve matrix shape when topn==1; otherwise the
+      # row collapses to a numeric vector, rownames() returns NULL,
+      # and Java's getKOEnrRowNames(.asStrings()) throws REXPMismatch.
+      res.mat <- res.mat[1:topn,,drop=FALSE];
       hits.query <- hits.query[1:topn];
     }else{
-      res.mat <- res.mat[imp.inx,];
+      res.mat <- res.mat[imp.inx,,drop=FALSE];
       hits.query <- hits.query[imp.inx];
-      
+
       if(sum(imp.inx) > 120){
         # now, clean up result, synchronize with hit.query
-        res.mat <- res.mat[1:120,];
+        res.mat <- res.mat[1:120,,drop=FALSE];
         hits.query <- hits.query[1:120];
       }
     }
@@ -935,7 +964,7 @@ PerformKOEnrichAnalysis_List <- function(mbSetObj, file.nm){
  #report related object
     if(!is.null(mbSetObj$paramSet$koProj.type)){
         vis.type <- mbSetObj$paramSet$koProj.type;
-        mbSetObj <- recordEnrTable(mbSetObj, vis.type, res.mat, "KEGG", "Overrepresentation Analysis", current.mset, hits.query, NA);
+        if(.on.public.web){ recordEnrTable(NA, vis.type, res.mat, "KEGG", "Overrepresentation Analysis", current.mset, hits.query, NA); mbSetObj <- mbSet } else { mbSetObj <- recordEnrTable(mbSetObj, vis.type, res.mat, "KEGG", "Overrepresentation Analysis", current.mset, hits.query, NA) };
     }
  
   mbSetObj <- Save2KEGGJSON(mbSetObj, hits.query, res.mat, file.nm);
@@ -953,21 +982,33 @@ GetKOEnrichmentResTable <- function(mbSetObj=NA, type){
   return(res.mat)
 }
 
+# Defensive helpers — Java side calls .asStrings() on the result and
+# crashes with REXPMismatchException when the R function returns NULL
+# (which rownames()/colnames() do on objects without dimnames). Returning
+# character(0) instead lets the result table populate as an empty
+# enrichment block rather than aborting the entire result-page render.
 GetKOEnrRowNames <- function(mbSetObj, type){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   res.mat <- GetKOEnrichmentResTable(mbSetObj, type);
-  return(rownames(res.mat));
+  if (is.null(res.mat)) return(character(0));
+  rn <- rownames(res.mat);
+  if (is.null(rn)) return(character(0));
+  return(rn);
 }
 
 GetKOEnrColNames <- function(mbSetObj, type){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   res.mat <- GetKOEnrichmentResTable(mbSetObj, type);
-  return(colnames(res.mat));
+  if (is.null(res.mat)) return(character(0));
+  cn <- colnames(res.mat);
+  if (is.null(cn)) return(character(0));
+  return(cn);
 }
 
 GetKOEnrMat <- function(mbSetObj, type){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   res.mat <- GetKOEnrichmentResTable(mbSetObj, type);
+  if (is.null(res.mat)) return(matrix(numeric(0), nrow=0, ncol=0));
   return(as.matrix(signif(res.mat),5));
 }
 

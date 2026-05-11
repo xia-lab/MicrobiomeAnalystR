@@ -1181,6 +1181,12 @@ SetParam<- function(mbSetObj=NA, paramName, value){
 
 #either mmp or sdp;
 recordEnrTable <- function(mbSetObj, vis.type, dataTable, library, algo, mset=NA,hits.query=NA,setids=NA){
+        # Resolve the public-web "NA" sentinel to the global mbSet — every
+        # other mutator in the codebase does this first; without it
+        # mbSetObj$imgSet errors with "$ operator is invalid for atomic
+        # vectors" when callers pass NA (e.g. PerformKOEnrichAnalysis_List
+        # in utils_sdp.R, .run.global.enrich, etc.).
+        mbSetObj <- .get.mbSetObj(mbSetObj);
        # vis.type <- mbSetObj$paramSet$koProj.type;
         if(is.null(mbSetObj$imgSet$enrTables)){
             mbSetObj$imgSet$enrTables <- list();

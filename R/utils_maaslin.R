@@ -229,9 +229,17 @@ if(model =="CPLM"){
   require('vegan')
 if(case==1){
   input_data = maaslin.para$input_data
-  if(exists("input_metadata",where = maaslin.para)){
+  # exists(..., where = <list>) does not work — `where` requires an
+  # environment, not a list, so this branch never fires and
+  # input_metadata stays unbound → "argument 'input_metadata' is
+  # missing, with no default" later in the function body. Use a
+  # plain name-membership test instead.
+  if("input_metadata" %in% names(maaslin.para)){
     input_metadata = maaslin.para$input_metadata
     fixed_effects = maaslin.para$fixed_effects
+  } else {
+    input_metadata = NULL
+    fixed_effects = NULL
   }
   reference = maaslin.para$reference
   max_significance = maaslin.para$max_significance

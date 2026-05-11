@@ -860,6 +860,14 @@ CleanTaxaNames <- function(mbSetObj, names) {
   # first get taxa type
   type <- mbSetObj$dataSet$taxa_type
 
+  # SDP (shotgun KO/EC/COG features) and other modules without taxonomy
+  # leave taxa_type unset; without this guard the next `if (type == "QIIME")`
+  # throws "argument is of length zero" and the caller (e.g.
+  # PlotImpVarLEfSe at general_anal.R:1083) propagates the failure.
+  if (is.null(type) || length(type) == 0) {
+    return(names)
+  }
+
   if (type == "QIIME") {
     new <- gsub("D.*__", "", names)
   } else if (type == "Greengenes") {
