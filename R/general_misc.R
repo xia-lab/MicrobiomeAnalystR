@@ -1354,7 +1354,14 @@ CheckResTableExists <- function(mbSetObj = NA, type) {
     res <- ifelse(is.null(res.mat), 0, 1)
 
 
-  }else if (type %in% c("mmp_ko", "mmp_metabolite", "mmp_otu", "mmp")) {
+  }else if (type %in% c("mmp_ko", "mmp_metabolite", "mmp_otu", "mmp",
+                         "mmp_mic", "mmp_met")) {
+    # mmp_mic / mmp_met are the keys that mmp_utils.R's
+    # .finalize.global.ko.res and .finalize.global.met.res actually
+    # write to enrTables (KO/microbiome and metabolite enrichment
+    # respectively). The Rmarkdown report reads from these same keys.
+    # Adding them here lets the Result Dashboard populate matching
+    # resTableStore entries so the same tables appear in both views.
     res.mat <- mbSetObj$imgSet$enrTables[[type]]$table;
     res <- ifelse(is.null(res.mat), 0, 1)
   }else if (type == "list") {
@@ -1438,7 +1445,11 @@ SetCurrentResTable <- function(mbSetObj = NA, type) {
     mbSetObj$analSet$resTable <- apply_signif_df(mbSetObj$dataSet$rawOutputMeta);
   }else if (type == "rf") {
     mbSetObj$analSet$resTable <- signif(mbSetObj$analSet$rf.sigmat, 5);
-  }else if (type %in% c("mmp_ko", "mmp_metabolite", "mmp_otu", "mmp")) {
+  }else if (type %in% c("mmp_ko", "mmp_metabolite", "mmp_otu", "mmp",
+                         "mmp_mic", "mmp_met")) {
+    # See CheckResTableExists comment — mmp_mic / mmp_met are the keys
+    # the MMP pipeline writes for KO/microbiome and metabolite
+    # enrichment tables.
     mbSetObj$analSet$resTable <- signif(mbSetObj$imgSet$enrTables[[type]]$table, 5);
   } else {
     stop("Invalid type provided")
