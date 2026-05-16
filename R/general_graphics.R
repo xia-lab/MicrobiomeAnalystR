@@ -301,11 +301,28 @@ PlotBoxMultiData <- function(mbSetObj, boxplotName, analysis.var, feat, plotType
 
   sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL = TRUE)
 
+  # Source preference:
+  #   1. analSet$multiboxdata (LinDA / MaAsLin populated, has feat + class + norm)
+  #   2. analSet$boxdata      (Random Forest populated, has feat + class; norm synthesised)
+  # The SDP -> RF -> View path on a KO feature only populates `boxdata`; without
+  # this fallback, PlotBoxMultiData aborted with "No valid features available
+  # in multiboxdata" because the SDP pass never ran LinDA/MaAsLin.
   data <- mbSetObj$analSet$multiboxdata
-  is.norm <- unique(data[, "norm"])
+  available_features <- if (is.null(data)) character(0)
+                        else setdiff(colnames(data), c("class", "norm", "log_feat"))
+  if ((is.null(feat) || feat == "" || !(feat %in% available_features))
+      && !is.null(mbSetObj$analSet$boxdata)) {
+    bd <- mbSetObj$analSet$boxdata
+    if (!is.null(feat) && feat != "" && feat %in% setdiff(colnames(bd), c("class","norm","log_feat"))) {
+      data <- bd
+      if (is.null(data$norm)) data$norm <- "true"   # RF runs on normalized counts
+      available_features <- setdiff(colnames(data), c("class", "norm", "log_feat"))
+    }
+  }
+  is.norm <- if (is.null(data) || is.null(data[["norm"]])) "true"
+             else unique(data[, "norm"])
 
   # Defensive: Handle empty or invalid feature name
-  available_features <- setdiff(colnames(data), c("class", "norm", "log_feat"))
   if (is.null(feat) || feat == "" || !(feat %in% available_features)) {
     if (length(available_features) > 0) {
       feat <- available_features[1]
