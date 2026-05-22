@@ -4260,9 +4260,9 @@ PlotGroupDataHeattree <- function(mbSetObj, meta, comparison, taxalvl, color, la
                                   showLabels,imgName, format="png", dpi=default.dpi){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   tax_o <- taxalvl;
-  
+
   dm <- mbSetObj$dataSet$proc.phyobj;
-  tax_table_new = data.frame("Kingdom" = "Root", as(tax_table(dm), "matrix")[, 1:6],check.names=FALSE) # add root to tax table
+  tax_table_new = data.frame("Kingdom" = "Root", as(tax_table(dm), "matrix")[, 1:ncol(tax_table(dm))],check.names=FALSE) # add root to tax table
   tax_table(dm) <- as.matrix(tax_table_new);
   
   dm_samples = as(sample_data(dm), "data.frame");
@@ -4295,9 +4295,9 @@ PlotSampleDataHeattree <- function(mbSetObj,comparison, taxalvl, color, layoutOp
                                   showLabels, imgName, format="png", dpi=default.dpi){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   tax_o <- taxalvl;
-  
+
   dm <- mbSetObj$dataSet$proc.phyobj;
-  tax_table_new = data.frame("Kingdom" = "Root", as(tax_table(dm), "matrix")[, 1:6],check.names=FALSE) # add root to tax table
+  tax_table_new = data.frame("Kingdom" = "Root", as(tax_table(dm), "matrix")[, 1:ncol(tax_table(dm))],check.names=FALSE) # add root to tax table
   tax_table(dm) <- as.matrix(tax_table_new);
   
   dm_samples = as(sample_data(dm), "data.frame");
@@ -4331,9 +4331,9 @@ PlotOverviewDataHeattree <- function(mbSetObj, taxalvl, color, layoutOpt,
                                     showLabels, imgName, format="png", dpi=default.dpi){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   tax_o <- taxalvl;
-  
+
   dm <- mbSetObj$dataSet$proc.phyobj;
-  tax_table_new = data.frame("Kingdom" = "Root", as(tax_table(dm), "matrix")[, 1:6],check.names=FALSE) # add root to tax table
+  tax_table_new = data.frame("Kingdom" = "Root", as(tax_table(dm), "matrix")[, 1:ncol(tax_table(dm))],check.names=FALSE) # add root to tax table
   tax_table(dm) <- as.matrix(tax_table_new);
   
   dm_samples = as(sample_data(dm), "data.frame");
@@ -4446,62 +4446,55 @@ PrepareHeatTreePlotAbR <- function(dm = dm, tax_dm = tax_dm, taxalvl = taxalvl, 
       dm_obj_cmf$data$tax_occ <- calc_n_samples(dm_obj_cmf, "tax_abund", groups = meta_com)
 
       set.seed(56784)
-      if(showLabels == "true"){
-        if(layoutOpt == "reda"){
-          box <- heat_tree(dm_obj_cmf,
-                           node_label = taxon_names,
-                           node_size = n_obs,
-                           node_color = dm_obj_cmf$data$tax_occ[[2]],
-                           node_color_range = color_new,
-                           node_size_axis_label = "OTU count",
-                           node_color_axis_label = "Samples with reads",
-                           layout = "davidson-harel",
-                           initial_layout = "reingold-tilford",
-                           title = comparison,
-                           title_size = 0.05,
-                           node_label_size_range = c(0.02, 0.05),
-                           output_file = NULL)
-        } else {
-          box <- heat_tree(dm_obj_cmf,
-                           node_label = taxon_names,
-                           node_size = n_obs,
-                           node_color = dm_obj_cmf$data$tax_occ[[2]],
-                           node_color_range = color_new,
-                           node_size_axis_label = "OTU count",
-                           node_color_axis_label = "Samples with reads",
-                           title = comparison,
-                           title_size = 0.05,
-                           node_label_size_range = c(0.02, 0.05),
-                           output_file = NULL)
-        }
+      # Strategic labeling: label only the top-N nodes ranked by n_obs
+      # (number of OTUs subsumed by each taxon — the most populous,
+      # information-dense subtrees). A full label-every-node abundance
+      # tree at Genus level produces hundreds of overlapping captions;
+      # a no-labels tree forces the reader to read off the taxonomy
+      # axis legend. Top-15 hits a readable middle ground.
+      n_obs_vec  <- n_obs(dm_obj_cmf)
+      strat_topN <- 15
+      strat_thr  <- if (length(n_obs_vec) > strat_topN)
+                      sort(n_obs_vec, decreasing = TRUE)[strat_topN]
+                    else
+                      0
+      strategic_labels <- ifelse(n_obs_vec >= strat_thr,
+                                 taxon_names(dm_obj_cmf), NA)
+
+      node_label_expr <- if (showLabels == "true") {
+                          taxon_names
+                        } else if (showLabels == "strategic") {
+                          strategic_labels
+                        } else {
+                          NA
+                        }
+
+      if(layoutOpt == "reda"){
+        box <- heat_tree(dm_obj_cmf,
+                         node_label = node_label_expr,
+                         node_size = n_obs,
+                         node_color = dm_obj_cmf$data$tax_occ[[2]],
+                         node_color_range = color_new,
+                         node_size_axis_label = "OTU count",
+                         node_color_axis_label = "Samples with reads",
+                         layout = "davidson-harel",
+                         initial_layout = "reingold-tilford",
+                         title = comparison,
+                         title_size = 0.05,
+                         node_label_size_range = c(0.02, 0.05),
+                         output_file = NULL)
       } else {
-        if(layoutOpt == "reda"){
-          box <- heat_tree(dm_obj_cmf,
-                           node_label = NA,
-                           node_size = n_obs,
-                           node_color = dm_obj_cmf$data$tax_occ[[2]],
-                           node_color_range = color_new,
-                           node_size_axis_label = "OTU count",
-                           node_color_axis_label = "Samples with reads",
-                           layout = "davidson-harel",
-                           initial_layout = "reingold-tilford",
-                           title = comparison,
-                           title_size = 0.05,
-                           node_label_size_range = c(0.02, 0.05),
-                           output_file = NULL)
-        } else {
-          box <- heat_tree(dm_obj_cmf,
-                           node_label = NA,
-                           node_size = n_obs,
-                           node_color = dm_obj_cmf$data$tax_occ[[2]],
-                           node_color_range = color_new,
-                           node_size_axis_label = "OTU count",
-                           node_color_axis_label = "Samples with reads",
-                           title = comparison,
-                           title_size = 0.05,
-                           node_label_size_range = c(0.02, 0.05),
-                           output_file = NULL)
-        }
+        box <- heat_tree(dm_obj_cmf,
+                         node_label = node_label_expr,
+                         node_size = n_obs,
+                         node_color = dm_obj_cmf$data$tax_occ[[2]],
+                         node_color_range = color_new,
+                         node_size_axis_label = "OTU count",
+                         node_color_axis_label = "Samples with reads",
+                         title = comparison,
+                         title_size = 0.05,
+                         node_label_size_range = c(0.02, 0.05),
+                         output_file = NULL)
       }
       return(box)
     },
