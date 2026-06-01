@@ -516,6 +516,22 @@ SetTaxonSetLib <- function(mbSetObj, tset.type){
   current.msetlib <<- .readDataTable(libPath);
   ms.list <- strsplit(current.msetlib[,2],"; ");
   names(ms.list) <- current.msetlib[,1];
+  # Some taxon-set libraries repeat a set name across rows. Consolidate duplicates
+  # here, at load, by unioning their members into one entry. Leaving duplicates in
+  # place (a) double-counts the same set in the hypergeometric test and (b) makes a
+  # later as.data.frame() of the ORA result matrix call make.names(unique = TRUE),
+  # which mangles every set name (e.g. "Crohn Disease (decrease)" ->
+  # "Crohn.Disease..decrease."). Keeping set names unique at the source avoids both.
+  if (anyDuplicated(names(ms.list))) {
+    nms    <- names(ms.list);
+    keep   <- !duplicated(nms);
+    merged <- lapply(nms[keep], function(nm) unique(unlist(ms.list[nms == nm], use.names = FALSE)));
+    names(merged) <- nms[keep];
+    lib2 <- current.msetlib[keep, , drop = FALSE];
+    lib2[, 2] <- vapply(merged, paste, character(1), collapse = "; ");
+    current.msetlib <<- lib2;
+    ms.list <- merged;
+  }
   current.mset <<- ms.list;
   # total uniq cmpds in the mset lib
   uniq.count <<- length(unique(unlist(current.mset, use.names = FALSE)));
