@@ -1577,6 +1577,8 @@ obtainSqlitePath <- function(){
     sqlite.path <<- "/data/sqlite/";
   }else if(file.exists("/home/zgy/sqlite/")){
     sqlite.path <<-"/home/zgy/sqlite/"; #zgy local)
+  }else if(nzchar(Sys.getenv("OMICS_LIB_DIR", "")) && dir.exists(Sys.getenv("OMICS_LIB_DIR", ""))){  # Docker shared library mount (OMICS_LIB_DIR)
+    sqlite.path <<- paste0(sub("/+$", "", Sys.getenv("OMICS_LIB_DIR", "")), "/");
   }else if(file.exists("/home/glassfish/sqlite/")){ #.on.public.web
     sqlite.path <<- "/home/glassfish/sqlite/";
   }else if(file.exists("/Users/xialab/Dropbox/sqlite/")){ # xia local
