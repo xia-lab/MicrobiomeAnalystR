@@ -812,6 +812,17 @@ ov_qs_exists <- function(file) {
 # RSclient subprocess execution (Rserve fork) — available on all deployments
 # =============================================================================
 run_func_via_rsclient <- function(func, args = list(), timeout_sec = 60) {
+  # Docker self-host: a NESTED RSclient connection (an Rserve session opening a
+  # connection back to Rserve on 6311) reliably crashes the spawned worker with
+  # "Fatal error: unable to initialize the JIT", which leaves the caller looping.
+  # The subprocess buys nothing here, so run the function in-process. `func` is a
+  # self-contained closure that exchanges data through its bridge files via the
+  # globally-defined ov_qs_* helpers, so it behaves identically here or in a worker.
+  if (file.exists("/.dockerenv")) {
+    setTimeLimit(elapsed = timeout_sec, transient = TRUE)
+    on.exit(setTimeLimit(elapsed = Inf), add = TRUE)
+    return(invisible(do.call(func, args)))
+  }
   conn <- RSclient::RS.connect(host = "localhost", port = 6311)
   on.exit(try(RSclient::RS.close(conn), silent = TRUE))
   # Inject the qs wrapper helpers into the subprocess R session so callers
