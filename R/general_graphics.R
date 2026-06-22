@@ -801,6 +801,10 @@ as_list <- to_plotly_list(p)
   Cairo::Cairo(file = imgFile, unit = "in", dpi = dpi, width = w / 150, height = h / 150, type = format, bg = "white");
   print(pstatic)
   dev.off()
+  # Method-standard: persist the scaled matrix actually rendered in the static
+  # heatmap so the AI "Refine" control can re-plot from data / users can
+  # regenerate it elsewhere. Guarded — wf_method.R helper is optional.
+  if (exists("WfSaveFigureData")) tryCatch(WfSaveFigureData("heatmap", data1sc), error = function(e) NULL)
 
   # Store the static heatmap path for report generation
   mbSetObj$imgSet$heatmap <- imgFile

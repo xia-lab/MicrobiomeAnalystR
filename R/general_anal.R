@@ -979,11 +979,15 @@ PlotLEfSeSummary <- function(mbSetObj, ldaFeature, layoutOptlf, imgName, format=
   }
   
   ldabar <-  ldabar[order(-abs(ldabar[[2]])), ];
-  
+
   if(ldaFeature < nrow(ldabar)) {
     ldabar <- ldabar[1:ldaFeature,];
   };
-  
+  # Method-standard: persist the ranked LDA-score table plotted in the LEfSe
+  # summary figure so Refine can re-plot from data / users can regenerate it
+  # elsewhere. Guarded — wf_method.R helper is optional.
+  if (exists("WfSaveFigureData")) tryCatch(WfSaveFigureData("lefse", ldabar), error = function(e) NULL)
+
   vip.score <- ldabar[[2]];
   names(vip.score) <- ldabar[[1]];
   

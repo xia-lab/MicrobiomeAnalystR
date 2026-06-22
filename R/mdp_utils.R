@@ -513,7 +513,11 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
                           check.names=FALSE);
     fileName <- "core_microbiome.csv";
     fast.write(core.nm, file=fileName);
-  
+    # Method-standard: persist the core-membership table (prevalence + mean
+    # relative abundance per taxon) behind the core-microbiome figure so Refine
+    # can re-plot from data / users can regenerate it. Guarded (wf_method.R).
+    if (exists("WfSaveFigureData")) tryCatch(WfSaveFigureData("core_micro", core.nm), error = function(e) NULL)
+
     imgName = paste(imgName, ".", format, sep="");
     mbSetObj$imgSet$core <- imgName;
 
@@ -1767,6 +1771,11 @@ PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName, metadata,
     mbSetObj$analSet$alpha <- box$data;
   }
   fast.write(mbSetObj$analSet$alpha, file="alphadiversity.csv");
+  # Method-standard: persist the plotted data behind the alpha-diversity figure
+  # (per-sample diversity value + metadata) so the AI "Refine" control can
+  # re-plot from data and users can regenerate it in any tool. Helper lives in
+  # wf_method.R; guard so the public package still runs standalone.
+  if (exists("WfSaveFigureData")) tryCatch(WfSaveFigureData("alpha_diversity", mbSetObj$analSet$alpha), error = function(e) NULL)
   #getting scale for plot (using same for boxplot also)
   ylimits <<- layer_scales(box)$y$range$range;
   
@@ -2456,7 +2465,11 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
   Cairo::Cairo(file=plotNm, unit="in", dpi=dpi, width=width/72, height=height/72, type=format, bg="white");
   print(box);
   dev.off();
-  
+  # Method-standard: persist the plotted ordination coordinates + sample
+  # metadata behind the beta-diversity figure so Refine can re-plot from data
+  # / users can regenerate it elsewhere. Guarded (wf_method.R).
+  if (exists("WfSaveFigureData")) tryCatch(WfSaveFigureData("beta_diversity", pdataframe), error = function(e) NULL)
+
   #saving info for report generation
   mbSetObj$analSet$beta <- data;
   mbSetObj$analSet$beta.metadata <- metadata;
@@ -3142,7 +3155,11 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
   mbSetObj$analSet$stack <- data;
   mbSetObj$analSet$stack.taxalvl <- taxalvl;
   mbSetObj$analSet$plot <- "Stacked Bar";
-  
+  # Method-standard: persist the plotted (melted) abundance data behind the
+  # stacked-bar figure so Refine can re-plot from data / users can regenerate
+  # it elsewhere. Guarded — wf_method.R helper is optional.
+  if (exists("WfSaveFigureData")) tryCatch(WfSaveFigureData("taxa_abundance", data), error = function(e) NULL)
+
   return(.set.mbSetObj(mbSetObj));
 }
 
@@ -4035,6 +4052,10 @@ PrepareHeatTreePlot <- function(mbSetObj, meta, taxalvl, color, layoutOpt, compa
   
   PrepareHeatTreePlotDataParse_cmf_res <- PrepareHeatTreePlotDataParse_cmf(dm_otu_cmf, dm_samples_cmf, meta); #parse otu table to heat tree object
   PrepareHeatTreePlotDataParse_cmf_diff_table_res <- PrepareHeatTreePlotDataParse_cmf_diff_table(PrepareHeatTreePlotDataParse_cmf_res); #generate diff table
+  # Method-standard: persist the per-taxon differential table (log2 median-
+  # ratio + wilcox p) behind the heat-tree comparison figure so Refine can
+  # re-plot from data / users can regenerate it. Guarded (wf_method.R).
+  if (exists("WfSaveFigureData")) tryCatch(WfSaveFigureData("heat_tree", PrepareHeatTreePlotDataParse_cmf_diff_table_res), error = function(e) NULL)
   PrepareHeatTreePlotDataParse_cmf_res <<- PrepareHeatTreePlotDataParse_cmf_res; #generate heat tree
   
   PrepareHeatTreePlotDataParse_cmf_plot(mbSetObj, color, layoutOpt, comparison, wilcox.cutoff,colorMode, showLabels, imgName, format, dpi=default.dpi);
