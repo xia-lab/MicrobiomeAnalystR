@@ -349,6 +349,25 @@ CompareMic <- function(mbSetObj, taxalvl,initDE=1,
   sample_type <- mbSetObj$dataSet$meta_info
   meta_type <- mbSetObj$dataSet$meta.types
 
+  # Fail early (with the real cause) when the requested grouping factor or its two
+  # comparison groups are absent from the loaded metadata — e.g. stale group
+  # selections carried over from a previously-loaded dataset. Without this the
+  # maaslin model silently runs on zero samples and returns an empty result table.
+  grp.vec <- tryCatch(as.character(sample_data[[analysis.var]]), error = function(e) NULL)
+  if (is.null(grp.vec)) {
+    AddErrMsg(paste0("Grouping factor '", analysis.var, "' is not a metadata column (available: ",
+                     paste(setdiff(colnames(sample_data), "sample_id"), collapse = ", "),
+                     "). Re-select the experimental factor."));
+    return(0);
+  }
+  if (sum(grp.vec %in% c(comp, ref)) == 0) {
+    AddErrMsg(paste0("No samples match the selected groups '", comp, "' / '", ref,
+                     "' for factor '", analysis.var, "'. Available groups: ",
+                     paste(unique(grp.vec), collapse = ", "),
+                     ". Re-select the two groups to compare."));
+    return(0);
+  }
+
   if (!exists('adj.vec')) {
     adj.bool = F;
   } else {
@@ -456,8 +475,27 @@ CompareMet <- function(mbSetObj, analysisVar,alg="limma",plvl=0.05,ref, compr, s
   current.proc$met$plvl<<-plvl
   current.proc$met$alg<<-alg
  
-  sample_data <-  mbSetObj$dataSet$sample_data
-  sample_data <- sample_data[sample_data[[analysisVar]] %in% c(ref,compr),]
+  # Coerce the phyloseq sample_data (S4) to a plain data.frame BEFORE subsetting:
+  # subsetting the S4 object to zero rows throws a cryptic phyloseq validity error
+  # ("Sample Data must have non-zero dimensions"). Instead, fail early with a clear
+  # message naming the real cause (a factor or group labels that are not present in
+  # the loaded metadata — e.g. stale group selections from a previous dataset).
+  sample_data <- data.frame(mbSetObj$dataSet$sample_data, check.names = FALSE, stringsAsFactors = FALSE)
+  if(!analysisVar %in% colnames(sample_data)){
+    AddErrMsg(paste0("Grouping factor '", analysisVar, "' is not a metadata column (available: ",
+                     paste(setdiff(colnames(sample_data), "sample_id"), collapse = ", "),
+                     "). Re-select the experimental factor."));
+    return(0);
+  }
+  grp.levels <- unique(as.character(sample_data[[analysisVar]]));
+  sample_data <- sample_data[sample_data[[analysisVar]] %in% c(ref,compr), , drop = FALSE]
+  if(nrow(sample_data) == 0){
+    AddErrMsg(paste0("No samples match the selected groups '", ref, "' / '", compr,
+                     "' for factor '", analysisVar, "'. Available groups: ",
+                     paste(grp.levels, collapse = ", "),
+                     ". Re-select the two groups to compare."));
+    return(0);
+  }
   sample_type <- mbSetObj$dataSet$meta_info
   metdat <- if(!is.null(current.proc$met$data.norm)) current.proc$met$data.norm else current.proc$met$data.proc
   # Use sample_id column if available, otherwise use rownames

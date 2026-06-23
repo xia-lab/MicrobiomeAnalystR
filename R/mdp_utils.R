@@ -2156,6 +2156,24 @@ sink();
 #'@import data.table
 #'@import ape
 
+## Final styling + save for the beta-diversity ordination plot, factored out of
+## the large PerformBetaDiversity body into a small, self-contained function so the
+## plot's colour scale + theme can be adjusted in one place. Behaviour is identical
+## to the prior inline block.
+.finalizeBetaOrdinationPlot <- function(box, custom_col, plotNm, format, dpi, width, height){
+  if(custom_col == "viridis"){
+    box = box + viridis::scale_color_viridis(discrete = TRUE) + viridis::scale_fill_viridis(discrete = TRUE)
+  }else if(custom_col == "plasma"){
+    box = box + viridis::scale_color_viridis(option="plasma", discrete = TRUE) + viridis::scale_fill_viridis(option="plasma", discrete = TRUE)
+  }else if(custom_col == "magma"){
+    box = box + viridis::scale_color_viridis(option="magma", discrete = TRUE) + viridis::scale_fill_viridis(option="magma", discrete = TRUE)
+  }
+  box = box + theme(text = element_text(size = 14));
+  Cairo::Cairo(file=plotNm, unit="in", dpi=dpi, width=width/72, height=height/72, type=format, bg="white");
+  print(box);
+  dev.off();
+}
+
 PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, metadata,
                                  showlabel, taxrank, taxa, alphaopt, ellopt, comp.method, format="png", dpi=default.dpi,
                                  custom_col = "none",pairwise, interactive = FALSE){
@@ -2452,19 +2470,7 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
     }
   }
   
-  if(custom_col == "viridis"){
-    box = box + viridis::scale_color_viridis(discrete = TRUE) + viridis::scale_fill_viridis(discrete = TRUE)
-  }else if(custom_col == "plasma"){
-    box = box + viridis::scale_color_viridis(option="plasma", discrete = TRUE) + viridis::scale_fill_viridis(option="plasma", discrete = TRUE)
-  }else if(custom_col == "magma"){
-    box = box + viridis::scale_color_viridis(option="magma", discrete = TRUE) + viridis::scale_fill_viridis(option="magma", discrete = TRUE)
-  }
-  
-  box = box + theme(text = element_text(size = 14));
-  
-  Cairo::Cairo(file=plotNm, unit="in", dpi=dpi, width=width/72, height=height/72, type=format, bg="white");
-  print(box);
-  dev.off();
+  .finalizeBetaOrdinationPlot(box, custom_col, plotNm, format, dpi, width, height);
   # Method-standard: persist the plotted ordination coordinates + sample
   # metadata behind the beta-diversity figure so Refine can re-plot from data
   # / users can regenerate it elsewhere. Guarded (wf_method.R).

@@ -876,9 +876,32 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
   ## -----------------------------------------------------------------------
   if(exists("current.proc")){
     shadow_save(data.list,"prescale.phyobj.qs")
-    current.proc$mic$data.norm.orig <<- data.list$count_tables[["OTU"]]
-    current.proc$mic$data.norm <<- data.list$count_tables[["OTU"]]
-    current.proc$mic$data.proc <<- data.list$count_tables[["OTU"]]
+    norm.otu <- data.list$count_tables[["OTU"]]
+    # data.norm.orig keeps the (non-negative) library-normalized counts as the
+    # pre-auto-scale baseline (used for the "Before" density panel and as the
+    # restore source for the auto-scale toggle). When "auto" scaling is
+    # requested the integration/plot view (data.norm / data.proc) holds the
+    # per-feature standardized (z-score) values, while the phyloseq merged
+    # object built above stays library-normalized so the count-based ecological
+    # methods are unaffected. Features are rows, so standardize row-wise.
+    current.proc$mic$data.norm.orig <<- norm.otu
+    # Auto-scale (per-feature z-score) when scale.opt=="auto" OR the isAutoScale
+    # flag is set true. The flag lets a caller library-normalize (e.g. colsum /
+    # total-sum scaling) AND auto-scale on top — e.g. MMP integration, so the
+    # microbiome layer is standardized like the metabolite layer's AutoNorm.
+    # norm.otu stays the (non-negative) library-norm baseline in data.norm.orig;
+    # data.norm / data.proc hold the standardized values for plots + integration.
+    if(scale.opt == "auto" || tolower(as.character(isAutoScale)) %in% c("true", "t")){
+      scaled.otu <- t(apply(norm.otu, 1, AutoNorm))
+      dimnames(scaled.otu) <- dimnames(norm.otu)
+      scaled.otu[!is.finite(scaled.otu)] <- 0   # constant features (sd 0) -> NaN
+      current.proc$mic$data.norm <<- scaled.otu
+      current.proc$mic$data.proc <<- scaled.otu
+      msg <- c(msg, "Performed ```auto-scaling``` (per-feature standardization).")
+    } else {
+      current.proc$mic$data.norm <<- norm.otu
+      current.proc$mic$data.proc <<- norm.otu
+    }
   }
   ### Normalized object for each taxonomy level
   saveDataQs(data.list, "phyloseq_objs.qs", module.type, dataName);
