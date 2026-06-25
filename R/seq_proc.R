@@ -168,15 +168,21 @@ PerformSeqProcessing <- function(){
   MessageOutput("Plotting error frequency bar plots ... ")
   if(params$is_paired){
     p1 <- plotErrors(errF, nominalQ=TRUE)
+    # Persist the error-model ggplot object (like diagnotics_plot_src.qs above) so
+    # the AI Result Dashboard can re-render / restyle (Refine) this figure in the
+    # warm session — the errF/errR objects live only in this detached subprocess.
+    tryCatch(shadow_save(p1, "error_f_plot_src.qs"), error = function(e) NULL)
     Cairo::Cairo(file = "error_images_f.png",  unit="in", dpi=96, width=12, height=10, type="png", bg="white");
     suppressWarnings(print(p1))
     dev.off();
     p2 <- plotErrors(errR, nominalQ=TRUE)
+    tryCatch(shadow_save(p2, "error_r_plot_src.qs"), error = function(e) NULL)
     Cairo::Cairo(file = "error_images_r.png",  unit="in", dpi=96, width=12, height=10, type="png", bg="white");
     suppressWarnings(print(p2))
     dev.off();
   } else {
     p0 <- plotErrors(errF, nominalQ=TRUE)
+    tryCatch(shadow_save(p0, "error_f_plot_src.qs"), error = function(e) NULL)
     Cairo::Cairo(file = "error_images_f.png",  unit="in", dpi=96, width=12, height=10, type="png", bg="white");
     suppressWarnings(print(p0))
     dev.off();
