@@ -3695,14 +3695,38 @@ PlotDiagnostic <- function(imgName, dpi=default.dpi, format="png",alg, taxrank="
             } else {
               df <- data.frame(Component = seq_along(mat), ErrorRate = as.numeric(mat))
             }
+            # Save BER per component CSV for WfOutputTable
+            ber_col <- if ("BER" %in% colnames(df)) "BER" else colnames(df)[2]
+            ber_df <- data.frame(Component = df$Component,
+                                 BER        = round(df[[ber_col]], 4))
+            utils::write.csv(ber_df, "diablo_ber_per_comp.csv", row.names = FALSE)
+            # Summary table (analogous to PROTEST for Procrustes)
+            opt_comp  <- as.integer(round(diablo.comp))
+            min_ber   <- round(min(ber_df$BER, na.rm = TRUE), 4)
+            cov_par   <- tryCatch(round(inp$design[1, 2], 4), error = function(e) NA_real_)
+            sum_tbl <- data.frame(
+              Metric = c("Optimal Components",
+                         "Min. Balanced Error Rate (BER)",
+                         "Covariance Parameter (design off-diagonal)",
+                         "CV Folds", "CV Repeats", "Distance Criterion"),
+              Value  = c(opt_comp, min_ber, cov_par, 5L, 1L, "max.dist"),
+              stringsAsFactors = FALSE)
+            utils::write.csv(sum_tbl, "diablo_ber_summary.csv", row.names = FALSE)
+            # Figure caption
+            ber_cap <- sprintf("DIABLO BER: min = %.4f at Comp. %d  (cov = %.2f, max.dist, 5-fold CV)",
+                               min_ber, opt_comp, if (!is.na(cov_par)) cov_par else 0)
             df_long <- reshape2::melt(df, id.vars = "Component", variable.name = "Metric", value.name = "ErrorRate")
             p <- ggplot2::ggplot(df_long, ggplot2::aes(x = Component, y = ErrorRate, color = Metric)) +
               ggplot2::geom_line(linewidth = 1.2) + ggplot2::geom_point(size = 2.5) +
               ggplot2::scale_x_continuous(breaks = df$Component) +
               ggplot2::labs(x = "Component", y = "Classification Error Rate",
-                           title = "DIABLO Performance (max.dist)") +
+                           title = "DIABLO Performance (max.dist)",
+                           caption = ber_cap) +
               ggplot2::theme_bw(base_size = 14) +
-              ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+              ggplot2::theme(plot.title   = ggplot2::element_text(hjust = 0.5),
+                             plot.caption = ggplot2::element_text(size = 9, hjust = 0.5,
+                                                                  colour = "#444444",
+                                                                  margin = ggplot2::margin(t = 6)))
             Cairo(file = imgNm, width = 10, height = 7, type = "png", bg = "white", unit = "in", dpi = 96)
             print(p)
             dev.off()
@@ -3774,21 +3798,33 @@ PlotDiagnosticPca <- function(imgNm, dpi=default.dpi, format="png",type="diablo"
     procrustes.res <- ov_qs_read("procrustes.res.qs")
     if(length(procrustes.res$dim.res) == 1){
     pro.test <- procrustes.res$dim.res[[1]][[1]]
+    prot     <- procrustes.res$dim.res[[1]][[2]]
     }else{
     pro.test <- procrustes.res$dim.res[[taxrank]][[1]]
+    prot     <- procrustes.res$dim.res[[taxrank]][[2]]
     }
     pct <- pro.test$svd$d
     ctest <- data.frame(rda1=pro.test$Yrot[,1], rda2=pro.test$Yrot[,2], xrda1=pro.test$X[,1],
                         xrda2=pro.test$X[,2],Type=procrustes.res$newmeta[,"omics"], Conditions = procrustes.res$newmeta[,1])
     xlabel <- paste0("Component 1 ", "(" , signif(pct[1],4), ")")
     ylabel <- paste0("Component 2 ", "(" , signif(pct[2],4), ")")
-    
+    # Build PROTEST annotation: m²₁₂, r = t0 (symmetric correlation), p-value, n permutations
+    prot_cap <- tryCatch({
+      pval_fmt <- if (!is.null(prot$signif) && prot$signif < 0.001) "< 0.001" else
+                  sprintf("%.3f", prot$signif)
+      sprintf("PROTEST: m²₁₂ = %.4f,  r = %.4f,  p %s  (%d permutations)",
+              prot$ss, prot$t0, pval_fmt, length(prot$t))
+    }, error = function(e) NULL)
+
     p <- ggplot(ctest) +
       geom_point(aes(x=rda1, y=rda2, colour=Conditions, shape=Type)) +
       geom_point(aes(x=xrda1, y=xrda2, colour=Conditions, shape=Type)) +
-      geom_segment(aes(x=rda1,y=rda2,xend=xrda1,yend=xrda2,colour=Conditions), alpha=0.4,arrow=arrow(length=unit(0.1,"cm"))) + 
+      geom_segment(aes(x=rda1,y=rda2,xend=xrda1,yend=xrda2,colour=Conditions), alpha=0.4,arrow=arrow(length=unit(0.1,"cm"))) +
       xlab(xlabel) + ylab(ylabel) +
       theme_bw()
+    if (!is.null(prot_cap)) p <- p + labs(caption = prot_cap) +
+      theme(plot.caption = element_text(size = 9, hjust = 0.5, colour = "#444444",
+                                        margin = margin(t = 6)))
     Cairo(file=imgNm, width=10, height=10, type=format, bg="white", unit="in", dpi=dpi);
     print(p)
     dev.off();
