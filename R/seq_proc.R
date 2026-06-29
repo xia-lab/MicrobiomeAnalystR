@@ -19,7 +19,7 @@ PerformSeqCheck <- function(home_dir = ""){
     stop("No FASTQ files found in ", paste0(path, "/upload"))
   }
 
-  # Raw data processing runs on local/Docker/SLURM — no memory isolation needed
+  # Raw data processing runs locally — no memory isolation needed
   require(dada2)
   if (length(fnRs) >= 2) {
     p1 <- plotQualityProfile(c(fnFs[1:2], fnRs[1:2]))

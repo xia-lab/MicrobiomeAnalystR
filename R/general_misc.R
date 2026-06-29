@@ -812,7 +812,7 @@ ov_qs_exists <- function(file) {
 # RSclient subprocess execution (Rserve fork) — available on all deployments
 # =============================================================================
 run_func_via_rsclient <- function(func, args = list(), timeout_sec = 60) {
-  # Docker self-host: a NESTED RSclient connection (an Rserve session opening a
+  # Self-host: a NESTED RSclient connection (an Rserve session opening a
   # connection back to Rserve on 6311) reliably crashes the spawned worker with
   # "Fatal error: unable to initialize the JIT", which leaves the caller looping.
   # The subprocess buys nothing here, so run the function in-process. `func` is a
@@ -1588,7 +1588,7 @@ obtainSqlitePath <- function(){
     sqlite.path <<- "/data/sqlite/";
   }else if(file.exists("/home/zgy/sqlite/")){
     sqlite.path <<-"/home/zgy/sqlite/"; #zgy local)
-  }else if(nzchar(Sys.getenv("OMICS_LIB_DIR", "")) && dir.exists(Sys.getenv("OMICS_LIB_DIR", "")) && any(file.info(list.files(Sys.getenv("OMICS_LIB_DIR", ""), pattern = "\\.sqlite$", full.names = TRUE))$size > 0, na.rm = TRUE)){  # Docker shared library mount (OMICS_LIB_DIR)
+  }else if(nzchar(Sys.getenv("OMICS_LIB_DIR", "")) && dir.exists(Sys.getenv("OMICS_LIB_DIR", "")) && any(file.info(list.files(Sys.getenv("OMICS_LIB_DIR", ""), pattern = "\\.sqlite$", full.names = TRUE))$size > 0, na.rm = TRUE)){  # shared sqlite library directory
     sqlite.path <<- paste0(sub("/+$", "", Sys.getenv("OMICS_LIB_DIR", "")), "/");
   }else if(file.exists("/home/glassfish/sqlite/")){ #.on.public.web
     sqlite.path <<- "/home/glassfish/sqlite/";
