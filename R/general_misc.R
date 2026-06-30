@@ -1461,7 +1461,7 @@ SetCurrentResTable <- function(mbSetObj = NA, type) {
     # See CheckResTableExists comment — mmp_mic / mmp_met are the keys
     # the MMP pipeline writes for KO/microbiome and metabolite
     # enrichment tables.
-    mbSetObj$analSet$resTable <- signif(mbSetObj$imgSet$enrTables[[type]]$table, 5);
+    mbSetObj$analSet$resTable <- apply_signif_df(mbSetObj$imgSet$enrTables[[type]]$table, 5);
   } else {
     stop("Invalid type provided")
   }
