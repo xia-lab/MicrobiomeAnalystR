@@ -1958,7 +1958,7 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
             bridge_in, preset = "fast")
   on.exit(unlink(c(bridge_in, bridge_out)), add = TRUE)
 
-  run_func_via_rc_microservice(
+  run_func_via_microservice(
     func = function(wd, bridge_in, bridge_out) {
       setwd(wd)
       input <- ov_qs_read(bridge_in)
@@ -3656,7 +3656,7 @@ PlotDiagnostic <- function(imgName, dpi=default.dpi, format="png",alg, taxrank="
     # perf in separate subprocess — clean environment, no prior plot state
     work_dir <- getwd()
     tryCatch({
-      run_func_via_rc_microservice(
+      run_func_via_microservice(
         func = function(work_dir, imgNm) {
           setwd(work_dir)
           require(mixOmics)
@@ -3948,7 +3948,7 @@ GenerateDiabloCircosJson <- function(cutoff=0.5, maxEdges=100) {
   if(!is.finite(cutoff) || is.na(cutoff)) cutoff <- 0.5
   if(is.na(maxEdges) || maxEdges < 1) maxEdges <- 100
   tryCatch(
-    run_func_via_rc_microservice(
+    run_func_via_microservice(
       func = function(params) {
         suppressPackageStartupMessages(library(mixOmics))
         diablo.res <- ov_qs_read(params$diablo_file)

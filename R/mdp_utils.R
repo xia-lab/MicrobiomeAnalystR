@@ -4211,7 +4211,7 @@ PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, co
                   imgFile = file.path(work_dir, paste0(imgName, ".", format)), format = format),
              "heattree_plot_input.qs")
 
-  run_func_via_rc_microservice(
+  run_func_via_microservice(
     func = function(work_dir) {
       setwd(work_dir)
       require(metacoder); require(Cairo)

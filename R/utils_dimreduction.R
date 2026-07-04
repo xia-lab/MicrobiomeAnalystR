@@ -201,7 +201,7 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
                       loading_img = file.path(work_dir, img.names$loading),
                       diag_img = file.path(work_dir, img.names$diag),
                       circos_img = file.path(work_dir, img.names$circos)), "diablo_input.qs")
-      diablo_result <- run_func_via_rc_microservice(
+      diablo_result <- run_func_via_microservice(
         func = function(work_dir) {
           setwd(work_dir)
           suppressPackageStartupMessages({
@@ -506,7 +506,7 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
     work_dir <- getwd()
     ov_qs_save(list(mic = mic_data_list, met = met_data), "procrustes_input.qs")
 
-    proc_result <- run_func_via_rc_microservice(
+    proc_result <- run_func_via_microservice(
       func = function(work_dir) {
         setwd(work_dir)
         require(vegan)
