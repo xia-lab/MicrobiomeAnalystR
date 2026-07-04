@@ -1217,7 +1217,7 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, f
                   comp1=comp1, comp2=comp2), bridge_in, preset = "fast")
   on.exit(unlink(c(bridge_in, bridge_out)), add = TRUE)
 
-  run_func_via_rsclient(
+  run_func_via_rc_microservice(
     func = function(wd, bridge_in, bridge_out) {
       setwd(wd)
       library(phyloseq)

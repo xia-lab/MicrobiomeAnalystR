@@ -301,7 +301,7 @@ CalculateGseaScore <- function(mbSetObj){
     return(0);
   }
 
-  gsea.res <- run_func_via_rsclient(
+  gsea.res <- run_func_via_rc_microservice(
     func = function(pathways, stats){
       res <- fgsea::fgsea(pathways = pathways, stats = stats,
                           minSize = 3, maxSize = 500, scoreType = "std");
