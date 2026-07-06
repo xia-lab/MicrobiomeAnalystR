@@ -638,7 +638,7 @@ sweaveBash4execPro <- function(users.path, isfromGoogle = FALSE, source_path){
 
 ReadRawMeta<-function(fileName){
   if(grepl(".txt", fileName, fixed=T)){
-    tbl=read.table(fileName,header=TRUE, stringsAsFactors = F, sep = "\t");
+    tbl=read.table(fileName,header=TRUE, stringsAsFactors = F, sep = "\t", comment.char = "");
   }else if(grepl(".csv", fileName, fixed=T)){
     tbl = read.csv(fileName,header=TRUE, stringsAsFactors = F);
   }else{
