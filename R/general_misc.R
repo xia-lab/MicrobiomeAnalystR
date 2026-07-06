@@ -1354,7 +1354,10 @@ AddFeatureToReport <- function(mbSetObj=NA, id, imgName){
 }
 
 setResourceDir <- function(path){
-  rpath <<- path;
+  # Normalise to exactly one trailing slash: paste0(rpath, "rscripts/...") calls
+  # (the .so + on-demand script loads) assume it; an absolute path arrives without
+  # one and would build ".../resourcesrscripts/...".
+  rpath <<- paste0(sub("/+$", "", path), "/");
 }
 
 CheckResTableExists <- function(mbSetObj = NA, type) {
