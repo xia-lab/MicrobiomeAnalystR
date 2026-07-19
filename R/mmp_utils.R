@@ -2178,6 +2178,7 @@ GetAssociationPlot <- function(type,keggid,koid,micDataType,metIDType,taxalvl,im
         corr.mat <- corr.mat[which(corr.mat$correlation< 0),]  
       }
       
+      library(dplyr)   # needed by the filter/group_by below in EVERY branch + the plot loop
       if(nrow(corr.mat)>0 & length(unique(corr.mat$Var2))==1){
         corr.mat <- corr.mat[1:min(topNum,nrow(corr.mat)),]
         names(corr.mat)[1:2] <- c("mic","met")
@@ -2187,7 +2188,6 @@ GetAssociationPlot <- function(type,keggid,koid,micDataType,metIDType,taxalvl,im
         wc=7
         hc = 8
       }else if(nrow(corr.mat)>0 & length(unique(corr.mat$Var2))>1){
-        library(dplyr)
         names(corr.mat)[1:2] <- c("mic","met")
         corr.mat <-  corr.mat[order(corr.mat$correlation,decreasing = T),] %>% 
           group_by(met) %>%

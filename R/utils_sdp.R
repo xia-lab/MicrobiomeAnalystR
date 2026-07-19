@@ -1009,7 +1009,12 @@ GetKOEnrMat <- function(mbSetObj, type){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   res.mat <- GetKOEnrichmentResTable(mbSetObj, type);
   if (is.null(res.mat)) return(matrix(numeric(0), nrow=0, ncol=0));
-  return(as.matrix(signif(res.mat),5));
+  # Guard signif() to numeric columns (some enrichment tables carry a character
+  # "Pathway" column -> Math.data.frame error) and fix the misplaced digits arg
+  # (the 5 was going to as.matrix, not signif).
+  df <- as.data.frame(res.mat, check.names = FALSE);
+  num.inx <- vapply(df, is.numeric, logical(1));
+  return(as.matrix(signif(df[, num.inx, drop = FALSE], 5)));
 }
 
 # Utility function

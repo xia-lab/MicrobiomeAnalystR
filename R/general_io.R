@@ -418,7 +418,14 @@ IsPoorReplicate <- function(mbSetObj){
 
 GetResMat <- function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  res_mat <- as.matrix(signif(mbSetObj$analSet$resTable, 5));
+  # Guard signif() to numeric columns only: some result tables (e.g. the MMP KEGG
+  # enrichment resTable) carry a leading character "Pathway" column, and signif() on
+  # the whole frame dispatches to Math.data.frame and errors ("non-numeric-alike
+  # variable(s)"). The Java side reads a pure numeric matrix and takes the row
+  # (pathway) names from rownames separately, so dropping the character column is safe.
+  df <- as.data.frame(mbSetObj$analSet$resTable, check.names = FALSE);
+  num.inx <- vapply(df, is.numeric, logical(1));
+  res_mat <- as.matrix(signif(df[, num.inx, drop = FALSE], 5));
 
   # Safe-Handshake: Arrow save with verification
   tryCatch({
