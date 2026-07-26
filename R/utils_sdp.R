@@ -662,7 +662,7 @@ PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",fi
   genemat <- as.data.frame(t(otu_table(mbSetObj$dataSet$norm.phyobj)), check.names=FALSE);
 
   hits <- lapply(current.mset, function(x){x[x %in% colnames(genemat)]});
-  set.num <- unlist(lapply(current.mset, length), use.names = FALSE);
+  set.num <- if(exists("current.mset.size") && length(current.mset.size) == length(current.mset)) current.mset.size else unlist(lapply(current.mset, length), use.names = FALSE);
 
   bridge_in <- paste0(tempdir(), "/bridge_", paste0(sample(letters,6,replace=TRUE), collapse=""), "_in.qs")
   bridge_out <- sub("_in.qs", "_out.qs", bridge_in)
@@ -727,6 +727,7 @@ PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",fi
 # Utility function
 LoadKEGGKO_lib<-function(category,contain="all"){
 
+  full.mset <- NULL;
   if(category == "module"){
        current.setlink <- "http://www.genome.jp/kegg-bin/show_module?";
        if(contain=="bac"){
@@ -743,6 +744,7 @@ LoadKEGGKO_lib<-function(category,contain="all"){
             current.mset <- kegg.anot$sets$"Pathway module";
         }else{
             current.mset <- ov_qs_read(paste0(rpath, "libs/ko/module_bac.qs")) ## filter users' data based on bacterial metabolism
+            full.mset <- current.mset;
             if(enrich.type != "hyper"){
                 current.mset <-  lapply(current.mset, function(x) x[x %in% query.ko])
                 current.mset <- current.mset[unlist(lapply(current.mset,function(x) length(x)))>1]
@@ -764,6 +766,7 @@ LoadKEGGKO_lib<-function(category,contain="all"){
             current.mset <- kegg.anot$sets$Metabolism;
         }else{
             current.mset <- ov_qs_read(paste0(rpath, "libs/mmp/ko_set_bac.qs")) ## filter users' data based on bacterial metabolism
+            full.mset <- current.mset;
             if(enrich.type != "hyper"){
                 current.mset <-  lapply(current.mset, function(x) x[x %in% query.ko])
                 current.mset <- current.mset[unlist(lapply(current.mset,function(x) length(x)))>1]
@@ -782,6 +785,9 @@ LoadKEGGKO_lib<-function(category,contain="all"){
   }
 
   kos.01100 <- ko.edge.map$gene[ko.edge.map$net == "ko01100"];
+  if(is.null(full.mset)){ full.mset <- current.mset; }
+  full.mset <- lapply(full.mset, function(x) {
+            as.character(unique(x[x %in% kos.01100]))});
   current.mset <- lapply(current.mset, function(x) {
             as.character(unique(x[x %in% kos.01100]))});
   # remove those empty ones
@@ -794,6 +800,7 @@ LoadKEGGKO_lib<-function(category,contain="all"){
   current.setlink <<-  current.setlink;
   current.setids <<- set.ids;
   current.mset <<- current.mset;
+  current.mset.size <<- unlist(lapply(full.mset[set.ids], length), use.names = FALSE);
   current.universe <<- unique(unlist(current.mset));
 }
 

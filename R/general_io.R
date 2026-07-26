@@ -385,12 +385,14 @@ GetResRowSymbols <- function(mbSetObj){
 
 GetResRowNames <- function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  return(rownames(mbSetObj$analSet$resTable));
+  nms <- rownames(mbSetObj$analSet$resTable);
+  if(is.null(nms)) character(0) else nms;
 }
 
 GetResColNames <- function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
-  return(colnames(mbSetObj$analSet$resTable));
+  nms <- colnames(mbSetObj$analSet$resTable);
+  if(is.null(nms)) character(0) else nms;
 }
 
 GetMetaboResRowNames <- function(){

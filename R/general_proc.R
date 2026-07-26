@@ -1138,8 +1138,11 @@ PerformRarefaction <- function(mbSetObj, data, rare.opt,rareDepth=NULL){
   
   phy.obj <- tryCatch({
         # Your function call
-        rarefied_data <- rarefy_even_depth(phy.obj, replace=TRUE,rngseed = T)
-        return(rarefied_data)
+    # NOTE: no return() here. return() inside a tryCatch BODY returns from the ENCLOSING
+    # function, so this exited PerformRarefaction with a phyloseq object and never reached
+    # the otu_table(phy.obj) conversion at the end. The block's value is assigned to
+    # phy.obj, which is what the code below expects.
+        rarefy_even_depth(phy.obj, replace=TRUE,rngseed = T)
     }, error = function(e) {
         # Custom error handling
         err.vec <<- e$message
@@ -1157,8 +1160,11 @@ PerformRarefaction <- function(mbSetObj, data, rare.opt,rareDepth=NULL){
 
   phy.obj <- tryCatch({
     # Your function call
-    phy.obj <- rarefy_even_depth(phy.obj, replace=FALSE,rngseed = T);
-    return(rarefied_data)
+    # NOTE: no return() here. return() inside a tryCatch BODY returns from the ENCLOSING
+    # function, so this exited PerformRarefaction with a phyloseq object and never reached
+    # the otu_table(phy.obj) conversion at the end. The block's value is assigned to
+    # phy.obj, which is what the code below expects.
+    rarefy_even_depth(phy.obj, replace=FALSE,rngseed = T)
   }, error = function(e) {
     # Custom error handling
     err.vec <<- e$message
@@ -1181,8 +1187,11 @@ PerformRarefaction <- function(mbSetObj, data, rare.opt,rareDepth=NULL){
   }
   phy.obj <- tryCatch({
     # Your function call
-    rarefied_data <- rarefy_even_depth(phy.obj, sample.size = rareDepth,replace=TRUE,rngseed = T)
-    return(rarefied_data)
+    # NOTE: no return() here. return() inside a tryCatch BODY returns from the ENCLOSING
+    # function, so this exited PerformRarefaction with a phyloseq object and never reached
+    # the otu_table(phy.obj) conversion at the end. The block's value is assigned to
+    # phy.obj, which is what the code below expects.
+    rarefy_even_depth(phy.obj, sample.size = rareDepth,replace=TRUE,rngseed = T)
   }, error = function(e) {
     # Custom error handling
     err.vec <<- e$message

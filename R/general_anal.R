@@ -964,8 +964,9 @@ PlotLEfSeSummary <- function(mbSetObj, ldaFeature, layoutOptlf, imgName, format=
   imgName = paste(imgName, ".", format, sep="");
   mbSetObj$analSet$lefse_plot <- imgName;
 
-  ldabar <- ldabar;
-  
+  # Only reference the global ldabar (set by PerformLefseAnal) after confirming
+  # it exists; reading it unconditionally raised "object 'ldabar' not found" and
+  # aborted the step whenever LEfSe yielded no features or did not complete.
   if (!exists("ldabar") || is.null(ldabar) || nrow(ldabar) == 0) {
     suppressPackageStartupMessages(library(ggplot2))
     Cairo::Cairo(file = imgName, unit="in", dpi=dpi, width=7, height=7, type=format, bg="white");
@@ -1213,8 +1214,18 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, f
 
   bridge_in <- paste0(tempdir(), "/bridge_", paste0(sample(letters,6,replace=TRUE), collapse=""), "_in.qs")
   bridge_out <- sub("_in.qs", "_out.qs", bridge_in)
+  # Blocking factor, resolved in THIS process: the analysis runs in a microservice subprocess,
+  # which does not inherit the parent's options or globals, so it must travel in the payload.
+  # "NA" (the default when no block role is assigned) keeps the formula exactly as before.
+  blockCol <- tryCatch({
+    if (exists("ov_meta_block_arg"))
+      ov_meta_block_arg(colnames(sample_data(mbSetObj$dataSet$norm.phyobj)))
+    else "NA"
+  }, error = function(e) "NA")
+  if (!identical(blockCol, "NA") && identical(blockCol, variable)) blockCol <- "NA"
+
   ov_qs_save(list(data=data, variable=variable, claslbl=as.character(claslbl),
-                  comp1=comp1, comp2=comp2), bridge_in, preset = "fast")
+                  comp1=comp1, comp2=comp2, block=blockCol), bridge_in, preset = "fast")
   on.exit(unlink(c(bridge_in, bridge_out)), add = TRUE)
 
   run_func_via_microservice(
@@ -1223,7 +1234,13 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, f
       library(phyloseq)
       library(DESeq2)
       input <- ov_qs_read(bridge_in)
-      my.formula <- as.formula(paste("~", input$variable))
+      # ~ block + variable puts the blocking factor first so the variable of interest stays the
+      # last term, which is what results()/the contrast below expect.
+      blk <- input$block
+      my.formula <- if (!is.null(blk) && !identical(blk, "NA") && nzchar(blk))
+        as.formula(paste("~", blk, "+", input$variable))
+      else
+        as.formula(paste("~", input$variable))
       diagdds <- phyloseq_to_deseq2(input$data, my.formula)
       geoMeans <- apply(counts(diagdds), 1,
                         function(x, na.rm=TRUE){exp(sum(log(x[x > 0]), na.rm=na.rm) / length(x))})
