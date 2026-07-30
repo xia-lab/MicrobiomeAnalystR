@@ -4227,28 +4227,49 @@ PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, co
         dm_obj_cmf$data$diff_table$log2_median_ratio[dm_obj_cmf$data$diff_table$wilcox_p_value > wilcox.cutoff] <- 0
       }
 
+      # Label fitting. heat_tree defaults to margin_size = c(0,0,0,0), so the
+      # outermost taxon labels sit flush against the image border and are clipped;
+      # its label repulsion is modest, so long names overlap each other and the
+      # branches. Give the panel a margin on all four sides, push nodes and labels
+      # apart harder, and cap the largest label size (the inner ranks were drawn
+      # big enough to collide with everything around the hub). A long title makes
+      # heat_tree shrink the whole tree to fit it on ONE line, so wrap it instead.
+      ht_margin     <- c(0.05, 0.05, 0.05, 0.05)   # left, right, bottom, top
+      ht_label_size <- c(0.015, 0.030)
+      ht_title      <- paste(strwrap(paste(as.character(comparison), collapse = " "),
+                                     width = 34), collapse = "\n")
+      # Shorten only over-long taxon names. abbreviate(strict = FALSE) exceeds the
+      # target rather than let two names collapse to the same string, so labels
+      # stay unique.
+      ht_label <- function(x) abbreviate(x, minlength = 18, named = FALSE,
+                                         strict = FALSE, dot = FALSE)
+
       set.seed(56784)
       Cairo(file = input$imgFile, unit = "in", dpi = 96, width = 13.9, height = 12.2, type = input$format, bg = "white")
       if(showLabels == "true"){
         if(layoutOpt == "reda"){
           box <- heat_tree(dm_obj_cmf,
-                           node_label = ifelse(wilcox_p_value < wilcox.cutoff, taxon_names, NA),
+                           node_label = ifelse(wilcox_p_value < wilcox.cutoff, ht_label(taxon_names), NA),
                            node_size = n_obs, node_color = log2_median_ratio,
                            node_color_interval = c(-8, 8), node_color_range = color_new,
                            node_size_axis_label = "Abundance level",
                            node_color_axis_label = "Median ratio (log2)",
                            layout = "davidson-harel", initial_layout = "reingold-tilford",
-                           title = comparison, title_size = 0.05,
-                           node_label_size_range = c(0.02, 0.05), output_file = NULL)
+                           title = ht_title, title_size = 0.05,
+                           margin_size = ht_margin, overlap_avoidance = 3,
+                           repel_force = 6, repel_iter = 2000,
+                           node_label_size_range = ht_label_size, output_file = NULL)
         } else {
           box <- heat_tree(dm_obj_cmf,
-                           node_label = ifelse(wilcox_p_value < wilcox.cutoff, taxon_names, NA),
+                           node_label = ifelse(wilcox_p_value < wilcox.cutoff, ht_label(taxon_names), NA),
                            node_size = n_obs, node_color = log2_median_ratio,
                            node_color_interval = c(-8, 8), node_color_range = color_new,
                            node_size_axis_label = "Abundance level",
                            node_color_axis_label = "Median ratio (log2)",
-                           title = comparison, title_size = 0.05,
-                           node_label_size_range = c(0.02, 0.05), output_file = NULL)
+                           title = ht_title, title_size = 0.05,
+                           margin_size = ht_margin, overlap_avoidance = 3,
+                           repel_force = 6, repel_iter = 2000,
+                           node_label_size_range = ht_label_size, output_file = NULL)
         }
       } else {
         if(layoutOpt == "reda"){
@@ -4259,8 +4280,9 @@ PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, co
                            node_size_axis_label = "Abundance level",
                            node_color_axis_label = "Median ratio (log2)",
                            layout = "davidson-harel", initial_layout = "reingold-tilford",
-                           title = comparison, title_size = 0.05,
-                           node_label_size_range = c(0.02, 0.05), output_file = NULL)
+                           title = ht_title, title_size = 0.05,
+                           margin_size = ht_margin, overlap_avoidance = 3,
+                           node_label_size_range = ht_label_size, output_file = NULL)
         } else {
           box <- heat_tree(dm_obj_cmf,
                            node_label = NA,
@@ -4268,8 +4290,9 @@ PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, co
                            node_color_interval = c(-8, 8), node_color_range = color_new,
                            node_size_axis_label = "Abundance level",
                            node_color_axis_label = "Median ratio (log2)",
-                           title = comparison, title_size = 0.05,
-                           node_label_size_range = c(0.02, 0.05), output_file = NULL)
+                           title = ht_title, title_size = 0.05,
+                           margin_size = ht_margin, overlap_avoidance = 3,
+                           node_label_size_range = ht_label_size, output_file = NULL)
         }
       }
       print(box)
@@ -4485,8 +4508,12 @@ PrepareHeatTreePlotAbR <- function(dm = dm, tax_dm = tax_dm, taxalvl = taxalvl, 
                       sort(n_obs_vec, decreasing = TRUE)[strat_topN]
                     else
                       0
+      # Shorten only over-long taxon names. abbreviate(strict = FALSE) exceeds the
+      # target rather than let two names collapse to the same string, so labels
+      # stay unique.
       strategic_labels <- ifelse(n_obs_vec >= strat_thr,
-                                 taxon_names(dm_obj_cmf), NA)
+                                 abbreviate(taxon_names(dm_obj_cmf), minlength = 18,
+                                            named = FALSE, strict = FALSE, dot = FALSE), NA)
 
       node_label_expr <- if (showLabels == "true") {
                           taxon_names
@@ -4495,6 +4522,15 @@ PrepareHeatTreePlotAbR <- function(dm = dm, tax_dm = tax_dm, taxalvl = taxalvl, 
                         } else {
                           NA
                         }
+
+      # Same label fitting as the comparison tree: heat_tree's default zero margin
+      # leaves the outermost labels flush against the image border, its default
+      # repulsion lets long names overlap, and a long title makes it shrink the
+      # whole tree to fit the title on one line.
+      ht_margin     <- c(0.05, 0.05, 0.05, 0.05)   # left, right, bottom, top
+      ht_label_size <- c(0.015, 0.030)
+      ht_title      <- paste(strwrap(paste(as.character(comparison), collapse = " "),
+                                     width = 34), collapse = "\n")
 
       if(layoutOpt == "reda"){
         box <- heat_tree(dm_obj_cmf,
@@ -4506,9 +4542,11 @@ PrepareHeatTreePlotAbR <- function(dm = dm, tax_dm = tax_dm, taxalvl = taxalvl, 
                          node_color_axis_label = "Samples with reads",
                          layout = "davidson-harel",
                          initial_layout = "reingold-tilford",
-                         title = comparison,
+                         title = ht_title,
                          title_size = 0.05,
-                         node_label_size_range = c(0.02, 0.05),
+                         margin_size = ht_margin, overlap_avoidance = 3,
+                         repel_force = 6, repel_iter = 2000,
+                         node_label_size_range = ht_label_size,
                          output_file = NULL)
       } else {
         box <- heat_tree(dm_obj_cmf,
@@ -4518,9 +4556,11 @@ PrepareHeatTreePlotAbR <- function(dm = dm, tax_dm = tax_dm, taxalvl = taxalvl, 
                          node_color_range = color_new,
                          node_size_axis_label = "OTU count",
                          node_color_axis_label = "Samples with reads",
-                         title = comparison,
+                         title = ht_title,
                          title_size = 0.05,
-                         node_label_size_range = c(0.02, 0.05),
+                         margin_size = ht_margin, overlap_avoidance = 3,
+                         repel_force = 6, repel_iter = 2000,
+                         node_label_size_range = ht_label_size,
                          output_file = NULL)
       }
       return(box)
