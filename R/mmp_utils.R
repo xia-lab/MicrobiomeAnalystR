@@ -511,6 +511,11 @@ CompareMet <- function(mbSetObj, analysisVar,alg="limma",plvl=0.05,ref, compr, s
   metdat.de <- metdat.de[ord.inx, , drop=FALSE]
   current.proc$met$res_deAnal <<- metdat.de
   mbSetObj$dataSet$metabolomics$resTable <- metdat.de
+  # Keep the contrast with the result table: current.proc is not carried into the
+  # report session, so this is the only record of which groups were compared.
+  mbSetObj$dataSet$metabolomics$meta <- analysisVar
+  mbSetObj$dataSet$metabolomics$comp <- compr
+  mbSetObj$dataSet$metabolomics$ref <- ref
   sigfeat <- rownames(metdat.de)[seq_len(sum(sig_mask))];
   sig.count <- length(sigfeat);
   if(sig.count == 0){
@@ -807,6 +812,11 @@ PrepareResTable <- function(mbSetObj,micDataType,taxalvl,is.norm=F){
   mbSetObj$analSet$sig.count <- sig.count;
   mbSetObj$analSet$resTable <- resTab;
   mbSetObj$analSet$maaslin$resTable <- resTab;
+  # Keep the contrast with the result table: current.proc is not carried into the
+  # report session, so this is the only record of which groups were compared.
+  mbSetObj$analSet$maaslin$meta <- analysis.var;
+  mbSetObj$analSet$maaslin$comp <- current.proc$meta_para$comp;
+  mbSetObj$analSet$maaslin$ref <- current.proc$meta_para$ref;
 
   resMsg<<- paste0(resMsg,current.msg)
   return(.set.mbSetObj(mbSetObj))
