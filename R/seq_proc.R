@@ -6,7 +6,14 @@
 
 MessageOutput <- function(msg, eol = "\n"){
   msg <- gsub("\"|\"|\\\\|\\[[0-9]\\] ", "", msg)
-  write.table(msg, file = "seq_process_details.txt", quote = F, row.names = F, col.names = F, append = T, eol = eol)
+  # Emit progress to STDOUT, not write.table() to seq_process_details.txt. The runner
+  # streams stdout into that file (SLURM #SBATCH --output=, and Nextflow main.nf's
+  # `tee "$SBATCH_OUT"`). Under Nextflow that tee TRUNCATES seq_process_details.txt with
+  # the R stdout, so the old direct write.table() was clobbered and the job's Text Output
+  # panel stayed empty throughout. Writing to stdout lets the pipeline capture the log
+  # live; flush() forces streaming (R block-buffers stdout when piped, not a TTY).
+  cat(msg, eol, sep = "")
+  flush(stdout())
 }
 
 PerformSeqCheck <- function(home_dir = ""){
@@ -92,12 +99,23 @@ PerformSeqProcessing <- function(){
   fnRs <- df_files$fnRs
   filtRs <- df_files$filtRs
   
-  if(file.exists("/Users/xialab/Dropbox/resources/microbiomeanalyst/microbiome_tax/")){
-    load.lib <- "/Users/xialab/Dropbox/resources/microbiomeanalyst/microbiome_tax/"
-  }else if(file.exists("/Users/lzy/Documents/examples_data_microbiomeanalyst/")){
-    load.lib <- "/Users/lzy/Documents/examples_data_microbiomeanalyst/demo_16s/"
-  }else{
-    load.lib <-  "/home/glassfish/projects/microbiome_tax/"
+  # Resolve the taxonomy-reference dir. Mirror SeqUploader.resolveTaxdbDir()
+  # (Java) so R and the upload-page pre-flight banner agree: OMICS_LIB_DIR first,
+  # then the bundled Docker lib volume, then the legacy dev paths. The old code
+  # hardcoded /home/glassfish/projects/microbiome_tax/ which does NOT exist on
+  # self-hosted / Docker installs (the bundle lives at /omicsverse/lib/microbiome_tax),
+  # so assignTaxonomy died with "no input files found" pointing at a missing FASTA.
+  taxdb_candidates <- c(
+    if (nzchar(Sys.getenv("OMICS_LIB_DIR")))
+      file.path(sub("/+$", "", Sys.getenv("OMICS_LIB_DIR")), "microbiome_tax") else NULL,
+    "/omicsverse/lib/microbiome_tax",
+    "/home/glassfish/projects/microbiome_tax",
+    "/Users/xialab/Dropbox/resources/microbiomeanalyst/microbiome_tax",
+    "/Users/lzy/Documents/examples_data_microbiomeanalyst/demo_16s"
+  )
+  load.lib <- "/home/glassfish/projects/microbiome_tax/"   # last-resort default
+  for (cand in taxdb_candidates) {
+    if (dir.exists(cand)) { load.lib <- paste0(sub("/+$", "", cand), "/"); break }
   }
 
   if(!exists("dataObj")){
@@ -362,7 +380,10 @@ GetSanityVec <- function(paired){
       } else {
         group <- "NA";
       }
-      paste(nmf, nmr, sizef, sizer, readf, readr, valdf, valdr, group, sep = " || ")
+      # Scalarize: a 0- or multi-row metadata match makes paste() return
+      # length != 1, which turns sapply() below into a list (see coercion at end).
+      group <- if(length(group) >= 1) as.character(group)[1] else "NA";
+      paste(nmf[1], nmr[1], sizef[1], sizer[1], readf[1], readr[1], valdf[1], valdr[1], group, sep = " || ")
     })
   } else {
     allNames <- unique(basename(allUPFiles));
@@ -379,9 +400,18 @@ GetSanityVec <- function(paired){
       } else {
         group <- "NA";
       }
-      paste(nmf, "x" , sizef, "x" , readf, "x" , valdf, "x" , group, sep = " || ")
+      group <- if(length(group) >= 1) as.character(group)[1] else "NA";
+      paste(nmf[1], "x" , sizef[1], "x" , readf[1], "x" , valdf[1], "x" , group, sep = " || ")
     })
   }
+  # Guarantee a flat character vector. sapply() silently returns a LIST when any
+  # per-sample paste() yields length != 1 (ambiguous filename/metadata match); a
+  # list crosses to Java as an REXPGenericVector and blows up asStrings() in
+  # GetSanityVec(), aborting the example-upload navigation (user stuck on the
+  # upload page with no error, R 4.5.2 / Rserve only — see runtime incident).
+  Sanity_vec <- vapply(Sanity_vec, function(z) paste0(as.character(z), collapse = " || "),
+                       character(1L));
+  Sanity_vec <- unname(Sanity_vec);
   return(Sanity_vec)
 }
 
