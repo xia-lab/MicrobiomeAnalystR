@@ -104,11 +104,8 @@ Read16STabData <- function(mbSetObj, dataName) {
       sam.nm <- tolower(colnames(mydata[1]));
       if(sam.nm %in% c("#phylum","#class","#order","#family","#genus","#species") ){
         mbSetObj$dataSet$sglTax <- gsub("#","",sam.nm)
-      }else{
-  
-        AddErrMsg("No labels ID found in your otu/asv table!");
-        return(0);
       }
+      # Column 1 is the feature-ID column whatever it is called; no fixed header required.
     
     } 
   
@@ -117,11 +114,7 @@ Read16STabData <- function(mbSetObj, dataName) {
     sam.nm <- substr(colnames(mydata[1]),1,5);
     sam.nm <- tolower(sam.nm);
     sam.inx <- grep("^#name",sam.nm);
-    
-    if(length(sam.inx) == 0){
-      AddErrMsg("No labels #NAME found in your data!");
-      return(0);
-    }  
+    # Column 1 is the feature-ID column whatever it is called; no fixed header required.
   }
   
   smpl_nm <- colnames(mydata[-1]);
@@ -509,12 +502,7 @@ ReadMetabolicTable <- function(mbSetObj, dataName, metType, idType) {
   sam.nm <- substr(colnames(mydata[1]),1,5);
   sam.nm <- tolower(sam.nm);
   sam.inx <- grep("^#name",sam.nm);
-  
-  if(length(sam.inx) == 0){
-    
-    AddErrMsg("No labels #NAME found in your data!");
-    return(0);
-  }   
+  # Column 1 is the feature-ID column whatever it is called; no fixed header required.
   
   #smpl_nm <- colnames(mydata[-1]);
   

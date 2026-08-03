@@ -82,12 +82,8 @@ ReadShotgunTabData <- function(mbSetObj, dataName, geneidtype,is.normalized) {
   sam.nm <- tolower(sam.nm);
   sam.inx <- grep("^#name",sam.nm);
     
-  if(length(sam.inx) > 0){
-    smpl_nm<-colnames(mydata[-1]);
-  }else{
-    AddErrMsg("No labels #NAME found in your data!");
-    return(0);
-  }
+  # Column 1 is the feature-ID column whatever it is called; no fixed header required.
+  smpl_nm<-colnames(mydata[-1]);
 
   dat.nms <- mydata[,1];
   mydata <- as.matrix(mydata[,-1]);
