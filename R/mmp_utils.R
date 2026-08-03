@@ -3686,7 +3686,13 @@ PlotDiagnostic <- function(imgName, dpi=default.dpi, format="png",alg, taxrank="
             res_perf$keepA <- lapply(res_perf$keepA, function(k) k[seq_len(min(length(k), ncomp_perf))])
           }
           perf.res <- mixOmics:::perf(res_perf, validation = 'Mfold', folds = 5, nrepeat = 1, dist = "max.dist", near.zero.var = TRUE)
-          diablo.comp <- median(perf.res$choice.ncomp$WeightedVote)
+          # perf()$choice.ncomp$WeightedVote can be NULL/non-numeric depending on the
+          # mixOmics version and regression-vs-discriminant DIABLO; median() then yields
+          # a non-numeric that makes round(diablo.comp) below abort the whole diagnostic
+          # image (empty Diablo diagnostic tab). Fall back to the fitted ncomp so the
+          # plot still renders.
+          .wv <- suppressWarnings(as.numeric(perf.res$choice.ncomp$WeightedVote))
+          diablo.comp <- if (any(is.finite(.wv))) median(.wv, na.rm = TRUE) else ncomp_perf
           # Extract error rates and plot with ggplot2
           # Note: mixOmics plot.perf uses matplot() which produces black/empty output in RSclient subprocess
           # (base graphics matplot does not render properly in Rserve-forked sessions)
@@ -3711,7 +3717,7 @@ PlotDiagnostic <- function(imgName, dpi=default.dpi, format="png",alg, taxrank="
                                  BER        = round(df[[ber_col]], 4))
             utils::write.csv(ber_df, "diablo_ber_per_comp.csv", row.names = FALSE)
             # Summary table (analogous to PROTEST for Procrustes)
-            opt_comp  <- as.integer(round(diablo.comp))
+            opt_comp  <- if (is.finite(diablo.comp)) as.integer(round(diablo.comp)) else NA_integer_
             min_ber   <- round(min(ber_df$BER, na.rm = TRUE), 4)
             cov_par   <- tryCatch(round(inp$design[1, 2], 4), error = function(e) NA_real_)
             sum_tbl <- data.frame(

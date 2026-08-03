@@ -26,7 +26,28 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
   if(!exists("phyloseq_objs")){
     phyloseq_objs <- ov_qs_read("phyloseq_objs.qs")
   }
-  
+
+  # Reloaded-project recovery. A project save zips the whole home dir, so the
+  # durable .qs artifacts come back on load — but the in-memory `current.proc`
+  # cache does NOT, so its mic/met processed data is NULL after a reload and the
+  # reductions below would run on empty input and die with "subscript out of
+  # bounds". (The correlation heatmap survives a reload precisely because it reads
+  # phyloseq_objs directly, not current.proc.) Rebuild the integration input from
+  # the same restored durable sources: phyloseq_objs count tables for microbiome,
+  # metabo.complete.norm.qs for metabolomics. Both match the orientation/content
+  # CreateMMPFakeFile originally wrote into current.proc; the reduction methods
+  # (vegan/mixOmics/MOFA) scale internally, so raw processed data is sufficient.
+  if(is.null(current.proc$mic$data.proc) && !is.null(phyloseq_objs$count_tables)){
+    current.proc$mic$data.proc <<- phyloseq_objs$count_tables[["OTU"]]
+  }
+  if(is.null(current.proc$met$data.proc)){
+    if(ov_qs_exists("metabo.complete.norm.qs")){
+      current.proc$met$data.proc <<- ov_qs_read("metabo.complete.norm.qs")
+    } else if(!is.null(mbSetObj$dataSet$metabolomics$data.orig)){
+      current.proc$met$data.proc <<- mbSetObj$dataSet$metabolomics$data.orig
+    }
+  }
+
   d.list[["mic"]] = list()
   # Use normalized/auto-scaled data for integration
   if(micDataType=='ko'){
