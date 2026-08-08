@@ -896,14 +896,45 @@ MetaboIDmap <- function(netModel,predDB,IDtype,met.vec=NA){
   }else{
     met.vec <- met.vec
   }
-  
+
+  # Resolve the requested ID type before dispatching. "na" is the interface's own
+  # "--- Please specify ---" placeholder, so an unset selection (or a caller that
+  # forwards it) reached none of the branches below and the function then died on
+  # an undefined met.map with "object 'met.map' not found". Fall back to the ID
+  # type recorded for the session at upload time, and stop cleanly if neither is
+  # usable.
+  known.ids <- c("name", "kegg", "hmdb");
+  IDtype.req <- if(length(IDtype) == 0) NA_character_ else as.character(IDtype)[1];
+  IDtype <- if(is.na(IDtype.req)) NA_character_ else tolower(IDtype.req);
+  if(is.na(IDtype) || !(IDtype %in% known.ids)){
+    alt <- if(exists("metIDType") && length(metIDType) > 0) tolower(as.character(metIDType)[1]) else NA_character_;
+    if(!is.na(alt) && alt %in% known.ids){
+      message("[MetaboIDmap] ID type '", IDtype.req, "' is not a metabolite ID type - using '", alt, "' from the current session.");
+      IDtype <- alt;
+    }else{
+      current.msg <<- "The metabolite ID type has not been specified, so metabolite IDs cannot be mapped.";
+      message("[MetaboIDmap] ", current.msg);
+      if(inputType == "table"){
+        return(0)
+      }else{
+        return(data.frame(Query = character(0), Match = character(0), stringsAsFactors = FALSE))
+      }
+    }
+  }
+
+  met.map <- NULL;
+
   if(netModel=="gem"){
     if(predDB=="agora"){
       metdb <- ov_qs_read(paste0(lib.path.mmp,"agora.met.qs"))
     }else if(predDB=="embl"){
       metdb <- ov_qs_read(paste0(lib.path.mmp,"embl.met.qs"))
+    }else{
+      # Unknown reference model: match nothing rather than fail on an undefined metdb
+      message("[MetaboIDmap] Unknown reference database '", predDB, "' - no metabolite can be matched.");
+      metdb <- character(0)
     }
-    
+
     if(IDtype=="name"){
       metInfo <- ov_qs_read(paste0(lib.path.mmp,"synonymGem.qs"));
       met.map <- data.frame(Query=met.vec,Match=met.vec,stringsAsFactors = F)
@@ -943,10 +974,24 @@ MetaboIDmap <- function(netModel,predDB,IDtype,met.vec=NA){
       met.map <- met.map[!(is.na(met.map$Name)),]
       map.l <- length(unique(met.map$Match))
     }
-    
+
   }
-  
-  
+
+  if(is.null(met.map)){
+    current.msg <<- paste0("Metabolite ID mapping is not available for network model '", netModel, "' with ID type '", IDtype, "'.");
+    message("[MetaboIDmap] ", current.msg);
+    if(inputType == "table"){
+      return(0)
+    }else{
+      return(data.frame(Query = character(0), Match = character(0), stringsAsFactors = FALSE))
+    }
+  }
+
+  if(nrow(met.map) == 0){
+    current.msg <<- "None of the metabolites could be matched to the reference database.";
+    message("[MetaboIDmap] ", current.msg);
+  }
+
   if(inputType=="table"){
     shadow_save(met.map,paste0(netModel,".met.map.qs"))
     

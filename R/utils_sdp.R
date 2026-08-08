@@ -561,8 +561,9 @@ PrepareQueryJson <- function(mbSetObj){
     netQueryNm <- "network_query";
     includeInfoNm <- "includeInfo";
   }
-  if(enrich.type == "hyper"){
-    exp.vec <- mbSetObj$analSet$data[,1]; # drop dim for json
+  etype <- if(exists("enrich.type") && length(enrich.type) > 0) as.character(enrich.type)[1] else "hyper";
+  if(etype == "hyper"){
+    exp.vec <- if(is.null(dim(mbSetObj$analSet$data))) NULL else mbSetObj$analSet$data[,1]; # drop dim for json
   }else{
     # for global test, all KO measured should be highlighted
     genemat <- as.data.frame(t(otu_table(mbSetObj$dataSet$norm.phyobj)),check.names=FALSE);
@@ -570,7 +571,31 @@ PrepareQueryJson <- function(mbSetObj){
     names(exp.vec) <- colnames(genemat);
   }
 
-  edge.mat <- MapKO2KEGGEdges(exp.vec);
+  edge.mat <- if(length(exp.vec) == 0) NULL else MapKO2KEGGEdges(exp.vec);
+
+  if(is.null(edge.mat) || is.null(dim(edge.mat)) || nrow(edge.mat) == 0){
+    # None of the query features is a KO the global KEGG map (ko01100) knows, so
+    # there is nothing to highlight. Two things must NOT happen here:
+    #  - filtKOmap must not overwrite an existing <includeInfoNm>.json: with an
+    #    empty KO list it replaces the include filter written earlier in the
+    #    analysis with an empty node/edge set, leaving every node grey. It still
+    #    runs when no include file exists yet, so the viewer has one to read.
+    #  - aggregate() must not run on the empty label table: it stops with
+    #    "no rows to aggregate" and takes the whole step down with it.
+    # Write a valid but empty query file so the viewer loads without an overlay
+    # instead of failing on a missing file.
+    query.ko <<- character(0);
+    if(!file.exists(paste0(includeInfoNm, ".json"))){
+      filtKOmap(query.ko, includeInfoNm)
+    }
+    current.msg <<- "No KO features could be matched to the global KEGG map, so the network query file is empty.";
+    message("[PrepareQueryJson] ", current.msg);
+    json.mat <- rjson::toJSON(list(query.res=structure(list(), names=character(0)), id_rxn=list(), label=list()));
+    sink(paste0(netQueryNm, ".json"));
+    cat(json.mat);
+    sink();
+    return(.set.mbSetObj(mbSetObj));
+  }
 
   row.names(edge.mat) <- eids <- rownames(edge.mat);
   query.ko <<- edge.mat[,1];
@@ -578,18 +603,26 @@ PrepareQueryJson <- function(mbSetObj){
   query.res <- edge.mat[,3];# abundance
   names(query.res) <- eids; # named by edge
   filtKOmap(query.ko, includeInfoNm)
-  
+
  labels <- ov_qs_read(paste0(rpath, "libs/ko/ko_lbs.qs"))
  labels <-labels[labels$info %in% query.ko,c(3,4)]
- labels <- aggregate(labels$info,list(labels$id_edge),function(x) paste(x,collapse = ","))
+ if(nrow(labels) == 0){
+   # mapped KOs carry no reaction label - keep the abundances, skip the labels
+   id.rxn <- list();
+   edge.lbs <- list();
+ }else{
+   labels <- aggregate(labels$info,list(labels$id_edge),function(x) paste(x,collapse = ","))
+   id.rxn <- labels[,1];
+   edge.lbs <- labels[,2];
+ }
 
-  json.mat <- rjson::toJSON(list(query.res=query.res,id_rxn=labels[,1],label=labels[,2]));
+  json.mat <- rjson::toJSON(list(query.res=query.res,id_rxn=id.rxn,label=edge.lbs));
   sink(paste0(netQueryNm, ".json"));
   cat(json.mat);
   sink();
 
   return(.set.mbSetObj(mbSetObj));
-  
+
 }
 
 filtKOmap <- function(include, fileName){
