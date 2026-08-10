@@ -1193,15 +1193,11 @@ if(grp.num <= 18){ # update color and respect default
 
 .load.scripts.on.demand <- function(fileName=""){
     complete.path <- paste0(rpath, "rscripts/MicrobiomeAnalystR/R/", fileName);
-    if (file.exists(complete.path)) {
-      compiler::loadcmp(complete.path);
+    r.path <- sub("\\.Rc$", ".R", complete.path);
+    if (file.exists(r.path)) {
+      source(r.path, local = FALSE);
     } else {
-      r.path <- sub("\\.Rc$", ".R", complete.path);
-      if (file.exists(r.path)) {
-        source(r.path, local = FALSE);
-      } else {
-        warning(paste("Script not found:", complete.path, "or", r.path));
-      }
+      warning(paste("Script not found:", r.path));
     }
 }
 
