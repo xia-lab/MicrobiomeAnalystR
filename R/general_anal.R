@@ -1853,7 +1853,13 @@ PerformLinDA <- function(mbSetObj, analysis.var, is.norm = "false",
 #'factors return an omnibus F-test p-value (no log2FC) so points render as
 #'circles, matching the t-test/ANOVA convention.
 #'@export
-PerformLinDAUni <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, taxrank, fc.thresh=0) {
+#'@param ref.grp,comp.grp Optional group pair. When both name levels of \code{variable}, the factor
+#'is built with \code{ref.grp} first so the reported log2 fold change is comp.grp relative to
+#'ref.grp. Without them the levels fall in alphabetical order and the sign follows that instead of
+#'the comparison the user asked for. Only affects the two-group branch; the multi-group branch is an
+#'omnibus F-test and has no direction.
+PerformLinDAUni <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, taxrank, fc.thresh=0,
+                            ref.grp=NA, comp.grp=NA) {
   mbSetObj <- .get.mbSetObj(mbSetObj)
   p.lvl <- as.numeric(p.lvl)
   fc.thresh <- as.numeric(fc.thresh)
@@ -1876,6 +1882,14 @@ PerformLinDAUni <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, tax
 
   meta_df <- as.data.frame(sample_data(mbSetObj$dataSet$norm.phyobj))
   cls <- factor(meta_df[colnames(data1), variable])
+  # Order the levels by the requested pair so the reported log2 fold change is comp.grp relative to
+  # ref.grp. A bare factor() leaves them alphabetical, which decided the SIGN of every fold change by
+  # spelling: "HC vs COVID" and "COVID vs HC" both reported COVID relative to HC. Applied only when
+  # both names really are levels here, so an unrecognised or absent pair keeps the previous ordering.
+  if(!is.na(ref.grp) && !is.na(comp.grp) && nzchar(ref.grp) && nzchar(comp.grp) &&
+     ref.grp != comp.grp && all(c(ref.grp, comp.grp) %in% levels(cls))) {
+    cls <- factor(cls, levels = c(ref.grp, comp.grp, setdiff(levels(cls), c(ref.grp, comp.grp))))
+  }
   lvl <- nlevels(cls)
   if(lvl < 2) {
     AddErrMsg("LinDA requires at least 2 groups in the experimental factor.")
