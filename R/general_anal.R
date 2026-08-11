@@ -1248,8 +1248,15 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, f
       diagdds <- DESeq(diagdds, test="Wald", fitType="parametric")
 
       if(input$comp1 %in% input$claslbl && input$comp2 %in% input$claslbl){
+        # comp2 FIRST. DESeq2's contrast is c(factor, numerator, denominator), so passing
+        # (comp1, comp2) made the REFERENCE the numerator and reported log2FC as ref over
+        # comparison -- the opposite of edgeR on the same pick, which takes pair[1] as the
+        # baseline (exactTest(dge, c(comp1, comp2)) -> comp over ref), and the opposite of
+        # LinDA. All three label the column "log2FC" and are reachable from the same method
+        # dropdown, so switching method inverted every fold change while the chosen
+        # comparison stayed put.
         res <- results(diagdds, independentFiltering = FALSE, cooksCutoff = Inf,
-                       contrast=c(input$variable, input$comp1, input$comp2))
+                       contrast=c(input$variable, input$comp2, input$comp1))
       }else{
         res <- results(diagdds, independentFiltering = FALSE, cooksCutoff = Inf)
       }
