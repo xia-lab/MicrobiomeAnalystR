@@ -860,6 +860,28 @@ get.fun.lib.path <- function(type){
 
  type <- tolower(type);
 
+ # Docker / lib-mounted deploy: resolve under OMICS_LIB_DIR first, matching every
+ # other tool's reference-data convention (see ov_library_cache.R). The 16S
+ # function-prediction bundle installs as <OMICS_LIB_DIR>/microbiome_funcpred/
+ # {tax4fun, tax4fun2, picrust12, picrust13} (fetched by fetch-microbiome.sh).
+ # Falls through to the hardcoded host chain below when unset/absent, so the
+ # classic server + developer machines keep working unchanged.
+ libdir <- Sys.getenv("OMICS_LIB_DIR", "");
+ if(nzchar(libdir)){
+   base <- file.path(sub("/+$", "", libdir), "microbiome_funcpred");
+   if(dir.exists(base)){
+     if(type == "tax4fun"){
+        return(file.path(base, "tax4fun/SILVA123"));
+     }else if(type == "tax4fun2"){
+        return(file.path(base, "tax4fun2"));
+     }else if(type == "picrust12"){
+        return(file.path(base, "picrust12"));
+     }else{
+        return(file.path(base, "picrust13"));
+     }
+   }
+ }
+
  # if(.on.public.web){
   if(file.exists("/home/glassfish/resources/MicrobiomeAnalyst")){ # on server
     if(type == "tax4fun"){
