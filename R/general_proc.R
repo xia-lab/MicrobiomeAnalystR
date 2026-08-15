@@ -143,9 +143,7 @@ SanityCheckData <- function(mbSetObj, filetype, preFilter = "sample", rmConstant
       tree_tip <- 1
     }else{
       tree_tip <- 0;
-      if(length(my.diff) > 10){
-        show.num <- 10;
-      }
+      show.num <- min(10, length(my.diff));
       my.msg <- paste0("A total of ",  length(my.diff), " feature names in the abundance table are not found in the tip labels of the tree! Top ", 
                         show.num, " features are shown here: ", paste(my.diff[1:show.num], collapse="; "), 
                         " You can still proceed, but will not be able to use UniFrac distance in beta diversity analysis.");
