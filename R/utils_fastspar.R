@@ -13,12 +13,26 @@ my.fast.spar <- function(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, out
     return(0);
   }
   
-  if(.on.public.web){
-    spar_home <- paste0(rpath, "libs/fastspar/");
-  }else if (file.exists("/home/jasmine/Downloads/fastspar/fastspar")){ #jas local
-    spar_home <- "/home/jasmine/Downloads/fastspar/"
-  }else{
-    spar_home <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/fast_spar/"
+  # Resolve the bundled fastspar binaries to an ABSOLUTE path. On OmicsVerse the run
+  # dir lives out-of-tree (OMICS_LOCAL_STORAGE_DIR, e.g. /omicsverse/projects/...), so
+  # the historical relative "../../libs/fastspar/" (rpath defaults to "../../") never
+  # reaches the WAR's microbiome/resources/libs/fastspar — SparCC failed even though
+  # the binaries are present and executable. Anchor to .rscripts.dir (the tool's
+  # rscripts dir, set at session init); libs/fastspar is its sibling. Fall back to the
+  # original relative / remote paths if the anchor is unavailable (no regression).
+  spar_home <- NULL
+  if (exists(".rscripts.dir", envir = .GlobalEnv) && !is.na(.rscripts.dir) && nzchar(.rscripts.dir)) {
+    cand <- file.path(sub("/rscripts/?$", "", .rscripts.dir), "libs", "fastspar/")
+    if (file.exists(paste0(cand, "fastspar"))) spar_home <- cand
+  }
+  if (is.null(spar_home)) {
+    if(.on.public.web){
+      spar_home <- paste0(rpath, "libs/fastspar/");
+    }else if (file.exists("/home/jasmine/Downloads/fastspar/fastspar")){ #jas local
+      spar_home <- "/home/jasmine/Downloads/fastspar/"
+    }else{
+      spar_home <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/fast_spar/"
+    }
   }
   
   path_fastspar <- paste(spar_home, "fastspar", sep="");
