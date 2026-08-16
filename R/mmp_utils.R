@@ -4603,6 +4603,10 @@ ComputeEncasingBatchDiablo <- function(filenm, type, groups_json, level = 0.95, 
 PlotMmpPairScatter <- function(featX, featY, imgName, format = "png", dpi = 150) {
   model <- ov_qs_read("diablo_model.qs")
   blocks <- model$X
+  # A continuous outcome is fitted with block.spls, which appends the RESPONSE to X as a block
+  # literally named "Y" (and leaves model$Y NULL). Left in, a feature can resolve into it and
+  # the panel plots the outcome as though it were an omics feature.
+  if (!is.null(names(blocks))) blocks <- blocks[setdiff(names(blocks), "Y")]
   if (is.null(blocks) || !length(blocks)) stop("no integrated blocks in the DIABLO model")
 
   where <- function(f) {
@@ -4633,6 +4637,10 @@ PlotMmpPairScatter <- function(featX, featY, imgName, format = "png", dpi = 150)
 
   Cairo::Cairo(file = paste0(imgName, ".", format), type = format, unit = "in",
                width = 6.5, height = 5.6, dpi = dpi, bg = "white")
+  # Close on EVERY exit. Without this a failure after the device opens leaves it current, and
+  # the next plot in that R session is written into this figure's filename -- so a later click
+  # is served a completely unrelated image as "the pair scatter".
+  on.exit(try(grDevices::dev.off(), silent = TRUE), add = TRUE)
   op <- graphics::par(mar = c(4.6, 4.6, 3.6, 1.4))
   graphics::plot(x, y, pch = 19, col = col, cex = 1.1,
                  xlab = paste0(featX, "  (", bx, ")"), ylab = paste0(featY, "  (", by, ")"),
@@ -4645,9 +4653,12 @@ PlotMmpPairScatter <- function(featX, featY, imgName, format = "png", dpi = 150)
     if (all(is.finite(stats::coef(fit)))) graphics::abline(fit, col = "grey35", lwd = 2, lty = 2)
   }
   if (!is.null(grp) && nlevels(grp) > 1)
-    graphics::legend("topleft", legend = levels(grp), col = pal[seq_len(nlevels(grp))],
+    graphics::legend("topleft", legend = levels(grp),
+                     # Wrap exactly as the points do. Taking the first n colours instead gave
+                     # groups 7+ an NA key while their points reused colour 1, so two groups
+                     # shared a colour and two keys drew nothing -- silently, above six groups.
+                     col = pal[(seq_len(nlevels(grp)) - 1L) %% length(pal) + 1L],
                      pch = 19, bty = "n", cex = 0.9)
   graphics::par(op)
-  grDevices::dev.off()
   invisible(paste0(imgName, ".", format))
 }
