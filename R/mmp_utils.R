@@ -4585,3 +4585,69 @@ ComputeEncasingBatchDiablo <- function(filenm, type, groups_json, level = 0.95, 
   })
   return(filenm)
 }
+
+#'Scatter plot of one microbiome feature against one metabolite
+#'@description Plots the two members of a cross-omics pair against each other for the same
+#'samples, coloured by group, with a fitted line and the Pearson correlation. The DIABLO
+#'cross-omics correlation table lists exactly such pairs, and a box plot of either half on its
+#'own cannot show the relationship the row reports.
+#'
+#'Reads the fitted DIABLO model from the working directory rather than from live analysis
+#'state, so the same call serves the interactive page and the workflow dashboard.
+#'@param featX Feature name from either block (order does not matter).
+#'@param featY Feature name from the other block.
+#'@param imgName Image name WITHOUT extension.
+#'@param format Image format, "png" or "pdf".
+#'@param dpi Image resolution.
+#'@export
+PlotMmpPairScatter <- function(featX, featY, imgName, format = "png", dpi = 150) {
+  model <- ov_qs_read("diablo_model.qs")
+  blocks <- model$X
+  if (is.null(blocks) || !length(blocks)) stop("no integrated blocks in the DIABLO model")
+
+  where <- function(f) {
+    for (b in names(blocks)) if (f %in% colnames(blocks[[b]])) return(b)
+    NA_character_
+  }
+  bx <- where(featX); by <- where(featY)
+  if (is.na(bx)) stop(paste0("feature not in the integrated data: ", featX))
+  if (is.na(by)) stop(paste0("feature not in the integrated data: ", featY))
+
+  x <- as.numeric(blocks[[bx]][, featX])
+  y <- as.numeric(blocks[[by]][, featY])
+  keep <- is.finite(x) & is.finite(y)
+  if (sum(keep) < 3) stop("fewer than three samples have both features")
+  x <- x[keep]; y <- y[keep]
+
+  grp <- NULL
+  if (!is.null(model$Y)) {
+    g <- factor(model$Y)
+    if (length(g) == length(keep)) grp <- droplevels(g[keep])
+  }
+  pal <- c("#5a9bd4", "#d76a6a", "#67a97d", "#c9a227", "#8e79b0", "#c07b56")
+  col <- if (is.null(grp)) rep("#5a9bd4", length(x)) else pal[(as.integer(grp) - 1L) %% length(pal) + 1L]
+
+  ct <- suppressWarnings(stats::cor.test(x, y))
+  sub <- sprintf("Pearson r = %.2f, p = %s, n = %d", unname(ct$estimate),
+                 format.pval(ct$p.value, digits = 2, eps = 1e-4), length(x))
+
+  Cairo::Cairo(file = paste0(imgName, ".", format), type = format, unit = "in",
+               width = 6.5, height = 5.6, dpi = dpi, bg = "white")
+  op <- graphics::par(mar = c(4.6, 4.6, 3.6, 1.4))
+  graphics::plot(x, y, pch = 19, col = col, cex = 1.1,
+                 xlab = paste0(featX, "  (", bx, ")"), ylab = paste0(featY, "  (", by, ")"),
+                 main = paste0(featX, "  vs  ", featY))
+  graphics::mtext(sub, side = 3, line = 0.2, cex = 0.85, col = "grey25")
+  # Trend line only when it is defined: two identical x values give a vertical fit and lm
+  # returns NA slope, which abline draws as nothing but warns.
+  if (stats::sd(x) > 0) {
+    fit <- stats::lm(y ~ x)
+    if (all(is.finite(stats::coef(fit)))) graphics::abline(fit, col = "grey35", lwd = 2, lty = 2)
+  }
+  if (!is.null(grp) && nlevels(grp) > 1)
+    graphics::legend("topleft", legend = levels(grp), col = pal[seq_len(nlevels(grp))],
+                     pch = 19, bty = "n", cex = 0.9)
+  graphics::par(op)
+  grDevices::dev.off()
+  invisible(paste0(imgName, ".", format))
+}
