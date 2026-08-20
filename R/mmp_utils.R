@@ -241,8 +241,8 @@ PerformPairDEAnalyse <- function(mbSetObj, taxalvl, analysisVar,alg="limma",plvl
   }
   
   if(taxalvl=="null" | is.null(taxalvl)){
-    if(exist(current.proc$taxalvl)){
-      
+    if(!is.null(current.proc$taxalvl)){
+
       taxalvl = current.proc$taxalvl
     }else{
       taxalvl=names(phyloseq_objs$count_tables)[length(phyloseq_objs$count_tables)-1]
