@@ -47,6 +47,16 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
       current.proc$met$data.proc <<- mbSetObj$dataSet$metabolomics$data.orig
     }
   }
+  # The metabolomics DE result is NOT part of the restored durable artifacts above, so a
+  # reaped/wiped current.proc leaves res_deAnal NULL. The rbind below then hits the line-76
+  # zero placeholder ("V1","V2",...) and dies with "names do not match previous names",
+  # blocking DIABLO. CompareMet persists it to limma_output.csv — restore from there.
+  if(is.null(current.proc$met$res_deAnal) && file.exists("limma_output.csv")){
+    .met_de <- try(utils::read.csv("limma_output.csv", row.names = 1, check.names = FALSE), silent = TRUE)
+    if(!inherits(.met_de, "try-error") && is.data.frame(.met_de) && nrow(.met_de) > 0){
+      current.proc$met$res_deAnal <<- .met_de
+    }
+  }
 
   d.list[["mic"]] = list()
   # Use normalized/auto-scaled data for integration

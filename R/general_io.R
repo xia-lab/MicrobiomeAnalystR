@@ -395,11 +395,30 @@ GetResColNames <- function(mbSetObj){
   if(is.null(nms)) character(0) else nms;
 }
 
+# The metabolomics limma result lives only in the in-memory `current.proc$met$res_deAnal`
+# global. If the Rserve child is reaped (or current.proc is otherwise wiped) between the
+# metabolomics comparison and a later read, that global is NULL — which renders the
+# ComparisonAnalysis metabolomics table empty and makes the DIABLO integration fall back to
+# a zero placeholder whose column names ("V1","V2",...) break the rbind against the
+# microbiome result ("names do not match previous names"), so DIABLO cannot proceed.
+# CompareMet always persists the result to limma_output.csv, so restore from there on demand.
+.ov_restore_met_res_deAnal <- function(){
+  if(exists("current.proc") && is.null(current.proc$met$res_deAnal) && file.exists("limma_output.csv")){
+    de <- try(utils::read.csv("limma_output.csv", row.names = 1, check.names = FALSE), silent = TRUE)
+    if(!inherits(de, "try-error") && is.data.frame(de) && nrow(de) > 0){
+      current.proc$met$res_deAnal <<- de
+    }
+  }
+  invisible(TRUE)
+}
+
 GetMetaboResRowNames <- function(){
+  .ov_restore_met_res_deAnal();
   return(rownames(current.proc$met$res_deAnal));
 }
 
 GetMetaboResColNames <- function(){
+  .ov_restore_met_res_deAnal();
   return(colnames(current.proc$met$res_deAnal));
 }
 
@@ -440,6 +459,7 @@ GetResMat <- function(mbSetObj){
 }
 
 GetResMetabo <- function(){
+  .ov_restore_met_res_deAnal();
   res_mat <- as.matrix(current.proc$met$res_deAnal);
 
   # Safe-Handshake: Arrow save with verification
