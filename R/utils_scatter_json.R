@@ -65,8 +65,15 @@ my.json.scatter.pair <- function(filenm,analysisVar, taxrank){
   if("omics" %in% colnames(metadf)){
     sel.meta = "omics"
   }
-  # Only generate scatter for the requested taxonomy level
+  # Only generate scatter for the requested taxonomy level. The reduction results
+  # are keyed by the level they were COMPUTED at; when the page requests a level
+  # that was not computed (taxonomy dropdown switched without re-running the
+  # integration), fall back to the computed level — and normalize taxrank to that
+  # EFFECTIVE level so every use below agrees. The export gate (tax == taxrank)
+  # and the final netData[[taxrank]] lookup used the RAW request, returned NULL,
+  # and the page reported "Failed to prepare data for 3D scatter visualization".
   tax_levels <- if(taxrank %in% names(pos.xyz.all)) taxrank else names(pos.xyz.all)
+  taxrank <- tax_levels[1]
   netData <- vector("list",length=length(tax_levels))
   names(netData) <- tax_levels
   for(tax in tax_levels){

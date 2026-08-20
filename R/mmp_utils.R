@@ -2666,14 +2666,17 @@ tuneKOmap <- function(){
 ###########################################################
 
 
-DoDimensionReductionIntegrative <- function(mbSetObj, reductionOpt, method="globalscore", dimn,analysisVar,diabloPar=0.2){
+DoDimensionReductionIntegrative <- function(mbSetObj, reductionOpt, method="globalscore", dimn,analysisVar,diabloPar=0.2, taxLevels=NULL){
   if(!exists("my.reduce.dimension")){
     .load.scripts.on.demand("utils_dimreduction.Rc");
   }
   if(analysisVar=="null"){
     analysisVar = current.proc$meta_para$analysis.var
   }
-  return(my.reduce.dimension(mbSetObj, reductionOpt, method,dimn, analysisVar,diabloPar));
+  ## taxLevels: optional character vector of taxonomy levels to integrate at
+  ## (e.g. c("OTU","Species","Genus") for the workflow sweep). NULL — the
+  ## default and every manual call — keeps the single-level behaviour.
+  return(my.reduce.dimension(mbSetObj, reductionOpt, method,dimn, analysisVar,diabloPar, taxLevels=taxLevels));
 }
 
 GetMofaRes <- function(){

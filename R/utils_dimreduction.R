@@ -7,7 +7,7 @@
 ## J. Xia, jeff.xia@mcgill.ca
 ###################################################
 #procrustes or diablo
-my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="globalscore", dimn=10,analysisVar, diabloPar=0.2){
+my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="globalscore", dimn=10,analysisVar, diabloPar=0.2, taxLevels=NULL){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   message("[my.reduce.dimension] reductionOpt=", reductionOpt, " method=", method)
   if(method == ""){
@@ -67,6 +67,25 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
     analyzed_lvl <- names(which(!sapply(phyloseq_objs$res_deAnal, is.null)))
     if(length(analyzed_lvl) == 0) analyzed_lvl <- names(phyloseq_objs$count_tables)
     d.list[["mic"]][["data.proc"]] = setNames(list(current.proc$mic$data.proc), analyzed_lvl[1])
+    ## Multi-level sweep: integrate at EACH requested taxonomy level, using the
+    ## per-rank count tables CreatePhyloseqObj/CreateMMPFakeFile already built.
+    ## The per-level loops below (model per element of data.proc, results keyed by
+    ## level) were designed for this — NULL (the default, and every manual call)
+    ## keeps the single analyzed-level behaviour above unchanged. A requested rank
+    ## the taxonomy cannot support (absent, or fewer than 3 features after
+    ## aggregation) is skipped with a message rather than failing the run.
+    if(!is.null(taxLevels)){
+      lv.tabs <- list()
+      for(lv in intersect(taxLevels, names(phyloseq_objs$count_tables))){
+        tb <- phyloseq_objs$count_tables[[lv]]
+        if(!is.null(tb) && nrow(tb) >= 3){
+          lv.tabs[[lv]] <- tb
+        } else {
+          message("[my.reduce.dimension] level '", lv, "' skipped: fewer than 3 features")
+        }
+      }
+      if(length(lv.tabs) > 0) d.list[["mic"]][["data.proc"]] <- lv.tabs
+    }
   }
   if(micDataType=='ko'){
     d.list[["mic"]][["comp.res"]]  = current.proc$mic$res_deAnal[,c(3,4,1)]
@@ -89,6 +108,26 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
   d.list[["met"]][["enrich.nms"]] = rownames(current.proc$met$res_deAnal)
   d.list[["met"]][["meta"]] = data.frame(mbSetObj$dataSet$sample_data)
   
+  ## Align the per-level DE lists to the levels actually being INTEGRATED. After a
+  ## comparison at a second taxonomy level, res_deAnal carries several levels while
+  ## the integration runs on one (or a different set) — the raw lists then disagree
+  ## in length, and the loadings/enrichment pairing below (mapply over loadingNames
+  ## vs enrich_ids) silently RECYCLES: loading.enrich came back with twice as many
+  ## entries as the loadings have rows, and the scatter JSON later died at
+  ## rownames(loading.data) with "length of 'dimnames' [1] not equal to array
+  ## extent". A level without its own comparison falls back to the first available.
+  if(micDataType != 'ko'){
+    lv.have <- names(d.list[["mic"]][["data.proc"]])
+    cr <- d.list[["mic"]][["comp.res"]];   cr <- cr[!vapply(cr, is.null, logical(1))]
+    en <- d.list[["mic"]][["enrich.nms"]]; en <- en[!vapply(en, is.null, logical(1))]
+    if(length(cr) > 0 && length(en) > 0){
+      d.list[["mic"]][["comp.res"]]   <- setNames(lapply(lv.have, function(lv)
+        if(!is.null(cr[[lv]])) cr[[lv]] else cr[[1]]), lv.have)
+      d.list[["mic"]][["enrich.nms"]] <- setNames(lapply(lv.have, function(lv)
+        if(!is.null(en[[lv]])) en[[lv]] else en[[1]]), lv.have)
+    }
+  }
+
   newmeta <- rbind(  d.list[["mic"]][["meta"]],d.list[["met"]][["meta"]])
   comp.res1 = lapply( d.list[["mic"]][["comp.res"]],function(x) rbind(x, d.list[["met"]][["comp.res"]]) )
   
@@ -225,13 +264,23 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
       img.names <- if (exists("diablo.img.names")) diablo.img.names else list(
         pca="diagnostic_pca_diablo_0.png", loading="diagnostic_loading_0.png",
         diag="diagnostic_components_diablo_0.png", circos="diagnostic_circos_diablo_0.png")
+      ## Multi-level sweep: the FIRST level keeps the canonical file names every
+      ## existing reader knows; later levels get a _<level> suffix so each level's
+      ## figures and model survive instead of the last level overwriting them all.
+      lvl.suffix <- if (length(dats) > 1 && l > 1) paste0("_", tolower(names(dats)[l])) else ""
+      if (nzchar(lvl.suffix)) {
+        img.names <- lapply(img.names, function(nm) sub("\\.png$", paste0(lvl.suffix, ".png"), nm))
+      }
 
       ov_qs_save(list(dats = dats[[l]], Y = Y, ncomp = ncomp, design = design,
                       meta_type = diablo.meta.type,
                       pca_img = file.path(work_dir, img.names$pca),
                       loading_img = file.path(work_dir, img.names$loading),
                       diag_img = file.path(work_dir, img.names$diag),
-                      circos_img = file.path(work_dir, img.names$circos)), "diablo_input.qs")
+                      circos_img = file.path(work_dir, img.names$circos),
+                      ## Per-level artifact names for the sweep (canonical for level 1).
+                      model_file  = paste0("diablo_model", lvl.suffix, ".qs"),
+                      circos_file = paste0("diablo_circos", lvl.suffix, ".json")), "diablo_input.qs")
       diablo_result <- run_func_via_microservice(
         func = function(work_dir) {
           setwd(work_dir)
@@ -270,7 +319,8 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
           diablo.res <- list(dim.res = setNames(list(model), names(input$dats)[1]))
           ov_qs_save(diablo.res, "diablo.res.qs")
           # Save raw model separately for perf() — avoids double qs corruption
-          ov_qs_save(model, "diablo_model.qs")
+          .model_file <- if (is.null(input$model_file)) "diablo_model.qs" else input$model_file
+          ov_qs_save(model, .model_file)
 
           # Generate ALL diagnostic plots while model is in memory
           # Helper to safely generate a plot
@@ -296,7 +346,12 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
             ## a fresh environment per call, so each panel keeps its own component.
             fig.list <- lapply(seq_len(ncomp_max), function(nc) {
               tryCatch(
-                as_grob(function() { plotDiablo(model, ncomp = nc) }),
+                ## Titled panel: plotDiablo draws no component label of its own, so
+                ## a 3-panel stack was three unlabeled look-alike grids.
+                gridExtra::arrangeGrob(
+                  as_grob(function() { plotDiablo(model, ncomp = nc) }),
+                  top = grid::textGrob(paste("Component", nc),
+                                       gp = grid::gpar(fontface = "bold", cex = 1.2))),
                 error = function(e) { message("[plotDiablo ncomp=", nc, "] ", e$message); NULL }
               )
             })
@@ -321,11 +376,12 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
             }
             ncomp.plot <- min(3L, as.integer(ncomp.max))
 
-            op <- par(no.readonly = TRUE)
-            on.exit(par(op), add = TRUE)
-            par(mfrow = c(ncomp.plot, 1), mar = c(5, 4, 3, 1))
-
-            for (nc in seq_len(ncomp.plot)) {
+            ## grid layout, NOT par(mfrow): the panels are ggplots, and grid
+            ## graphics ignore the base mfrow layout — print(ggplot) opened a
+            ## NEW page per component, each overwriting the last, so the PNG
+            ## showed only the final component's loadings. Collect the panels
+            ## and arrange them once.
+            loading.panels <- lapply(seq_len(ncomp.plot), function(nc) {
               tryCatch({
                 top.rows <- lapply(names(model$loadings), function(block.nm){
                   mat <- as.matrix(model$loadings[[block.nm]])
@@ -357,7 +413,7 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
                 top.df <- top.df[order(abs(top.df$loading), decreasing = TRUE), , drop = FALSE]
                 top.df$feature <- factor(top.df$feature, levels = rev(unique(top.df$feature)))
 
-                p <- ggplot2::ggplot(top.df, ggplot2::aes(x = feature, y = loading, fill = block)) +
+                ggplot2::ggplot(top.df, ggplot2::aes(x = feature, y = loading, fill = block)) +
                   ggplot2::geom_col(width = 0.7) +
                   ggplot2::coord_flip() +
                   ggplot2::labs(
@@ -370,13 +426,12 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
                     legend.position = "bottom",
                     plot.title = ggplot2::element_text(hjust = 0.5)
                   )
-                print(p)
               }, error = function(e) {
                 message("[custom loading comp=", nc, "] ", e$message)
-                plot.new()
-                text(0.5, 0.5, paste0("Component ", nc, " failed:\n", e$message), cex = 1)
+                grid::textGrob(paste0("Component ", nc, " failed:\n", e$message))
               })
-            }
+            })
+            gridExtra::grid.arrange(grobs = loading.panels, nrow = length(loading.panels))
           })
 
           # 3. perf — skipped here, runs in separate PlotDiagnostic call (clean environment)
@@ -464,7 +519,7 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
             message("[DIABLO circos] Creating edge list with ", length(edges), " edges...")
             circos_json <- list(DIABLO = edges)
             message("[DIABLO circos] Writing JSON to file...")
-            jsonlite::write_json(circos_json, "diablo_circos.json", auto_unbox = TRUE, pretty = FALSE)
+            jsonlite::write_json(circos_json, if (is.null(input$circos_file)) "diablo_circos.json" else input$circos_file, auto_unbox = TRUE, pretty = FALSE)
             message("[DIABLO circos] JSON completed in ", round(difftime(Sys.time(), circos_start, units="secs"), 1), " seconds")
           }, error = function(e) message("[DIABLO circosJSON] ", e$message))
 
@@ -499,7 +554,7 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
           } else {
             message("[DIABLO] Circos plot generation skipped (diablo.skip.circos = TRUE)")
             # Create empty JSON so viewer doesn't break
-            jsonlite::write_json(list(DIABLO = list()), "diablo_circos.json", auto_unbox = TRUE, pretty = FALSE)
+            jsonlite::write_json(list(DIABLO = list()), if (is.null(input$circos_file)) "diablo_circos.json" else input$circos_file, auto_unbox = TRUE, pretty = FALSE)
           }
 
           gc(verbose = FALSE, full = TRUE)
@@ -599,32 +654,43 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
     return(2)
   }
 
-    pos.xyz <- lapply(pos.xyz,function(x) as.data.frame(x)[,c(1:3)]);
-    pos.xyz <- lapply(pos.xyz,function(x) unitAutoScale(x));
-    pos.xyz <- lapply(pos.xyz, "rownames<-", names[[1]]);
+    ## Each element keeps ITS OWN row names through the scale/subset transforms.
+    ## The old code stamped names[[1]] (the FIRST element's rownames) onto every
+    ## element: with more than one level, or whenever an element's row count did
+    ## not match the first's, that died mid-reduction with
+    ## "length of 'dimnames' [1] not equal to array extent" AFTER the model had
+    ## already fitted — the whole run failed for a labelling step.
+    .relabel_scores <- function(x){
+      rn <- make.unique(as.character(rownames(x)));
+      x <- as.data.frame(x)[, seq_len(min(3L, ncol(x))), drop = FALSE];
+      x <- unitAutoScale(x);
+      if(length(rn) == nrow(x)) rownames(x) <- rn;
+      x
+    }
+    pos.xyz <- lapply(pos.xyz, .relabel_scores);
 
   if(reductionOpt %in% c("diablo")){
-    names2 <- lapply(pos.xyz2, function(x) rownames(x))
-    pos.xyz <- lapply(pos.xyz,function(x) as.data.frame(x)[,c(1:3)]);
-    pos.xyz2 <- lapply(pos.xyz2, function(x) unitAutoScale(x));
-    pos.xyz2 <- lapply(pos.xyz2, "rownames<-", names2[[1]]);
+    pos.xyz2 <- lapply(pos.xyz2, .relabel_scores);
   }
 
   
   
   
   if(reductionOpt != "procrustes"){
-    hit.inx <- mapply(function(x,y){
-      match(x,y)
-    },loadingNames, combined.res$enrich_ids);
-    loadingSymbols <- mapply(function(x,y){
-      y[x]
-    },hit.inx, combined.res$enrich_ids);
-    if(micDataType=="ko"){
-      loadingSymbols=list(OTU=loadingSymbols)
-    } else if(!is.list(loadingSymbols)){
-      loadingSymbols=setNames(list(loadingSymbols), names(loadingNames))
-    }
+    ## By-NAME join, sized to the loadings. The old parallel mapply paired the
+    ## two lists POSITIONALLY: whenever the DE list and the integrated levels
+    ## disagreed (a comparison run at a second taxonomy level is enough), it
+    ## silently RECYCLED and SIMPLIFY collapsed the equal-length results into a
+    ## matrix — loading.enrich came back with 2x the loadings' rows and the
+    ## scatter JSON died three calls later at rownames(loading.data) with
+    ## "length of 'dimnames' [1] not equal to array extent". Joining each level
+    ## against ITS OWN enrich ids (first available as fallback) is always
+    ## level-keyed and always row-aligned with the loadings.
+    loadingSymbols <- setNames(lapply(names(loadingNames), function(lv){
+      ids <- combined.res$enrich_ids[[lv]]
+      if(is.null(ids) && length(combined.res$enrich_ids) > 0) ids <- combined.res$enrich_ids[[1]]
+      ids[match(loadingNames[[lv]], ids)]
+    }), names(loadingNames))
   }
   if(reductionOpt == "mofa"){
     loading.pos.xyz = lapply(loading.pos.xyz, as.data.frame)
