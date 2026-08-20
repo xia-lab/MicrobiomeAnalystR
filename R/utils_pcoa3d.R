@@ -154,11 +154,18 @@ my.pcoa.3d <- function(mbSetObj, ordMeth, distName, taxrank, colopt, variable, t
   # Meta-analysis: encode the study of origin as the second factor so the 3D
   # viewer renders one point SHAPE per study (the serializer maps facB to
   # shapes; without it every study renders as the same circle and the
-  # cross-study structure is invisible).
-  meta.sam <- sample_data(mbSetObj$dataSet$norm.phyobj);
-  if("dataset" %in% colnames(meta.sam)){
-    pca3d$score$facB <- as.character(meta.sam[["dataset"]]);
-  }
+  # cross-study structure is invisible). Gated on a multi-study session so a
+  # single-study run whose metadata happens to contain a "dataset" column is
+  # left untouched, and wrapped so a missing norm.phyobj can never abort the
+  # ordination itself.
+  tryCatch({
+    if(length(mbSetObj$dataSets) > 1){
+      meta.sam <- sample_data(mbSetObj$dataSet$norm.phyobj);
+      if("dataset" %in% colnames(meta.sam)){
+        pca3d$score$facB <- as.character(meta.sam[["dataset"]]);
+      }
+    }
+  }, error = function(e){});
   rgbcols <- col2rgb(cols);
   cols <- apply(rgbcols, 2, function(x){paste("rgb(", paste(x, collapse=","), ")", sep="")});
   pca3d$score$colors <- cols;
