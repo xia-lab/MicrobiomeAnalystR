@@ -1179,7 +1179,12 @@ M2Mprediction<- function(model,predDB,taxalvl,psc=0.5,metType="metabolite"){
     names(predres)<- lvlnm
     for(taxalvl in lvlnm){
       OTUtab <<- phyloseq_objs$count_tables[[taxalvl]]
-      predres[[taxalvl]] <- doGemPrediction(predDB,taxalvl,psc,metType)
+      # Isolate each level: a level with no GEM coverage must not abort the whole
+      # multi-level prediction — record 0 and continue so the covered levels render.
+      predres[[taxalvl]] <- tryCatch(
+        doGemPrediction(predDB,taxalvl,psc,metType),
+        error = function(e){ message("GEM prediction skipped for ", taxalvl, ": ", conditionMessage(e)); 0 }
+      )
     }
   }else{
     
@@ -1223,13 +1228,21 @@ doGemPrediction <- function(predDB,taxalvl,psc=0.5,metType,matchonly=T,sigonly=T
   m2m_db <- dcast(m2m_ls,taxa~metabolite,value.var="potential")
   
   m2m_db[is.na(m2m_db)] <- 0
-  dbnorm <- as.matrix(m2m_db[,-1])
-  ##filter otu table
-  OTUtab <- OTUtab[which(rownames(OTUtab) %in% tax_map$Query),]
-  if(!(all( rownames(OTUtab) ==m2m_db$taxa))){
+  ## Filter + align the OTU table and the model matrix by SHARED taxa, matched by
+  ## NAME rather than by position. The old positional check
+  ## `all(rownames(OTUtab) == m2m_db$taxa)` reported "Names not match!" whenever the
+  ## two carried the same taxa in a different order, and an empty intersection then
+  ## fell through to apply() on a 0-row matrix and crashed
+  ## ("dim(ordered) <- ns ... length of object [0]"), failing the whole prediction.
+  OTUtab <- OTUtab[which(rownames(OTUtab) %in% tax_map$Query), , drop = FALSE]
+  common.taxa <- intersect(rownames(OTUtab), m2m_db$taxa)
+  if(length(common.taxa) == 0){
     AddErrMsg("Names not match!");
     return(0);
   }
+  OTUtab <- OTUtab[common.taxa, , drop = FALSE]
+  m2m_db <- m2m_db[match(common.taxa, m2m_db$taxa), , drop = FALSE]
+  dbnorm <- as.matrix(m2m_db[,-1])
   OTUtab <- apply(OTUtab, 2, function(x) ReScale(rank(x),0,1) )
   fun_prediction = NULL
   fun_m2m_pair <- list()
@@ -3774,12 +3787,15 @@ PlotDiagnostic <- function(imgName, dpi=default.dpi, format="png",alg, taxrank="
               stringsAsFactors = FALSE)
             utils::write.csv(sum_tbl, "diablo_ber_summary.csv", row.names = FALSE)
             # Figure caption
-            ber_cap <- sprintf("DIABLO BER: min = %.4f at Comp. %d  (cov = %.2f, max.dist, 5-fold CV)",
+            ber_cap <- sprintf("DIABLO BER: min = %.4f at Comp. %d  (cov = %.2f, max.dist, 5-fold CV) — * = selected # components",
                                min_ber, opt_comp, if (!is.na(cov_par)) cov_par else 0)
             df_long <- reshape2::melt(df, id.vars = "Component", variable.name = "Metric", value.name = "ErrorRate")
+            # Mark the selected (optimal) number of components with an asterisk on the x-axis
+            x_labels <- as.character(df$Component)
+            if (!is.na(opt_comp)) x_labels[df$Component == opt_comp] <- paste0(opt_comp, "*")
             p <- ggplot2::ggplot(df_long, ggplot2::aes(x = Component, y = ErrorRate, color = Metric)) +
               ggplot2::geom_line(linewidth = 1.2) + ggplot2::geom_point(size = 2.5) +
-              ggplot2::scale_x_continuous(breaks = df$Component) +
+              ggplot2::scale_x_continuous(breaks = df$Component, labels = x_labels) +
               ggplot2::labs(x = "Component", y = "Classification Error Rate",
                            title = "DIABLO Performance (max.dist)",
                            caption = ber_cap) +
