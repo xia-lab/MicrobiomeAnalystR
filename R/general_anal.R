@@ -1887,7 +1887,10 @@ PerformLinDAUni <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, tax
     }
   }
 
-  meta_df <- as.data.frame(sample_data(mbSetObj$dataSet$norm.phyobj))
+  # as(..., "data.frame"), NOT as.data.frame(): phyloseq's sample_data keeps its
+  # S4-backed class through as.data.frame, so meta_df[rows, var] returns another
+  # sample_data and factor()/order() die with "cannot xtfrm data frames".
+  meta_df <- as(sample_data(mbSetObj$dataSet$norm.phyobj), "data.frame")
   cls <- factor(meta_df[colnames(data1), variable])
   # Order the levels by the requested pair so the reported log2 fold change is comp.grp relative to
   # ref.grp. A bare factor() leaves them alphabetical, which decided the SIGN of every fold change by
