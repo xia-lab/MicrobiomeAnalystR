@@ -250,3 +250,33 @@ PerformBatchCorrection <- function(){
     return(1);
 }
 
+# Single entry point for the "Adjust study batch effect / Apply auto-scaling" Update on
+# MetaProcView. Batch correction and auto-scaling are one-way, in-place mutations of
+# microbiome_meta.qs / merged.data.qs, so unchecking a box (or re-clicking) used to leave
+# the previously-applied transform in place and the figure never changed ("figures aren't
+# updating"). Recompute deterministically from a clean normalized baseline every time:
+# revert to the baseline, then re-apply ONLY the operations currently checked. The baseline
+# is captured lazily on the first Update -- at that point the working data is still the clean
+# normalized merge, nothing having been applied yet -- and invalidated by MergeDatasets on
+# every (re)normalization so it can never go stale. Returns 1 iff batch correction was
+# applied, 0 otherwise, matching the caller's existing status-message semantics.
+RecomputeMetaProcessing <- function(adjustBatch = "false", autoScale = "false"){
+  if(!ov_qs_exists("microbiome_meta.base.qs")){
+    shadow_save(ov_qs_read("microbiome_meta.qs"), "microbiome_meta.base.qs");
+    shadow_save(ov_qs_read("merged.data.qs"),     "merged.data.base.qs");
+  }
+  # Revert the working data to the clean normalized baseline before re-applying.
+  shadow_save(ov_qs_read("microbiome_meta.base.qs"), "microbiome_meta.qs");
+  shadow_save(ov_qs_read("merged.data.base.qs"),     "merged.data.qs");
+
+  res <- 0;
+  if(adjustBatch == "true"){
+    PerformBatchCorrection();   # reads/writes merged.data.qs + microbiome_meta.qs
+    res <- 1;
+  }
+  if(autoScale == "true"){
+    ApplyMetaAutoScale("true"); # reads/writes microbiome_meta.qs (on top of any batch step)
+  }
+  return(res);
+}
+

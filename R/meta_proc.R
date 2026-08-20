@@ -949,6 +949,12 @@ MergeDatasets <- function(mbSetObj, taxo_type, sample_var){
   norm.data <- transform_sample_counts(merged.data, function(x) x / sum(x) );
   shadow_save(norm.data, "merged.data.qs");
 
+  # A fresh (re)normalization invalidates any prior batch-effect / auto-scaling baseline,
+  # so the MetaProcView Update step re-snapshots the current normalized data on its next
+  # click instead of reverting to a stale one (see RecomputeMetaProcessing in meta_qc.R).
+  for(.bf in c("microbiome_meta.base.qs", "merged.data.base.qs")){
+    unlink(c(.bf, sub("\\.qs$", ".qs2", .bf), sub("\\.qs$", ".arrow", .bf)));
+  }
 
   return(1);
 }
