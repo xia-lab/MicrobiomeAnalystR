@@ -4329,10 +4329,11 @@ PlotGroupDataHeattree <- function(mbSetObj, meta, comparison, taxalvl, color, la
   
   flag <- FALSE;
   
-  PrepareHeatTreePlotAbR(dm, tax_dm, taxalvl, dm_samples_cmf, color, showLabels,imgName, format, layoutOpt, comparison, flag);
-  
+  ok <- PrepareHeatTreePlotAbR(dm, tax_dm, taxalvl, dm_samples_cmf, color, showLabels,imgName, format, layoutOpt, comparison, flag);
+  if (!isTRUE(ok)) { return(0); }  # AddErrMsg already set the reason; do not claim success
+
   #below is for PDF reporter
-  mbSetObj$analSet$heat_tree_plot <- imgName; 
+  mbSetObj$analSet$heat_tree_plot <- imgName;
   #mbSetObj$analSet$heat_tree_plot <- paste(imgName,".", format, sep="")
   mbSetObj$analSet$heat_tree_meta <- meta;
   mbSetObj$analSet$heat_tree_tax <- tax_o;
@@ -4366,10 +4367,11 @@ PlotSampleDataHeattree <- function(mbSetObj,comparison, taxalvl, color, layoutOp
   dm_samples_cmf <- dm_samples[dm_samples$sample_id %in% comparison, ];
   dm_samples_cmf$meta_com <- comparison;
   
-  PrepareHeatTreePlotAbR(dm, tax_dm, taxalvl, dm_samples_cmf, color,showLabels, imgName, format, layoutOpt, comparison, flag);
-  
+  ok <- PrepareHeatTreePlotAbR(dm, tax_dm, taxalvl, dm_samples_cmf, color,showLabels, imgName, format, layoutOpt, comparison, flag);
+  if (!isTRUE(ok)) { return(0); }  # AddErrMsg already set the reason; do not claim success
+
   #below is for PDF reporter
-  mbSetObj$analSet$heat_tree_plot <- imgName; 
+  mbSetObj$analSet$heat_tree_plot <- imgName;
   mbSetObj$analSet$heat_tree_meta <- comparison;
   mbSetObj$analSet$heat_tree_tax <- tax_o;
   mbSetObj$analSet$heat_tree_comparison <- comparison;
@@ -4397,10 +4399,11 @@ PlotOverviewDataHeattree <- function(mbSetObj, taxalvl, color, layoutOpt,
   
   flag <- FALSE;
   
-  PrepareHeatTreePlotAbR(dm, tax_dm, taxalvl, dm_samples_cmf, color,showLabels, imgName, format, layoutOpt, comparison, flag);  
-  
+  ok <- PrepareHeatTreePlotAbR(dm, tax_dm, taxalvl, dm_samples_cmf, color,showLabels, imgName, format, layoutOpt, comparison, flag);
+  if (!isTRUE(ok)) { return(0); }  # AddErrMsg already set the reason; do not claim success
+
   #below is for PDF reporter
-  mbSetObj$analSet$heat_tree_plot <- imgName; 
+  mbSetObj$analSet$heat_tree_plot <- imgName;
   mbSetObj$analSet$heat_tree_meta <- "All samples";
   mbSetObj$analSet$heat_tree_tax <- tax_o;
   mbSetObj$analSet$heat_tree_comparison <- "All samples";
@@ -4473,9 +4476,13 @@ PrepareHeatTreePlotAbR <- function(dm = dm, tax_dm = tax_dm, taxalvl = taxalvl, 
 
   set.seed(56784);
 
-  box <- rsclient_isolated_exec(
+  # Absolute output path resolved in THIS process (cwd = the user's home dir);
+  # the subprocess renders straight to it (see below).
+  imgFile <- file.path(getwd(), paste0(imgName, ".", format));
+
+  res <- rsclient_isolated_exec(
     func_body = function(input_data) {
-      require(metacoder)
+      require(metacoder); require(Cairo)
       dm_otu_cmf <- input_data$dm_otu_cmf
       sample_ids <- input_data$sample_ids
       meta_com <- input_data$meta_com
@@ -4516,7 +4523,7 @@ PrepareHeatTreePlotAbR <- function(dm = dm, tax_dm = tax_dm, taxalvl = taxalvl, 
                                             named = FALSE, strict = FALSE, dot = FALSE), NA)
 
       node_label_expr <- if (showLabels == "true") {
-                          taxon_names
+                          taxon_names(dm_obj_cmf)
                         } else if (showLabels == "strategic") {
                           strategic_labels
                         } else {
@@ -4563,7 +4570,15 @@ PrepareHeatTreePlotAbR <- function(dm = dm, tax_dm = tax_dm, taxalvl = taxalvl, 
                          node_label_size_range = ht_label_size,
                          output_file = NULL)
       }
-      return(box)
+      # metacoder heat_tree uses R5 NSE — the plot object does NOT survive qs
+      # serialization back to the main process (print() there yields a blank/empty
+      # device and no PNG, while the caller still reports success). Render to disk
+      # HERE, in the same subprocess that built the taxmap, exactly as the
+      # comparison-mode path (PrepareHeatTreePlotDataParse_cmf_plot) does.
+      Cairo::Cairo(file = input_data$imgFile, unit = "in", dpi = 96, width = 13.9, height = 12.2, type = input_data$format, bg = "white")
+      print(box)
+      dev.off()
+      return(list(rendered = TRUE))
     },
     input_data = list(dm_otu_cmf = dm_otu_cmf,
                       sample_ids = dm_samples_cmf$sample_id,
@@ -4571,16 +4586,16 @@ PrepareHeatTreePlotAbR <- function(dm = dm, tax_dm = tax_dm, taxalvl = taxalvl, 
                       color_new = color_new,
                       showLabels = showLabels,
                       layoutOpt = layoutOpt,
-                      comparison = comparison),
-    packages = c("metacoder", "qs"),
+                      comparison = comparison,
+                      imgFile = imgFile,
+                      format = format),
+    packages = c("metacoder", "qs", "Cairo"),
     timeout = 180,
     output_type = "qs"
   )
-  if (is.list(box) && isFALSE(box$success)) { AddErrMsg(box$message); return(0) }
-
-  Cairo::Cairo(file=paste0(imgName, ".", format), unit="in", dpi=96, width=13.9, height=12.2, type=format, bg="white");
-  print(box);
-  dev.off();
+  if (is.list(res) && isFALSE(res$success)) { AddErrMsg(res$message); return(FALSE) }
+  if (!file.exists(imgFile)) { AddErrMsg("Heat tree image was not generated."); return(FALSE) }
+  return(TRUE);
 }
 
 #######################################
