@@ -151,6 +151,14 @@ my.pcoa.3d <- function(mbSetObj, ordMeth, distName, taxrank, colopt, variable, t
   cls <- as.factor(cls);
   pca3d$score$type <- col.type;
   pca3d$score$facA <- cls;
+  # Meta-analysis: encode the study of origin as the second factor so the 3D
+  # viewer renders one point SHAPE per study (the serializer maps facB to
+  # shapes; without it every study renders as the same circle and the
+  # cross-study structure is invisible).
+  meta.sam <- sample_data(mbSetObj$dataSet$norm.phyobj);
+  if("dataset" %in% colnames(meta.sam)){
+    pca3d$score$facB <- as.character(meta.sam[["dataset"]]);
+  }
   rgbcols <- col2rgb(cols);
   cols <- apply(rgbcols, 2, function(x){paste("rgb(", paste(x, collapse=","), ")", sep="")});
   pca3d$score$colors <- cols;

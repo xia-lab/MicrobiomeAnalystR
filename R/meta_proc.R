@@ -606,6 +606,66 @@ GetMetaInfoMeta <- function(mbSetObj, dataName, type="disc"){
 #'License: GNU GPL (>= 2)
 #'@export
 
+# Aggregate every study to the finest taxonomic rank whose names are shared
+# across all studies (>= 10 shared taxa). Feature abundances are summed within
+# each rank value for both the count (proc) and normalized tables; for
+# total-sum-scaled data the sums remain valid rank-level proportions. Taxa
+# without an assignment at the rank (NA / Not_Assigned) are dropped. On
+# success the aggregated objects replace each study's phyloseq objects in
+# mbSetObj$dataSets and a list(rank, shared) is returned; NULL when no rank
+# qualifies or any study lacks a taxonomy table.
+.meta_harmonize_taxa_rank <- function(mbSetObj, sel.nms){
+  ranks <- c("Genus", "Family", "Order", "Class", "Phylum");
+  .rank_names_for <- function(ds, rank){
+    tt <- tryCatch(as.matrix(phyloseq::tax_table(ds$proc.phyobj)), error = function(e) NULL);
+    if(is.null(tt) || !(rank %in% colnames(tt))) return(NULL);
+    map <- as.character(tt[, rank]);
+    names(map) <- rownames(tt);
+    keep <- !(is.na(map) | map %in% c("", "NA", "Not_Assigned"));
+    map <- map[keep];
+    if(length(map) == 0) return(NULL);
+    map;
+  }
+  .aggregate_phy <- function(phy, map, rank){
+    m <- as(phyloseq::otu_table(phy), "matrix");
+    m <- m[rownames(m) %in% names(map), , drop = FALSE];
+    if(nrow(m) == 0) return(NULL);
+    m2 <- rowsum(m, map[rownames(m)]);
+    tax2 <- phyloseq::tax_table(matrix(rownames(m2), ncol = 1,
+                                       dimnames = list(rownames(m2), rank)));
+    phyloseq::merge_phyloseq(phyloseq::otu_table(m2, taxa_are_rows = TRUE),
+                             phyloseq::sample_data(phy), tax2);
+  }
+  for(rank in ranks){
+    maps <- lapply(sel.nms, function(nm) .rank_names_for(readDataset(nm), rank));
+    if(any(vapply(maps, is.null, logical(1)))) next;
+    shared <- Reduce(intersect, lapply(maps, unique));
+    if(length(shared) < 10) next;
+    # adopt: aggregate every study at this rank
+    ok <- TRUE;
+    for(j in seq_along(sel.nms)){
+      nm <- sel.nms[j];
+      ds <- readDataset(nm);
+      map <- maps[[j]];
+      p2 <- .aggregate_phy(ds$proc.phyobj, map, rank);
+      n2 <- tryCatch(.aggregate_phy(ds$norm.phyobj, map, rank), error = function(e) NULL);
+      if(is.null(p2) || is.null(n2)){ ok <- FALSE; break; }
+      ds$proc.phyobj <- p2;
+      ds$norm.phyobj <- n2;
+      if(!is.null(ds$filt.data) && !is.null(rownames(ds$filt.data))){
+        fm <- as.matrix(ds$filt.data);
+        fm <- fm[rownames(fm) %in% names(map), , drop = FALSE];
+        if(nrow(fm) > 0) ds$filt.data <- rowsum(fm, map[rownames(fm)]);
+      }
+      mbSetObj$dataSets[[nm]] <- ds;
+    }
+    if(!ok) next;
+    .set.mbSetObj(mbSetObj);
+    return(list(rank = rank, shared = shared));
+  }
+  NULL;
+}
+
 CheckMetaDataIntegrity <- function(mbSetObj, taxo_type="OTU", sample_var="NA"){
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -639,15 +699,9 @@ CheckMetaDataIntegrity <- function(mbSetObj, taxo_type="OTU", sample_var="NA"){
         return(0);
       }
       
-      # check and record if there is common genes            
+      # check and record if there is common genes
       shared.nms <- intersect(shared.nms, rownames(data));
-      if(length(shared.nms) < 10){
-        msgSet$current.msg <- paste(sel.nms[i], "has less than 10 common genes/probes from previous data sets");
-        saveSet(msgSet, "msgSet");                      
-        print(msgSet$current.msg);
-        return(0);
-      }
-      
+
       shared.meta.nms <- intersect(shared.meta.nms, colnames(dataSet$proc.phyobj@sam_data));
       if(length(shared.meta.nms) < 1){
         msgSet$current.msg <- paste(sel.nms[i], "has no shared metadata with previous dataset.");
@@ -658,8 +712,35 @@ CheckMetaDataIntegrity <- function(mbSetObj, taxo_type="OTU", sample_var="NA"){
     }   
   }
   
+  # Features must be comparable across studies. When the raw feature IDs
+  # (ASV/OTU identifiers) barely overlap, the studies can still be combined at
+  # a higher taxonomic rank: aggregate each study to the finest rank whose
+  # taxonomy NAMES are shared, instead of refusing outright. Requires a
+  # taxonomy table per study; when none is available the original refusal
+  # stands.
+  if(length(shared.nms) < 10){
+    harm <- .meta_harmonize_taxa_rank(mbSetObj, sel.nms);
+    if(is.null(harm)){
+      msgSet$current.msg <- paste("Fewer than 10 features are shared across the studies by feature ID,",
+                                  "and taxonomy-level harmonization was not possible (each study needs",
+                                  "a taxonomy table with a rank whose names are shared across studies).");
+      saveSet(msgSet, "msgSet");
+      print(msgSet$current.msg);
+      return(0);
+    }
+    mbSetObj <- .get.mbSetObj(NA);
+    shared.nms <- harm$shared;
+    msgSet$current.msg <- paste0("Feature IDs were not shared across the studies; all studies were ",
+                                 "aggregated to the ", harm$rank, " level (", length(shared.nms),
+                                 " shared taxa) before integration.");
+    paramSet$meta.harmonized.rank  <- harm$rank;
+    paramSet$meta.harmonized.count <- length(shared.nms);
+    saveSet(msgSet, "msgSet");
+    print(msgSet$current.msg);
+  }
+
   print("Passed exp condition check!");
-  
+
   # now construct a common matrix to faciliated plotting across all studies
   dataName <- sel.nms[1];
   dataSet <- readDataset(dataName);
@@ -866,6 +947,14 @@ CheckMetaDataIntegrity <- function(mbSetObj, taxo_type="OTU", sample_var="NA"){
   msgSet$current.msg <- paste("Sample #:", ncol(microbiome.meta$data),
                               "Common ID #:", nrow(microbiome.meta$data), 
                               "Condition:", paste(levels(microbiome.meta$cls.lbl), collapse=" vs. "));
+  # Keep the rank-harmonization notice visible in the final summary — this
+  # message is what the interface shows after a successful check, and the
+  # aggregation is a behavior the user must be told about.
+  if(!is.null(paramSet$meta.harmonized.rank)){
+    msgSet$current.msg <- paste0(msgSet$current.msg,
+      " Note: feature IDs were not shared across studies, so all studies were aggregated to the ",
+      paramSet$meta.harmonized.rank, " level before integration.");
+  }
   
   saveSet(msgSet, "msgSet");
   saveSet(paramSet, "paramSet");

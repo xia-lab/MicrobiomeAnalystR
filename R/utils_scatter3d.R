@@ -77,7 +77,7 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
     metadf <- as.data.frame(metadf);
     shape <- vector();
     meta.vec.num <- as.integer(as.factor(meta.vec2))
-    shape.s <- c("circle", "triangle", "square", "diamond")[1:length(unique(meta.vec2))];
+    shape.s <- rep_len(c("circle", "triangle", "square", "diamond"), length(unique(meta.vec2)));
     
     for(i in 1:length(meta.vec.num)){
       shape[i] = shape.s[meta.vec.num[i]];
