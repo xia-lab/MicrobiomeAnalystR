@@ -521,6 +521,19 @@ ReadMetabolicTable <- function(mbSetObj, dataName, metType, idType) {
     current.msg <<- c(current.msg, "the remaining", sum(na.inx), "missing variables were replaced with data min");
   }
 
+  # merge duplicate metabolite IDs (user-selected statistic); duplicates
+  # otherwise fail late in limma with "Duplicate features names are not allowed"
+  if (anyDuplicated(rownames(mydata)) && exists("ov_merge_duplicate_features")) {
+    dres <- ov_merge_duplicate_features(data.matrix(mydata));
+    if (!is.null(dres$data)) {
+      mydata <- dres$data;
+      current.msg <<- c(current.msg, dres$msg);
+    } else {
+      AddErrMsg(dres$msg);
+      return(0);
+    }
+  }
+
   mbSetObj$dataSet$metabolomics$name <- basename(dataName);
   #mbSetObj$dataSet$metabolomics$smpl_nm <- smpl_nm;
   mbSetObj$dataSet$metabolomics$data.orig <- data.matrix(mydata);
