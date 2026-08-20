@@ -279,14 +279,17 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
           message("[DIABLO] Generating PCA diagnostic plots...")
           .safe_plot(input$pca_img, 8, 15, function() {
             ncomp_max <- min(3, model$ncomp[1])
-            fig.list <- list()
-            for (nc in 1:ncomp_max) {
-              local_nc <- nc
-              fig.list[[nc]] <- tryCatch(
-                as_grob(function() { plotDiablo(model, ncomp = local_nc) }),
-                error = function(e) { message("[plotDiablo ncomp=", local_nc, "] ", e$message); NULL }
+            ## lapply, NOT a for loop: as_grob() on a function DEFERS the call to
+            ## draw time (gridGraphics::echoGrob), and a for body shares one
+            ## environment — every deferred closure then reads the LAST loop value
+            ## and all panels render the same component. lapply binds the index in
+            ## a fresh environment per call, so each panel keeps its own component.
+            fig.list <- lapply(seq_len(ncomp_max), function(nc) {
+              tryCatch(
+                as_grob(function() { plotDiablo(model, ncomp = nc) }),
+                error = function(e) { message("[plotDiablo ncomp=", nc, "] ", e$message); NULL }
               )
-            }
+            })
             fig.list <- fig.list[!sapply(fig.list, is.null)]
             if (length(fig.list) > 0) {
               grid.arrange(grobs = fig.list, nrow = length(fig.list))
