@@ -1993,7 +1993,7 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
       current.set <- ov_qs_read(paste0(lib.path.mmp,"ko_set_bac.qs"))
     }
 
-    set2nm <- ov_qs_read(paste0(rpath, "libs/mmp/set2nm.qs")[["pathway"]]);
+    set2nm <- ov_qs_read(paste0(rpath, "libs/mmp/set2nm.qs"))[["pathway"]];
     set.ids <- names(current.set);
     names(set.ids) <- names(current.set) <- set2nm[set.ids];
     current.setids <<- set.ids;
