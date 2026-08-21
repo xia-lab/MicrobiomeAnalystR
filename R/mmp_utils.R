@@ -4794,3 +4794,50 @@ PlotMmpPairScatter <- function(featX, featY, imgName, format = "png", dpi = 150)
   graphics::par(op)
   invisible(paste0(imgName, ".", format))
 }
+
+#'Variance explained per factor, as a report-ready table
+#'@description The MOFA variance figure shows the shape of the decomposition; this publishes
+#'the numbers behind it. Same column contract as OmicsAnalyst's function of the same name,
+#'so the two tools' reports read alike.
+#'@param alg currently "mofa" (DIABLO reports cross-validated error instead, see
+#'GetDiabloBerTables)
+#'@param taxalvl taxonomy level to read when the run covered several
+#'@export
+GetDimRedVarExpTable <- function(alg = "mofa", taxalvl = NULL){
+  empty <- data.frame(Component = character(0), stringsAsFactors = FALSE);
+  f <- paste0(alg, ".res.qs");
+  if(!file.exists(f)) return(empty);
+  res <- tryCatch(ov_qs_read(f), error = function(e) NULL);
+  if(is.null(res) || is.null(res$misc)) return(empty);
+  lvl <- if(!is.null(taxalvl) && taxalvl %in% names(res$misc)) taxalvl else names(res$misc)[1];
+  v <- res$misc[[lvl]]$var.exp;
+  if(is.null(v) || length(dim(v)) != 2 || nrow(v) == 0) return(empty);
+  v <- as.matrix(v);
+  layers <- colnames(v);
+  if(is.null(layers) || length(layers) != ncol(v)){
+    layers <- c("Microbiome", "Metabolomics")[seq_len(ncol(v))];
+  }
+  comps <- rownames(v);
+  if(is.null(comps)) comps <- paste0("Factor", seq_len(nrow(v)));
+  df <- data.frame(Component = comps, stringsAsFactors = FALSE);
+  for(i in seq_along(layers)){
+    df[[paste0(layers[i], " (%)")]] <- round(as.numeric(v[, i]) * 100, 2);
+  }
+  df[["Total (%)"]] <- round(rowSums(v, na.rm = TRUE) * 100, 2);
+  rownames(df) <- NULL;
+  df
+}
+
+#'DIABLO cross-validation tables
+#'@description PlotDiagnostic already writes diablo_ber_summary.csv and
+#'diablo_ber_per_comp.csv, but nothing ever read them -- the model's predictive performance
+#'existed on disk while the report and slides carried only the BER curve. Returns whichever
+#'is asked for, empty when the cross-validation could not be computed.
+#'@param which "summary" or "per_comp"
+#'@export
+GetDiabloBerTables <- function(which = "summary"){
+  f <- if(identical(which, "per_comp")) "diablo_ber_per_comp.csv" else "diablo_ber_summary.csv";
+  if(!file.exists(f)) return(data.frame());
+  tryCatch(utils::read.csv(f, check.names = FALSE, stringsAsFactors = FALSE),
+           error = function(e) data.frame());
+}
