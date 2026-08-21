@@ -632,11 +632,63 @@ UpdateSampleItems <- function(mbSetObj){
   }
   
   mbSetObj$dataSet$sample_data <- my.meta
-  
+
   return(.set.mbSetObj(mbSetObj));
-  
+
 }
 
+#'Update samples at the upload stage
+#'@description Subsets the uploaded data to the samples named in smpl.nm.vec,
+#'keeping a full copy so excluded samples can be added back. Applies to the
+#'abundance table, the sample metadata and, when present, the paired
+#'metabolomics table. The sanity check should be re-run afterwards so all
+#'derived summaries reflect the new sample set.
+#'@param mbSetObj Input the name of the mbSetObj.
+#'@export
+UpdateUploadedSampleItems <- function(mbSetObj){
+
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+
+  if(!exists("smpl.nm.vec")){
+    AddErrMsg("Cannot find the sample names to keep!");
+    return(0);
+  }
+
+  # full copies made on first use are the add-back universe
+  if(is.null(mbSetObj$dataSet$data.full)){
+    mbSetObj$dataSet$data.full <- mbSetObj$dataSet$data.orig;
+    mbSetObj$dataSet$sample_data.full <- mbSetObj$dataSet$sample_data;
+    if(!is.null(mbSetObj$dataSet$metabolomics$data.orig)){
+      mbSetObj$dataSet$metabolomics$data.full <- mbSetObj$dataSet$metabolomics$data.orig;
+    }
+  }
+
+  keep <- intersect(colnames(mbSetObj$dataSet$data.full), smpl.nm.vec);
+  if(length(keep) < 3){
+    AddErrMsg("At least three samples must remain for analysis.");
+    return(0);
+  }
+
+  mbSetObj$dataSet$data.orig <- mbSetObj$dataSet$data.full[, keep, drop=FALSE];
+
+  sd.full <- mbSetObj$dataSet$sample_data.full;
+  mbSetObj$dataSet$sample_data <- sd.full[rownames(sd.full) %in% keep, , drop=FALSE];
+
+  if(!is.null(mbSetObj$dataSet$metabolomics$data.full)){
+    met.keep <- intersect(colnames(mbSetObj$dataSet$metabolomics$data.full), keep);
+    if(length(met.keep) < 3){
+      AddErrMsg("At least three samples must remain in the metabolomics data.");
+      return(0);
+    }
+    mbSetObj$dataSet$metabolomics$data.orig <- mbSetObj$dataSet$metabolomics$data.full[, met.keep, drop=FALSE];
+  }
+
+  excluded <- setdiff(colnames(mbSetObj$dataSet$data.full), keep);
+  mbSetObj$dataSet$remsam <- excluded;
+  current.msg <<- paste0(length(keep), " samples kept; ", length(excluded), " excluded.");
+
+  return(.set.mbSetObj(mbSetObj));
+}
 
 #'Function to perform normalization
 #'@description This function performs normalization on the uploaded
