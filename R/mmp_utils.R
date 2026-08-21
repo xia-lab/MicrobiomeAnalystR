@@ -3355,14 +3355,42 @@ GetPredictionPlot <- function(mbSetObj, keggid,imgNm,predDB="agora",potentialThr
   potentialThresh = as.numeric(potentialThresh)
   mic.map = mbSetObj$analSet$mic.map
   met.map = mbSetObj$analSet$met.map
+  # predDB arrives from the viewer's dropdown; an unrecognised value used to reach
+  # met.map[,predDB] and die on "subscript out of bounds", which the caller reports
+  # as a bare failure with no message.
+  if(!predDB %in% colnames(met.map)){
+    current.msg <<- paste0("Unknown GEM database '", predDB, "'. Choose AGORA or EMBL.")
+    return(0)
+  }
   macthed_cmpd = met.map$kegg[which( !is.na(met.map[,predDB]))]
   metType = mbSetObj$paraSet$metDataType
-  
+
   if(!keggid %in% met.map$kegg){
     current.msg <<- "The selected compound is not provided in your input data! Please choose the related compounds!"
     return(0)
   }else if(!keggid %in% macthed_cmpd){
-    current.msg <<- "The selected compound is not supported by the selected GEM database!"
+    # A genome-scale metabolic model covers ~1100 metabolites, so most compounds in a
+    # typical untargeted panel are outside it. Saying only "not supported" leaves the
+    # user clicking node after node to find one that works -- name the compound, say
+    # whether the OTHER model has it, and give the coverage for this one.
+    cmpdNm <- met.map$name[match(keggid, met.map$kegg)]
+    if(length(cmpdNm) == 0 || is.na(cmpdNm) || !nzchar(cmpdNm)){
+      cmpdNm <- keggid
+    }
+    altDB <- setdiff(c("agora","embl"), predDB)
+    inAlt <- length(altDB) == 1 && altDB %in% colnames(met.map) &&
+             keggid %in% met.map$kegg[which(!is.na(met.map[,altDB]))]
+    if(inAlt){
+      current.msg <<- paste0(cmpdNm, " is not in the ", toupper(predDB),
+                             " model, but it IS in ", toupper(altDB),
+                             ". Switch the GEM database to ", toupper(altDB),
+                             " and submit again.")
+    }else{
+      current.msg <<- paste0(cmpdNm, " is not covered by either genome-scale metabolic model, ",
+                             "so no microbial contribution can be predicted for it. ",
+                             length(unique(macthed_cmpd)), " of ", nrow(met.map),
+                             " compounds in your data are in ", toupper(predDB), ".")
+    }
     return(0)
   }
   
