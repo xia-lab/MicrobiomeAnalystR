@@ -3024,7 +3024,24 @@ GetMetMapCol <-function(mbSetObj, colInx){
   }else{
     return(mbSetObj$analSet$met.map[,colInx]);
   }
-  
+
+}
+
+#'KEGG ids the selected metabolic model can actually predict
+#'@description A genome-scale metabolic model covers roughly a thousand metabolites, so most
+#'compounds on the KEGG map fall outside it. The network used to render every compound as
+#'clickable and only refuse afterwards, one node at a time. The viewer asks for this set up
+#'front so it can dim the compounds it cannot answer for.
+#'@export
+GetGemSupportedKeggIds <- function(mbSetObj, predDB="agora"){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  met.map <- mbSetObj$analSet$met.map;
+  if(is.null(met.map) || is.null(met.map$kegg) || !(predDB %in% colnames(met.map))){
+    return(character(0));
+  }
+  ids <- met.map$kegg[which(!is.na(met.map[, predDB]))];
+  ids <- unique(ids[!is.na(ids) & nzchar(ids)]);
+  return(ids);
 }
 
 PerformMetListEnrichment <- function(mbSetObj, contain,file.nm){
