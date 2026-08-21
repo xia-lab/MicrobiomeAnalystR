@@ -3798,7 +3798,12 @@ PlotDiagnostic <- function(imgName, dpi=default.dpi, format="png",alg, taxrank="
           # image (empty Diablo diagnostic tab). Fall back to the fitted ncomp so the
           # plot still renders.
           .wv <- suppressWarnings(as.numeric(perf.res$choice.ncomp$WeightedVote))
-          diablo.comp <- if (any(is.finite(.wv))) median(.wv, na.rm = TRUE) else ncomp_perf
+          # Remember WHETHER cross-validation actually chose, not just what it returned.
+          # The fallback below is the number of components FITTED, which is a legitimate
+          # thing to plot but is not a CV result -- reporting it as "Optimal Components"
+          # claims a selection the test never made.
+          diablo.cv.selected <- any(is.finite(.wv))
+          diablo.comp <- if (diablo.cv.selected) median(.wv, na.rm = TRUE) else ncomp_perf
           # Extract error rates and plot with ggplot2
           # Note: mixOmics plot.perf uses matplot() which produces black/empty output in RSclient subprocess
           # (base graphics matplot does not render properly in Rserve-forked sessions)
@@ -3826,17 +3831,53 @@ PlotDiagnostic <- function(imgName, dpi=default.dpi, format="png",alg, taxrank="
             opt_comp  <- if (is.finite(diablo.comp)) as.integer(round(diablo.comp)) else NA_integer_
             min_ber   <- round(min(ber_df$BER, na.rm = TRUE), 4)
             cov_par   <- tryCatch(round(inp$design[1, 2], 4), error = function(e) NA_real_)
+            # The smallest component count that already reaches the lowest error. The BER
+            # curve is commonly flat at its floor -- on the reference run comp 5 and comp 8
+            # both hit 0.1711 -- and recommending the larger one is a needlessly complex
+            # model for identical performance.
+            first_min <- suppressWarnings(min(ber_df$Component[ber_df$BER <= min_ber], na.rm = TRUE))
+            if (!is.finite(first_min)) first_min <- NA_integer_
+            # Group sizes decide how much weight the BER can carry, so they belong beside it
+            # in the table as well as on the figure.
+            grp_n   <- tryCatch(as.integer(table(res$Y)), error = function(e) integer(0))
+            min_grp <- if (length(grp_n) > 0) min(grp_n, na.rm = TRUE) else NA_integer_
+            grp_note <- if (is.na(min_grp)) "NA"
+                        else if (min_grp < 20) paste0(min_grp, " (< 20 — CV error unstable, read as indicative)")
+                        else as.character(min_grp)
+            sel_label <- if (isTRUE(diablo.cv.selected))
+                           as.character(opt_comp)
+                         else
+                           paste0(opt_comp, " (not selected by CV; components fitted)")
             sum_tbl <- data.frame(
-              Metric = c("Optimal Components",
+              Metric = c("Components suggested by CV",
+                         "Fewest components reaching the lowest BER",
                          "Min. Balanced Error Rate (BER)",
+                         "Smallest group size (n)",
                          "Covariance Parameter (design off-diagonal)",
                          "CV Folds", "CV Repeats", "Distance Criterion"),
-              Value  = c(opt_comp, min_ber, cov_par, 5L, 1L, "max.dist"),
+              Value  = c(sel_label,
+                         if (is.na(first_min)) "NA" else as.character(first_min),
+                         min_ber, grp_note, cov_par, 5L, 1L, "max.dist"),
               stringsAsFactors = FALSE)
             utils::write.csv(sum_tbl, "diablo_ber_summary.csv", row.names = FALSE)
             # Figure caption
-            ber_cap <- sprintf("DIABLO BER: min = %.4f at Comp. %d  (cov = %.2f, max.dist, 5-fold CV) — * = selected # components",
-                               min_ber, opt_comp, if (!is.na(cov_par)) cov_par else 0)
+            # cov printed 0.00 whenever the design covariance could not be read, which is a
+            # specific and meaningful modelling claim (independent blocks) rather than
+            # "unknown". Say n/a.
+            ber_cap <- sprintf("DIABLO BER: min = %.4f, first reached at Comp. %s  (cov = %s, max.dist, 5-fold CV) — * = %s",
+                               min_ber,
+                               if (is.na(first_min)) "NA" else as.character(first_min),
+                               if (is.na(cov_par)) "n/a" else sprintf("%.2f", cov_par),
+                               if (isTRUE(diablo.cv.selected)) "components suggested by CV" else "components fitted (CV made no selection)")
+            # A balanced error rate from 5-fold CV on small groups is dominated by which
+            # samples land in which fold: with a handful per class each fold holds one or two,
+            # so the number moves a lot on reshuffling. Say so on the figure itself, where the
+            # number is read, rather than leaving it to be taken at face value.
+            if (!is.na(min_grp) && min_grp < 20) {
+              ber_cap <- paste0(ber_cap, sprintf(
+                "\nSMALL SAMPLE: smallest group has n = %d (< 20). With 5-fold CV each fold holds about %d of them,\nso this error rate is unstable — read it as indicative, not as a performance estimate.",
+                min_grp, max(1L, as.integer(round(min_grp / 5)))))
+            }
             df_long <- reshape2::melt(df, id.vars = "Component", variable.name = "Metric", value.name = "ErrorRate")
             # Mark the selected (optimal) number of components with an asterisk on the x-axis
             x_labels <- as.character(df$Component)
