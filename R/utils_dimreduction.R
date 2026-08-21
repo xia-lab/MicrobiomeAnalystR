@@ -63,10 +63,18 @@ my.reduce.dimension <- function(mbSetObj, reductionOpt= "procrustes", method="gl
   if(micDataType=='ko'){
     d.list[["mic"]][["data.proc"]] = list(OTU = current.proc$mic$data.proc)
   } else {
-    # Wrap as named list matching the analyzed taxonomy level
-    analyzed_lvl <- names(which(!sapply(phyloseq_objs$res_deAnal, is.null)))
-    if(length(analyzed_lvl) == 0) analyzed_lvl <- names(phyloseq_objs$count_tables)
-    d.list[["mic"]][["data.proc"]] = setNames(list(current.proc$mic$data.proc), analyzed_lvl[1])
+    # current.proc$mic$data.proc IS the feature-level table, so key it by the
+    # feature level — keying by whichever level happened to be compared first
+    # mislabels feature data (e.g. as "Genus") and every downstream by-name
+    # join (DE alignment, scatter taxrank lookup) then pairs the wrong lists.
+    if("OTU" %in% names(phyloseq_objs$count_tables)){
+      feat_lvl <- "OTU"
+    } else {
+      feat_lvl <- names(which(!sapply(phyloseq_objs$res_deAnal, is.null)))
+      if(length(feat_lvl) == 0) feat_lvl <- names(phyloseq_objs$count_tables)
+      feat_lvl <- feat_lvl[1]
+    }
+    d.list[["mic"]][["data.proc"]] = setNames(list(current.proc$mic$data.proc), feat_lvl)
     ## Multi-level sweep: integrate at EACH requested taxonomy level, using the
     ## per-rank count tables CreatePhyloseqObj/CreateMMPFakeFile already built.
     ## The per-level loops below (model per element of data.proc, results keyed by
