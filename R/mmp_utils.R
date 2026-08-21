@@ -4072,23 +4072,53 @@ GetProcrustesResidualTable <- function(taxrank="genus"){
   return(df);
 }
 
+# Single extractor for the Procrustes summary statistics, so the panel, the report and the
+# slides cannot quote different numbers for the same run.
+#
+# protest() runs the permutation test and res$signif IS its p-value; it used to be computed
+# and dropped, with a literal 0.001 printed in its place -- the floor of a 999-permutation
+# test, and wrong for any pair of datasets that do NOT align. res$scale is the Procrustes
+# correlation for a protest object (it equals res$t0, sqrt(1 - ss)).
+.ProcrustesStats <- function(){
+  procrustes.res <- ov_qs_read("procrustes.res.qs");
+  res <- procrustes.res$dim.res[[length(procrustes.res$dim.res)]][[2]];
+  nperm <- if(is.null(res$permutations)) length(res$t) else res$permutations;
+  list(ss = signif(res$ss, 4),
+       corr = signif(res$scale, 4),
+       pval = signif(res$signif, 4),
+       nperm = if(length(nperm) != 1 || is.na(nperm)) NA_integer_ else as.integer(nperm));
+}
+
+#'Procrustes summary statistics as a report-ready table
+#'@description The two Procrustes figures show the shape of the agreement but none of its
+#'magnitude, so a reader could not tell a near-perfect concordance from a poor one. Returns
+#'the three numbers that answer that: overall discrepancy, correlation, and whether the
+#'alignment beats chance.
+#'@export
+GetProcrustesStatsTable <- function(){
+  st <- tryCatch(.ProcrustesStats(), error = function(e) NULL);
+  if(is.null(st)){
+    return(data.frame(Statistic=character(0), Value=character(0), stringsAsFactors=FALSE));
+  }
+  permTxt <- if(is.na(st$nperm)) "PROTEST permutation test" else
+      paste0("PROTEST permutation test, ", st$nperm, " permutations");
+  data.frame(
+    Statistic = c("Procrustes sum of squares (m2)",
+                  "Correlation in a symmetric Procrustes rotation",
+                  paste0("Significance (", permTxt, ")")),
+    Value = c(format(st$ss), format(st$corr), format(st$pval)),
+    stringsAsFactors = FALSE);
+}
+
 GetDiagnosticSummary<- function(type){
   if(type %in% c("perturbation", "spectrum", "snf")){
     reductionSet <- .get.rdt.set();
     clustNum <- length(unique(reductionSet$clustVec))
     return(c(clustNum, signif(reductionSet$clustNmi)))
   }else if(type == "procrustes"){
-    procrustes.res <- ov_qs_read("procrustes.res.qs")
-    res <-procrustes.res$dim.res[[length(procrustes.res$dim.res)]][[2]];
-    # protest() runs the permutation test and res$signif IS its p-value. It was computed and
-    # then dropped here, and the panel printed a literal 0.001 in its place -- a number the
-    # test never produced, and wrong for any pair of datasets that do NOT align.
-    # res$scale is the Procrustes correlation for a protest object (it equals res$t0,
-    # i.e. sqrt(1 - ss)), so that one is reported correctly.
-    nperm <- if(is.null(res$permutations)) length(res$t) else res$permutations;
-    return(c(signif(res$ss,4), signif(res$scale,4),
-             signif(res$signif,4),
-             if(length(nperm) != 1 || is.na(nperm)) "" else as.character(nperm)));
+    st <- .ProcrustesStats();
+    return(c(st$ss, st$corr, st$pval,
+             if(is.na(st$nperm)) "" else as.character(st$nperm)));
   }else{
     return(c("","") )
   }
