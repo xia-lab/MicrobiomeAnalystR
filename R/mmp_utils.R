@@ -4042,6 +4042,36 @@ PlotDiagnosticLoading <- function(imgNm, dpi=default.dpi, format="png",type="dia
   return(1)
 }
 
+#'Per-sample Procrustes residual vector lengths
+#'@description The residual for a sample is the distance still separating its two configurations
+#'after the optimal translation, rotation and scaling -- so it says which samples agree across
+#'the two omics layers and which do not. The diagnostic figure plots these but labels only the
+#'five largest; this returns the whole set, ordered worst first, so the outliers can be read off
+#'and exported. Also writes procrustes_residuals.csv for download.
+#'@export
+GetProcrustesResidualTable <- function(taxrank="genus"){
+  procrustes.res <- ov_qs_read("procrustes.res.qs");
+  if(length(procrustes.res$dim.res) == 1){
+    res <- procrustes.res$dim.res[[1]];
+  }else if(!is.null(taxrank) && taxrank %in% names(procrustes.res$dim.res)){
+    res <- procrustes.res$dim.res[[taxrank]];
+  }else{
+    res <- procrustes.res$dim.res[[length(procrustes.res$dim.res)]];
+  }
+  err <- residuals(res[[1]]);
+  if(is.null(err) || length(err) == 0){
+    return(data.frame(Sample=character(0), Residual=numeric(0), Rank=integer(0),
+                      stringsAsFactors=FALSE));
+  }
+  ord <- order(err, decreasing=TRUE);
+  df <- data.frame(Sample = names(err)[ord],
+                   Residual = signif(unname(err)[ord], 5),
+                   Rank = seq_along(err),
+                   stringsAsFactors = FALSE);
+  fast.write(df, "procrustes_residuals.csv", row.names=FALSE);
+  return(df);
+}
+
 GetDiagnosticSummary<- function(type){
   if(type %in% c("perturbation", "spectrum", "snf")){
     reductionSet <- .get.rdt.set();
@@ -4050,7 +4080,15 @@ GetDiagnosticSummary<- function(type){
   }else if(type == "procrustes"){
     procrustes.res <- ov_qs_read("procrustes.res.qs")
     res <-procrustes.res$dim.res[[length(procrustes.res$dim.res)]][[2]];
-    return(c(signif(res$ss,4), signif(res$scale,4)));
+    # protest() runs the permutation test and res$signif IS its p-value. It was computed and
+    # then dropped here, and the panel printed a literal 0.001 in its place -- a number the
+    # test never produced, and wrong for any pair of datasets that do NOT align.
+    # res$scale is the Procrustes correlation for a protest object (it equals res$t0,
+    # i.e. sqrt(1 - ss)), so that one is reported correctly.
+    nperm <- if(is.null(res$permutations)) length(res$t) else res$permutations;
+    return(c(signif(res$ss,4), signif(res$scale,4),
+             signif(res$signif,4),
+             if(length(nperm) != 1 || is.na(nperm)) "" else as.character(nperm)));
   }else{
     return(c("","") )
   }
