@@ -654,12 +654,24 @@ UpdateUploadedSampleItems <- function(mbSetObj){
     return(0);
   }
 
-  # full copies made on first use are the add-back universe
+  # Full copies made on first use are the add-back universe. Later pipeline
+  # steps mutate several of these in place (the taxonomy table is renamed and
+  # pruned when the phyloseq object is built; the sample metadata is converted
+  # to a phyloseq sample_data), so every apply restores from these copies and
+  # the pipeline re-derives everything from a clean state.
   if(is.null(mbSetObj$dataSet$data.full)){
     mbSetObj$dataSet$data.full <- mbSetObj$dataSet$data.orig;
-    mbSetObj$dataSet$sample_data.full <- mbSetObj$dataSet$sample_data;
+    sd <- mbSetObj$dataSet$sample_data;
+    if(inherits(sd, "sample_data")){ sd <- as(sd, "data.frame"); }
+    mbSetObj$dataSet$sample_data.full <- sd;
     if(!is.null(mbSetObj$dataSet$metabolomics$data.orig)){
       mbSetObj$dataSet$metabolomics$data.full <- mbSetObj$dataSet$metabolomics$data.orig;
+    }
+    if(!is.null(mbSetObj$dataSet$taxa_table)){
+      mbSetObj$dataSet$taxa_table.full <- mbSetObj$dataSet$taxa_table;
+    }
+    if(!is.null(current.proc$mic$data.proc)){
+      current.proc$mic$data.proc.full <<- current.proc$mic$data.proc;
     }
   }
 
@@ -681,6 +693,30 @@ UpdateUploadedSampleItems <- function(mbSetObj){
       return(0);
     }
     mbSetObj$dataSet$metabolomics$data.orig <- mbSetObj$dataSet$metabolomics$data.full[, met.keep, drop=FALSE];
+  }
+
+  # Restore the pristine taxonomy table: building the phyloseq object renames
+  # feature IDs (e.g. ASV sequences) and prunes rows in place, so a later
+  # re-build against re-subset raw data must start from the original table.
+  if(!is.null(mbSetObj$dataSet$taxa_table.full)){
+    mbSetObj$dataSet$taxa_table <- mbSetObj$dataSet$taxa_table.full;
+  }
+
+  # Keep the in-memory working copy aligned with the kept samples.
+  if(!is.null(current.proc$mic$data.proc.full)){
+    cp <- current.proc$mic$data.proc.full;
+    ck <- intersect(colnames(cp), keep);
+    current.proc$mic$data.proc <<- cp[, ck, drop=FALSE];
+  }
+
+  # Remove derived artifacts written for the previous sample set; the next
+  # processing pass rebuilds all of them from the updated inputs.
+  for(f in c("phyloseq_prenorm_objs.qs", "phyloseq_objs.qs", "prescale.phyobj.qs",
+             "metabo.prenorm.qs", "metabo.complete.norm.qs", "metabo.row.norm.qs",
+             "metabo.filt.data.qs")){
+    if(file.exists(f)) unlink(f);
+    fa <- sub("\\.qs$", ".arrow", f);
+    if(file.exists(fa)) unlink(fa);
   }
 
   excluded <- setdiff(colnames(mbSetObj$dataSet$data.full), keep);
