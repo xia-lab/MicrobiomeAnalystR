@@ -3822,15 +3822,22 @@ PlotDiagnostic <- function(imgName, dpi=default.dpi, format="png",alg, taxrank="
             } else {
               df <- data.frame(Component = seq_along(mat), ErrorRate = as.numeric(mat))
             }
-            # Save BER per component CSV for WfOutputTable
-            ber_col <- if ("BER" %in% colnames(df)) "BER" else colnames(df)[2]
+            # Save BER per component CSV for WfOutputTable. The perf matrix rows are
+            # per-class error rates plus "Overall.ER"/"Overall.BER" — the balanced
+            # error rate column is "Overall.BER", never plain "BER", so the old
+            # fallback to column 2 silently exported the FIRST CLASS's error rate.
+            ber_col <- if ("Overall.BER" %in% colnames(df)) "Overall.BER"
+                       else if ("BER" %in% colnames(df)) "BER"
+                       else colnames(df)[2]
             ber_df <- data.frame(Component = df$Component,
                                  BER        = round(df[[ber_col]], 4))
             utils::write.csv(ber_df, "diablo_ber_per_comp.csv", row.names = FALSE)
             # Summary table (analogous to PROTEST for Procrustes)
             opt_comp  <- if (is.finite(diablo.comp)) as.integer(round(diablo.comp)) else NA_integer_
             min_ber   <- round(min(ber_df$BER, na.rm = TRUE), 4)
-            cov_par   <- tryCatch(round(inp$design[1, 2], 4), error = function(e) NA_real_)
+            # The design matrix travels on the fitted model; `inp` does not exist in
+            # this subprocess, so reading inp$design made cov_par permanently NA.
+            cov_par   <- tryCatch(round(res$design[1, 2], 4), error = function(e) NA_real_)
             # The smallest component count that already reaches the lowest error. The BER
             # curve is commonly flat at its floor -- on the reference run comp 5 and comp 8
             # both hit 0.1711 -- and recommending the larger one is a needlessly complex
