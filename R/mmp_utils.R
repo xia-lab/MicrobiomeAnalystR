@@ -4159,15 +4159,16 @@ GetProcrustesStatsTable <- function(){
 }
 
 # ===================================================================================
-# MMP feature importance — VIP for DIABLO (supervised), variance-weighted "Importance"
-# for MOFA (unsupervised). Computed PER OMICS LAYER (microbiome / metabolome) so a layer
-# with fewer features cannot dominate a pooled ranking. Read post-hoc from the saved model
-# (diablo.res.qs) / MOFA weights (mofa_result.qs) — no change to the dim-reduction path.
+# MMP feature importance — each method's OWN native signed loading/weight on the feature's
+# dominant component: DIABLO block loading, MOFA factor weight (mixOmics defines no VIP for
+# block models). Presented PER OMICS LAYER (microbiome / metabolome), top-N per layer. Read
+# post-hoc from the saved model (diablo.res.qs) / MOFA weights (mofa_result.qs) — no change to
+# the dim-reduction path.
 # ===================================================================================
 
-# Per-feature VIP from a RAW loadings/weights matrix + per-component weights. Standard PLS
-# VIP normalization (mean(VIP^2)=1, hence "VIP > 1 = above average"). Ported from
-# OmicsAnalyst .oa_feature_vip.
+# Latent fallback (unused by the current methods, kept in step with OmicsAnalyst): a
+# variance-weighted-loading VIP analog for any future method with no native scalar importance.
+# Standard PLS VIP normalization (mean(VIP^2)=1). Ported from OmicsAnalyst .oa_feature_vip.
 .mba_feature_vip <- function(loadings, weights){
   L <- as.matrix(loadings); storage.mode(L) <- "double"; L[is.na(L)] <- 0
   w <- as.numeric(weights); w[is.na(w) | w < 0] <- 0
@@ -4178,12 +4179,21 @@ GetProcrustesStatsTable <- function(){
   vip <- sqrt(nrow(L) * as.vector(L2 %*% wn)); names(vip) <- rownames(L); vip
 }
 
-.mba_featimp_label <- function(method) if(identical(method, "diablo")) "VIP" else "Importance"
+.mba_featimp_label <- function(method) if(method %in% c("diablo", "mofa")) "Loading" else "Importance"
 
-# Per-feature importance data.frame (Feature, Layer, VIP), normalized WITHIN each layer.
-# DIABLO: RAW model loadings per block, weighted by the proportion of OUTCOME variance per
-# component (genuine supervised VIP — the block name IS the omics layer). MOFA: RAW factor
-# weights, weighted by the per-factor variance captured (unsupervised analog).
+# A feature's importance = its SIGNED loading/weight on its dominant component (the one with the
+# largest |value|) — each method's OWN native signal (DIABLO block loading, MOFA factor weight;
+# mixOmics defines no VIP for block models). The sign encodes direction. Per-feature vector.
+.mba_dominant_loading <- function(loadings){
+  L <- as.matrix(loadings); storage.mode(L) <- "double"
+  if(nrow(L) == 0L || ncol(L) == 0L) return(rep(NA_real_, nrow(L)))
+  v <- apply(L, 1L, function(r){ if(all(is.na(r))) return(NA_real_); r[which.max(abs(r))] })
+  names(v) <- rownames(L); v
+}
+
+# Per-feature importance data.frame (Feature, Layer, VIP), each method's OWN native signed
+# loading/weight on the feature's dominant component. DIABLO: block loading (the block name IS
+# the omics layer). MOFA: factor weight (get_weights). The sign encodes direction.
 .mba_featimp_df <- function(method = "diablo", taxrank = NULL){
   parts <- list()
   if(identical(method, "diablo")){
@@ -4192,31 +4202,27 @@ GetProcrustesStatsTable <- function(){
     if(is.null(dm) || length(dm) == 0L) return(NULL)
     key <- if(!is.null(taxrank) && taxrank %in% names(dm)) taxrank else names(dm)[1]
     model <- dm[[key]]
-    yvar <- tryCatch(as.numeric(model$prop_expl_var$Y), error = function(e) NULL)
     lyr <- c(mic = "Microbiome", met = "Metabolome")
     for(blk in setdiff(names(model$loadings), "Y")){
       L <- as.matrix(model$loadings[[blk]])
-      w <- if(!is.null(yvar) && length(yvar) > 0) yvar else rep(1, ncol(L))
-      vip <- .mba_feature_vip(L, w)
+      score <- .mba_dominant_loading(L)
       layer <- if(blk %in% names(lyr)) unname(lyr[blk]) else blk
       parts[[blk]] <- data.frame(Feature = rownames(L), Layer = layer,
-                                 VIP = round(as.numeric(vip), 4), stringsAsFactors = FALSE)
+                                 VIP = round(as.numeric(score), 4), stringsAsFactors = FALSE)
     }
-  } else {  # mofa
+  } else {  # mofa — the feature's signed weight on its dominant factor (get_weights)
     if(!file.exists("mofa_result.qs")) return(NULL)
     mr <- ov_qs_read("mofa_result.qs")
     ml <- as.data.frame(mr$loading.pos.xyz); nf <- ncol(ml) - 1L
     if(nf < 1L) return(NULL)
     L_all <- as.matrix(ml[, seq_len(nf), drop = FALSE])
     rownames(L_all) <- as.character(mr$loading_ids)
-    ve <- as.matrix(mr$var.exp)
-    w <- if(ncol(ve) > 1L) rowSums(ve, na.rm = TRUE) else as.numeric(ve)
     lyr <- ifelse(as.character(mr$loading_ids) %in% mr$met_features, "Metabolome", "Microbiome")
     for(layer in unique(lyr)){
       ii <- which(lyr == layer)
-      vip <- .mba_feature_vip(L_all[ii, , drop = FALSE], w)
+      score <- .mba_dominant_loading(L_all[ii, , drop = FALSE])
       parts[[layer]] <- data.frame(Feature = rownames(L_all)[ii], Layer = layer,
-                                   VIP = round(as.numeric(vip), 4), stringsAsFactors = FALSE)
+                                   VIP = round(as.numeric(score), 4), stringsAsFactors = FALSE)
     }
   }
   if(length(parts) == 0L) return(NULL)
@@ -4229,8 +4235,9 @@ GetProcrustesStatsTable <- function(){
   if(is.null(df) || nrow(df) == 0L) return(NULL)
   df <- df[!is.na(df$VIP), , drop = FALSE]
   if(nrow(df) == 0L) return(NULL)
+  # Rank by MAGNITUDE (DIABLO's loading score is signed; the MOFA analog is non-negative).
   parts <- lapply(split(df, df$Layer), function(d){
-    d <- d[order(d$VIP, decreasing = TRUE), , drop = FALSE]
+    d <- d[order(abs(d$VIP), decreasing = TRUE), , drop = FALSE]
     d <- utils::head(d, as.integer(n)); d$LayerRank <- seq_len(nrow(d)); d
   })
   do.call(rbind, parts)
@@ -4243,21 +4250,26 @@ PlotMmpFeatImp <- function(imgNm, dpi=default.dpi, format="png", type="diablo", 
   dpi <- as.numeric(dpi); imgFile <- paste0(imgNm, ".", format)
   top <- .mba_featimp_per_layer(type, taxrank, 10L)
   if(is.null(top)){ message("[mmp/featimp] no importance scores for ", type); return(0) }
-  lab <- .mba_featimp_label(type)
-  top <- top[order(top$Layer, top$VIP), , drop = FALSE]
+  is.loading <- type %in% c("diablo", "mofa")
+  top <- top[order(top$Layer, abs(top$VIP)), , drop = FALSE]
   top$FeatKey <- factor(paste(top$Layer, top$Feature, sep = ":::"),
                         levels = paste(top$Layer, top$Feature, sep = ":::"))
   feat.labels <- setNames(as.character(top$Feature), as.character(top$FeatKey))
   n.layers <- length(unique(top$Layer))
+  x_lab <- switch(type, diablo = "DIABLO loading (signed)", mofa = "MOFA factor weight (signed)",
+                  "Importance (variance-weighted loading)")
+  # Loading-based methods show the SIGNED loading/weight (bars diverge left/right = direction).
   p <- ggplot(top, aes(x = VIP, y = FeatKey, fill = Layer)) +
     geom_col(width = 0.7) +
     facet_wrap(~ Layer, scales = "free_y", ncol = 1) +
     scale_y_discrete(labels = feat.labels) +
-    labs(y = "", x = if(identical(type, "diablo")) "VIP score" else "Importance (variance-weighted loading)",
-         title = paste0("Top features by ", lab, ", per omics layer")) +
+    labs(y = "", x = x_lab,
+         title = if(is.loading) "Top features by loading, per omics layer"
+                 else "Top features by Importance, per omics layer") +
     theme_minimal(base_size = 13) +
     theme(plot.title = element_text(hjust = 0.5, size = 14), legend.position = "none",
           strip.text = element_text(face = "bold"), panel.grid.major.y = element_blank())
+  if(is.loading) p <- p + geom_vline(xintercept = 0, colour = "grey60", linewidth = 0.4)
   Cairo::Cairo(file = imgFile, unit = "in", dpi = dpi, width = 8, height = max(5, 3.2 * n.layers),
                type = format, bg = "white")
   print(p); grDevices::dev.off()
