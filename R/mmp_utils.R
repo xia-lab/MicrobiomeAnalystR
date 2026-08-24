@@ -4158,6 +4158,140 @@ GetProcrustesStatsTable <- function(){
     stringsAsFactors = FALSE);
 }
 
+# ===================================================================================
+# MMP feature importance — VIP for DIABLO (supervised), variance-weighted "Importance"
+# for MOFA (unsupervised). Computed PER OMICS LAYER (microbiome / metabolome) so a layer
+# with fewer features cannot dominate a pooled ranking. Read post-hoc from the saved model
+# (diablo.res.qs) / MOFA weights (mofa_result.qs) — no change to the dim-reduction path.
+# ===================================================================================
+
+# Per-feature VIP from a RAW loadings/weights matrix + per-component weights. Standard PLS
+# VIP normalization (mean(VIP^2)=1, hence "VIP > 1 = above average"). Ported from
+# OmicsAnalyst .oa_feature_vip.
+.mba_feature_vip <- function(loadings, weights){
+  L <- as.matrix(loadings); storage.mode(L) <- "double"; L[is.na(L)] <- 0
+  w <- as.numeric(weights); w[is.na(w) | w < 0] <- 0
+  if(nrow(L) == 0L || ncol(L) == 0L || sum(w) == 0) return(rep(NA_real_, nrow(L)))
+  if(length(w) != ncol(L)) w <- rep_len(w, ncol(L))
+  ss <- colSums(L^2); ss[ss == 0] <- 1
+  L2 <- sweep(L^2, 2, ss, "/"); wn <- w / sum(w)
+  vip <- sqrt(nrow(L) * as.vector(L2 %*% wn)); names(vip) <- rownames(L); vip
+}
+
+.mba_featimp_label <- function(method) if(identical(method, "diablo")) "VIP" else "Importance"
+
+# Per-feature importance data.frame (Feature, Layer, VIP), normalized WITHIN each layer.
+# DIABLO: RAW model loadings per block, weighted by the proportion of OUTCOME variance per
+# component (genuine supervised VIP — the block name IS the omics layer). MOFA: RAW factor
+# weights, weighted by the per-factor variance captured (unsupervised analog).
+.mba_featimp_df <- function(method = "diablo", taxrank = NULL){
+  parts <- list()
+  if(identical(method, "diablo")){
+    if(!file.exists("diablo.res.qs")) return(NULL)
+    dm <- ov_qs_read("diablo.res.qs")$dim.res
+    if(is.null(dm) || length(dm) == 0L) return(NULL)
+    key <- if(!is.null(taxrank) && taxrank %in% names(dm)) taxrank else names(dm)[1]
+    model <- dm[[key]]
+    yvar <- tryCatch(as.numeric(model$prop_expl_var$Y), error = function(e) NULL)
+    lyr <- c(mic = "Microbiome", met = "Metabolome")
+    for(blk in setdiff(names(model$loadings), "Y")){
+      L <- as.matrix(model$loadings[[blk]])
+      w <- if(!is.null(yvar) && length(yvar) > 0) yvar else rep(1, ncol(L))
+      vip <- .mba_feature_vip(L, w)
+      layer <- if(blk %in% names(lyr)) unname(lyr[blk]) else blk
+      parts[[blk]] <- data.frame(Feature = rownames(L), Layer = layer,
+                                 VIP = round(as.numeric(vip), 4), stringsAsFactors = FALSE)
+    }
+  } else {  # mofa
+    if(!file.exists("mofa_result.qs")) return(NULL)
+    mr <- ov_qs_read("mofa_result.qs")
+    ml <- as.data.frame(mr$loading.pos.xyz); nf <- ncol(ml) - 1L
+    if(nf < 1L) return(NULL)
+    L_all <- as.matrix(ml[, seq_len(nf), drop = FALSE])
+    rownames(L_all) <- as.character(mr$loading_ids)
+    ve <- as.matrix(mr$var.exp)
+    w <- if(ncol(ve) > 1L) rowSums(ve, na.rm = TRUE) else as.numeric(ve)
+    lyr <- ifelse(as.character(mr$loading_ids) %in% mr$met_features, "Metabolome", "Microbiome")
+    for(layer in unique(lyr)){
+      ii <- which(lyr == layer)
+      vip <- .mba_feature_vip(L_all[ii, , drop = FALSE], w)
+      parts[[layer]] <- data.frame(Feature = rownames(L_all)[ii], Layer = layer,
+                                   VIP = round(as.numeric(vip), 4), stringsAsFactors = FALSE)
+    }
+  }
+  if(length(parts) == 0L) return(NULL)
+  do.call(rbind, parts)
+}
+
+# Top-N features per layer with a within-layer rank, grouped by layer.
+.mba_featimp_per_layer <- function(method = "diablo", taxrank = NULL, n = 10L){
+  df <- .mba_featimp_df(method, taxrank)
+  if(is.null(df) || nrow(df) == 0L) return(NULL)
+  df <- df[!is.na(df$VIP), , drop = FALSE]
+  if(nrow(df) == 0L) return(NULL)
+  parts <- lapply(split(df, df$Layer), function(d){
+    d <- d[order(d$VIP, decreasing = TRUE), , drop = FALSE]
+    d <- utils::head(d, as.integer(n)); d$LayerRank <- seq_len(nrow(d)); d
+  })
+  do.call(rbind, parts)
+}
+
+#'Faceted top-N feature-importance bar chart (one panel per omics layer).
+#'@export
+PlotMmpFeatImp <- function(imgNm, dpi=default.dpi, format="png", type="diablo", taxrank="OTU"){
+  require("Cairo"); library(ggplot2)
+  dpi <- as.numeric(dpi); imgFile <- paste0(imgNm, ".", format)
+  top <- .mba_featimp_per_layer(type, taxrank, 10L)
+  if(is.null(top)){ message("[mmp/featimp] no importance scores for ", type); return(0) }
+  lab <- .mba_featimp_label(type)
+  top <- top[order(top$Layer, top$VIP), , drop = FALSE]
+  top$FeatKey <- factor(paste(top$Layer, top$Feature, sep = ":::"),
+                        levels = paste(top$Layer, top$Feature, sep = ":::"))
+  feat.labels <- setNames(as.character(top$Feature), as.character(top$FeatKey))
+  n.layers <- length(unique(top$Layer))
+  p <- ggplot(top, aes(x = VIP, y = FeatKey, fill = Layer)) +
+    geom_col(width = 0.7) +
+    facet_wrap(~ Layer, scales = "free_y", ncol = 1) +
+    scale_y_discrete(labels = feat.labels) +
+    labs(y = "", x = if(identical(type, "diablo")) "VIP score" else "Importance (variance-weighted loading)",
+         title = paste0("Top features by ", lab, ", per omics layer")) +
+    theme_minimal(base_size = 13) +
+    theme(plot.title = element_text(hjust = 0.5, size = 14), legend.position = "none",
+          strip.text = element_text(face = "bold"), panel.grid.major.y = element_blank())
+  Cairo::Cairo(file = imgFile, unit = "in", dpi = dpi, width = 8, height = max(5, 3.2 * n.layers),
+               type = format, bg = "white")
+  print(p); grDevices::dev.off()
+  return(1)
+}
+
+# One feature-importance CSV per omics layer. Returns a NAMED char vector layer -> csv (or NULL).
+.mba_export_featimp <- function(method = "diablo", taxrank = NULL, n = 15L){
+  per <- .mba_featimp_per_layer(method, taxrank, n)
+  if(is.null(per)) return(NULL)
+  scoreCol <- .mba_featimp_label(method)
+  out.paths <- character(0)
+  for(ly in unique(per$Layer)){
+    d <- per[per$Layer == ly, , drop = FALSE]; d <- d[order(d$LayerRank), , drop = FALSE]
+    tab <- data.frame(Rank = d$LayerRank, Feature = d$Feature, check.names = FALSE, stringsAsFactors = FALSE)
+    tab[[scoreCol]] <- round(d$VIP, 4)
+    slug <- gsub("[^A-Za-z0-9]+", "_", ly)
+    csv <- paste0("feat_importance_", method, "_", slug, ".csv")
+    fast.write(tab, csv, row.names = FALSE)
+    out.paths[[ly]] <- csv
+  }
+  if(length(out.paths) == 0L) NULL else out.paths
+}
+
+#'Delimited per-layer top-N feature-importance table for the JSF Feature Importance tab.
+#'Rows joined by "||", columns by tab: LayerRank, Feature, Layer, Score. Empty when absent.
+#'@export
+GetMmpFeatImpTableStr <- function(type = "diablo", taxrank = "OTU", n = 10L){
+  top <- tryCatch(.mba_featimp_per_layer(type, taxrank, as.integer(n)), error = function(e) NULL)
+  if(is.null(top)) return("")
+  rows <- paste(top$LayerRank, top$Feature, top$Layer, sprintf("%.4f", top$VIP), sep = "\t")
+  paste(rows, collapse = "||")
+}
+
 GetDiagnosticSummary<- function(type){
   if(type %in% c("perturbation", "spectrum", "snf")){
     reductionSet <- .get.rdt.set();
