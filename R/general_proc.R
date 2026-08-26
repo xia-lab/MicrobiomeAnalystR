@@ -448,11 +448,21 @@ ApplyVarianceFilter <- function(mbSetObj, filtopt, filtPerct){
   #shadow_save(mbSetObj$dataSet$filt.data, file="filt.data.orig"); # save an copy
   saveDataQs(mbSetObj$dataSet$filt.data, "filt.data.orig", module.type, dataName);
 
-  rm.msg1 <- paste0("A total of ", sum(!remain), " low variance features were removed based on ", filtopt);
+  rm.msg1 <- if(filtPerct==0){
+    paste0("A total of ", sum(!remain), " low variance features were removed (variance filtering disabled).");
+  }else{
+    paste0("A total of ", sum(!remain), " low variance features (bottom ", round(filtPerct*100),
+           "% by ", nm, ") were removed.");
+  }
   rm.msg2 <- paste0("The number of features remains after the data filtering step: ", nrow(data));
   current.msg <<- c(current.msg, rm.msg1, rm.msg2);
 
-  rm.msg1 <- paste0("A total of ```", sum(!remain), "``` low variance features were removed based on ```", filtopt, "```.");
+  rm.msg1 <- if(filtPerct==0){
+    paste0("A total of ```", sum(!remain), "``` low variance features were removed (variance filtering disabled).");
+  }else{
+    paste0("A total of ```", sum(!remain), "``` low variance features (bottom ```", round(filtPerct*100),
+           "```% by ```", nm, "```) were removed.");
+  }
   rm.msg2 <- paste0("The number of features remains after the data filtering step: ```", nrow(data), "```.");
   mbSetObj$dataSet$filt.msg <- c(rm.msg1, rm.msg2);
 
@@ -544,20 +554,20 @@ ApplyMetaboFilter <- function(mbSetObj=NA, filter,  rsd){
     
     if(feat.num < 250){ # reduce 5%
       remain <- rk < feat.num*0.95;
-      msg <- paste(msg, "Further feature filtering based on", nm,". A total of ",sum(!remain), "features were removed.");
+      msg <- paste(msg, "Further feature filtering based on", nm, "(bottom 5% by rank, ", feat.num, "features before filtering). A total of ",sum(!remain), "features were removed.");
     }else if(feat.num < 500){ # reduce 10%
       remain <- rk < feat.num*0.9;
-      msg <- paste(msg, "Further feature filtering based on", nm,". A total of ",sum(!remain), "features were removed.");
+      msg <- paste(msg, "Further feature filtering based on", nm, "(bottom 10% by rank, ", feat.num, "features before filtering). A total of ",sum(!remain), "features were removed.");
     }else if(feat.num < 1000){ # reduce 25%
       remain <- rk < feat.num*0.75;
-      msg <- paste(msg, "Further feature filtering based on", nm,". A total of ",sum(!remain), "features were removed.");
+      msg <- paste(msg, "Further feature filtering based on", nm, "(bottom 25% by rank, ", feat.num, "features before filtering). A total of ",sum(!remain), "features were removed.");
     }else{ # reduce 40%, if still over 5000, then only use top 5000
       remain <- rk < feat.num*0.6;
-      msg <- paste(msg, "Further feature filtering based on", nm);
-      
+      msg <- paste(msg, "Further feature filtering based on", nm, "(bottom 40% by rank, ", feat.num, "features before filtering). A total of ", sum(!remain), "features were removed.");
+
       if(sum(remain) > 5000){
         remain <- rk < 5000;
-        msg <- paste(msg, paste("Reduced to", 5000, "features based on", nm,""));
+        msg <- paste(msg, paste("Reduced further to the top", 5000, "features based on", nm,""));
       }
     }
     
