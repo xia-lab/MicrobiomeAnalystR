@@ -545,7 +545,7 @@ ApplyMetaboFilter <- function(mbSetObj=NA, filter,  rsd){
       nm <- "median";
     }else{ # iqr
       filter.val <- apply(int.mat, 2, IQR, na.rm=T);
-      nm <- "Interquantile Range";
+      nm <- "Interquartile Range";
     }
     
     # get the rank of the filtered variables
