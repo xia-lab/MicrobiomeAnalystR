@@ -25,6 +25,19 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
       sparcc_results <- RunFastSpar(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, "network")
     }
     
+    # RunFastSpar REFUSES with a bare 0 when it cannot run at all — the bundled
+    # fastspar binaries are Linux-only, and it says why via AddErrMsg first.
+    # nrow(0) is NULL, so testing nrow(...)==0 compared NULL to 0, produced
+    # logical(0), and `if` threw "argument is of length zero" — a cryptic error
+    # that REPLACED the clear reason on every macOS/Windows run (reported
+    # 2026-08-28: "SparCC correlation network was skipped: argument is of length
+    # zero"). The three SECOM branches below already guard their result this way.
+    if(!is.data.frame(sparcc_results) && !is.matrix(sparcc_results)){
+      if(!length(current.msg) || !nzchar(current.msg[1])){
+        AddErrMsg("SparCC could not be run in this environment.")
+      }
+      return(0)
+    }
     if(nrow(sparcc_results)==0){
       AddErrMsg("No correlations meet the p-value and correlation thresholds!")
       return(0)
