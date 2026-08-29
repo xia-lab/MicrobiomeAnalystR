@@ -61,9 +61,16 @@ PerformMetaEffectSize <- function(mbSetObj=NA, imgName="", taxrank="OTU", selMet
 
   metadata <-sample_data(dat@sam_data);
   metadata$dataset <- dat@sam_data$dataset;
-  
-  metadata<-as.matrix(metadata);
-  metadata<-as.data.frame(metadata);
+
+  # keep the column types as read: a numeric covariate stays numeric for the per-study
+  # models (as.matrix would turn every column into character, and a continuous
+  # covariate then becomes a factor with one level per value); a character column is
+  # left as it is -- values that happen to be numbers may still be category codes.
+  # The exposure and the dataset id are always read as character.
+  metadata <- data.frame(as(metadata, "data.frame"), check.names = FALSE, stringsAsFactors = FALSE);
+  for (cn in intersect(c(selMeta, "dataset"), colnames(metadata))) {
+    metadata[[cn]] <- as.character(metadata[[cn]]);
+  }
   
   #data <- data[,rownames(metadata)];
   
