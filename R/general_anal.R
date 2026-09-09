@@ -1836,6 +1836,8 @@ PerformLinDA <- function(mbSetObj, analysis.var, is.norm = "false",
   mbSetObj$analSet$multiboxdata <- box_data
   mbSetObj$analSet$sig.count <- sig.count
   mbSetObj$analSet$cov <- list()
+  # the coefficients the fit reported, for the section text: read the fit, not the request
+  mbSetObj$analSet$cov$fitted.terms <- linda.res$variables
   mbSetObj$analSet$cov$resTable <- mbSetObj$analSet$resTable <- res
   mbSetObj$analSet$maas.resnoadj <- res.noadj
 

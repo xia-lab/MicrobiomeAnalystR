@@ -990,6 +990,8 @@ PostProcessMaaslin <- function(mbSetObj,analysis.var,comp=NULL, thresh = 0.05,ta
     mbSetObj$analSet$sig.count <- sig.count;
     mbSetObj$analSet$cov <- list();
     mbSetObj$analSet$cov$resTable <- mbSetObj$analSet$resTable <- res;
+    # the terms the fit reported, for the section text: read the fit, not the request
+    mbSetObj$analSet$cov$fitted.terms <- unique(as.character(mbSetObj$analSet$maaslin$results$metadata));
     mbSetObj$analSet$maas.resnoadj <- res.noadj;
 
     return(.set.mbSetObj(mbSetObj))
