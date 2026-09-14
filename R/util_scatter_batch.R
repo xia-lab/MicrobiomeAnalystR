@@ -8,17 +8,23 @@
 #' @param groups_json JSON string with group info
 #' @param level Confidence level (default 0.95)
 #' @param omics Omics type (default "NA")
-#' @return JSON filename
+#' @param dir Directory holding pos.xyz.qs and to write filenm into, or "" for the R session's
+#'   current working directory (the pre-existing behaviour, kept as the default so a caller that
+#'   does not know about this parameter is unaffected). Passed explicitly by the AJAX servlet
+#'   for a workflow-mode standalone viewer, whose run folder can differ from the R session's own.
+#' @return JSON filename (bare — the caller already knows the directory)
 #' @export
-ComputeEncasingBatch <- function(filenm, type, groups_json, level = 0.95, omics = "NA") {
+ComputeEncasingBatch <- function(filenm, type, groups_json, level = 0.95, omics = "NA", dir = "") {
+  posFile <- if (nzchar(dir)) file.path(dir, "pos.xyz.qs") else "pos.xyz.qs"
+  outFile <- if (nzchar(dir)) file.path(dir, filenm) else filenm
   tryCatch({
     level <- as.numeric(level)
 
-    if (!file.exists("pos.xyz.qs")) {
-      sink(filenm); cat("{}"); sink()
+    if (!file.exists(posFile)) {
+      sink(outFile); cat("{}"); sink()
       return(filenm)
     }
-    pos.xyz <- ov_qs_read("pos.xyz.qs")
+    pos.xyz <- ov_qs_read(posFile)
 
     groups_list <- RJSONIO::fromJSON(groups_json)
     if (is.data.frame(groups_list)) {
@@ -62,13 +68,13 @@ ComputeEncasingBatch <- function(filenm, type, groups_json, level = 0.95, omics 
     )
 
     if (!is.list(result_list) || isFALSE(result_list$success)) {
-      sink(filenm); cat("{}"); sink()
+      sink(outFile); cat("{}"); sink()
     } else {
-      sink(filenm); cat(RJSONIO::toJSON(result_list)); sink()
+      sink(outFile); cat(RJSONIO::toJSON(result_list)); sink()
     }
   }, error = function(e) {
     message("[ComputeEncasingBatch] ", e$message)
-    sink(filenm); cat("{}"); sink()
+    sink(outFile); cat("{}"); sink()
   })
   return(filenm)
 }
