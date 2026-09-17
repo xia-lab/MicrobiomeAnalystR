@@ -1321,6 +1321,17 @@ setResourceDir <- function(path){
   # (the .so + on-demand script loads) assume it; an absolute path arrives without
   # one and would build ".../resourcesrscripts/...".
   rpath <<- paste0(sub("/+$", "", path), "/");
+  # lib.path.mmp (mmp_utils.R) is a TOP-LEVEL "lib.path.mmp <<- paste0(rpath, "libs/mmp/")" —
+  # computed ONCE when the script sources, from whatever rpath was at that moment (the default
+  # relative "../../"), not re-derived when rpath changes later. Every MMP reference-library
+  # read (general_kegg2name.qs and friends) goes through it, so calling this function alone left
+  # lib.path.mmp silently stale: an AI-orchestrated MMP run (home dir is durable local storage,
+  # never two levels under the deployed webapp's resources/ the way a manual session's is) set
+  # rpath correctly but InitCurrentProc() still failed "neither .qs2 nor .qs found for:
+  # ../../libs/mmp/general_kegg2name.qs" — the OLD relative value, live, 17 Sep 2026. lib.path
+  # (meta_proc.R) is NOT the same bug — it is re-derived inside Init.mbSetObj() on every call,
+  # which every MMP run already makes before reading data.
+  if (exists("lib.path.mmp")) lib.path.mmp <<- paste0(rpath, "libs/mmp/");
 }
 
 CheckResTableExists <- function(mbSetObj = NA, type) {
