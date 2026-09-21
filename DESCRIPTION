@@ -49,7 +49,9 @@ Imports:
     dplyr,
     limma,
     memoise,
-    tidyverse
+    tidyverse,
+    modeest,
+    lmerTest
 Suggests: 
     knitr,
     rmarkdown,
