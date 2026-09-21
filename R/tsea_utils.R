@@ -213,9 +213,9 @@ CalculateHyperScore <- function(mbSetObj){
 
     AddErrMsg("No matches were found in the selected taxon set library!");
 
-    if(mbSetObj$dataSet$tset.type=="host_int_species"|mbSetObj$dataSet$tset.type=="env_species"|mbSetObj$dataSet$tset.type=="host_ext_species"){
+    if(grepl("_species$", mbSetObj$dataSet$tset.type)){
       AddErrMsg("Species-level taxa set was selected: verify that your list contains species names!");
-    }else if(mbSetObj$dataSet$tset.type=="host_int_strain"|mbSetObj$dataSet$tset.type=="env_strain"|mbSetObj$dataSet$tset.type=="mic_int_strain"){
+    }else if(grepl("_strain$", mbSetObj$dataSet$tset.type)){
       AddErrMsg("Strain-level taxa set was selected: verify that your list contains strain names!");
     }else{
       AddErrMsg("Mixed-level taxa set was selected!");
@@ -435,12 +435,14 @@ PrepareEnrichNet<-function(mbSetObj){
   mic_met           = "taxon_metabolite_tsea.csv",
   mic_int           = "tsea_microbiome_int.csv",
   gene              = "tsea_host_snps_new.csv",
+  food_matrix       = "tsea_food_matrix.csv",
   # species level
   host_int_species  = "tsea_host_int_species.csv",
   host_ext_species  = "tsea_host_ext_species.csv",
   host_diet_species = "tsea_host_diet_lifestyle_species.csv",
   host_drug_species = "tsea_host_medication_species.csv",
   env_species       = "tsea_environment_species.csv",
+  food_matrix_species = "tsea_food_matrix_species.csv",
   # strain level
   host_int_strain   = "tsea_host_int_strain.csv",
   env_strain        = "tsea_environment_strain.csv",
