@@ -1643,14 +1643,9 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, f
 #'@param imgNm Image name for visualization.
 #'@param thresh Adjusted p-value cutoff.
 #'@export
-PerformLinDA <- function(mbSetObj, analysis.var, is.norm = "false",
-                         comp = NULL, ref = NULL, block = "NA",
-                         taxrank = "NA", imgNm = "NA", thresh = 0.05) {
-
-  mbSetObj <- .get.mbSetObj(mbSetObj)
-  thresh <- as.numeric(thresh)
-
-  # Determine covariates
+# Shared preparation for the covariate-analysis compositional methods (LinDA, ANCOM-BC2):
+# count table at the requested level, aligned metadata, covariates, comparison subset.
+.cov_da_prepare <- function(mbSetObj, analysis.var, is.norm, comp, ref, block, taxrank) {
   if(!exists('adj.vec')) {
     adj.bool <- FALSE
     adj.vars <- character(0)
@@ -1659,21 +1654,17 @@ PerformLinDA <- function(mbSetObj, analysis.var, is.norm = "false",
     adj.bool <- length(adj.vars) > 0 && !all(adj.vars == "")
     if(!adj.bool) adj.vars <- character(0)
   }
-
   mbSetObj$analSet$adj.bool <- adj.bool
   mbSetObj$analSet$block <- block
 
-  # Get OTU table at the requested taxonomy level
   if(mbSetObj$module.type == "sdp") {
     taxrank <- "OTU"
   }
-
   if(is.norm == "false") {
     phyloseq_objs <- ov_qs_read("phyloseq_prenorm_objs.qs")
   } else {
     phyloseq_objs <- ov_qs_read("phyloseq_objs.qs")
   }
-
   if(taxrank == "OTU") {
     input.data <- as.data.frame(phyloseq_objs$count_tables$OTU)
   } else {
@@ -1681,18 +1672,15 @@ PerformLinDA <- function(mbSetObj, analysis.var, is.norm = "false",
     input.data <- as.data.frame(phyloseq_objs$count_tables[[taxrank.inx]])
   }
 
-  # Build metadata
   meta.nms <- colnames(mbSetObj$dataSet$sample_data)
   input.meta <- as.data.frame(mbSetObj$dataSet$sample_data@.Data)
   colnames(input.meta) <- meta.nms
   rownames(input.meta) <- input.meta$sample_id
 
-  # Align samples
   common.samples <- intersect(colnames(input.data), rownames(input.meta))
   input.data <- input.data[, common.samples, drop = FALSE]
   input.meta <- input.meta[common.samples, , drop = FALSE]
 
-  # Determine analysis type (discrete or continuous)
   fixed.effects <- if(adj.bool) c(analysis.var, adj.vars) else analysis.var
   fixed.types <- mbSetObj$dataSet$meta.types[names(mbSetObj$dataSet$meta.types) %in% fixed.effects]
   analysis.type <- fixed.types[analysis.var]
@@ -1708,86 +1696,35 @@ PerformLinDA <- function(mbSetObj, analysis.var, is.norm = "false",
       input.meta[[analysis.var]] <- factor(input.meta[[analysis.var]], levels = c(ref, comp))
     }
   }
-
-  # Ensure discrete covariates are factors
   for(v in fixed.effects) {
     if(v %in% names(fixed.types) && fixed.types[v] == "disc") {
       input.meta[[v]] <- factor(input.meta[[v]])
     }
   }
-
-  # Build LinDA formula
-  formula.parts <- fixed.effects
   if(block != "NA") {
     input.meta[[block]] <- factor(input.meta[[block]])
-    formula.str <- paste0("~", paste(formula.parts, collapse = "+"), "+(1|", block, ")")
-  } else {
-    formula.str <- paste0("~", paste(formula.parts, collapse = "+"))
   }
+  list(mbSetObj = mbSetObj, input.data = input.data, input.meta = input.meta, fixed.effects = fixed.effects,
+       analysis.type = analysis.type, adj.bool = adj.bool, adj.vars = adj.vars, taxrank = taxrank)
+}
 
-  # Run LinDA (adjusted)
-  linda.res <- .linda_core(input.data, input.meta, formula = formula.str,
-                           prev.cut = 0, lib.cut = 1, winsor.quan = 0.97)
-
-  # Find the variable corresponding to the primary metadata
-  # For discrete variables, LinDA creates coefficients like "varNameLevel"
-  all.vars.out <- linda.res$variables
-  if(analysis.type == "disc" && !is.null(comp) && comp != "NA") {
-    var.match <- grep(paste0("^", analysis.var), all.vars.out, value = TRUE)[1]
-  } else {
-    var.match <- all.vars.out[1]
+# Shared result handling for the covariate-analysis compositional methods: `adj` and `noadj` are
+# data.frames with columns log2FoldChange, lfcSE, pvalue, padj (rownames = features).
+.cov_da_finish <- function(prep, adj.output, noadj.output, model, fitted.terms, analysis.var, is.norm,
+                           comp, ref, block, imgNm, thresh) {
+  mbSetObj <- prep$mbSetObj
+  input.data <- prep$input.data; input.meta <- prep$input.meta
+  eff.nm <- if(prep$analysis.type == "disc") "Log2FC" else "Coefficient"
+  mk <- function(o, se.nm) {
+    d <- data.frame(signif(o$log2FoldChange, 3), signif(o$lfcSE, 3), signif(o$pvalue, 3), signif(o$padj, 3),
+                    row.names = rownames(o), check.names = FALSE)
+    colnames(d) <- c(eff.nm, se.nm, "P-value", "FDR")
+    d
   }
-  adj.output <- linda.res$output[[var.match]]
+  res <- mk(adj.output, "St.Error")
+  res.noadj <- mk(noadj.output, if(prep$analysis.type == "disc") "St. Error" else "St.Error")
 
-  # Run LinDA (unadjusted) for comparison plot if covariates/blocking exist
-  if(adj.bool || block != "NA") {
-    formula.noadj <- paste0("~", analysis.var)
-    linda.noadj <- .linda_core(input.data, input.meta, formula = formula.noadj,
-                               prev.cut = 0, lib.cut = 1, winsor.quan = 0.97)
-    noadj.var <- grep(paste0("^", analysis.var), linda.noadj$variables, value = TRUE)[1]
-    noadj.output <- linda.noadj$output[[noadj.var]]
-  } else {
-    noadj.output <- adj.output
-  }
-
-  # Format results - match PostProcessMaaslin column names
-  if(analysis.type == "disc") {
-    res <- data.frame(
-      Log2FC = signif(adj.output$log2FoldChange, 3),
-      St.Error = signif(adj.output$lfcSE, 3),
-      `P-value` = signif(adj.output$pvalue, 3),
-      FDR = signif(adj.output$padj, 3),
-      row.names = rownames(adj.output),
-      check.names = FALSE
-    )
-    res.noadj <- data.frame(
-      Log2FC = signif(noadj.output$log2FoldChange, 3),
-      `St. Error` = signif(noadj.output$lfcSE, 3),
-      `P-value` = signif(noadj.output$pvalue, 3),
-      FDR = signif(noadj.output$padj, 3),
-      row.names = rownames(noadj.output),
-      check.names = FALSE
-    )
-  } else {
-    res <- data.frame(
-      Coefficient = signif(adj.output$log2FoldChange, 3),
-      St.Error = signif(adj.output$lfcSE, 3),
-      `P-value` = signif(adj.output$pvalue, 3),
-      FDR = signif(adj.output$padj, 3),
-      row.names = rownames(adj.output),
-      check.names = FALSE
-    )
-    res.noadj <- data.frame(
-      Coefficient = signif(noadj.output$log2FoldChange, 3),
-      `St.Error` = signif(noadj.output$lfcSE, 3),
-      `P-value` = signif(noadj.output$pvalue, 3),
-      FDR = signif(noadj.output$padj, 3),
-      row.names = rownames(noadj.output),
-      check.names = FALSE
-    )
-  }
-
-  # Write CSV (full LinDA output, unsorted as produced)
+  # Write CSV (full output, unsorted as produced)
   fast.write(res, file = "multifac_output.csv")
 
   # Significance + sig-first sort so the front-end's positional highlight
@@ -1837,23 +1774,162 @@ PerformLinDA <- function(mbSetObj, analysis.var, is.norm = "false",
   mbSetObj$analSet$sig.count <- sig.count
   mbSetObj$analSet$cov <- list()
   # the coefficients the fit reported, for the section text: read the fit, not the request
-  mbSetObj$analSet$cov$fitted.terms <- linda.res$variables
+  mbSetObj$analSet$cov$fitted.terms <- fitted.terms
   mbSetObj$analSet$cov$resTable <- mbSetObj$analSet$resTable <- res
   mbSetObj$analSet$maas.resnoadj <- res.noadj
 
   mbSetObj$paramSet$cov <- list(
     primaryMeta = analysis.var,
-    covariates = if(adj.bool) adj.vars else "NA",
+    covariates = if(prep$adj.bool) prep$adj.vars else "NA",
     block = block,
-    taxrank = taxrank,
-    model = "LinDA",
+    taxrank = prep$taxrank,
+    model = model,
     comparison = comp,
     reference = ref,
     p.lvl = thresh
   )
-
   .set.mbSetObj(mbSetObj)
   return(1)
+}
+
+PerformLinDA <- function(mbSetObj, analysis.var, is.norm = "false",
+                         comp = NULL, ref = NULL, block = "NA",
+                         taxrank = "NA", imgNm = "NA", thresh = 0.05) {
+
+  mbSetObj <- .get.mbSetObj(mbSetObj)
+  thresh <- as.numeric(thresh)
+  prep <- .cov_da_prepare(mbSetObj, analysis.var, is.norm, comp, ref, block, taxrank)
+  input.data <- prep$input.data; input.meta <- prep$input.meta
+
+  # Build LinDA formula
+  formula.parts <- prep$fixed.effects
+  if(block != "NA") {
+    formula.str <- paste0("~", paste(formula.parts, collapse = "+"), "+(1|", block, ")")
+  } else {
+    formula.str <- paste0("~", paste(formula.parts, collapse = "+"))
+  }
+
+  # Run LinDA (adjusted)
+  linda.res <- .linda_core(input.data, input.meta, formula = formula.str,
+                           prev.cut = 0, lib.cut = 1, winsor.quan = 0.97)
+
+  # Find the variable corresponding to the primary metadata
+  # For discrete variables, LinDA creates coefficients like "varNameLevel"
+  all.vars.out <- linda.res$variables
+  if(prep$analysis.type == "disc" && !is.null(comp) && comp != "NA") {
+    var.match <- grep(paste0("^", analysis.var), all.vars.out, value = TRUE)[1]
+  } else {
+    var.match <- all.vars.out[1]
+  }
+  adj.output <- linda.res$output[[var.match]]
+
+  # Run LinDA (unadjusted) for comparison plot if covariates/blocking exist
+  if(prep$adj.bool || block != "NA") {
+    formula.noadj <- paste0("~", analysis.var)
+    linda.noadj <- .linda_core(input.data, input.meta, formula = formula.noadj,
+                               prev.cut = 0, lib.cut = 1, winsor.quan = 0.97)
+    noadj.var <- grep(paste0("^", analysis.var), linda.noadj$variables, value = TRUE)[1]
+    noadj.output <- linda.noadj$output[[noadj.var]]
+  } else {
+    noadj.output <- adj.output
+  }
+
+  .cov_da_finish(prep, adj.output, noadj.output, "LinDA", linda.res$variables, analysis.var, is.norm,
+                 comp, ref, block, imgNm, thresh)
+}
+
+#'Covariate-adjusted ANCOM-BC2 differential abundance analysis
+#'@description Same interface and outputs as PerformLinDA, fitted with ANCOMBC::ancombc2
+#'(fixed effects = primary variable + covariates, blocking factor as a random intercept).
+#'@export
+PerformANCOMBC2 <- function(mbSetObj, analysis.var, is.norm = "false",
+                            comp = NULL, ref = NULL, block = "NA",
+                            taxrank = "NA", imgNm = "NA", thresh = 0.05) {
+
+  mbSetObj <- .get.mbSetObj(mbSetObj)
+  thresh <- as.numeric(thresh)
+  prep <- .cov_da_prepare(mbSetObj, analysis.var, is.norm, comp, ref, block, taxrank)
+  input.data <- prep$input.data; input.meta <- prep$input.meta
+
+  fix.formula <- paste(prep$fixed.effects, collapse = " + ")
+  rand.formula <- if(block != "NA") paste0("(1|", block, ")") else NULL
+  grp <- if(prep$analysis.type == "disc") analysis.var else NULL
+
+  abc <- .ancombc2_core(input.data, input.meta, fix.formula, rand.formula, group = grp, alpha = thresh)
+  if(is.null(abc)) return(0)
+  adj.output <- .ancombc2_coef(abc$res, analysis.var, prep$analysis.type)
+  if(is.null(adj.output)) { AddErrMsg("ANCOM-BC2 did not return a coefficient for the primary variable."); return(0) }
+
+  if(prep$adj.bool || block != "NA") {
+    abc.noadj <- .ancombc2_core(input.data, input.meta, analysis.var, NULL, group = grp, alpha = thresh)
+    if(is.null(abc.noadj)) return(0)
+    noadj.output <- .ancombc2_coef(abc.noadj$res, analysis.var, prep$analysis.type)
+  } else {
+    noadj.output <- adj.output
+  }
+
+  .cov_da_finish(prep, adj.output, noadj.output, "ANCOM-BC2", abc$variables, analysis.var, is.norm,
+                 comp, ref, block, imgNm, thresh)
+}
+
+########################################################
+########### ANCOM-BC2 ##################################
+
+# ANCOMBC::ancombc2 run in a fresh subprocess (heavy dependencies: CVXR, lme4, doRNG), the same
+# quarantine used for edgeR. Returns list(res, res_global, variables) or NULL after AddErrMsg.
+# The pseudo-count sensitivity analysis the authors recommend multiplies the run time (x2 for fixed
+# effects, x10+ with a random effect), so it is on for fixed-effect models up to 1500 features and
+# off otherwise; the q-values reported are ancombc2's BH-adjusted p-values either way.
+.ancombc2_core <- function(otu.tab, meta, fix_formula, rand_formula = NULL, group = NULL,
+                           global = FALSE, alpha = 0.05, prv.cut = 0, lib.cut = 1, pseudo_sens = NULL) {
+  if(!requireNamespace("ANCOMBC", quietly = TRUE)) {
+    AddErrMsg("The ANCOMBC package is not installed on this server.")
+    return(NULL)
+  }
+  if(is.null(pseudo_sens)) pseudo_sens <- is.null(rand_formula) && nrow(otu.tab) <= 1500
+  # drop samples with missing values in any model variable (fixed effects and the random-effect grouping)
+  model.vars <- unique(c(all.vars(as.formula(paste("~", fix_formula))),
+                         if(!is.null(rand_formula)) gsub("^\\(1\\||\\)$", "", rand_formula)))
+  keep <- complete.cases(meta[, model.vars, drop = FALSE])
+  Y <- round(as.matrix(otu.tab[, keep, drop = FALSE]))
+  Z <- meta[keep, , drop = FALSE]
+  # ancombc2 drops a single-column meta_data to a vector and then reports the variable as missing;
+  # a second (unused) column keeps it a data.frame
+  Z$.ov_sample_id <- rownames(Z)
+  result <- rsclient_isolated_exec(
+    func_body = function(input_data) {
+      suppressPackageStartupMessages(require(ANCOMBC))
+      r <- suppressWarnings(suppressMessages(ancombc2(
+        data = input_data$Y, taxa_are_rows = TRUE, meta_data = input_data$meta,
+        fix_formula = input_data$fix, rand_formula = input_data$rand, p_adj_method = "BH",
+        prv_cut = input_data$prv, lib_cut = input_data$lib, group = input_data$group,
+        struc_zero = !is.null(input_data$group), alpha = input_data$alpha, n_cl = 1, verbose = FALSE,
+        global = input_data$global, pairwise = FALSE, dunnet = FALSE, trend = FALSE,
+        pseudo_sens = input_data$sens)))
+      list(res = as.data.frame(r$res), res_global = if(input_data$global) as.data.frame(r$res_global) else NULL)
+    },
+    input_data = list(Y = Y, meta = Z, fix = fix_formula, rand = rand_formula, group = group, global = global,
+                      sens = pseudo_sens, alpha = alpha, prv = prv.cut, lib = lib.cut),
+    packages = c("ANCOMBC", "qs"), timeout = 3600, output_type = "qs")
+  if (is.list(result) && isFALSE(result$success)) { AddErrMsg(paste("ANCOM-BC2 failed:", result$message)); return(NULL) }
+  result$variables <- sub("^lfc_", "", grep("^lfc_", colnames(result$res), value = TRUE))
+  result$variables <- setdiff(result$variables, "(Intercept)")
+  result
+}
+
+# Coefficient block of ancombc2 output for the primary variable (first level contrast for a factor),
+# in the column layout .cov_da_finish / the univariate table expect. lfc is on the natural-log scale
+# in ANCOM-BC2 and is converted to log2.
+.ancombc2_coef <- function(res, variable, analysis.type = "disc") {
+  cand <- grep(paste0("^lfc_", variable), colnames(res), value = TRUE)
+  if(!length(cand)) return(NULL)
+  v <- sub("^lfc_", "", cand[1])
+  data.frame(log2FoldChange = res[[paste0("lfc_", v)]] / log(2),
+             lfcSE = res[[paste0("se_", v)]] / log(2),
+             stat = res[[paste0("W_", v)]],
+             pvalue = res[[paste0("p_", v)]],
+             padj = res[[paste0("q_", v)]],
+             row.names = res$taxon, check.names = FALSE)
 }
 
 #'Single-factor LinDA differential abundance test
@@ -1867,12 +1943,9 @@ PerformLinDA <- function(mbSetObj, analysis.var, is.norm = "false",
 #'ref.grp. Without them the levels fall in alphabetical order and the sign follows that instead of
 #'the comparison the user asked for. Only affects the two-group branch; the multi-group branch is an
 #'omnibus F-test and has no direction.
-PerformLinDAUni <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, taxrank, fc.thresh=0,
-                            ref.grp=NA, comp.grp=NA) {
-  mbSetObj <- .get.mbSetObj(mbSetObj)
-  p.lvl <- as.numeric(p.lvl)
-  fc.thresh <- as.numeric(fc.thresh)
-
+# Shared preparation for the single-factor compositional methods (LinDA, ANCOM-BC2): count table at
+# the requested level and the group factor, ordered so the fold change is comp.grp relative to ref.grp.
+.uni_da_prepare <- function(mbSetObj, variable, taxrank, ref.grp = NA, comp.grp = NA) {
   if(mbSetObj$module.type == "sdp") {
     taxrank <- "OTU"
     data <- mbSetObj$dataSet$norm.phyobj
@@ -1888,7 +1961,6 @@ PerformLinDAUni <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, tax
       data1 <- as.matrix(phyloseq_objs$count_tables[[taxrank.inx]])
     }
   }
-
   # as(..., "data.frame"), NOT as.data.frame(): phyloseq's sample_data keeps its
   # S4-backed class through as.data.frame, so meta_df[rows, var] returns another
   # sample_data and factor()/order() die with "cannot xtfrm data frames".
@@ -1902,60 +1974,17 @@ PerformLinDAUni <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, tax
      ref.grp != comp.grp && all(c(ref.grp, comp.grp) %in% levels(cls))) {
     cls <- factor(cls, levels = c(ref.grp, comp.grp, setdiff(levels(cls), c(ref.grp, comp.grp))))
   }
-  lvl <- nlevels(cls)
-  if(lvl < 2) {
-    AddErrMsg("LinDA requires at least 2 groups in the experimental factor.")
-    return(0)
-  }
-
   meta_lin <- data.frame(grp = cls)
   colnames(meta_lin) <- variable
   rownames(meta_lin) <- colnames(data1)
+  list(data1 = data1, meta_df = meta_df, meta_lin = meta_lin, cls = cls, taxrank = taxrank)
+}
 
-  linda.res <- .linda_core(data1, meta_lin, formula = paste0("~", variable),
-                           prev.cut = 0, lib.cut = 1, winsor.quan = 0.97)
-  vars_out <- linda.res$variables
-  feats <- rownames(linda.res$output[[vars_out[1]]])
-  baseMean <- linda.res$output[[vars_out[1]]]$baseMean
-
-  if(lvl == 2) {
-    out_i <- linda.res$output[[vars_out[1]]]
-    resTable <- data.frame(
-      log2FC     = signif(out_i$log2FoldChange, 5),
-      Statistics = signif(out_i$stat, 5),
-      Pvalues    = signif(out_i$pvalue, 5),
-      FDR        = signif(out_i$padj, 5),
-      logCPM     = signif(log2(baseMean + 1), 5),
-      row.names  = feats,
-      check.names = FALSE
-    )
-    sigHits <- !is.na(resTable$FDR) & resTable$FDR < p.lvl & abs(resTable$log2FC) > fc.thresh
-  } else {
-    # Multi-group omnibus: refit lm on the same CLR-transformed W per feature
-    Y <- data1[feats, intersect(colnames(data1), rownames(meta_lin)), drop = FALSE]
-    if(any(Y == 0)) Y <- Y + 0.5
-    logY <- log2(Y)
-    W <- t(logY) - colMeans(logY)
-    grp <- meta_lin[colnames(Y), variable]
-    fmat <- do.call(rbind, lapply(seq_len(ncol(W)), function(i) {
-      fit <- lm(W[, i] ~ grp)
-      fs <- summary(fit)$fstatistic
-      if(is.null(fs)) c(NA_real_, NA_real_) else c(unname(fs[1]),
-        pf(fs[1], fs[2], fs[3], lower.tail = FALSE))
-    }))
-    f.stats <- fmat[, 1]; f.pvals <- fmat[, 2]
-    fdr <- p.adjust(f.pvals, method = "BH")
-    resTable <- data.frame(
-      Statistics = signif(f.stats, 5),
-      Pvalues    = signif(f.pvals, 5),
-      FDR        = signif(fdr, 5),
-      logCPM     = signif(log2(baseMean + 1), 5),
-      row.names  = feats,
-      check.names = FALSE
-    )
-    sigHits <- !is.na(resTable$FDR) & resTable$FDR < p.lvl
-  }
-
+# Shared result handling for the single-factor compositional methods: sorts, writes the CSV,
+# builds the box-plot data and records the analysis under analSet[[method]] / paramSet[[method]].
+.uni_da_finish <- function(mbSetObj, resTable, sigHits, feats, prep, method, label, variable,
+                           shotgunid, p.lvl, fc.thresh, lvl) {
+  taxrank <- prep$taxrank
   resTable <- resTable[complete.cases(resTable), , drop = FALSE]
   sigHits  <- sigHits[match(rownames(resTable), feats)]
   ord.inx  <- order(!sigHits, resTable$Pvalues)
@@ -2000,30 +2029,141 @@ PerformLinDAUni <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, tax
   dat3t_boxplot <- as.data.frame(t(otu_table(data_boxplot)), check.names = FALSE)
   colnames(dat3t_boxplot) <- taxa_names(data_boxplot)
   box_data <- data.frame(dat3t_boxplot, check.names = FALSE)
-  box_data$class <- factor(meta_df[rownames(box_data), variable])
+  box_data$class <- factor(prep$meta_df[rownames(box_data), variable])
   mbSetObj$analSet$boxdata <- box_data
   fast.write(t(box_data), "uni_abund_data.csv")
 
   diff_ft <<- rownames(resTable)[seq_len(de.Num)]
 
-  mbSetObj$analSet$anal.type <- "linda"
+  mbSetObj$analSet$anal.type <- method
   mbSetObj$analSet$var.type <- variable
   mbSetObj$analSet$sig.count <- de.Num
   mbSetObj$analSet$id.type <- shotgunid
-  mbSetObj$analSet$linda$resTable <- mbSetObj$analSet$resTable <- resTable
-  mbSetObj$analSet$linda.taxalvl <- taxrank
+  mbSetObj$analSet[[method]]$resTable <- mbSetObj$analSet$resTable <- resTable
+  mbSetObj$analSet[[paste0(method, ".taxalvl")]] <- taxrank
 
-  mbSetObj$paramSet$linda <- list(
+  mbSetObj$paramSet[[method]] <- list(
     exp.factor = variable,
-    anal.type  = "LinDA",
-    method     = "linda",
+    anal.type  = label,
+    method     = method,
     taxalvl    = taxrank,
     p.lvl      = p.lvl,
     fc.thresh  = fc.thresh,
     multigroup = (lvl > 2)
   )
-
   return(.set.mbSetObj(mbSetObj))
+}
+
+PerformLinDAUni <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, taxrank, fc.thresh=0,
+                            ref.grp=NA, comp.grp=NA) {
+  mbSetObj <- .get.mbSetObj(mbSetObj)
+  p.lvl <- as.numeric(p.lvl)
+  fc.thresh <- as.numeric(fc.thresh)
+  prep <- .uni_da_prepare(mbSetObj, variable, taxrank, ref.grp, comp.grp)
+  data1 <- prep$data1; meta_lin <- prep$meta_lin
+  lvl <- nlevels(prep$cls)
+  if(lvl < 2) {
+    AddErrMsg("LinDA requires at least 2 groups in the experimental factor.")
+    return(0)
+  }
+
+  linda.res <- .linda_core(data1, meta_lin, formula = paste0("~", variable),
+                           prev.cut = 0, lib.cut = 1, winsor.quan = 0.97)
+  vars_out <- linda.res$variables
+  feats <- rownames(linda.res$output[[vars_out[1]]])
+  baseMean <- linda.res$output[[vars_out[1]]]$baseMean
+
+  if(lvl == 2) {
+    out_i <- linda.res$output[[vars_out[1]]]
+    resTable <- data.frame(
+      log2FC     = signif(out_i$log2FoldChange, 5),
+      Statistics = signif(out_i$stat, 5),
+      Pvalues    = signif(out_i$pvalue, 5),
+      FDR        = signif(out_i$padj, 5),
+      logCPM     = signif(log2(baseMean + 1), 5),
+      row.names  = feats,
+      check.names = FALSE
+    )
+    sigHits <- !is.na(resTable$FDR) & resTable$FDR < p.lvl & abs(resTable$log2FC) > fc.thresh
+  } else {
+    # Multi-group omnibus: refit lm on the same CLR-transformed W per feature
+    Y <- data1[feats, intersect(colnames(data1), rownames(meta_lin)), drop = FALSE]
+    if(any(Y == 0)) Y <- Y + 0.5
+    logY <- log2(Y)
+    W <- t(logY) - colMeans(logY)
+    grp <- meta_lin[colnames(Y), variable]
+    fmat <- do.call(rbind, lapply(seq_len(ncol(W)), function(i) {
+      fit <- lm(W[, i] ~ grp)
+      fs <- summary(fit)$fstatistic
+      if(is.null(fs)) c(NA_real_, NA_real_) else c(unname(fs[1]),
+        pf(fs[1], fs[2], fs[3], lower.tail = FALSE))
+    }))
+    f.stats <- fmat[, 1]; f.pvals <- fmat[, 2]
+    fdr <- p.adjust(f.pvals, method = "BH")
+    resTable <- data.frame(
+      Statistics = signif(f.stats, 5),
+      Pvalues    = signif(f.pvals, 5),
+      FDR        = signif(fdr, 5),
+      logCPM     = signif(log2(baseMean + 1), 5),
+      row.names  = feats,
+      check.names = FALSE
+    )
+    sigHits <- !is.na(resTable$FDR) & resTable$FDR < p.lvl
+  }
+  .uni_da_finish(mbSetObj, resTable, sigHits, feats, prep, "linda", "LinDA", variable, shotgunid, p.lvl, fc.thresh, lvl)
+}
+
+#'Single-factor ANCOM-BC2 differential abundance test
+#'@description Same interface and outputs as PerformLinDAUni, fitted with ANCOMBC::ancombc2.
+#'Two-group factors report the bias-corrected log2 fold change of comp.grp relative to ref.grp;
+#'multi-group factors report ANCOM-BC2's global test (W statistic, no fold change).
+#'@export
+PerformANCOMBC2Uni <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, taxrank, fc.thresh=0,
+                               ref.grp=NA, comp.grp=NA) {
+  mbSetObj <- .get.mbSetObj(mbSetObj)
+  p.lvl <- as.numeric(p.lvl)
+  fc.thresh <- as.numeric(fc.thresh)
+  prep <- .uni_da_prepare(mbSetObj, variable, taxrank, ref.grp, comp.grp)
+  data1 <- prep$data1; meta_lin <- prep$meta_lin
+  lvl <- nlevels(prep$cls)
+  if(lvl < 2) {
+    AddErrMsg("ANCOM-BC2 requires at least 2 groups in the experimental factor.")
+    return(0)
+  }
+
+  abc <- .ancombc2_core(data1, meta_lin, fix_formula = variable, group = variable, global = (lvl > 2), alpha = p.lvl)
+  if(is.null(abc)) return(0)
+  # library-size-normalised mean abundance for the logCPM column (ANCOM-BC2 has no baseMean)
+  cpm <- t(t(data1) / pmax(colSums(data1), 1)) * 1e6
+  baseMean <- rowMeans(cpm)[abc$res$taxon]
+
+  if(lvl == 2) {
+    out_i <- .ancombc2_coef(abc$res, variable)
+    feats <- rownames(out_i)
+    resTable <- data.frame(
+      log2FC     = signif(out_i$log2FoldChange, 5),
+      Statistics = signif(out_i$stat, 5),
+      Pvalues    = signif(out_i$pvalue, 5),
+      FDR        = signif(out_i$padj, 5),
+      logCPM     = signif(log2(baseMean[feats] + 1), 5),
+      row.names  = feats,
+      check.names = FALSE
+    )
+    sigHits <- !is.na(resTable$FDR) & resTable$FDR < p.lvl & abs(resTable$log2FC) > fc.thresh
+  } else {
+    g <- abc$res_global
+    feats <- g$taxon
+    resTable <- data.frame(
+      Statistics = signif(g$W, 5),
+      Pvalues    = signif(g$p_val, 5),
+      FDR        = signif(g$q_val, 5),
+      logCPM     = signif(log2(baseMean[feats] + 1), 5),
+      row.names  = feats,
+      check.names = FALSE
+    )
+    sigHits <- !is.na(resTable$FDR) & resTable$FDR < p.lvl
+  }
+  .uni_da_finish(mbSetObj, resTable, sigHits, feats, prep, "ancombc2", "ANCOM-BC2", variable, shotgunid, p.lvl, fc.thresh, lvl)
 }
 
 ########################################################
@@ -3047,13 +3187,13 @@ GenerateCompJson <- function(mbSetObj = NA, fileName, format,type, mode = 1, tax
     mbSetObj$imgSet$rnaseq.manhattan <- gsub("json",format,fileName);
     mbSetObj$imgSet$rnaseq.manhattan.plotly <- gsub("json","rda",fileName);
     mbSetObj$imgSet$rnaseq.manhattan.json <- fileName;
-  } else if (type == "linda") {
-    resTable <- mbSetObj$analSet$linda$resTable
+  } else if (type %in% c("linda", "ancombc2")) {
+    resTable <- mbSetObj$analSet[[type]]$resTable
     resTable$id <- rownames(resTable)
-    resList <- list(data = resTable, param = mbSetObj$paramSet$linda)
-    mbSetObj$imgSet$linda.manhattan <- gsub("json",format,fileName);
-    mbSetObj$imgSet$linda.manhattan.plotly <- gsub("json","rda",fileName);
-    mbSetObj$imgSet$linda.manhattan.json <- fileName;
+    resList <- list(data = resTable, param = mbSetObj$paramSet[[type]])
+    mbSetObj$imgSet[[paste0(type, ".manhattan")]] <- gsub("json",format,fileName);
+    mbSetObj$imgSet[[paste0(type, ".manhattan.plotly")]] <- gsub("json","rda",fileName);
+    mbSetObj$imgSet[[paste0(type, ".manhattan.json")]] <- fileName;
   }
   
   if(mbSetObj[["module.type"]]=="mdp"){
@@ -3086,7 +3226,7 @@ GenerateCompJson <- function(mbSetObj = NA, fileName, format,type, mode = 1, tax
                         arrange(parent, len) %>%
                         mutate(BPcum = len + tot))
     #print(type)
-    if (type %in% c("EdgeR", "DESeq2", "ffm") || (type == "linda" && "log2FC" %in% names(don))) {
+    if (type %in% c("EdgeR", "DESeq2", "ffm") || (type %in% c("linda", "ancombc2") && "log2FC" %in% names(don))) {
       don$shape <- ifelse(don$log2FC > 0, "triangle-up", "triangle-down")
       don$shape[don$FDR > sigLevel | abs(don$log2FC) < fcLevel] <- "circle"
       resList$param$multigroup <- FALSE
