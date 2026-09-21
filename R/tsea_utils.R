@@ -235,9 +235,16 @@ CalculateHyperScore <- function(mbSetObj){
   res.mat[,3]<-hit.num;
   res.mat[,4]<-phyper(hit.num-1, set.num, uniq.count-set.num, q.size, lower.tail=F);
 
-  # adjust for multiple testing problems
-  res.mat[,5] <- p.adjust(res.mat[,4], "holm");
-  res.mat[,6] <- p.adjust(res.mat[,4], "fdr");
+  # Multiple-testing correction is applied only to sets with >= 2 hits. A single
+  # matched taxon is not meaningful evidence of enrichment, and counting every
+  # 1-hit set as a test inflates the penalty on the sets that matter (the
+  # per-study libraries make this noticeable). 1-hit sets keep their raw p but
+  # are reported with NA for Holm/FDR.
+  test.inx <- hit.num >= 2;
+  if(any(test.inx)){
+    res.mat[test.inx, 5] <- p.adjust(res.mat[test.inx, 4], "holm");
+    res.mat[test.inx, 6] <- p.adjust(res.mat[test.inx, 4], "fdr");
+  }
 
   res.mat <- res.mat[hit.num>0,];
 
@@ -417,6 +424,62 @@ PrepareEnrichNet<-function(mbSetObj){
 
 #'Set the microbe set library
 #'@description This function sets the microbe
+# Taxon-set library file for each library key used by the web interface.
+.tsea.lib.files <- c(
+  # mixed level
+  host_int          = "tsea_host_int.csv",
+  host_ext          = "tsea_host_ext.csv",
+  host_diet         = "tsea_host_diet_lifestyle.csv",
+  host_drug         = "tsea_host_medication.csv",
+  env               = "tsea_environment.csv",
+  mic_met           = "taxon_metabolite_tsea.csv",
+  mic_int           = "tsea_microbiome_int.csv",
+  gene              = "tsea_host_snps_new.csv",
+  # species level
+  host_int_species  = "tsea_host_int_species.csv",
+  host_ext_species  = "tsea_host_ext_species.csv",
+  host_diet_species = "tsea_host_diet_lifestyle_species.csv",
+  host_drug_species = "tsea_host_medication_species.csv",
+  env_species       = "tsea_environment_species.csv",
+  # strain level
+  host_int_strain   = "tsea_host_int_strain.csv",
+  env_strain        = "tsea_environment_strain.csv",
+  mic_int_strain    = "tsea_microbiome_int_strain.csv"
+);
+
+# Resolve a taxon-set library file to a local path. On the web server the file is
+# read from the resources tree. In package mode it is downloaded once into the
+# working directory and re-used for 30 days (same policy as
+# .read.microbiomeanalyst.lib.rds), instead of being fetched on every call.
+.get.tsea.lib.path <- function(filenm){
+  if(.on.public.web){
+    return(paste0(rpath, "libs/tsea/", filenm));
+  }
+  stale <- !file.exists(filenm) ||
+           difftime(Sys.time(), file.info(filenm)$mtime, units="days") > 30;
+  if(stale){
+    lib.url <- paste0("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/tsea/", filenm);
+    # download to a temp file first so an interrupted transfer never masquerades as a cached library
+    tmp <- paste0(filenm, ".part");
+    ok <- tryCatch({ download.file(lib.url, destfile=tmp, method="curl", quiet=TRUE); TRUE },
+                   error=function(e){
+                     tryCatch({ download.file(lib.url, destfile=tmp, method="libcurl", quiet=TRUE); TRUE },
+                              error=function(e2) FALSE)
+                   });
+    if(ok && file.exists(tmp) && file.info(tmp)$size > 0){
+      file.rename(tmp, filenm);
+    }else{
+      if(file.exists(tmp)) unlink(tmp);
+      if(!file.exists(filenm)){
+        AddErrMsg(paste("Could not download taxon set library", filenm, "- check your internet connection."));
+        return(NULL);
+      }
+      # else: keep using the stale copy
+    }
+  }
+  filenm
+}
+
 #'set library for TSEA.
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
@@ -429,62 +492,16 @@ SetTaxonSetLib <- function(mbSetObj, tset.type){
 
   mbSetObj$dataSet$tset.type <- tset.type
   
-  if(.on.public.web){
-    if(tset.type=="host_int"){
-      libPath <- paste0(rpath, "libs/tsea/tsea_host_int.csv");
-    }else if(tset.type=="host_ext"){
-      libPath <- paste0(rpath, "libs/tsea/tsea_host_ext.csv");
-    }else if(tset.type=="env"){
-      libPath <- paste0(rpath, "libs/tsea/tsea_environment.csv");
-    }else if(tset.type=="mic_int"){
-      libPath <- paste0(rpath, "libs/tsea/tsea_microbiome_int.csv");
-    }else if(tset.type=="gene"){
-      libPath <- paste0(rpath, "libs/tsea/tsea_host_snps_new.csv");
-    }else if(tset.type=="host_int_species") {
-      libPath <- paste0(rpath, "libs/tsea/tsea_host_int_species.csv");
-    }else if(tset.type=="env_species"){
-      libPath <- paste0(rpath, "libs/tsea/tsea_environment_species.csv");
-    }else if(tset.type=="host_ext_species"){
-      libPath <- paste0(rpath, "libs/tsea/tsea_host_ext_species.csv");
-    }else if(tset.type=="host_int_strain"){
-      libPath <- paste0(rpath, "libs/tsea/tsea_host_int_strain.csv");
-    }else if(tset.type=="host_diet"){
-      libPath <- paste0(rpath, "libs/tsea/tsea_host_diet_lifestyle.csv");
-    }else if(tset.type=="host_drug"){
-      libPath <- paste0(rpath, "libs/tsea/tsea_host_medication.csv");
-    }else if(tset.type=="mic_met"){
-      libPath <- paste0(rpath, "libs/tsea/taxon_metabolite_tsea.csv");
-    }else if(tset.type=="host_diet_species"){
-      libPath <- paste0(rpath, "libs/tsea/tsea_host_diet_lifestyle_species.csv");
-    }else if(tset.type=="host_drug_species"){
-      libPath <- paste0(rpath, "libs/tsea/tsea_host_medication_species.csv");
-    }
-  }else{
-    if(tset.type=="host_int"){
-      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/tsea/tsea_host_int.csv";
-    }else if(tset.type=="host_ext"){
-      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/tsea/tsea_host_ext.csv";
-    }else if(tset.type=="env"){
-      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/tsea/tsea_environment.csv";
-    }else if(tset.type=="mic_int"){
-      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/tsea/tsea_microbiome_int.csv";
-    }else if(tset.type=="gene"){
-      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/tsea/tsea_host_snps_new.csv";
-    }else if(tset.type=="host_int_species") {
-      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/tsea/tsea_host_int_species.csv";
-    }else if(tset.type=="env_species"){
-      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/tsea/tsea_environment_species.csv";
-    }else if(tset.type=="host_ext_species"){
-      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/tsea/tsea_host_ext_species.csv";
-    }else if(tset.type=="host_int_strain"){
-      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/tsea/tsea_host_int_strain.csv";
-    }else if(tset.type=="env_strain"){
-      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/tsea/tsea_environment_strain.csv";
-    }else{
-      libPath <- "https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/tsea/tsea_microbiome_int_strain.csv";
-    }
+  filenm <- .tsea.lib.files[tset.type];
+  if(is.na(filenm)){
+    AddErrMsg(paste("Unknown taxon set library:", tset.type));
+    return(0);
   }
-      
+  libPath <- .get.tsea.lib.path(filenm);
+  if(is.null(libPath)){
+    return(0);
+  }
+
   current.msetlib <<- .readDataTable(libPath);
   ms.list <- strsplit(current.msetlib[,2],"; ");
   names(ms.list) <- current.msetlib[,1];
