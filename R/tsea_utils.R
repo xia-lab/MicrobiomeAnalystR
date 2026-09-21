@@ -567,9 +567,11 @@ SetTaxonSetLib <- function(mbSetObj, tset.type){
     ms.list <- merged;
   }
   # members under old nomenclature join their current-name equivalents (see .canonical.taxon.name)
+  set.nms <- names(ms.list);
   all.can <- .canonical.taxon.name(unlist(ms.list, use.names = FALSE));
-  ms.list <- lapply(split(all.can, rep(seq_along(ms.list), lengths(ms.list))), unique);
-  names(ms.list) <- current.msetlib[, 1][seq_along(ms.list)];
+  grp <- factor(rep(seq_along(ms.list), lengths(ms.list)), levels = seq_along(ms.list));   # keeps empty sets in place
+  ms.list <- lapply(split(all.can, grp), unique);
+  names(ms.list) <- set.nms;
   current.mset <<- ms.list;
   # total uniq cmpds in the mset lib
   uniq.count <<- length(unique(unlist(current.mset, use.names = FALSE)));
