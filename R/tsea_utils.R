@@ -446,7 +446,8 @@ PrepareEnrichNet<-function(mbSetObj){
   # strain level
   host_int_strain   = "tsea_host_int_strain.csv",
   env_strain        = "tsea_environment_strain.csv",
-  mic_int_strain    = "tsea_microbiome_int_strain.csv"
+  mic_int_strain    = "tsea_microbiome_int_strain.csv",
+  food_matrix_strain = "tsea_food_matrix_strain.csv"
 );
 
 # Resolve a taxon-set library file to a local path. On the web server the file is
