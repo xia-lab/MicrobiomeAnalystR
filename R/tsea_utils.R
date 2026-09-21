@@ -116,6 +116,14 @@ SpeciesMappingExact<-function(qvec, q.type){
     match.state[!is.na(hit.inx)] <- 1;
   }else if(q.type %in% c("mixed","species","strain")){
     hit.inx <- match(tolower(qvec), tolower(species.db$taxa));
+    # not spelled exactly as in the table: try the tidied / current NCBI name
+    miss <- is.na(hit.inx);
+    if(any(miss)){
+      can <- .canonical.taxon.name(qvec[miss]);
+      alt <- match(tolower(can), tolower(species.db$canonical));
+      alt[is.na(alt)] <- match(tolower(can), tolower(species.db$taxa))[is.na(alt)];
+      hit.inx[miss] <- alt;
+    }
     match.values <- species.db$taxa[hit.inx];
     match.state[!is.na(hit.inx)] <- 1;
   }else if(q.type == "ncbitax"){
@@ -390,14 +398,17 @@ GetFinalNameMap<-function(mbSetObj){
     match.state <- name.map$match.state;
     species.db <- .read.microbiomeanalyst.lib.rds("microbe_db_new.rds", "tsea");
         
+    # enrichment is done on canonical names: the mapped table entry's current NCBI name when the
+    # query matched, otherwise the tidied query itself (it may still equal a set member verbatim)
+    can <- .canonical.taxon.name(qvec);
     for (i in 1:length(qvec)){
-      hit <-species.db[hit.inx[i], ,drop=F];
-      if(match.state[i]==0){
-        kegg.hit <- NA;
+      if(match.state[i]==1 && !is.na(hit.inx[i])){
+        hit <- species.db[hit.inx[i], , drop=FALSE];
+        nm <- if(!is.null(hit$canonical) && !is.na(hit$canonical) && nchar(hit$canonical) > 0) hit$canonical else hit$taxa;
       }else{
-        kegg.hit <- ifelse(nchar(hit$organism.name)==0, NA, hit$organism.name);
+        nm <- can[i];
       }
-      nm.mat[i, ] <- c(qvec[i], kegg.hit);
+      nm.mat[i, ] <- c(qvec[i], nm);
     }
   }
   return(as.data.frame(nm.mat,check.names=FALSE));
@@ -424,6 +435,37 @@ PrepareEnrichNet<-function(mbSetObj){
 
 #'Set the microbe set library
 #'@description This function sets the microbe
+# ---- taxon name canonicalisation -------------------------------------------------------------
+# The libraries mix nomenclature eras (Firmicutes / Bacillota, Ruminococcus gnavus /
+# Mediterraneibacter gnavus ...). Both query taxa and set members are mapped to the current
+# NCBI scientific name through tsea_name_synonyms.rds (built from NCBI names.dmp for every
+# taxid in microbe_db_new.rds) so that either spelling reaches the same sets. Names NCBI does
+# not know (most strain designations) are left as they are.
+.tsea.cache <- new.env(parent = emptyenv())    # an environment, so it also works inside a locked package namespace
+.get.tsea.synonyms <- function(){
+  if(is.null(.tsea.cache$synonyms)){
+    syn <- .read.microbiomeanalyst.lib.rds("tsea_name_synonyms.rds", "tsea");
+    .tsea.cache$synonyms <- setNames(syn$canonical, syn$name);
+  }
+  .tsea.cache$synonyms
+}
+
+# tidy a user-supplied or library taxon name: rank prefixes (s__Genus_species), underscores,
+# surrounding quotes/whitespace, repeated spaces
+.tidy.taxon.name <- function(x){
+  x <- sub("^[a-z]__", "", trimws(as.character(x)));
+  x <- gsub("_", " ", x, fixed=TRUE);
+  x <- gsub("^[\"']+|[\"']+$", "", x);
+  gsub("[[:space:]]+", " ", x)
+}
+
+.canonical.taxon.name <- function(x){
+  x <- .tidy.taxon.name(x);
+  syn <- .get.tsea.synonyms();
+  can <- syn[tolower(x)];
+  ifelse(is.na(can), x, can)
+}
+
 # Taxon-set library file for each library key used by the web interface.
 .tsea.lib.files <- c(
   # mixed level
@@ -524,6 +566,10 @@ SetTaxonSetLib <- function(mbSetObj, tset.type){
     current.msetlib <<- lib2;
     ms.list <- merged;
   }
+  # members under old nomenclature join their current-name equivalents (see .canonical.taxon.name)
+  all.can <- .canonical.taxon.name(unlist(ms.list, use.names = FALSE));
+  ms.list <- lapply(split(all.can, rep(seq_along(ms.list), lengths(ms.list))), unique);
+  names(ms.list) <- current.msetlib[, 1][seq_along(ms.list)];
   current.mset <<- ms.list;
   # total uniq cmpds in the mset lib
   uniq.count <<- length(unique(unlist(current.mset, use.names = FALSE)));
