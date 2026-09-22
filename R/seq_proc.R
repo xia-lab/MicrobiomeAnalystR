@@ -557,13 +557,16 @@ sweaveBash4exec <- function(users.path){
   # need to require("dada2")
   str <- paste0('library(dada2)');
   
-  # Set working dir & funcs to be used
+  # Set working dir & funcs to be used. Load params and pull MessageOutput out of
+  # dataObj BEFORE any MessageOutput() call — this inline `R -e` process only loads
+  # dada2 (not the MicrobiomeAnalystR package), so the function does not exist until
+  # it is assigned here. Calling it earlier fails with "could not find function".
   str <- paste0(str, ";\n", "setwd(\'",users.path,"\')");
-  str <- paste0(str, ";\n", "MessageOutput(paste0('Working directory: ', getwd()))");
-  str <- paste0(str, ";\n", "MessageOutput(paste0('dataObj_param.rda exists here: ', file.exists('dataObj_param.rda')))");
   str <- paste0(str, ";\n", "load('dataObj_param.rda')");
   str <- paste0(str, ";\n", "dataObj <<- dataObj");
   str <- paste0(str, ";\n", "MessageOutput <- dataObj[['funs']][['MessageOutput']]");
+  str <- paste0(str, ";\n", "MessageOutput(paste0('Working directory: ', getwd()))");
+  str <- paste0(str, ";\n", "MessageOutput(paste0('dataObj_param.rda exists here: ', file.exists('dataObj_param.rda')))");
   str <- paste0(str, ";\n", "PerformSeqCheck <- dataObj[['funs']][['PerformSeqCheck']]");
   str <- paste0(str, ";\n", "PerformSeqImport <- dataObj[['funs']][['PerformSeqImport']]");
   str <- paste0(str, ";\n", "PerformSeqProcessing <- dataObj[['funs']][['PerformSeqProcessing']]");
