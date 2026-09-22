@@ -547,8 +547,12 @@ sweaveBash4exec <- function(users.path){
               dir.exists("/home/qiang/Documents/Regular_commands") || dir.exists("/home/zgy/NetBeansProjects/")
 
   ## Prepare Configuration script
+  # --output= streams the R stdout (where MessageOutput writes progress) into
+  # seq_process_details.txt, which the UI's getJobProcess() tails. Without it SLURM
+  # writes to the default slurm-<id>.out in the submit dir and the Text Output panel
+  # stays empty (progress bar still works — it reads log_progress.txt directly).
   if(useSlurm){
-    conf_inf <- "#!/bin/bash\n#\n#SBATCH --job-name=16S_Processing\n#\n#SBATCH --ntasks=1\n#SBATCH --time=600:00\n#SBATCH --mem-per-cpu=5G\n#SBATCH --cpus-per-task=2\n"
+    conf_inf <- paste0("#!/bin/bash\n#\n#SBATCH --job-name=16S_Processing\n#\n#SBATCH --ntasks=1\n#SBATCH --time=600:00\n#SBATCH --mem-per-cpu=5G\n#SBATCH --cpus-per-task=2\n#SBATCH --output=", users.path, "/seq_process_details.txt\n")
   } else {
     conf_inf <- "#!/bin/bash\n"
   }
