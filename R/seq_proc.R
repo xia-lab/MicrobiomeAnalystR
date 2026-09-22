@@ -575,8 +575,11 @@ sweaveRScript4exec <- function(users.path){
 sweaveBash4exec <- function(users.path){
 
   ## Detect if SLURM is available
-  useSlurm <- dir.exists("/home/glassfish/") || file.exists("/docker_marker") ||
-              dir.exists("/home/qiang/Documents/Regular_commands") || dir.exists("/home/zgy/NetBeansProjects/")
+  # A host layout that normally has SLURM and SLURM actually being installed are
+  # two different things: off the cluster srun does not exist and the job died
+  # with "srun: command not found". Require the binary as well.
+  useSlurm <- (dir.exists("/home/glassfish/") || file.exists("/docker_marker") ||
+              dir.exists("/home/qiang/Documents/Regular_commands") || dir.exists("/home/zgy/NetBeansProjects/")) && nzchar(Sys.which("srun"))
 
   ## Prepare Configuration script
   # --output= streams the R stdout (where MessageOutput writes progress) into
@@ -616,7 +619,16 @@ sweaveBash4exec <- function(users.path){
   sink(script_path);
 
   cat(conf_inf);
-  cat(paste0("\nsrun R -e \"\n", str, "\n\""));
+  # Under SLURM the step runs through srun; otherwise call R directly, by the
+  # absolute path of this installation, because the detached shell running this
+  # script does not inherit the server's PATH.
+  if(useSlurm){
+    r_cmd <- "srun R";
+  } else {
+    r_bin <- file.path(R.home("bin"), "R");
+    r_cmd <- if(file.exists(r_bin)) shQuote(r_bin) else "R";
+  }
+  cat(paste0("\n", r_cmd, " -e \"\n", str, "\n\""));
 
   sink();
 
