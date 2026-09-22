@@ -137,6 +137,30 @@ PerformSeqProcessing <- function(){
   trimRight <- params$trimRight;
   write.table(8.0, file = "log_progress.txt", quote = F, row.names = F, col.names = F, append = F)
   dataObj$sample.names -> sample.names;
+
+  # DADA2 applies trimRight, then truncLen (reads shorter than truncLen are
+  # discarded), then trimLeft. Check the settings against the observed read
+  # length here so an impossible combination is reported in plain terms instead
+  # of surfacing as "The filter removed all reads" after the whole pass.
+  read.len <- tryCatch(read_seq_len(), error = function(e) NA_integer_);
+  if(!is.na(read.len) && read.len > 0){
+    remaining <- read.len - trimRight;
+    if(remaining <= trimLeft){
+      MessageOutput(paste0("ERROR! Trim left (", trimLeft, ") + trim right (", trimRight,
+                           ") removes the whole read (", read.len, " nt). Reduce one of them."));
+      stop("ERROR");
+    }
+    bad <- which(truncLen > 0 & truncLen > remaining);
+    if(length(bad) > 0){
+      which.read <- c("Forward", "Reverse")[bad];
+      MessageOutput(paste0("ERROR! ", paste(which.read, collapse = " and "), " truncation length (",
+                           paste(truncLen[bad], collapse = "/"), ") is longer than the read after trimming ",
+                           trimRight, " nt from the right (", remaining, " nt). DADA2 discards every read shorter ",
+                           "than the truncation length, so no read can pass. Set the truncation length to at most ",
+                           remaining, ", or trim less."));
+      stop("ERROR");
+    }
+  }
    MessageOutput("Start Sequencing data filtering and triming2 ... ")
 
   if(params$is_paired){
@@ -152,8 +176,16 @@ PerformSeqProcessing <- function(){
   }
    MessageOutput("Start Sequencing data filtering and triming2 ... ")
   if(all(out[,"reads.out"]==0)){
-    MessageOutput("ERROR! No reads passed the filter. Please revisit your filtering parameters.")
-    stop("ERROR")
+    MessageOutput("ERROR! No reads passed the filter. Please revisit your filtering parameters.");
+    MessageOutput(paste0("Settings: trimLeft=", trimLeft, ", trimRight=", trimRight,
+                         ", truncLen=", paste(truncLen, collapse = "/"), ", maxEE=", paste(maxEE, collapse = "/"),
+                         ", truncQ=", truncQ, ", maxN=", maxN,
+                         if(!is.na(read.len)) paste0(", read length=", read.len) else ""));
+    for(i in seq_len(nrow(out))){
+      MessageOutput(paste0("  ", basename(rownames(out)[i]), ": ", out[i, "reads.in"], " reads in, ", out[i, "reads.out"], " out"));
+    }
+    MessageOutput("Most often the truncation length exceeds the read length after trimming, or maxEE is too strict for the read quality.");
+    stop("ERROR");
   }
   write.table(15.0, file = "log_progress.txt", quote = F, row.names = F, col.names = F, append = F)
   MessageOutput("OK, done!")
