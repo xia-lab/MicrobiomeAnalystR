@@ -547,8 +547,12 @@ sweaveBash4exec <- function(users.path){
               dir.exists("/home/qiang/Documents/Regular_commands") || dir.exists("/home/zgy/NetBeansProjects/")
 
   ## Prepare Configuration script
+  # --output= streams the R stdout (where MessageOutput writes progress) into
+  # seq_process_details.txt, which the UI's getJobProcess() tails. Without it SLURM
+  # writes to the default slurm-<id>.out in the submit dir and the Text Output panel
+  # stays empty (progress bar still works — it reads log_progress.txt directly).
   if(useSlurm){
-    conf_inf <- "#!/bin/bash\n#\n#SBATCH --job-name=16S_Processing\n#\n#SBATCH --ntasks=1\n#SBATCH --time=600:00\n#SBATCH --mem-per-cpu=5G\n#SBATCH --cpus-per-task=2\n"
+    conf_inf <- paste0("#!/bin/bash\n#\n#SBATCH --job-name=16S_Processing\n#\n#SBATCH --ntasks=1\n#SBATCH --time=600:00\n#SBATCH --mem-per-cpu=5G\n#SBATCH --cpus-per-task=2\n#SBATCH --output=", users.path, "/seq_process_details.txt\n")
   } else {
     conf_inf <- "#!/bin/bash\n"
   }
@@ -557,7 +561,10 @@ sweaveBash4exec <- function(users.path){
   # need to require("dada2")
   str <- paste0('library(dada2)');
   
-  # Set working dir & funcs to be used
+  # Set working dir & funcs to be used. Load params and pull MessageOutput out of
+  # dataObj BEFORE any MessageOutput() call — this inline `R -e` process only loads
+  # dada2 (not the MicrobiomeAnalystR package), so the function does not exist until
+  # it is assigned here. Calling it earlier fails with "could not find function".
   str <- paste0(str, ";\n", "setwd(\'",users.path,"\')");
   str <- paste0(str, ";\n", "load('dataObj_param.rda')");
   str <- paste0(str, ";\n", "dataObj <<- dataObj");
