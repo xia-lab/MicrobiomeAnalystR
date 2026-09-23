@@ -583,8 +583,14 @@ sweaveBash4exec <- function(users.path){
   # A host layout that normally has SLURM and SLURM actually being installed are
   # two different things: off the cluster srun does not exist and the job died
   # with "srun: command not found". Require the binary as well.
-  useSlurm <- (dir.exists("/home/glassfish/") || file.exists("/docker_marker") ||
-              dir.exists("/home/qiang/Documents/Regular_commands") || dir.exists("/home/zgy/NetBeansProjects/")) && nzchar(Sys.which("srun"))
+  # A developer box (zgy) can carry both /home/glassfish/ and a broken local
+  # SLURM node, so a srun job hangs "Pending" forever ("Required node not
+  # available"). Java's submitJob() already routes this host to local execution
+  # (submit2local); mirror that here so the generated script calls R directly.
+  is_dev_box <- dir.exists("/home/zgy/NetBeansProjects/")
+  useSlurm <- !is_dev_box &&
+              (dir.exists("/home/glassfish/") || file.exists("/docker_marker") ||
+               dir.exists("/home/qiang/Documents/Regular_commands")) && nzchar(Sys.which("srun"))
 
   ## Prepare Configuration script
   # --output= streams the R stdout (where MessageOutput writes progress) into
