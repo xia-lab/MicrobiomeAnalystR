@@ -378,13 +378,20 @@ GetSanityVec <- function(paired){
   # 3. calculate how many reads in each file
   read_vec <- vapply(allUPFiles, calculate_Reads, FUN.VALUE = integer(1L));
   # 4. Pairing the name if they are paired-ended (paired == 2)
-  if(file.exists("meta_info.qs")){
-    meta_df <- ov_qs_read("meta_info.qs")
-  } else if(file.exists("meta_its.qs")){
-    meta_df <-ov_qs_read("meta_its.qs")
-  }else{
-    meta_df <- data.frame()
-  }
+  # An unreadable/empty meta file must not abort the sanity check; groups simply
+  # fall back to NA. (A 0-byte meta_info.qs previously threw "error reading from
+  # connection" and 500'd the whole upload.)
+  meta_df <- tryCatch({
+    if(file.exists("meta_info.qs")){
+      ov_qs_read("meta_info.qs")
+    } else if(file.exists("meta_its.qs")){
+      ov_qs_read("meta_its.qs")
+    } else {
+      data.frame()
+    }
+  }, error = function(e){
+    data.frame()
+  })
  
   if(paired == 2){
     allNames <- vapply(allUPFiles, function(x){
@@ -514,12 +521,10 @@ composeParamFun <- function(trimLeft, trimRight,
   params$taxadb <- taxabd;
   dataObj$params <- params;
   
-  # meta section
-  if(file.exists("meta_info.qs")){
-    meta_df <- ov_qs_read("meta_info.qs")
-  } else {
-    meta_df <- NA;
-  }
+  # meta section (tolerate an unreadable/empty meta file)
+  meta_df <- tryCatch({
+    if(file.exists("meta_info.qs")) ov_qs_read("meta_info.qs") else NA
+  }, error = function(e) NA)
   dataObj$meta_info <- meta_df;
   
   # function section
