@@ -778,7 +778,8 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
     msg <- c(msg, paste("Performed data rarefaction."));
     
     ###### note, rarefying (should?) affect filt.data in addition to norm
-    mbSetObj$dataSet$filt.data <- data@otu_table;
+    # PerformRarefaction returns the otu_table itself (not a phyloseq object), so no @otu_table
+    mbSetObj$dataSet$filt.data <- data;
   }else{
     msg <- c(msg, paste("No data rarefaction was performed."));
   }
