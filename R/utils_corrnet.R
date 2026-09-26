@@ -4,16 +4,33 @@
 ## Authors:  Jeff Xia, jeff.xia@mcgill.ca; Yao Lu, yao.lu5@mail.mcgill.ca
 ##################################################
 
+# When no SECOM pair passes the cutoffs, the topN strongest pairs (my.secom.anal's "all_pairs"),
+# marked with the thresholds they actually meet, so the network shows the strongest structure and
+# says what it is, instead of nothing. topN = 0 keeps the old behaviour (no network).
+.corr.top.pairs <- function(res, topN, corrCutoff, pvalCutoff){
+  if(!is.data.frame(res) || nrow(res) > 0 || !isTRUE(topN > 0)) return(res);
+  allp <- attr(res, "all_pairs");
+  if(!is.data.frame(allp) || nrow(allp) == 0) return(res);
+  top <- utils::head(allp, topN);
+  top[,3] <- round(top[,3], digits=4);
+  top[,4] <- round(top[,4], digits=4);
+  attr(top, "fallback") <- list(n = nrow(top), r_min = min(abs(top$Correlation)), r_max = max(abs(top$Correlation)),
+                                p_max = max(top$P.value, na.rm = TRUE), corr_cut = corrCutoff, p_cut = pvalCutoff,
+                                secom_threshold = attr(res, "secom_threshold"));
+  top
+}
+
 my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr", 
                                       permNum=100, pvalCutoff=0.05, corrCutoff=0.3, abundOpt="mean", 
                                       corr.net.name, plotNet = FALSE, netType="static", netLayout="kk",
-                                      netTextSize = 2.5){
+                                      netTextSize = 2.5, topN = 0){
 
   #save.image("mycorr.RData");
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
   mbSetObj$dataSet$cor.method <- cor.method;
   mbSetObj$analSet$abund.opt <- abundOpt;
+  mbSetObj$analSet$network_cor_fallback <- NULL;   # set again only when this run falls back
   current.msg <<- "";
 
   # NOTE: ppcor and igraph loaded lazily when needed (not at startup)
@@ -50,7 +67,7 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
     .load.scripts.on.demand("utils_secom.Rc");    
   }
  
-   secomp1_results <- my.secom.anal(mbSetObj,taxrank,permNum,corrCutoff, pvalCutoff,"secomp1")
+   secomp1_results <- .corr.top.pairs(my.secom.anal(mbSetObj,taxrank,permNum,corrCutoff, pvalCutoff,"secomp1"), topN, corrCutoff, pvalCutoff)
     # Check if analysis failed (returns 0) or has no results
     if(!is.data.frame(secomp1_results) || nrow(secomp1_results)==0){
       if(is.data.frame(secomp1_results)){
@@ -59,6 +76,7 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
       return(0)
     }else{
       mbSetObj$analSet$network_cor <- secomp1_results
+      mbSetObj$analSet$network_cor_fallback <- attr(secomp1_results, "fallback")
     }
 
 }else if(cor.method == "secom_p2"){
@@ -67,7 +85,7 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
     .load.scripts.on.demand("utils_secom.Rc");    
   }
 
-   secomp2_results <- my.secom.anal(mbSetObj,taxrank,permNum,corrCutoff, pvalCutoff,"secomp2")
+   secomp2_results <- .corr.top.pairs(my.secom.anal(mbSetObj,taxrank,permNum,corrCutoff, pvalCutoff,"secomp2"), topN, corrCutoff, pvalCutoff)
    # Check if analysis failed (returns 0) or has no results
    if(!is.data.frame(secomp2_results) || nrow(secomp2_results)==0){
       if(is.data.frame(secomp2_results)){
@@ -76,6 +94,7 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
       return(0)
     }else{
       mbSetObj$analSet$network_cor <- secomp2_results
+      mbSetObj$analSet$network_cor_fallback <- attr(secomp2_results, "fallback")
     }
 
 }else if(cor.method == "secom_dist"){
@@ -84,7 +103,7 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
     .load.scripts.on.demand("utils_secom.Rc");    
   }
 
-   secomdis_results <- my.secom.anal(mbSetObj,taxrank,permNum,corrCutoff, pvalCutoff,"secomdis")
+   secomdis_results <- .corr.top.pairs(my.secom.anal(mbSetObj,taxrank,permNum,corrCutoff, pvalCutoff,"secomdis"), topN, corrCutoff, pvalCutoff)
    # Check if analysis failed (returns 0) or has no results
    if(!is.data.frame(secomdis_results) || nrow(secomdis_results)==0){
       if(is.data.frame(secomdis_results)){
@@ -93,6 +112,7 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
       return(0)
     }else{
       mbSetObj$analSet$network_cor <- secomdis_results
+      mbSetObj$analSet$network_cor_fallback <- attr(secomdis_results, "fallback")
     }
 
 }else{
@@ -115,7 +135,7 @@ my.corr.net <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr"
 
     if(ncol(data) > 1000){
       filter.val <- apply(data.matrix(data), 2, IQR, na.rm=T);
-      rk <- rank(-filter.val, ties.method='random');
+      rk <- rank(-filter.val, ties.method='first');   # ties kept in input order: a random tie-break kept a different feature set on every run of the same data
       data <- as.data.frame(data[,rk <=1000],check.names=FALSE);
     }
  

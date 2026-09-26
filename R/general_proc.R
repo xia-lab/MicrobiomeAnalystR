@@ -428,7 +428,7 @@ ApplyVarianceFilter <- function(mbSetObj, filtopt, filtPerct){
       nm <- "Coeffecient of variation";
     }
     # get the rank
-    rk <- rank(-filter.val, ties.method='random');
+    rk <- rank(-filter.val, ties.method='first');   # ties kept in input order: a random tie-break kept a different feature set on every run of the same data
     var.num <- nrow(data);
     remain <- rk < var.num*(1-filtPerct);
   }
@@ -549,7 +549,7 @@ ApplyMetaboFilter <- function(mbSetObj=NA, filter,  rsd){
     }
     
     # get the rank of the filtered variables
-    rk <- rank(-filter.val, ties.method='random');
+    rk <- rank(-filter.val, ties.method='first');   # ties kept in input order: a random tie-break kept a different feature set on every run of the same data
     
     
     if(feat.num < 250){ # reduce 5%

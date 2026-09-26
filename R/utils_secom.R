@@ -95,6 +95,19 @@ my.secom.anal<-function(mbSetObj,taxrank,R,corr_cut, max_p,mode,method='pearson'
  
    res[,3] <- round(res[,3], digits=4)
    res[,4] <- round(res[,4], digits=4)
+   # Every estimated pair before SECOM's sparsity threshold and the cutoffs, strongest first, with
+   # the threshold itself: on a small table the cross-validated threshold can remove every pair,
+   # and a caller that asks for the strongest pairs (my.corr.net, topN) shows those instead.
+   raw  <- if (mode == "secomdis") res_corr$dcorr else res_corr$corr
+   rawp <- if (mode == "secomdis") res_corr$dcorr_p else res_corr$corr_p
+   ut <- which(upper.tri(raw), arr.ind = TRUE)
+   allp <- data.frame(Taxon1 = rownames(raw)[ut[, 1]], Taxon2 = colnames(raw)[ut[, 2]],
+                      Correlation = raw[ut], P.value = rawp[ut],
+                      Method = c(secomdis = "secom_dist", secomp1 = "secom_pearson1", secomp2 = "secom_pearson2")[[mode]],
+                      stringsAsFactors = FALSE)
+   allp <- allp[is.finite(allp$Correlation) & allp$Correlation != 0, , drop = FALSE]
+   attr(res, "all_pairs") <- allp[order(-abs(allp$Correlation)), , drop = FALSE]
+   attr(res, "secom_threshold") <- if (!is.null(res_corr$thresh_opt)) res_corr$thresh_opt else NA
    secom_data <- exp(1)^y_hat
    secom_data[is.na(secom_data)] <- 0
    shadow_save(secom_data,"secom_data.qs")

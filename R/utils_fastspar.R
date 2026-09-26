@@ -92,7 +92,7 @@ system(my.cmd);
   # second, do low variance filtering
   if(feat_num > 500 & !var_filtered){
     filter.val <- apply(data1, 1, IQR, na.rm=T);
-    rk <- rank(-filter.val, ties.method='random');
+    rk <- rank(-filter.val, ties.method='first');   # ties kept in input order: a random tie-break kept a different feature set on every run of the same data
     remain <- rk < feat_num*(1-0.1); # filter out 10% of low variance feats based on IQR
     data1 <- data1[remain,];
   }
@@ -100,7 +100,7 @@ system(my.cmd);
   # third, if still over 500 feats, rank and keep top 500
   if(feat_num > 500){
     filter.val <- apply(data1, 1, IQR, na.rm=T);
-    rk <- rank(-filter.val, ties.method='random');
+    rk <- rank(-filter.val, ties.method='first');   # ties kept in input order: a random tie-break kept a different feature set on every run of the same data
     remain <- rk < 500;
     data1 <- data1[remain,];
     current.msg <<- "Only the top 500 features are kept, ranked by their variance!"

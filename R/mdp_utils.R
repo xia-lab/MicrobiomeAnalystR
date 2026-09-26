@@ -139,11 +139,11 @@ PerformAlphaDiversityComp <- function(mbSetObj, opt, metadata, pair.wise = "fals
 PerformNetworkCorrelation <- function(mbSetObj, taxrank, cor.method="pearson", colorOpt="expr", 
                                       permNum=100, pvalCutoff=0.05, corrCutoff=0.3, abundOpt="mean", 
                                       corr.net.name, plotNet = FALSE, netType="static", netLayout="kk",
-                                      netTextSize = 2.5){
+                                      netTextSize = 2.5, topN = 0){
   if(!exists("my.corr.net")){
     .load.scripts.on.demand("utils_corrnet.Rc");    
   }
-  return(my.corr.net(mbSetObj, taxrank, cor.method, colorOpt, permNum, pvalCutoff, corrCutoff, abundOpt, corr.net.name, plotNet, netType, netLayout,netTextSize));
+  return(my.corr.net(mbSetObj, taxrank, cor.method, colorOpt, permNum, pvalCutoff, corrCutoff, abundOpt, corr.net.name, plotNet, netType, netLayout,netTextSize, topN));
 }
 
 #'Function to create box plots of important features
