@@ -1882,7 +1882,9 @@ PerformANCOMBC2 <- function(mbSetObj, analysis.var, is.norm = "false",
 # off otherwise; the q-values reported are ancombc2's BH-adjusted p-values either way.
 .ancombc2_core <- function(otu.tab, meta, fix_formula, rand_formula = NULL, group = NULL,
                            global = FALSE, alpha = 0.05, prv.cut = 0, lib.cut = 1, pseudo_sens = NULL) {
-  if(!requireNamespace("ANCOMBC", quietly = TRUE)) {
+  # installed-check without loading: requireNamespace() would attach ANCOMBC and its dependencies to
+  # this Rserve worker, although the fit itself runs in the subprocess below
+  if(!nzchar(system.file(package = "ANCOMBC"))) {
     AddErrMsg("The ANCOMBC package is not installed on this server.")
     return(NULL)
   }
@@ -1910,7 +1912,7 @@ PerformANCOMBC2 <- function(mbSetObj, analysis.var, is.norm = "false",
     },
     input_data = list(Y = Y, meta = Z, fix = fix_formula, rand = rand_formula, group = group, global = global,
                       sens = pseudo_sens, alpha = alpha, prv = prv.cut, lib = lib.cut),
-    packages = c("ANCOMBC", "qs"), timeout = 3600, output_type = "qs")
+    packages = c("ANCOMBC", "qs"), timeout = 3600, output_type = "qs", allow_fallback = FALSE)
   if (is.list(result) && isFALSE(result$success)) { AddErrMsg(paste("ANCOM-BC2 failed:", result$message)); return(NULL) }
   result$variables <- sub("^lfc_", "", grep("^lfc_", colnames(result$res), value = TRUE))
   result$variables <- setdiff(result$variables, "(Intercept)")

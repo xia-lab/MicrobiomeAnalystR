@@ -814,7 +814,7 @@ ov_qs_exists <- function(file) {
 # Backward-compatible alias: external/community callers of the old name still resolve.
 run_func_via_rc_microservice <- function(...) run_func_via_microservice(...)
 
-run_func_via_microservice <- function(func, args = list(), timeout_sec = 60) {
+run_func_via_microservice <- function(func, args = list(), timeout_sec = 60, allow_fallback = TRUE) {
   # RSclient has been retired — always run in a fresh callr subprocess (falling
   # back to in-process below); never dispatch to the nested RSclient fork.
   # Run the closure in a fresh, short-lived R process (a microservice), which then exits and reclaims
@@ -826,6 +826,7 @@ run_func_via_microservice <- function(func, args = list(), timeout_sec = 60) {
   # files, so the child only needs those helpers defined; the result travels back through the files.
   if (requireNamespace("callr", quietly = TRUE)) {
     child_failed <- FALSE
+    child_err <- NULL
     res <- tryCatch(
       callr::r(
         func = function(func, args) {
@@ -842,8 +843,16 @@ run_func_via_microservice <- function(func, args = list(), timeout_sec = 60) {
         },
         args = list(func = func, args = args), timeout = timeout_sec, show = FALSE
       ),
-      error = function(e) { message("[rc_microservice] child failed (", conditionMessage(e), "); running in-process"); child_failed <<- TRUE; NULL })
+      error = function(e) {
+        child_err <<- conditionMessage(e)
+        message("[rc_microservice] child failed (", child_err, ")", if (allow_fallback) "; running in-process" else "")
+        child_failed <<- TRUE; NULL })
     if (!child_failed) return(res)
+    # Heavy fits (e.g. ANCOM-BC2) must not fall back: in-process they load their dependencies into the
+    # session's Rserve worker and leave it holding GBs, which _clean_jobs.sh then kills (session lost).
+    if (!allow_fallback) return(list(success = FALSE, message = paste("the analysis subprocess failed:", child_err)))
+  } else if (!allow_fallback) {
+    return(list(success = FALSE, message = "the callr package is not installed on this server"))
   }
   # Fallback: run in-process (correct result; no separate-process memory reclaim).
   setTimeLimit(elapsed = timeout_sec, transient = TRUE)
@@ -853,7 +862,7 @@ run_func_via_microservice <- function(func, args = list(), timeout_sec = 60) {
 
 
 rsclient_isolated_exec <- function(func_body, input_data, packages = character(0),
-                                   timeout = 180, output_type = "qs") {
+                                   timeout = 180, output_type = "qs", allow_fallback = TRUE) {
   bridge_tmp <- file.path(tempdir(), "rsclient_bridge")
   if (!dir.exists(bridge_tmp)) dir.create(bridge_tmp, recursive = TRUE)
   uid <- paste0(sample(letters, 6), collapse = "")
@@ -872,7 +881,7 @@ rsclient_isolated_exec <- function(func_body, input_data, packages = character(0
     },
     args = list(input_path = input_path, output_path = output_path,
                 func_body = func_body, pkgs = packages),
-    timeout_sec = timeout)
+    timeout_sec = timeout, allow_fallback = allow_fallback)
   if (file.exists(output_path)) return(ov_qs_read(output_path))  # bridge-file existence = success (callr returns NULL)
   msg <- if (!is.null(result$message)) result$message else "RSclient subprocess failed"
   message("[rsclient_isolated_exec] ", msg)
