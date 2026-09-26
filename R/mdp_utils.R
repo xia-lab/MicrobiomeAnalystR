@@ -3248,6 +3248,10 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pai
     rsclient_isolated_exec(
       func_body = function(input_data) {
         require(vegan)
+        # The permutation tests (PERMANOVA, ANOSIM, PERMDISP) run in this isolated session, where no
+        # caller's seed reaches: two runs of the same data gave p = 0.051 and 0.039. Seeded here, the
+        # same data gives the same p.
+        set.seed(28053447)
   
         abund_mat <- input_data$abund_mat
         sam_df <- input_data$sam_df
