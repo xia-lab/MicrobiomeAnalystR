@@ -174,6 +174,27 @@ mbSet<-PerformMetaEffectSize(mbSet, "metafeature_bar_0", "OTU","study_condition"
 #bar plot of top features is saved in an image called metafeature_bar_0.png
 ```
 
+#### Raw shotgun metagenomics data (Meteor2)
+
+Raw shotgun reads are processed on your own computer, not on the web server. MicrobiomeAnalystR runs [Meteor2](https://github.com/metagenopolis/meteor) (Ghozlane et al., *Microbiome* 2025), which maps reads to a species-resolved gene catalogue and reports species (MSP) abundance together with KEGG, gut metabolic (GMM) and gut-brain (GBM) modules, CAZymes and antibiotic resistance genes, including which species carry each module. The merged tables are then uploaded to MicrobiomeAnalyst.
+
+1. Install Meteor2 and bowtie2, e.g. `conda create -n meteor -c conda-forge -c bioconda meteor`. Reads should be quality-filtered and host reads removed beforehand.
+
+2. Download a catalogue (human gut, oral and skin; mouse, rat, pig, chicken, dog, cat and rabbit gut). The full catalogue is needed for functional profiles; `fast = TRUE` gives species profiles only.
+```{eval=FALSE}
+options(MicrobiomeAnalystR.meteor = "~/miniconda3/envs/meteor/bin/meteor")  # if meteor is not on the PATH
+CheckMeteor();
+ListMeteorCatalogues();
+cat.dir <- DownloadMeteorCatalogue("hs_10_4_gut", "~/meteor_ref");
+```
+
+3. Profile all samples in a folder (paired files named e.g. `S1_R1.fastq.gz` / `S1_R2.fastq.gz`) and merge them. Samples already profiled are skipped when the run is restarted.
+```{eval=FALSE}
+merged <- RunMeteorProfiling("fastq", cat.dir, "meteor_out", paired = TRUE, threads = 8);
+res <- ReadMeteorResults(merged);        # species, taxonomy, modules, module completeness per species, functions
+PackMeteorResults(merged, "meteor_tables.zip");   # upload this file to MicrobiomeAnalyst
+```
+
 ## Citation
 
 MicrobiomeAnalystR has been developed by the [XiaLab](http://xialabresearch.com/) at McGill University. The original manuscript (web-based version) can be found [here](https://www.ncbi.nlm.nih.gov/pubmed/28449106). 
@@ -194,6 +215,7 @@ To inform us of any bugs or requests, please open a new issue or send an email t
 
 ## MicrobiomeAnalystR History & Updates
 
+09-29-2026 - Raw shotgun metagenomics processing with Meteor2 on the local computer (CheckMeteor, ListMeteorCatalogues, DownloadMeteorCatalogue, RunMeteorProfiling, ReadMeteorResults, PackMeteorResults); BuildCarrierTables and RunMeteorStrain planned\
 02-23-2023 - Initial commit of MicrobiomeAnalyst 2.0 - prepping for stable release\
 11-16-2020 - Code update w. web + change files from .rds to .qs - users need to install qs R package now
 02-24-2020 - Code update w. web + added note about usage\
