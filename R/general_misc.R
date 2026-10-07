@@ -1586,6 +1586,7 @@ library(RSQLite)
 
   # Establish connection to the SQLite database
   db_path <- paste0(sqlite.path, "/ko_genes.sqlite")
+  if (exists("ov_require_ref_sqlite", mode = "function")) ov_require_ref_sqlite(db_path);
 
   con <- dbConnect(SQLite(), dbname = db_path)
   
