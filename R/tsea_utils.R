@@ -207,8 +207,12 @@ CalculateHyperScore <- function(mbSetObj){
     
   # total uniq cmpds in the current mset lib
   uniq.count <- length(unique(unlist(current.mset, use.names = FALSE)));
+  # A set of fewer than two members is not tested (one taxon cannot be "enriched"). Filtered by size alone, before
+  # any test, so the family the p-values are adjusted over never depends on the hits; the background stays the
+  # whole library (counted above).
+  current.mset <- current.mset[lengths(current.mset) >= 2];
   set.size<-length(current.mset);
-    
+
   if(set.size ==1){
     AddErrMsg("Cannot perform enrichment analysis on a single metabolite set!");
     return(0);
@@ -243,16 +247,11 @@ CalculateHyperScore <- function(mbSetObj){
   res.mat[,3]<-hit.num;
   res.mat[,4]<-phyper(hit.num-1, set.num, uniq.count-set.num, q.size, lower.tail=F);
 
-  # Multiple-testing correction is applied only to sets with >= 2 hits. A single
-  # matched taxon is not meaningful evidence of enrichment, and counting every
-  # 1-hit set as a test inflates the penalty on the sets that matter (the
-  # per-study libraries make this noticeable). 1-hit sets keep their raw p but
-  # are reported with NA for Holm/FDR.
-  test.inx <- hit.num >= 2;
-  if(any(test.inx)){
-    res.mat[test.inx, 5] <- p.adjust(res.mat[test.inx, 4], "holm");
-    res.mat[test.inx, 6] <- p.adjust(res.mat[test.inx, 4], "fdr");
-  }
+  # Multiple-testing correction over EVERY set tested (a set with no hit has p = 1). Adjusting only over the sets
+  # with >= 2 hits chose the family by the outcome, which understates the adjusted p-values; the sets too small to
+  # be evidence are left out by their SIZE above, before any test.
+  res.mat[,5] <- p.adjust(res.mat[,4], "holm");
+  res.mat[,6] <- p.adjust(res.mat[,4], "fdr");
 
   res.mat <- res.mat[hit.num>0,];
 
