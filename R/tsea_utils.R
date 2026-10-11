@@ -635,7 +635,8 @@ PrepareEnrichNet<-function(mbSetObj){
 #'Prepare the data of the enrichment network viewer from a taxon set result.
 #'@description The enrichment network viewer (the one MetaboAnalyst opens for its enrichment results) draws two networks from one JSON
 #'and switches between them with its own View option: the sets only (nodes, edges: two sets are joined when they share at least 20% of
-#'their taxa) and the sets with the taxa that hit them (bnodes, bedges: a line from a set to each of its hit taxa). It is written from
+#'their taxa) and the sets with the taxa in them (bnodes, bedges: a line from a set to each of its members, the library's members the set
+#'network joins its sets by, so two sets that share taxa are joined there too; a taxon node says whether it hit and whether it was tested). It is written from
 #'the result in state (\code{analSet$ora.mat} and \code{ora.hits}: the over-representation result and the rank-based one alike, the
 #'leading-edge taxa being the hits of the latter), for the top 50 sets as the page's own network. The JSON has the shape
 #'MetaboAnalyst's builder writes. The same call writes the result table the viewer offers to download.
@@ -648,6 +649,7 @@ PrepareEnrichNetViewer <- function(mbSetObj, netNm = "enrichNet_tsea"){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   enr.mat <- mbSetObj$analSet$ora.mat;
   set.hits <- mbSetObj$analSet$ora.hits;
+  set.tested <- mbSetObj$analSet$ora.tested;      # the members each set was tested with; NULL for a result saved before they were recorded
   if(is.null(enr.mat) || nrow(enr.mat) == 0){
     AddErrMsg("No taxon set enrichment result to draw a network from!");
     return(0);
@@ -695,24 +697,35 @@ PrepareEnrichNetViewer <- function(mbSetObj, netNm = "enrichNet_tsea"){
     list(id = k, source = e.df$from[k], target = e.df$to[k], weight = e.df$weight[k], width = 0.5);
   });
 
-  # the bipartite network: the sets and the taxa that hit them (a taxon named like a set is left out: node ids are unique)
-  taxa <- setdiff(unique(unlist(hit.lists, use.names = FALSE)), set.nms);
-  b.from <- unlist(lapply(set.nms, function(s) rep(s, length(intersect(hit.lists[[s]], taxa)))), use.names = FALSE);
-  b.to <- unlist(lapply(set.nms, function(s) intersect(hit.lists[[s]], taxa)), use.names = FALSE);
+  # the bipartite network: the sets and the taxa in them (a taxon named like a set is left out: node ids are unique). A set is drawn with
+  # every member the library holds for it, as its own view lists them; the taxa the result calls hits are marked, and so are the members
+  # that were not in the list tested (their sets were not tested on them)
+  set.members <- lapply(seq_len(n), function(i){
+    m <- c(members[[i]], hit.lists[[i]]);
+    unique(m[!is.na(m) & nzchar(m)])
+  });
+  taxa <- setdiff(unique(unlist(set.members, use.names = FALSE)), set.nms);
+  b.from <- unlist(lapply(seq_len(n), function(i) rep(set.nms[i], length(intersect(set.members[[i]], taxa)))), use.names = FALSE);
+  b.to <- unlist(lapply(seq_len(n), function(i) intersect(set.members[[i]], taxa)), use.names = FALSE);
   if(is.null(b.from)){ b.from <- character(0); b.to <- character(0); }
   bg <- igraph::graph_from_data_frame(data.frame(from = b.from, to = b.to, stringsAsFactors = FALSE), directed = FALSE,
                                       vertices = data.frame(name = c(set.nms, taxa), stringsAsFactors = FALSE));
   deg <- as.numeric(igraph::degree(bg));
   is.set <- seq_along(deg) <= n;
-  b.cols <- rep("#6CD0D0", length(deg));
-  b.cols[is.set] <- .enrnet.gradient(.enrnet.rescale(deg[is.set], 0, 1, 0.5));
+  b.nms <- igraph::V(bg)$name;
+  hit.taxa <- unique(unlist(hit.lists, use.names = FALSE));
+  tested.taxa <- if(is.null(set.tested)) NULL else unique(unlist(set.tested[set.nms], use.names = FALSE));
+  b.hit <- !is.set & b.nms %in% hit.taxa;
+  b.tested <- is.set | is.null(tested.taxa) | b.nms %in% tested.taxa;
+  # the sets keep the colour they have in the set network; the taxa: a hit strong, a tested member light, a member not tested grey
+  b.cols <- c(set.cols, ifelse(b.hit[!is.set], "#1B9E9E", ifelse(b.tested[!is.set], "#6CD0D0", "#C8C8C8")));
   b.sizes <- .enrnet.rescale(log10(deg + 1), 6, 20, 13);
   b.sizes[is.set] <- set.sizes;
   b.pos <- .enrnet.layout(bg, "Default");
-  b.nms <- igraph::V(bg)$name;
   bnodes <- lapply(seq_along(b.nms), function(i){
     list(id = b.nms[i], label = b.nms[i], size = b.sizes[i], colorb = b.cols[i], colorw = b.cols[i], true_size = b.sizes[i],
-         molType = if(is.set[i]) "pathway" else "compound", posx = b.pos[i, 1], posy = b.pos[i, 2]);
+         molType = if(is.set[i]) "pathway" else "compound", isHit = as.integer(b.hit[i]), tested = as.integer(b.tested[i]),
+         posx = b.pos[i, 1], posy = b.pos[i, 2]);
   });
   bedges <- lapply(seq_along(b.from), function(k){
     list(id = paste0("b", k), source = b.to[k], target = b.from[k]);
@@ -1304,10 +1317,21 @@ GetHTMLMetSet<-function(mbSetObj, msetNm){
   mset[red.inx] <- paste("<font color=\"red\">", "<b>", members[red.inx], "</b>", "</font>",sep="");
   mset[grey.inx] <- paste("<font color=\"grey\" title=\"not tested\">", "<b>", members[grey.inx], "</b>", "</font>",sep="");
 
+  # the library keeps every known member of a set; the table counts only those in the list tested, so the view says both
+  n.mem <- length(members);
+  said <- paste0("The library holds ", n.mem, if(n.mem == 1) " member" else " members", " of this set");
+  if(is.null(tested)){
+    said <- paste0(said, ".");
+  }else{
+    n.tested <- sum(members %in% tested);
+    said <- paste0(said, "; ", n.tested, " of them ", if(n.tested == 1) "is" else "are", " in the list tested here, and only those count in the table (Total and Hits). ",
+                   "Hits are red; grey members are not in the tested list, so they were not tested.");
+  }
+
   # get references
   matched.inx <- match(tolower(msetNm), tolower(current.msetlib$name))[1];
 
-  return(cbind(msetNm, paste(mset, collapse="; "), current.msetlib$reference[matched.inx]));
+  return(cbind(msetNm, paste0("<p style=\"font-size:12px\"><i>", said, "</i></p>", paste(mset, collapse="; ")), current.msetlib$reference[matched.inx]));
 }
 
 GetMsetPval<-function(mbSetObj, msetNm){
