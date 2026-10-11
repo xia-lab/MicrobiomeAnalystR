@@ -639,6 +639,7 @@ PrepareEnrichNet<-function(mbSetObj){
 # taxid in microbe_db_new.rds) so that either spelling reaches the same sets. Names NCBI does
 # not know (most strain designations) are left as they are.
 .tsea.cache <- new.env(parent = emptyenv())    # an environment, so it also works inside a locked package namespace
+.tsea.cache$missing <- list()                   # library files asked for quietly and not there
 .get.tsea.synonyms <- function(){
   if(is.null(.tsea.cache$synonyms)){
     syn <- .read.microbiomeanalyst.lib.rds("tsea_name_synonyms.rds", "tsea");
@@ -673,7 +674,8 @@ PrepareEnrichNet<-function(mbSetObj){
 # "Ruminococcaceae UCG-014", "Lachnospiraceae NK4A136 group", "Prevotella 9", "Pseudoramibacter Eubacterium": a second word that is not a
 # lower-case epithet), and a single word that ends as a family, order, class or phylum name does
 # is "higher" (above genus: "Lachnospiraceae", "Bacteroidota", "Firmicutes"). "Candidatus" and square brackets are not words of the name.
-.tsea.rank.levels <- c("genus", "species", "strain", "higher")
+.tsea.rank.levels <- c("genus", "species", "strain", "higher")     # the order everywhere: Genus, Species, Strain (then above genus; mixed is last)
+.tsea.variant.ranks <- c("genus", "species", "strain")                # the ranks a library can have a single-rank variant of (suffix _genus / _species / _strain)
 .tsea.rank.pure <- 0.9;     # a list is "at" a rank when at least this share of its names are written at it; otherwise it is mixed
 
 .tsea.taxon.rank <- function(x){
@@ -709,9 +711,10 @@ TaxonRankSummary <- function(x){
 
 #'The variant of a taxon-set library a list of this rank is tested against.
 #'@description The ONE place that decides it, called by \code{CalculateHyperScore} and \code{CalculateGseaScore} (so the web app and
-#'the AI workflows steer alike): a species-level list goes to the "_species" variant of the library chosen, a strain-level list to the
-#'"_strain" variant, when the library has one. A genus, mixed or higher-rank list, a library with no such variant, an unknown library,
-#'and a level the user chose themselves (a library that already ends in _species or _strain) stay as they are.
+#'the AI workflows steer alike): a genus-, species- or strain-level list goes to the "_genus", "_species" or "_strain" variant of the
+#'library chosen, when the library has one (one rule on the rank suffix; a variant whose file is not shipped is tried and, when it is
+#'not there, the mixed library is used and the result says so). A mixed or higher-rank list, a library with no such variant, an unknown
+#'library, and a level the user chose themselves (a library that already ends in _genus, _species or _strain) stay as they are.
 #'@param tset.type the library key the user chose (see \code{SetTaxonSetLib}).
 #'@param rank the list's rank, from \code{TaxonRankSummary}.
 #'@return the library key to test against.
@@ -719,10 +722,9 @@ TaxonRankSummary <- function(x){
 ResolveTaxonSetLib <- function(tset.type, rank){
   if(length(tset.type) != 1 || is.na(tset.type) || !(tset.type %in% names(.tsea.lib.files))) return(tset.type);
   if(length(rank) != 1 || is.na(rank)) return(tset.type);
-  if(grepl("_(species|strain)$", tset.type)) return(tset.type);
-  suffix <- switch(rank, species = "_species", strain = "_strain", NULL);
-  if(is.null(suffix)) return(tset.type);
-  cand <- paste0(tset.type, suffix);
+  if(grepl("_(genus|species|strain)$", tset.type)) return(tset.type);
+  if(!(rank %in% .tsea.variant.ranks)) return(tset.type);
+  cand <- paste0(tset.type, "_", rank);
   if(cand %in% names(.tsea.lib.files)) cand else tset.type
 }
 
@@ -737,7 +739,10 @@ ResolveTaxonSetLib <- function(tset.type, rank){
     used <- ResolveTaxonSetLib(req, rs$rank);
     have <- mbSetObj$dataSet$tset.used; if(is.null(have)) have <- req;
     if(!identical(used, have)){
-      if(.tsea.load.lib(used)) have <- used;     # a variant that cannot be read leaves the library as it was
+      if(isTRUE(tryCatch(.tsea.load.lib(used, quiet = TRUE), error = function(e) FALSE))) have <- used     # a variant that cannot be read (not shipped yet) leaves the library as it was, and the record says which was wanted
+      else rec$library.variant.missing <- used;
+    } else if(rs$rank %in% .tsea.variant.ranks && identical(used, req) && !grepl("_(genus|species|strain)$", req)){
+      rec$library.variant.missing <- paste0(req, "_", rs$rank);      # this library has no variant at the list's rank at all
     }
     mbSetObj$dataSet$tset.used <- have;
     rec$library <- have;
@@ -777,14 +782,23 @@ ResolveTaxonSetLib <- function(tset.type, rank){
   host_int_strain   = "tsea_host_int_strain.csv",
   env_strain        = "tsea_environment_strain.csv",
   mic_int_strain    = "tsea_microbiome_int_strain.csv",
-  food_matrix_strain = "tsea_food_matrix_strain.csv"
+  food_matrix_strain = "tsea_food_matrix_strain.csv",
+  # genus level: the library curation ships tsea_<category>_genus.csv one file at a time. A genus list is tested against the variant
+  # when the file is there and against the mixed library, said so, when it is not.
+  host_int_genus    = "tsea_host_int_genus.csv",
+  host_ext_genus    = "tsea_host_ext_genus.csv",
+  host_diet_genus   = "tsea_host_diet_lifestyle_genus.csv",
+  host_drug_genus   = "tsea_host_medication_genus.csv",
+  env_genus         = "tsea_environment_genus.csv",
+  mic_int_genus     = "tsea_microbiome_int_genus.csv",
+  food_matrix_genus = "tsea_food_matrix_genus.csv"
 );
 
 # Resolve a taxon-set library file to a local path. On the web server the file is
 # read from the resources tree. In package mode it is downloaded once into the
 # working directory and re-used for 30 days (same policy as
 # .read.microbiomeanalyst.lib.rds), instead of being fetched on every call.
-.get.tsea.lib.path <- function(filenm){
+.get.tsea.lib.path <- function(filenm, quiet = FALSE){
   if(.on.public.web){
     return(paste0(rpath, "libs/tsea/", filenm));
   }
@@ -804,7 +818,7 @@ ResolveTaxonSetLib <- function(tset.type, rank){
     }else{
       if(file.exists(tmp)) unlink(tmp);
       if(!file.exists(filenm)){
-        AddErrMsg(paste("Could not download taxon set library", filenm, "- check your internet connection."));
+        if(!quiet) AddErrMsg(paste("Could not download taxon set library", filenm, "- check your internet connection."));
         return(NULL);
       }
       # else: keep using the stale copy
@@ -833,15 +847,20 @@ SetTaxonSetLib <- function(mbSetObj, tset.type){
 }
 
 # Read one taxon-set library into the globals the tests use (current.msetlib, current.mset, uniq.count). TRUE when it was read.
-.tsea.load.lib <- function(tset.type){
+# quiet = TRUE: a library that is not there is not an error (a variant the curation has not shipped yet); the caller falls back.
+.tsea.load.lib <- function(tset.type, quiet = FALSE){
 
   filenm <- .tsea.lib.files[tset.type];
   if(is.na(filenm)){
-    AddErrMsg(paste("Unknown taxon set library:", tset.type));
+    if(!quiet) AddErrMsg(paste("Unknown taxon set library:", tset.type));
     return(FALSE);
   }
-  libPath <- .get.tsea.lib.path(filenm);
-  if(is.null(libPath)){
+  # package mode: a variant already found missing in this session is not downloaded for again (on the web server it is a cheap file check)
+  if(quiet && !.on.public.web && isTRUE(.tsea.cache$missing[[filenm]])) return(FALSE);
+  libPath <- .get.tsea.lib.path(filenm, quiet);
+  if(is.null(libPath) || (.on.public.web && !file.exists(libPath))){
+    if(quiet) .tsea.cache$missing[[filenm]] <- TRUE;
+    if(!quiet && !is.null(libPath)) AddErrMsg(paste("Taxon set library", filenm, "is not available."));
     return(FALSE);
   }
 
