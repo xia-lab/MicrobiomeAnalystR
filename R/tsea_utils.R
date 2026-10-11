@@ -670,7 +670,8 @@ PrepareEnrichNet<-function(mbSetObj){
 # one word is a genus; two words a species; more a strain ("Escherichia coli K-12", "Streptococcus phocae subsp. salmonis"). A
 # placeholder species is a species however long its tail is ("Eubacterium sp CAG 180", "Clostridium sp. CAG:127", "Firmicutes bacterium
 # CAG:110"), a genus label of the marker-gene databases is a genus however many words it has ("Clostridium sensu stricto 1",
-# "Ruminococcaceae UCG-014", "Lachnospiraceae NK4A136 group"), and a single word that ends as a family, order, class or phylum name does
+# "Ruminococcaceae UCG-014", "Lachnospiraceae NK4A136 group", "Prevotella 9", "Pseudoramibacter Eubacterium": a second word that is not a
+# lower-case epithet), and a single word that ends as a family, order, class or phylum name does
 # is "higher" (above genus: "Lachnospiraceae", "Bacteroidota", "Firmicutes"). "Candidatus" and square brackets are not words of the name.
 .tsea.rank.levels <- c("genus", "species", "strain", "higher")
 .tsea.rank.pure <- 0.9;     # a list is "at" a rank when at least this share of its names are written at it; otherwise it is mixed
@@ -682,6 +683,7 @@ PrepareEnrichNet<-function(mbSetObj){
   rk <- ifelse(w <= 1, "genus", ifelse(w == 2, "species", "strain"));
   rk[w >= 3 & grepl("^[^ ]+ (sp\\.?|bacterium|cf\\.?|aff\\.?)( |$)", x)] <- "species";
   rk[w >= 2 & grepl("( group| clade| cluster)$|sensu stricto|incertae sedis| UCG[- ]?[0-9]+$", x, ignore.case = TRUE)] <- "genus";
+  rk[w == 2 & grepl("^[^ ]+ ([A-Z]|[0-9])", x)] <- "genus";      # a second word that is not a lower-case epithet: "Pseudoramibacter Eubacterium", "Prevotella 9"
   rk[w <= 1 & grepl("(aceae|ales|ineae|ota|etes|bacteria)$", x, ignore.case = TRUE)] <- "higher";
   rk[is.na(x) | !nzchar(x)] <- NA_character_;
   rk
