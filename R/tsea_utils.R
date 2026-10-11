@@ -730,6 +730,38 @@ PrepareEnrichNet<-function(mbSetObj){
   PlotEnrichNet.Overview(hits, pvals);
 }
 
+# What belongs to one result of a taxon set test: the table, the hits, the members each set was tested with, and what it was tested against.
+.tsea.kept.fields <- c("ora.mat", "ora.hits", "ora.tested", "ora.background");
+
+#'Keep the result in state under a name.
+#'@description A complete list is tested two ways and the page shows one result at a time, so the result in state is kept under a name
+#'before the second test overwrites it, and put back with \code{ShowTseaResult} when its tab is chosen.
+#'@param mbSetObj Input the name of the mbSetObj.
+#'@param key The name of the result, for example "top" or "rank".
+#'@export
+KeepTseaResult <- function(mbSetObj, key){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  keep <- mbSetObj$analSet$tsea.keep;
+  if(is.null(keep)) keep <- list();
+  keep[[key]] <- mbSetObj$analSet[intersect(names(mbSetObj$analSet), .tsea.kept.fields)];
+  mbSetObj$analSet$tsea.keep <- keep;
+  .set.mbSetObj(mbSetObj)
+}
+
+#'Make a kept result the one in state.
+#'@description The details of a taxon set (its hits, its p value, the members it was tested with) and the enrichment network are read from the
+#'result in state. A part the kept result does not have is removed from state, not left from another result.
+#'@param mbSetObj Input the name of the mbSetObj.
+#'@param key The name the result was kept under.
+#'@export
+ShowTseaResult <- function(mbSetObj, key){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  k <- mbSetObj$analSet$tsea.keep[[key]];
+  if(is.null(k)) stop("no such result");
+  for(n in .tsea.kept.fields) mbSetObj$analSet[[n]] <- k[[n]];
+  .set.mbSetObj(mbSetObj)
+}
+
 #'Prepare the data of the enrichment network viewer from a taxon set result.
 #'@description The enrichment network viewer (the one MetaboAnalyst opens for its enrichment results) draws two networks from one JSON
 #'and switches between them with its own View option: the sets only (nodes, edges: two sets are joined when they share at least 20% of
@@ -1149,7 +1181,10 @@ SetTaxonSetLib <- function(mbSetObj, tset.type){
     return(FALSE);
   }
 
-  current.msetlib <<- .readDataTable(libPath);
+  lib <- .readDataTable(libPath);
+  # the reader makes the text "NA" a missing value, and a set named NA would answer to no name: the set keeps the text
+  if(anyNA(lib[, 1])) lib[is.na(lib[, 1]), 1] <- "NA";
+  current.msetlib <<- lib;
   ms.list <- strsplit(current.msetlib[,2],"; ");
   names(ms.list) <- current.msetlib[,1];
   # Some taxon-set libraries repeat a set name across rows. Consolidate duplicates
