@@ -44,15 +44,35 @@ use <- function(mb) {
 name.map <- function(mb) data.frame(query = mb$dataSet$species, Strain = mb$dataSet$species, stringsAsFactors = FALSE)
 
 test_that("a species or a strain name is rolled up to its genus, any other name is left as it is", {
-  g <- env$.tsea.to.genus(c("Bacteroides fragilis", "Escherichia coli K-12", "[Eubacterium] siraeum", "Candidatus Accumulibacter phosphatis",
-                            "Clostridium sp. CAG:127", "Roseburia", "Prevotella 9", "Lachnospiraceae", NA))
+  g <- env$.tsea.to.level(c("Bacteroides fragilis", "Escherichia coli K-12", "[Eubacterium] siraeum", "Candidatus Accumulibacter phosphatis",
+                            "Clostridium sp. CAG:127", "Roseburia", "Prevotella 9", "Lachnospiraceae", NA), "genus")
   expect_equal(g, c("Bacteroides", "Escherichia", "Eubacterium", "Accumulibacter", "Clostridium", "Roseburia", "Prevotella 9", "Lachnospiraceae", NA))
+})
+
+test_that("a strain name is rolled up to its species for a species-level library; a species, a genus and a family stay", {
+  sp <- env$.tsea.to.level(c("Escherichia coli K-12", "Streptococcus phocae subsp. salmonis", "[Eubacterium] siraeum ATCC 29", "Bacteroides fragilis",
+                             "Clostridium sp. CAG:127", "Roseburia", "Lachnospiraceae", NA), "species")
+  expect_equal(sp, c("Escherichia coli", "Streptococcus phocae", "Eubacterium siraeum", "Bacteroides fragilis", "Clostridium sp. CAG:127",
+                     "Roseburia", "Lachnospiraceae", NA))
+  expect_equal(env$.tsea.to.level("Escherichia coli K-12", "strain"), "Escherichia coli K-12", info = "a strain-level library takes the names as they are")
+})
+
+test_that("a species-level library rolls the strains of a list up to their species, not to their genus", {
+  mb <- mbset("host_int_species", species = c("Escherichia coli K-12", "Escherichia coli O157", "Bacteroides fragilis", "Roseburia"),
+              sc = c(1, -2, 0.5, 0.1)); use(mb)
+  r <- env$.tsea.roll.up(mb, name.map(mb))
+  expect_equal(r$level, "species")
+  expect_equal(r$nm.map$Strain, c("Escherichia coli", "Escherichia coli", "Bacteroides fragilis", "Roseburia"))
+  expect_equal(r$set$dataSet$scores[1], -2)
+  expect_equal(r$from, 4)
+  expect_equal(r$to, 3)
 })
 
 test_that("a genus-level library rolls the list up: one row per genus, the strongest score, the other names left alone", {
   mb <- mbset("host_int_genus"); use(mb)
   r <- env$.tsea.roll.up(mb, name.map(mb))
   expect_false(is.null(r))
+  expect_equal(r$level, "genus")
   expect_equal(r$from, 13)
   expect_equal(r$to, 11)
   first <- !duplicated(r$nm.map$Strain)
@@ -77,7 +97,9 @@ test_that("a list of p values keeps the smallest p of a genus, and a list's p an
 test_that("nothing is rolled up for a library of the mixed level, a species library, or a list that has nothing to roll up", {
   mb <- mbset("host_int"); use(mb)
   expect_null(env$.tsea.roll.up(mb, name.map(mb)))
-  mb <- mbset("host_int_species"); use(mb)
+  mb <- mbset("host_int_strain"); use(mb)
+  expect_null(env$.tsea.roll.up(mb, name.map(mb)))
+  mb <- mbset("host_int_species", species = c("Bacteroides fragilis", "Prevotella copri", "Roseburia"), sc = c(1, 2, 3)); use(mb)
   expect_null(env$.tsea.roll.up(mb, name.map(mb)))
   mb <- mbset("host_int_genus", species = c("Bacteroides", "Prevotella", "Roseburia"), sc = c(1, 2, 3)); use(mb)
   expect_null(env$.tsea.roll.up(mb, name.map(mb)))
@@ -104,6 +126,7 @@ test_that("the over-representation of a mixed list against a genus library tests
   bg <- state$mb$analSet$ora.background
   expect_equal(bg$rollup.from, 13)
   expect_equal(bg$rollup.to, 11)
+  expect_equal(bg$rollup.level, "genus")
   expect_true(bg$rollup.scored)
   expect_equal(bg$list.size, 11, info = "the list is now its 11 rows: ten genera and a family")
   expect_equal(bg$background, 10, info = "the taxa of the list that the library holds: the ten genera, not the family")
@@ -133,4 +156,25 @@ test_that("the rank-based test of a mixed list against a genus library ranks its
   expect_equal(state$mb$analSet$ora.background$rollup.to, 11)
   members <- unique(unlist(state$mb$analSet$ora.tested))
   expect_true(all(members %in% unique(unlist(lib))), info = "every member tested is a genus")
+})
+
+test_that("the level a list is read at: its finest level, the share of each, and whether its names are of one level", {
+  lv <- function(nms) { mb <- list(dataSet = list(species = nms), analSet = list()); use(mb); env$GetTseaListLevel(NA) }
+  g <- lv(c("Bacteroides", "Prevotella", "Roseburia"))
+  expect_equal(g[1:2], c("genus", "genus"))
+  expect_match(g[3], "3 genus", fixed = TRUE)
+  sp <- lv(c("Bacteroides fragilis", "Prevotella copri", "Roseburia intestinalis"))
+  expect_equal(sp[1:2], c("species", "species"))
+  st <- lv(c("Escherichia coli K-12", "Escherichia coli O157", "Bacteroides fragilis NT5"))
+  expect_equal(st[1:2], c("strain", "strain"))
+  mixed.gs <- lv(c("Bacteroides", "Prevotella", "Roseburia", "Bacteroides fragilis", "Prevotella copri", "Roseburia intestinalis"))
+  expect_equal(mixed.gs[1:2], c("species", "mixed"), info = "genus and species names: the finest level is species")
+  mixed.all <- lv(c(mixed))
+  expect_equal(mixed.all[1:2], c("strain", "mixed"))
+  expect_match(mixed.all[3], "genus", fixed = TRUE)
+  expect_match(mixed.all[3], "species", fixed = TRUE)
+  expect_match(mixed.all[3], "strain", fixed = TRUE)
+  fam <- lv(c("Lachnospiraceae", "Ruminococcaceae", "Bacteroidaceae"))
+  expect_equal(fam[1:2], c("higher", "higher"))
+  expect_equal(lv(character(0))[1:2], c("mixed", "mixed"), info = "nothing to read: the list is offered every level")
 })

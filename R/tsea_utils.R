@@ -280,43 +280,49 @@ SetTseaListInput <- function(mbSetObj = NA, input = "significant", cutoff.by = "
   list(query = unique(query), background = unique(all.vec), kind = if(by == "top") "top_fraction" else by, cutoff = cutoff);
 }
 
-# ---- rolling a list up to genus -----------------------------------------------------------------------------------------------------
-# A genus-level library holds genus names only, so a list that names species and strains matches almost none of it. For such a library the
-# list is rolled up to its genera: one row per genus, a genus keeping the score of its strongest member (the largest size of score, its sign
-# kept; the smallest value for a list of p values and for the p and FDR columns), and the taxa measured are rolled up the same way.
+# ---- rolling a list up to the level of the library --------------------------------------------------------------------------------------
+# A library holds the names of one level, so a list that names finer taxa matches almost none of it: a genus-level library has no place for a
+# species name. A list can be tested against a library of its own level or a coarser one, never a finer one, so for such a library the list
+# is rolled up: a strain name to its species for a species-level library, a species or a strain name to its genus for a genus-level one. One
+# row stays per name, a name keeping the score of its strongest member (the largest size of score, its sign kept; the smallest value for a
+# list of p values and for the p and FDR columns), and the taxa measured are rolled up the same way.
 
-# The genus of a species or a strain name: its first word, without a bracket or a "Candidatus" in front ("[Eubacterium] siraeum",
-# "Escherichia coli K-12"). A name of any other rank (a genus, a family) is returned as it is.
-.tsea.to.genus <- function(x){
+# The name a species or a strain name rolls up to at a level ("genus" or "species"): its first word, or its first two, without a bracket or a
+# "Candidatus" in front ("[Eubacterium] siraeum", "Escherichia coli K-12"). A name of a rank that is not finer than the level is returned as it is.
+.tsea.to.level <- function(x, level){
   x <- as.character(x);
+  if(!(level %in% c("genus", "species"))) return(x);
   rk <- .tsea.taxon.rank(x);
-  down <- !is.na(rk) & rk %in% c("species", "strain");
+  down <- !is.na(rk) & rk %in% (if(level == "genus") c("species", "strain") else "strain");
   if(any(down)){
     y <- .tidy.taxon.name(x[down]);
     y <- trimws(gsub("[\\[\\]]", "", sub("^Candidatus +", "", y, ignore.case = TRUE), perl = TRUE));
-    x[down] <- .canonical.taxon.name(sub(" .*$", "", y));
+    keep <- if(level == "genus") 1 else 2;
+    x[down] <- .canonical.taxon.name(vapply(strsplit(y, " ", fixed = TRUE), function(v) paste(utils::head(v, keep), collapse = " "), ""));
   }
   x
 }
 
-# Is the library a list is tested against a genus-level one? The library the user chose, steered by the rank of the list as CalculateHyperScore
-# and CalculateGseaScore steer it (ResolveTaxonSetLib).
-.tsea.genus.library <- function(mbSetObj, nms){
+# The level of the library a list is tested against ("genus", "species" or "strain"; NA for a library of the mixed level): the library the user
+# chose, steered by the rank of the list as CalculateHyperScore and CalculateGseaScore steer it (ResolveTaxonSetLib).
+.tsea.library.level <- function(mbSetObj, nms){
   req <- mbSetObj$dataSet$tset.type;
-  if(length(req) != 1 || is.na(req) || !(req %in% names(.tsea.lib.files))) return(FALSE);
+  if(length(req) != 1 || is.na(req) || !(req %in% names(.tsea.lib.files))) return(NA_character_);
   nms <- nms[!is.na(nms) & nzchar(nms)];
-  if(length(nms) == 0) return(FALSE);
-  grepl("_genus$", ResolveTaxonSetLib(req, TaxonRankSummary(nms)$rank))
+  if(length(nms) == 0) return(NA_character_);
+  used <- ResolveTaxonSetLib(req, TaxonRankSummary(nms)$rank);
+  if(grepl("_(genus|species|strain)$", used)) sub("^.*_", "", used) else NA_character_
 }
 
-# The name map of a list, and the list's scores, rolled up to genus for a genus-level library; NULL when there is nothing to roll up.
-# Returns list(nm.map, set, from, to, scored): the map with the genus as its Strain, a COPY of the data set holding the rolled scores (the list
-# as typed is not changed, so the same list can be run against another library), the names before and after, and whether it had scores.
-# The value of a genus sits on its first row; the other rows of the genus are the duplicates the callers already drop.
+# The name map of a list, and the list's scores, rolled up to the level of the library; NULL when there is nothing to roll up.
+# Returns list(nm.map, set, from, to, scored, level): the map with the rolled name as its Strain, a COPY of the data set holding the rolled
+# scores (the list as typed is not changed, so the same list can be run against another library), the names before and after, whether it had
+# scores, and the level. The value of a name sits on its first row; the other rows of that name are the duplicates the callers already drop.
 .tsea.roll.up <- function(mbSetObj, nm.map){
   nms <- as.character(nm.map$Strain);
-  if(!.tsea.genus.library(mbSetObj, nms)) return(NULL);
-  g <- .tsea.to.genus(nms);
+  level <- .tsea.library.level(mbSetObj, nms);
+  if(is.na(level) || level == "strain") return(NULL);
+  g <- .tsea.to.level(nms, level);
   if(!any(!is.na(nms) & !is.na(g) & g != nms)) return(NULL);
   strongest <- function(v, small = FALSE){
     v <- v[!is.na(v)];
@@ -336,7 +342,28 @@ SetTseaListInput <- function(mbSetObj = NA, input = "significant", cutoff.by = "
   qset$dataSet$fdr.values <- roll(mbSetObj$dataSet$fdr.values, small = TRUE);
   nm2 <- nm.map;
   nm2$Strain <- g;
-  list(nm.map = nm2, set = qset, from = length(unique(nms[!is.na(nms)])), to = length(unique(g[!is.na(g)])), scored = !is.null(sc));
+  list(nm.map = nm2, set = qset, from = length(unique(nms[!is.na(nms)])), to = length(unique(g[!is.na(g)])), scored = !is.null(sc), level = level);
+}
+
+#'The level a list of taxon names is read at, and the libraries it can be tested against.
+#'@description A list can be tested against the libraries of the finest level it names or of a coarser one (a strain name rolls up to its
+#'species and to its genus, a genus name cannot roll down). The finest level is the rank of the list when its names are of one rank
+#'(\\code{TaxonRankSummary}), and the finest rank present when they are of several.
+#'@param mbSetObj Input the name of the mbSetObj.
+#'@return Three strings: the finest level ("genus", "species", "strain"; "higher" for a list of families and above; "mixed" when it cannot be
+#'read), the rank of the list ("mixed" when its names are of several ranks), and a phrase with the number of names of each rank.
+#'@export
+GetTseaListLevel <- function(mbSetObj){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  rs <- TaxonRankSummary(mbSetObj$dataSet$species);
+  nb <- rs$n.by.rank;
+  if(is.na(rs$rank) || length(nb) == 0) return(c("mixed", "mixed", ""));
+  levels.fine <- c("genus", "species", "strain");
+  present <- intersect(levels.fine, names(nb));
+  finest <- if(rs$rank %in% levels.fine) rs$rank else if(length(present) == 0) "higher" else present[length(present)];
+  parts <- paste(nb, ifelse(names(nb) == "higher", "higher-rank", names(nb)));
+  txt <- paste0(if(length(parts) > 1) paste(paste(parts[-length(parts)], collapse = ", "), "and", parts[length(parts)]) else parts, " names");
+  c(finest, rs$rank, txt)
 }
 
 #'Calculate enrichment score.
@@ -358,7 +385,7 @@ CalculateHyperScore <- function(mbSetObj, background = NULL){
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
   nm.map <- GetFinalNameMap(mbSetObj);
-  # a genus-level library takes genus names: species and strain names of the list are rolled up to their genus (qset: what the list is read from)
+  # a library holds names of one level: the list is rolled up to it, never down (qset: what the list is read from)
   roll <- .tsea.roll.up(mbSetObj, nm.map);
   qset <- mbSetObj;
   if(!is.null(roll)){ nm.map <- roll$nm.map; qset <- roll$set; }
@@ -407,7 +434,8 @@ CalculateHyperScore <- function(mbSetObj, background = NULL){
     if(!identical(mbSetObj$dataSet$q.type, "taxa")){
       background <- unique(.canonical.taxon.name(background));  # the same names the query and the sets are read in
     }
-    if(.tsea.genus.library(mbSetObj, list.names)) background <- unique(.tsea.to.genus(background));   # measured species count as their genus
+    bg.level <- .tsea.library.level(mbSetObj, list.names);
+    if(!is.na(bg.level) && bg.level != "strain") background <- unique(.tsea.to.level(background, bg.level));   # measured species count as their genus
     current.mset <- lapply(current.mset, function(x){x[x %in% background]});
     uniq.count <- length(unique(unlist(current.mset, use.names = FALSE)));
     ora.vec <- ora.vec[ora.vec %in% unlist(current.mset, use.names = FALSE)];
@@ -490,7 +518,7 @@ CalculateHyperScore <- function(mbSetObj, background = NULL){
                                          background = uniq.count, query = q.size, query.input = q.input, sets.tested = set.size,
                                          source = if(use.bg && !is.null(bg.source)) as.character(bg.source)[1] else "");
   mbSetObj$analSet$ora.background[names(st$rec)] <- st$rec;     # the rank tested and the library variant used
-  if(!is.null(roll)) mbSetObj$analSet$ora.background[c("rollup.from", "rollup.to", "rollup.scored")] <- list(roll$from, roll$to, roll$scored);
+  if(!is.null(roll)) mbSetObj$analSet$ora.background[c("rollup.from", "rollup.to", "rollup.scored", "rollup.level")] <- list(roll$from, roll$to, roll$scored, roll$level);
   # how big the tested sets are: a test over sets of two or three members has little power, and the result can say so
   mbSetObj$analSet$ora.background$set.size.median <- stats::median(set.num);
   mbSetObj$analSet$ora.background$sets.small <- sum(set.num < 5);
@@ -532,7 +560,7 @@ CalculateGseaScore <- function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
   nm.map <- GetFinalNameMap(mbSetObj);
-  # a genus-level library takes genus names: species and strain names of the ranking are rolled up to their genus (qset: what the ranking is read from)
+  # a library holds names of one level: the ranking is rolled up to it, never down (qset: what the ranking is read from)
   roll <- .tsea.roll.up(mbSetObj, nm.map);
   qset <- mbSetObj;
   if(!is.null(roll)){ nm.map <- roll$nm.map; qset <- roll$set; }
@@ -626,7 +654,7 @@ CalculateGseaScore <- function(mbSetObj){
                                           query.input = n.scored, sets.tested = n.tested, source = "the ranked list itself",
                                           set.size.median = stats::median(tested.sizes), sets.small = sum(tested.sizes < 5));
   mbSetObj$analSet$ora.background[names(st$rec)] <- st$rec;     # the rank tested and the library variant used
-  if(!is.null(roll)) mbSetObj$analSet$ora.background[c("rollup.from", "rollup.to", "rollup.scored")] <- list(roll$from, roll$to, roll$scored);
+  if(!is.null(roll)) mbSetObj$analSet$ora.background[c("rollup.from", "rollup.to", "rollup.scored", "rollup.level")] <- list(roll$from, roll$to, roll$scored, roll$level);
   fast.write(res.mat, file = "tsea_gsea_result.csv");
 
   tryCatch({
