@@ -317,7 +317,13 @@ CalculateHyperScore <- function(mbSetObj, background = NULL){
 }
 
 #'Calculate GSEA-based enrichment score.
-#'@description This function calculates the enrichment score using fgsea for TSEA.
+#'@description This function calculates the enrichment score using fgsea for TSEA: the complete ranked list
+#'(every taxon measured, each with a score) is the input, no significance cutoff is applied and no background has
+#'to be chosen, because the ranking itself is the universe. A set's size is the number of its members that are in
+#'the ranking; sets with fewer than three are not tested. A ranking whose scores are all non-negative (a list
+#'ordered by importance, or -log10 p-values) is scored one-sided, so that only the top of the list can be enriched.
+#'The multiple-testing correction runs over every set tested. The permutations are seeded, so the same ranking
+#'always gives the same table. What was tested is recorded in \code{analSet$ora.background}.
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@export
 CalculateGseaScore <- function(mbSetObj){
@@ -333,6 +339,7 @@ CalculateGseaScore <- function(mbSetObj){
   keep <- !is.na(scores);
   mapped.names <- mapped.names[keep];
   scores <- scores[keep];
+  n.scored <- length(scores);
 
   if(length(mapped.names) == 0){
     AddErrMsg("No valid scored taxa after mapping!");
@@ -354,13 +361,19 @@ CalculateGseaScore <- function(mbSetObj){
 
   gsea.res <- run_func_via_microservice(
     func = function(pathways, stats){
+      set.seed(1);  # the same ranking gives the same table, so a recorded run replays
+      # all scores non-negative: the list is ordered from most to least important, only its top can be enriched
       res <- fgsea::fgsea(pathways = pathways, stats = stats,
-                          minSize = 3, maxSize = 500, scoreType = "std");
+                          minSize = 3, maxSize = 500, scoreType = ifelse(all(stats >= 0), "pos", "std"));
       as.data.frame(res);
     },
     args = list(pathways = current.mset, stats = ranked.vec),
     timeout_sec = 180
   );
+
+  # adjusted over EVERY set tested, before the sets with no leading edge are left out of the table
+  n.tested <- nrow(gsea.res);
+  gsea.res$holm <- p.adjust(gsea.res$pval, "holm");
 
   # filter to sets with leading edge
   le.counts <- sapply(gsea.res$leadingEdge, length);
@@ -381,7 +394,7 @@ CalculateGseaScore <- function(mbSetObj){
   res.mat[, 2] <- gsea.res$NES;         # expected = NES
   res.mat[, 3] <- le.counts;            # hits = leading_edge_count
   res.mat[, 4] <- gsea.res$pval;        # Raw p
-  res.mat[, 5] <- p.adjust(gsea.res$pval, "holm");
+  res.mat[, 5] <- gsea.res$holm;
   res.mat[, 6] <- gsea.res$padj;        # FDR (fgsea's BH-adjusted)
 
   ord.inx <- order(res.mat[, 4]);
@@ -396,6 +409,9 @@ CalculateGseaScore <- function(mbSetObj){
 
   mbSetObj$analSet$ora.mat <- res.mat;
   mbSetObj$analSet$ora.hits <- hits;
+  # what the test was run over, so every result surface can say it: the ranking itself, no background
+  mbSetObj$analSet$ora.background <- list(mode = "ranked", background = length(ranked.vec), query = length(ranked.vec),
+                                          query.input = n.scored, sets.tested = n.tested, source = "the ranked list itself");
   fast.write(res.mat, file = "tsea_gsea_result.csv");
 
   tryCatch({
