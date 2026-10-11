@@ -383,6 +383,9 @@ CalculateHyperScore <- function(mbSetObj, background = NULL){
   mbSetObj$analSet$ora.background = list(mode = ifelse(use.bg, "measured", "library"),
                                          background = uniq.count, query = q.size, query.input = q.input, sets.tested = set.size,
                                          source = if(use.bg && !is.null(bg.source)) as.character(bg.source)[1] else "");
+  # how big the tested sets are: a test over sets of two or three members has little power, and the result can say so
+  mbSetObj$analSet$ora.background$set.size.median <- stats::median(set.num);
+  mbSetObj$analSet$ora.background$sets.small <- sum(set.num < 5);
   if(!is.null(complete.sel)){
     # what was tested, for pages and manifests: "the top 8% (5) of your 62 taxa against all 62"
     mbSetObj$analSet$ora.background$kind <- complete.sel$kind;
@@ -459,6 +462,7 @@ CalculateGseaScore <- function(mbSetObj){
 
   # adjusted over EVERY set tested, before the sets with no leading edge are left out of the table
   n.tested <- nrow(gsea.res);
+  tested.sizes <- gsea.res$size;
   gsea.res$holm <- p.adjust(gsea.res$pval, "holm");
 
   # filter to sets with leading edge
@@ -497,7 +501,8 @@ CalculateGseaScore <- function(mbSetObj){
   mbSetObj$analSet$ora.hits <- hits;
   # what the test was run over, so every result surface can say it: the ranking itself, no background
   mbSetObj$analSet$ora.background <- list(mode = "ranked", background = length(ranked.vec), query = length(ranked.vec),
-                                          query.input = n.scored, sets.tested = n.tested, source = "the ranked list itself");
+                                          query.input = n.scored, sets.tested = n.tested, source = "the ranked list itself",
+                                          set.size.median = stats::median(tested.sizes), sets.small = sum(tested.sizes < 5));
   fast.write(res.mat, file = "tsea_gsea_result.csv");
 
   tryCatch({
