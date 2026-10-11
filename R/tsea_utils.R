@@ -1276,11 +1276,11 @@ PlotEnrichNet.Overview<-function(hits, pvals){
   cols <- color_scale("red", "#E5C494");
   V(g)$color <- cols[sapply(pvalue, getIdx, min(pvalue), max(pvalue))];
 
-  cnt <- hits + 2;
-  names(cnt) <- id;
-  cnt2 <- cnt[V(g)$name];
-  V(g)$size <- log(cnt2, base=10) * 10; ## cnt2/sum(cnt2) * 100;
-  #V(g)$size <- cnt2/sum(cnt2) * 10;
+  # a set's size is its number of hits, spread over the range the enrichment network viewer draws (8 to 20), so the sets with the most and the
+  # fewest hits differ whatever the counts are
+  sz <- .enrnet.rescale(log10(hits + 1), 8, 20, 12);
+  names(sz) <- id;
+  V(g)$size <- sz[V(g)$name];
     
   # layout
   pos.xy <- layout_with_fr(g);
