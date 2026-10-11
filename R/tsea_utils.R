@@ -120,7 +120,7 @@ SpeciesMappingExact<-function(qvec, q.type){
     hit.inx <- match(tolower(qvec), tolower(species.db$GOLD_ID));
     match.values <- species.db$GOLD_ID[hit.inx];
     match.state[!is.na(hit.inx)] <- 1;
-  }else if(q.type %in% c("mixed","species","strain")){
+  }else if(q.type %in% c("genus","species","strain","mixed")){   # one table holds the names of every rank, so a genus name is mapped as any name
     hit.inx <- match(tolower(qvec), tolower(species.db$taxa));
     # not spelled exactly as in the table: try the tidied / current NCBI name
     miss <- is.na(hit.inx);
@@ -376,7 +376,9 @@ CalculateHyperScore <- function(mbSetObj, background = NULL){
 
     AddErrMsg("No matches were found in the selected taxon set library!");
 
-    if(grepl("_species$", mbSetObj$dataSet$tset.type)){
+    if(grepl("_genus$", mbSetObj$dataSet$tset.type)){
+      AddErrMsg("Genus-level taxa set was selected: verify that your list contains genus names!");
+    }else if(grepl("_species$", mbSetObj$dataSet$tset.type)){
       AddErrMsg("Species-level taxa set was selected: verify that your list contains species names!");
     }else if(grepl("_strain$", mbSetObj$dataSet$tset.type)){
       AddErrMsg("Strain-level taxa set was selected: verify that your list contains strain names!");
