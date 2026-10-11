@@ -182,11 +182,18 @@ SpeciesMappingExact<-function(qvec, q.type){
 #'Calculate enrichment score.
 #'@description This function calculates the enrichment score for TSEA.
 #'@param mbSetObj Input the name of the mbSetObj.
+#'@param background Optional character vector of the taxa measured in the study. When given, chance is
+#'defined by what could have been seen: the background is the measured taxa that are also in the library,
+#'a set's size is its measured members, the query is the query taxa that are in that background, and
+#'only sets with at least two measured members are tested (the multiple-testing correction runs over all
+#'of them). When NULL (the default) or empty, the whole library is the background. A "source" attribute on
+#'the vector (a short phrase naming where the list came from) is kept with the result, in
+#'\code{analSet$ora.background}.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
 #'License: GNU GPL (>= 2)
 #'@export
-CalculateHyperScore <- function(mbSetObj){
+CalculateHyperScore <- function(mbSetObj, background = NULL){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
@@ -207,11 +214,37 @@ CalculateHyperScore <- function(mbSetObj){
     
   # total uniq cmpds in the current mset lib
   uniq.count <- length(unique(unlist(current.mset, use.names = FALSE)));
+
+  # With a list of the taxa measured in the study, chance is defined by what could have been seen: the
+  # background is the measured taxa that are in the library, a set counts only its measured members, and the
+  # query is the query taxa inside that background. Without one, the whole library is the background.
+  q.input <- q.size;
+  bg.source <- attr(background, "source");
+  use.bg <- length(background) > 0;
+  if(use.bg){
+    background <- unique(as.character(background));
+    if(!identical(mbSetObj$dataSet$q.type, "taxa")){
+      background <- unique(.canonical.taxon.name(background));  # the same names the query and the sets are read in
+    }
+    current.mset <- lapply(current.mset, function(x){x[x %in% background]});
+    uniq.count <- length(unique(unlist(current.mset, use.names = FALSE)));
+    ora.vec <- ora.vec[ora.vec %in% unlist(current.mset, use.names = FALSE)];
+    q.size <- length(ora.vec);
+    if(q.size==0) {
+      AddErrMsg("None of the query taxa was both measured in the study and present in the selected taxon set library!");
+      return(0);
+    }
+  }
+
   # A set of fewer than two members is not tested (one taxon cannot be "enriched"). Filtered by size alone, before
-  # any test, so the family the p-values are adjusted over never depends on the hits; the background stays the
-  # whole library (counted above).
+  # any test, so the family the p-values are adjusted over never depends on the hits; the background is counted above.
   current.mset <- current.mset[lengths(current.mset) >= 2];
   set.size<-length(current.mset);
+
+  if(use.bg && set.size==0){
+    AddErrMsg("No taxon set has two or more of the measured taxa, so there is nothing to test!");
+    return(0);
+  }
 
   if(set.size ==1){
     AddErrMsg("Cannot perform enrichment analysis on a single metabolite set!");
@@ -266,6 +299,10 @@ CalculateHyperScore <- function(mbSetObj){
   # download result
   mbSetObj$analSet$ora.mat = signif(res.mat[ord.inx,],3);
   mbSetObj$analSet$ora.hits = hits;
+  # what the test was run against, so every result surface can say it
+  mbSetObj$analSet$ora.background = list(mode = ifelse(use.bg, "measured", "library"),
+                                         background = uniq.count, query = q.size, query.input = q.input, sets.tested = set.size,
+                                         source = if(use.bg && !is.null(bg.source)) as.character(bg.source)[1] else "");
   fast.write(mbSetObj$analSet$ora.mat, file="tsea_ora_result.csv");
 
   # Safe-Handshake: Arrow save with verification

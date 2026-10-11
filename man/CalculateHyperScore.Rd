@@ -4,10 +4,18 @@
 \alias{CalculateHyperScore}
 \title{Calculate enrichment score.}
 \usage{
-CalculateHyperScore(mbSetObj)
+CalculateHyperScore(mbSetObj, background = NULL)
 }
 \arguments{
 \item{mbSetObj}{Input the name of the mbSetObj.}
+
+\item{background}{Optional character vector of the taxa measured in the study. When given, chance is
+defined by what could have been seen: the background is the measured taxa that are also in the library,
+a set's size is its measured members, the query is the query taxa that are in that background, and
+only sets with at least two measured members are tested (the multiple-testing correction runs over all
+of them). When NULL (the default) or empty, the whole library is the background. A "source" attribute on
+the vector (a short phrase naming where the list came from) is kept with the result, in
+\code{analSet$ora.background}.}
 }
 \description{
 This function calculates the enrichment score for TSEA.
