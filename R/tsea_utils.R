@@ -327,7 +327,7 @@ CalculateHyperScore <- function(mbSetObj, background = NULL){
   }
 
   if(set.size ==1){
-    AddErrMsg("Cannot perform enrichment analysis on a single metabolite set!");
+    AddErrMsg("Cannot perform enrichment analysis on a single taxon set!");
     return(0);
   }
 
@@ -379,6 +379,8 @@ CalculateHyperScore <- function(mbSetObj, background = NULL){
   # download result
   mbSetObj$analSet$ora.mat = signif(res.mat[ord.inx,],3);
   mbSetObj$analSet$ora.hits = hits;
+  # the members each reported set was tested with (its measured members): the set's view marks the others as not tested
+  mbSetObj$analSet$ora.tested = current.mset[rownames(mbSetObj$analSet$ora.mat)];
   # what the test was run against, so every result surface can say it
   mbSetObj$analSet$ora.background = list(mode = ifelse(use.bg, "measured", "library"),
                                          background = uniq.count, query = q.size, query.input = q.input, sets.tested = set.size,
@@ -499,6 +501,8 @@ CalculateGseaScore <- function(mbSetObj){
 
   mbSetObj$analSet$ora.mat <- res.mat;
   mbSetObj$analSet$ora.hits <- hits;
+  # the members each reported set was tested with (those in the ranking): the set's view marks the others as not tested
+  mbSetObj$analSet$ora.tested <- setNames(lapply(rownames(res.mat), function(nm) current.mset[[nm]][current.mset[[nm]] %in% names(ranked.vec)]), rownames(res.mat));
   # what the test was run over, so every result surface can say it: the ranking itself, no background
   mbSetObj$analSet$ora.background <- list(mode = "ranked", background = length(ranked.vec), query = length(ranked.vec),
                                           query.input = n.scored, sets.tested = n.tested, source = "the ranked list itself",
@@ -571,8 +575,10 @@ PrepareEnrichNet<-function(mbSetObj){
   #calculate the enrichment fold change
   folds <- mbSetObj$analSet$ora.mat[,3]/mbSetObj$analSet$ora.mat[,2];
   names(folds) <- GetShortNames(rownames(mbSetObj$analSet$ora.mat));
-  hits <- mbSetObj$analSet$ora.mat[,3];
-  pvals <- mbSetObj$analSet$ora.mat[,4];
+  # named by set: on a one-row matrix m[,3] is a bare number, and the overview then had no set ids
+  m <- mbSetObj$analSet$ora.mat;
+  hits <- setNames(m[,3], rownames(m));
+  pvals <- setNames(m[,4], rownames(m));
   PlotEnrichNet.Overview(hits, pvals);
 }
 
@@ -946,13 +952,15 @@ GetHTMLMetSet<-function(mbSetObj, msetNm){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   
   hits <- mbSetObj$analSet$ora.hits;
-  # highlighting with different colors
-  mset <- current.mset[[msetNm]];
-  red.inx <- which(mset %in% hits[[msetNm]]);
-  mset[red.inx] <- paste("<font color=\"red\">", "<b>", mset[red.inx], "</b>", "</font>",sep="");
-
-  grey.inx <- which(!(mset %in% current.mset[[msetNm]]));
-  mset[grey.inx] <- paste("<font color=\"grey\">", "<b>", mset[grey.inx], "</b>", "</font>",sep="");
+  # the members the set was tested with; NULL for a result saved before they were recorded (then none can be called untested)
+  tested <- mbSetObj$analSet$ora.tested[[msetNm]];
+  # highlighting with different colors: hits red, members that were not tested grey
+  members <- current.mset[[msetNm]];
+  mset <- members;
+  red.inx <- which(members %in% hits[[msetNm]]);
+  grey.inx <- if(is.null(tested)) integer(0) else setdiff(which(!(members %in% tested)), red.inx);
+  mset[red.inx] <- paste("<font color=\"red\">", "<b>", members[red.inx], "</b>", "</font>",sep="");
+  mset[grey.inx] <- paste("<font color=\"grey\" title=\"not tested\">", "<b>", members[grey.inx], "</b>", "</font>",sep="");
 
   # get references
   matched.inx <- match(tolower(msetNm), tolower(current.msetlib$name))[1];
