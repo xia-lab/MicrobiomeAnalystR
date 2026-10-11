@@ -307,6 +307,7 @@ CalculateHyperScore <- function(mbSetObj, background = NULL){
     print("Query taxa is missing!");
     return(0);
   }
+  list.names <- ora.vec;      # the list as given: the query of a significant list, the whole of a complete one (its rank is stated, and decides the library variant)
 
   if(all(is.na(ora.vec))) {
     print("Query taxa are all NA!");
@@ -325,6 +326,10 @@ CalculateHyperScore <- function(mbSetObj, background = NULL){
     attr(background, "source") <- paste0("all ", length(background), " taxa of your list");
   }
     
+  # the list's rank decides which variant of the chosen library it is tested against (ResolveTaxonSetLib); the rank and the variant are recorded
+  st <- .tsea.steer(mbSetObj, list.names, if(is.null(complete.sel)) background else NULL);
+  mbSetObj <- st$set;
+
   # total uniq cmpds in the current mset lib
   uniq.count <- length(unique(unlist(current.mset, use.names = FALSE)));
 
@@ -418,6 +423,7 @@ CalculateHyperScore <- function(mbSetObj, background = NULL){
   mbSetObj$analSet$ora.background = list(mode = ifelse(use.bg, "measured", "library"),
                                          background = uniq.count, query = q.size, query.input = q.input, sets.tested = set.size,
                                          source = if(use.bg && !is.null(bg.source)) as.character(bg.source)[1] else "");
+  mbSetObj$analSet$ora.background[names(st$rec)] <- st$rec;     # the rank tested and the library variant used
   # how big the tested sets are: a test over sets of two or three members has little power, and the result can say so
   mbSetObj$analSet$ora.background$set.size.median <- stats::median(set.num);
   mbSetObj$analSet$ora.background$sets.small <- sum(set.num < 5);
@@ -473,6 +479,10 @@ CalculateGseaScore <- function(mbSetObj){
     AddErrMsg("No valid scored taxa after mapping!");
     return(0);
   }
+
+  # the ranking's rank decides which variant of the chosen library it is scored against (ResolveTaxonSetLib); the rank and the variant are recorded
+  st <- .tsea.steer(mbSetObj, mapped.names);
+  mbSetObj <- st$set;
 
   ranked.vec <- scores;
   names(ranked.vec) <- mapped.names;
@@ -544,6 +554,7 @@ CalculateGseaScore <- function(mbSetObj){
   mbSetObj$analSet$ora.background <- list(mode = "ranked", background = length(ranked.vec), query = length(ranked.vec),
                                           query.input = n.scored, sets.tested = n.tested, source = "the ranked list itself",
                                           set.size.median = stats::median(tested.sizes), sets.small = sum(tested.sizes < 5));
+  mbSetObj$analSet$ora.background[names(st$rec)] <- st$rec;     # the rank tested and the library variant used
   fast.write(res.mat, file = "tsea_gsea_result.csv");
 
   tryCatch({
@@ -652,6 +663,95 @@ PrepareEnrichNet<-function(mbSetObj){
   ifelse(is.na(can), x, can)
 }
 
+# ---- taxon ranks ---------------------------------------------------------------------------------
+# Most taxon-set libraries MIX ranks in one set (genus, species and strain names side by side); their _species / _strain variants are
+# single-rank. The rank a list is written at decides which variant it is tested against, and the result states the rank it tested.
+# The rank is read from the NAME (the name-mapping database has no rank column to trust: its 'strain' column repeats species names):
+# one word is a genus; two words a species; more a strain ("Escherichia coli K-12", "Streptococcus phocae subsp. salmonis"). A
+# placeholder species is a species however long its tail is ("Eubacterium sp CAG 180", "Clostridium sp. CAG:127", "Firmicutes bacterium
+# CAG:110"), a genus label of the marker-gene databases is a genus however many words it has ("Clostridium sensu stricto 1",
+# "Ruminococcaceae UCG-014", "Lachnospiraceae NK4A136 group"), and a single word that ends as a family, order, class or phylum name does
+# is "higher" (above genus: "Lachnospiraceae", "Bacteroidota", "Firmicutes"). "Candidatus" and square brackets are not words of the name.
+.tsea.rank.levels <- c("genus", "species", "strain", "higher")
+.tsea.rank.pure <- 0.9;     # a list is "at" a rank when at least this share of its names are written at it; otherwise it is mixed
+
+.tsea.taxon.rank <- function(x){
+  x <- .tidy.taxon.name(x);
+  x <- trimws(gsub("[\\[\\]]", "", sub("^Candidatus +", "", x, ignore.case = TRUE), perl = TRUE));
+  w <- lengths(strsplit(x, " ", fixed = TRUE));
+  rk <- ifelse(w <= 1, "genus", ifelse(w == 2, "species", "strain"));
+  rk[w >= 3 & grepl("^[^ ]+ (sp\\.?|bacterium|cf\\.?|aff\\.?)( |$)", x)] <- "species";
+  rk[w >= 2 & grepl("( group| clade| cluster)$|sensu stricto|incertae sedis| UCG[- ]?[0-9]+$", x, ignore.case = TRUE)] <- "genus";
+  rk[w <= 1 & grepl("(aceae|ales|ineae|ota|etes|bacteria)$", x, ignore.case = TRUE)] <- "higher";
+  rk[is.na(x) | !nzchar(x)] <- NA_character_;
+  rk
+}
+
+#'The rank a list of taxon names is written at.
+#'@description Reads each name's rank from the name itself (one word a genus, two a species, more a strain; see the notes above
+#'\code{.tsea.taxon.rank}). A list is "at" a rank when at least 90 percent of its names are; otherwise it is "mixed" and the counts say its mix.
+#'@param x character vector of taxon names (duplicates are counted once; blanks and NA are left out).
+#'@return list(rank = "genus" | "species" | "strain" | "higher" | "mixed" (NA for an empty list), n.by.rank = named integer counts of the
+#'ranks present, n = number of distinct names).
+#'@export
+TaxonRankSummary <- function(x){
+  x <- unique(as.character(x));
+  rk <- .tsea.taxon.rank(x);
+  rk <- rk[!is.na(rk)];
+  n.by <- vapply(.tsea.rank.levels, function(l) sum(rk == l), integer(1));
+  n.by <- n.by[n.by > 0];
+  n <- sum(n.by);
+  rank <- if(n == 0) NA_character_ else if(max(n.by) / n >= .tsea.rank.pure) names(n.by)[which.max(n.by)] else "mixed";
+  list(rank = rank, n.by.rank = n.by, n = n)
+}
+
+#'The variant of a taxon-set library a list of this rank is tested against.
+#'@description The ONE place that decides it, called by \code{CalculateHyperScore} and \code{CalculateGseaScore} (so the web app and
+#'the AI workflows steer alike): a species-level list goes to the "_species" variant of the library chosen, a strain-level list to the
+#'"_strain" variant, when the library has one. A genus, mixed or higher-rank list, a library with no such variant, an unknown library,
+#'and a level the user chose themselves (a library that already ends in _species or _strain) stay as they are.
+#'@param tset.type the library key the user chose (see \code{SetTaxonSetLib}).
+#'@param rank the list's rank, from \code{TaxonRankSummary}.
+#'@return the library key to test against.
+#'@export
+ResolveTaxonSetLib <- function(tset.type, rank){
+  if(length(tset.type) != 1 || is.na(tset.type) || !(tset.type %in% names(.tsea.lib.files))) return(tset.type);
+  if(length(rank) != 1 || is.na(rank)) return(tset.type);
+  if(grepl("_(species|strain)$", tset.type)) return(tset.type);
+  suffix <- switch(rank, species = "_species", strain = "_strain", NULL);
+  if(is.null(suffix)) return(tset.type);
+  cand <- paste0(tset.type, suffix);
+  if(cand %in% names(.tsea.lib.files)) cand else tset.type
+}
+
+# Steer the library to the list's rank and say what was tested: returns list(set = mbSetObj, rec = the fields to add to analSet$ora.background).
+# list.names = the list tested (the query of a significant list, the whole of a complete or ranked list); background.names = a separate
+# measured list, whose own mix of ranks is recorded apart. Reloads the library globals only when the variant changes.
+.tsea.steer <- function(mbSetObj, list.names, background.names = NULL){
+  rs <- TaxonRankSummary(list.names);
+  rec <- list(rank = rs$rank, n.by.rank = rs$n.by.rank);
+  req <- mbSetObj$dataSet$tset.type;
+  if(length(req) == 1 && !is.na(req) && req %in% names(.tsea.lib.files)){
+    used <- ResolveTaxonSetLib(req, rs$rank);
+    have <- mbSetObj$dataSet$tset.used; if(is.null(have)) have <- req;
+    if(!identical(used, have)){
+      if(.tsea.load.lib(used)) have <- used;     # a variant that cannot be read leaves the library as it was
+    }
+    mbSetObj$dataSet$tset.used <- have;
+    rec$library <- have;
+    rec$library.requested <- req;
+    rec$library.steered <- !identical(have, req);
+    rec$library.sets <- length(current.mset);
+    rec$library.rank <- TaxonRankSummary(unlist(current.mset, use.names = FALSE))$rank;
+  }
+  if(length(background.names) > 0){
+    bs <- TaxonRankSummary(background.names);
+    rec$background.rank <- bs$rank;
+    rec$background.n.by.rank <- bs$n.by.rank;
+  }
+  list(set = mbSetObj, rec = rec)
+}
+
 # Taxon-set library file for each library key used by the web interface.
 .tsea.lib.files <- c(
   # mixed level
@@ -718,19 +818,29 @@ PrepareEnrichNet<-function(mbSetObj){
 #'License: GNU GPL (>= 2)
 #'@export
 SetTaxonSetLib <- function(mbSetObj, tset.type){
-  
+
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
   mbSetObj$dataSet$tset.type <- tset.type
-  
+  if(!.tsea.load.lib(tset.type)){
+    return(0);
+  }
+  # the variant the list is tested against: what the user chose, until CalculateHyperScore / CalculateGseaScore steer it (ResolveTaxonSetLib)
+  mbSetObj$dataSet$tset.used <- tset.type
+  return(.set.mbSetObj(mbSetObj))
+}
+
+# Read one taxon-set library into the globals the tests use (current.msetlib, current.mset, uniq.count). TRUE when it was read.
+.tsea.load.lib <- function(tset.type){
+
   filenm <- .tsea.lib.files[tset.type];
   if(is.na(filenm)){
     AddErrMsg(paste("Unknown taxon set library:", tset.type));
-    return(0);
+    return(FALSE);
   }
   libPath <- .get.tsea.lib.path(filenm);
   if(is.null(libPath)){
-    return(0);
+    return(FALSE);
   }
 
   current.msetlib <<- .readDataTable(libPath);
@@ -761,7 +871,7 @@ SetTaxonSetLib <- function(mbSetObj, tset.type){
   current.mset <<- ms.list;
   # total uniq cmpds in the mset lib
   uniq.count <<- length(unique(unlist(current.mset, use.names = FALSE)));
-  return(.set.mbSetObj(mbSetObj))
+  return(TRUE)
 }
 
 #'Create network for enrichmnet overview
