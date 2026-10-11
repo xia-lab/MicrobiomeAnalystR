@@ -33,10 +33,16 @@ Setup.MapData<-function(mbSetObj, qvec, method="ora"){
   lines <- lines[lines != ""];
   mbSetObj <- .get.mbSetObj(mbSetObj);
   mbSetObj$dataSet$tsea.method <- method;
+  mbSetObj$dataSet$tsea.input <- NULL;   # a new list starts without a chosen input kind (SetTseaListInput)
   if(method == "gsea"){
     parts <- strsplit(lines, "\t");
     mbSetObj$dataSet$species <- trimws(sapply(parts, `[`, 1));
     mbSetObj$dataSet$scores <- as.numeric(sapply(parts, `[`, 2));
+    # optional third and fourth columns: the list's p-value and adjusted p-value (FDR); blank where it has none
+    p.col <- suppressWarnings(as.numeric(sapply(parts, `[`, 3)));
+    f.col <- suppressWarnings(as.numeric(sapply(parts, `[`, 4)));
+    mbSetObj$dataSet$p.values <- if(any(is.finite(p.col))) p.col else NULL;
+    mbSetObj$dataSet$fdr.values <- if(any(is.finite(f.col))) f.col else NULL;
   } else {
     mbSetObj$dataSet$species <- lines;
   }
@@ -179,6 +185,68 @@ SpeciesMappingExact<-function(qvec, q.type){
   return(data.frame(html.res,check.names=FALSE));
 }
 
+#'Say what kind of list was entered, and where a complete list is cut.
+#'@description A taxon list is either a set of significant taxa (the default: tested against the taxa
+#'measured in the study, see \code{CalculateHyperScore}) or a COMPLETE list, every taxon measured with a
+#'score. A complete list is its own background: \code{CalculateHyperScore} then tests the part of it chosen
+#'by the cutoff against the whole list (set sizes are the list's members, sets with at least two of them
+#'are tested, the adjustment runs over all of those), and \code{CalculateGseaScore} scores the whole ranking.
+#'@param mbSetObj Input the name of the mbSetObj.
+#'@param input "significant" or "complete".
+#'@param cutoff.by "top" (the top fraction of the list by the size of its score, or by its order when it has
+#'no score), "fdr" or "p" (the taxa below a threshold of the list's own adjusted p / p column; refused when
+#'the list has no such column).
+#'@param cutoff the fraction for "top" (strictly between 0 and 1, default 0.10), the threshold for "fdr" / "p".
+#'@export
+SetTseaListInput <- function(mbSetObj = NA, input = "significant", cutoff.by = "top", cutoff = 0.10){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  if(!(length(input) == 1 && input %in% c("complete", "significant"))){
+    AddErrMsg("The list is either 'complete' or 'significant'.");
+    return(0);
+  }
+  if(!(length(cutoff.by) == 1 && cutoff.by %in% c("top", "fdr", "p"))){
+    AddErrMsg("The cutoff is a top fraction ('top'), an adjusted p-value ('fdr') or a p-value ('p').");
+    return(0);
+  }
+  if(!(is.numeric(cutoff) && length(cutoff) == 1 && is.finite(cutoff) && cutoff > 0 && (cutoff.by != "top" || cutoff < 1))){
+    AddErrMsg(if(cutoff.by == "top") "The top fraction must be more than 0 and less than 1 (0.10 is the top 10%)." else "The threshold must be more than 0.");
+    return(0);
+  }
+  mbSetObj$dataSet$tsea.input <- input;
+  mbSetObj$dataSet$tsea.cutoff.by <- cutoff.by;
+  mbSetObj$dataSet$tsea.cutoff <- cutoff;
+  return(.set.mbSetObj(mbSetObj));
+}
+
+# The query and the background of a COMPLETE list: the whole mapped list is the background, the part chosen by the cutoff is the query.
+# Returns list(query, background, kind, cutoff), or NULL with the reason recorded.
+.tsea.complete.query <- function(mbSetObj, nm.map, valid.inx){
+  all.vec <- nm.map$Strain[valid.inx];
+  pick <- function(v) if(length(v) == length(nm.map$Strain)) v[valid.inx] else NULL;
+  by <- mbSetObj$dataSet$tsea.cutoff.by; if(is.null(by)) by <- "top";
+  cutoff <- mbSetObj$dataSet$tsea.cutoff; if(is.null(cutoff)) cutoff <- 0.10;
+  if(by == "top"){
+    sc <- pick(mbSetObj$dataSet$scores);
+    n.q <- max(1, min(length(all.vec), floor(length(all.vec) * cutoff)));
+    # the largest change in either direction first (as MetaboAnalyst reads a complete list); the list order when it has no score
+    ord <- if(is.null(sc)) seq_along(all.vec) else order(-abs(ifelse(is.finite(sc), sc, NA)), na.last = TRUE);
+    query <- all.vec[ord][seq_len(n.q)];
+  } else {
+    v <- pick(if(by == "fdr") mbSetObj$dataSet$fdr.values else mbSetObj$dataSet$p.values);
+    col <- if(by == "fdr") "FDR" else "p-value";
+    if(is.null(v) || all(is.na(v))){
+      AddErrMsg(paste0("This list has no ", col, " column, so a ", col, " cutoff cannot be used; use the top fraction (for example the top 10%) instead."));
+      return(NULL);
+    }
+    query <- all.vec[!is.na(v) & v < cutoff];
+    if(length(query) == 0){
+      AddErrMsg(paste0("No taxon of the list has a ", col, " below ", cutoff, "."));
+      return(NULL);
+    }
+  }
+  list(query = unique(query), background = unique(all.vec), kind = if(by == "top") "top_fraction" else by, cutoff = cutoff);
+}
+
 #'Calculate enrichment score.
 #'@description This function calculates the enrichment score for TSEA.
 #'@param mbSetObj Input the name of the mbSetObj.
@@ -210,6 +278,18 @@ CalculateHyperScore <- function(mbSetObj, background = NULL){
   if(all(is.na(ora.vec))) {
     print("Query taxa are all NA!");
     return(0);
+  }
+
+  # A COMPLETE list (SetTseaListInput) is its own background: the query is the part of it the cutoff picks, the whole mapped list is
+  # what was measured. Whatever background was passed in is not used then.
+  complete.sel <- NULL;
+  if(identical(mbSetObj$dataSet$tsea.input, "complete")){
+    complete.sel <- .tsea.complete.query(mbSetObj, nm.map, valid.inx);
+    if(is.null(complete.sel)) return(0);
+    ora.vec <- complete.sel$query;
+    q.size <- length(ora.vec);
+    background <- complete.sel$background;
+    attr(background, "source") <- paste0("all ", length(background), " taxa of your list");
   }
     
   # total uniq cmpds in the current mset lib
@@ -303,6 +383,12 @@ CalculateHyperScore <- function(mbSetObj, background = NULL){
   mbSetObj$analSet$ora.background = list(mode = ifelse(use.bg, "measured", "library"),
                                          background = uniq.count, query = q.size, query.input = q.input, sets.tested = set.size,
                                          source = if(use.bg && !is.null(bg.source)) as.character(bg.source)[1] else "");
+  if(!is.null(complete.sel)){
+    # what was tested, for pages and manifests: "the top 8% (5) of your 62 taxa against all 62"
+    mbSetObj$analSet$ora.background$kind <- complete.sel$kind;
+    mbSetObj$analSet$ora.background$cutoff <- complete.sel$cutoff;
+    mbSetObj$analSet$ora.background$list.size <- length(complete.sel$background);
+  }
   fast.write(mbSetObj$analSet$ora.mat, file="tsea_ora_result.csv");
 
   # Safe-Handshake: Arrow save with verification
