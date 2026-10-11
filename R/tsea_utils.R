@@ -348,7 +348,7 @@ SetTseaListInput <- function(mbSetObj = NA, input = "significant", cutoff.by = "
 #'The level a list of taxon names is read at, and the libraries it can be tested against.
 #'@description A list can be tested against the libraries of the finest level it names or of a coarser one (a strain name rolls up to its
 #'species and to its genus, a genus name cannot roll down). The finest level is the rank of the list when its names are of one rank
-#'(\\code{TaxonRankSummary}), and the finest rank present when they are of several.
+#'(\code{TaxonRankSummary}), and the finest rank present when they are of several.
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@return Three strings: the finest level ("genus", "species", "strain"; "higher" for a list of families and above; "mixed" when it cannot be
 #'read), the rank of the list ("mixed" when its names are of several ranks), and a phrase with the number of names of each rank.
@@ -1422,7 +1422,7 @@ GetHTMLMetSet<-function(mbSetObj, msetNm){
     said <- paste0(said, ".");
   }else{
     n.tested <- sum(members %in% tested);
-    said <- paste0(said, "; ", n.tested, " of them ", if(n.tested == 1) "is" else "are", " in the list tested here, and only those count in the table (Total and Hits). ",
+    said <- paste0(said, "; ", n.tested, " of them ", if(n.tested == 1) "is" else "are", " in the list tested here, and only those count in the table (Total tested and Hits). ",
                    "Hits are red; grey members are not in the tested list, so they were not tested.");
   }
 
