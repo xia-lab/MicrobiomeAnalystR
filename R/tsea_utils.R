@@ -194,28 +194,45 @@ SpeciesMappingExact<-function(qvec, q.type){
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@param input "significant" or "complete".
 #'@param cutoff.by "top" (the top fraction of the list by the size of its score, or by its order when it has
-#'no score), "fdr" or "p" (the taxa below a threshold of the list's own adjusted p / p column; refused when
+#'no score), "score" (the taxa whose |score| passes the cutoff in the direction \code{cutoff.dir}; refused when the
+#'list has no score), "fdr" or "p" (the taxa below a threshold of the list's own adjusted p / p column; refused when
 #'the list has no such column).
-#'@param cutoff the fraction for "top" (strictly between 0 and 1, default 0.10), the threshold for "fdr" / "p".
+#'@param cutoff the fraction for "top" (strictly between 0 and 1, default 0.10), the threshold for "score" / "fdr" / "p".
+#'@param cutoff.dir for "score" only: ">=" (|score| at least the cutoff: a fold change or a statistic) or "<="
+#'(|score| at most the cutoff: a p-value-like score). When not given it follows the kind of score the list carries
+#'(\code{.tsea.score.kind}). The direction used is recorded in \code{analSet$ora.background$cutoff.dir}.
 #'@export
-SetTseaListInput <- function(mbSetObj = NA, input = "significant", cutoff.by = "top", cutoff = 0.10){
+SetTseaListInput <- function(mbSetObj = NA, input = "significant", cutoff.by = "top", cutoff = 0.10, cutoff.dir = NULL){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   if(!(length(input) == 1 && input %in% c("complete", "significant"))){
     AddErrMsg("The list is either 'complete' or 'significant'.");
     return(0);
   }
-  if(!(length(cutoff.by) == 1 && cutoff.by %in% c("top", "fdr", "p"))){
-    AddErrMsg("The cutoff is a top fraction ('top'), an adjusted p-value ('fdr') or a p-value ('p').");
+  if(!(length(cutoff.by) == 1 && cutoff.by %in% c("top", "score", "fdr", "p"))){
+    AddErrMsg("The cutoff is a top fraction ('top'), a score ('score'), an adjusted p-value ('fdr') or a p-value ('p').");
     return(0);
   }
   if(!(is.numeric(cutoff) && length(cutoff) == 1 && is.finite(cutoff) && cutoff > 0 && (cutoff.by != "top" || cutoff < 1))){
     AddErrMsg(if(cutoff.by == "top") "The top fraction must be more than 0 and less than 1 (0.10 is the top 10%)." else "The threshold must be more than 0.");
     return(0);
   }
+  if(!is.null(cutoff.dir) && !(length(cutoff.dir) == 1 && cutoff.dir %in% c(">=", "<="))){
+    AddErrMsg("The direction of a score cutoff is '>=' (|score| at least the cutoff) or '<=' (|score| at most the cutoff).");
+    return(0);
+  }
   mbSetObj$dataSet$tsea.input <- input;
   mbSetObj$dataSet$tsea.cutoff.by <- cutoff.by;
   mbSetObj$dataSet$tsea.cutoff <- cutoff;
+  mbSetObj$dataSet$tsea.cutoff.dir <- if(cutoff.by == "score") cutoff.dir else NULL;
   return(.set.mbSetObj(mbSetObj));
+}
+
+# What kind of score a complete list carries, by its values: "p" when every value lies in [0, 1] (a p-value-like score: small is
+# strong), else "effect" (a fold change or a statistic: any negative value, or a value beyond [0, 1]; large in size is strong).
+.tsea.score.kind <- function(sc){
+  sc <- sc[is.finite(sc)];
+  if(length(sc) == 0) return(NA_character_);
+  if(all(sc >= 0 & sc <= 1)) "p" else "effect"
 }
 
 # The query and the background of a COMPLETE list: the whole mapped list is the background, the part chosen by the cutoff is the query.
@@ -231,6 +248,22 @@ SetTseaListInput <- function(mbSetObj = NA, input = "significant", cutoff.by = "
     # the largest change in either direction first (as MetaboAnalyst reads a complete list); the list order when it has no score
     ord <- if(is.null(sc)) seq_along(all.vec) else order(-abs(ifelse(is.finite(sc), sc, NA)), na.last = TRUE);
     query <- all.vec[ord][seq_len(n.q)];
+  } else if(by == "score"){
+    sc <- pick(mbSetObj$dataSet$scores);
+    if(is.null(sc) || !any(is.finite(sc))){
+      AddErrMsg("This list has no score, so a score cutoff cannot be used; use the top fraction (for example the top 10%) instead.");
+      return(NULL);
+    }
+    kind <- .tsea.score.kind(sc);
+    # the direction is the user's when given; otherwise the kind of score decides (large is strong in a fold change or a statistic, small in a p-value)
+    dir <- mbSetObj$dataSet$tsea.cutoff.dir; if(is.null(dir)) dir <- if(kind == "p") "<=" else ">=";
+    pass <- is.finite(sc) & (if(dir == "<=") abs(sc) <= cutoff else abs(sc) >= cutoff);
+    query <- all.vec[pass];
+    if(length(query) == 0){
+      AddErrMsg(paste0("No taxon of the list has |score| ", dir, " ", cutoff, "."));
+      return(NULL);
+    }
+    return(list(query = unique(query), background = unique(all.vec), kind = "score", cutoff = cutoff, score.kind = kind, cutoff.dir = dir));
   } else {
     v <- pick(if(by == "fdr") mbSetObj$dataSet$fdr.values else mbSetObj$dataSet$p.values);
     col <- if(by == "fdr") "FDR" else "p-value";
@@ -393,6 +426,10 @@ CalculateHyperScore <- function(mbSetObj, background = NULL){
     mbSetObj$analSet$ora.background$kind <- complete.sel$kind;
     mbSetObj$analSet$ora.background$cutoff <- complete.sel$cutoff;
     mbSetObj$analSet$ora.background$list.size <- length(complete.sel$background);
+    if(!is.null(complete.sel$score.kind)){
+      mbSetObj$analSet$ora.background$score.kind <- complete.sel$score.kind;
+      mbSetObj$analSet$ora.background$cutoff.dir <- complete.sel$cutoff.dir;
+    }
   }
   fast.write(mbSetObj$analSet$ora.mat, file="tsea_ora_result.csv");
 
