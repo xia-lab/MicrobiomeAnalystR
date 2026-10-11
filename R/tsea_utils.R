@@ -771,9 +771,10 @@ PlotEnrichNet.Overview<-function(hits, pvals){
   w[lower.tri(w)] <- t(w)[lower.tri(w)];
 
   wd <- reshape2::melt(w);
-  wd <- wd[wd[,1] != wd[,2],];
+  # one row per pair of sets: the mirrored matrix lists A-B and B-A, which made two edges for every link
+  wd <- wd[match(as.character(wd[,1]), id) < match(as.character(wd[,2]), id),];
   wd <- wd[!is.na(wd[,3]),];
-  g <- graph_from_data_frame(wd[,-3], directed=F);
+  g <- graph_from_data_frame(wd[,-3], directed=F, vertices=id);
   E(g)$width <- sqrt(wd[,3]*20);
   g <- delete_edges(g, E(g)[wd[,3] < 0.2]);
   idx <- unlist(sapply(V(g)$name, function(x) match(x,id)));
@@ -806,10 +807,13 @@ PlotEnrichNet.Overview<-function(hits, pvals){
   }
     
   edge.mat <- as_edgelist(g);
-  edge.mat <- cbind(id=1:nrow(edge.mat), source=edge.mat[,1], target=edge.mat[,2]);
+  # seq_len, not 1:nrow: when no two sets overlap enough to keep an edge, 1:0 is c(1, 0) and the file carried two
+  # edges with no ends, so the network drew nothing. No edge left is an empty list; the sets still show as nodes.
+  edges <- if (nrow(edge.mat) == 0) list() else
+    cbind(id=seq_len(nrow(edge.mat)), source=edge.mat[,1], target=edge.mat[,2]);
 
   # covert to json
-  netData <- list(nodes=nodes, edges=edge.mat);
+  netData <- list(nodes=nodes, edges=edges);
   sink("tsea_network.json");
   cat(RJSONIO::toJSON(netData));
   sink();
