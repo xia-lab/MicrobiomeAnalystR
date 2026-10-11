@@ -630,6 +630,172 @@ PrepareEnrichNet<-function(mbSetObj){
   PlotEnrichNet.Overview(hits, pvals);
 }
 
+#'Prepare the data of the enrichment network viewer from a taxon set result.
+#'@description The enrichment network viewer (the one MetaboAnalyst opens for its enrichment results) draws two networks from one JSON
+#'and switches between them with its own View option: the sets only (nodes, edges: two sets are joined when they share at least 20% of
+#'their taxa) and the sets with the taxa that hit them (bnodes, bedges: a line from a set to each of its hit taxa). It is written from
+#'the result in state (\code{analSet$ora.mat} and \code{ora.hits}: the over-representation result and the rank-based one alike, the
+#'leading-edge taxa being the hits of the latter), for the top 50 sets as the page's own network. The JSON has the shape
+#'MetaboAnalyst's builder writes. The same call writes the result table the viewer offers to download.
+#'@param mbSetObj Input the name of the mbSetObj.
+#'@param netNm The name of the JSON file without its extension; the result table is named from it (enrichNet_ -> enrichment_).
+#'@return 1 when the network was written, 0 when it could not be (the reason is in the error messages).
+#'@export
+PrepareEnrichNetViewer <- function(mbSetObj, netNm = "enrichNet_tsea"){
+
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  enr.mat <- mbSetObj$analSet$ora.mat;
+  set.hits <- mbSetObj$analSet$ora.hits;
+  if(is.null(enr.mat) || nrow(enr.mat) == 0){
+    AddErrMsg("No taxon set enrichment result to draw a network from!");
+    return(0);
+  }
+  if(nrow(enr.mat) > 50){
+    enr.mat <- enr.mat[1:50, , drop=FALSE];      # the same top 50 as the page's own network
+  }
+  if(nrow(enr.mat) < 2){
+    AddErrMsg("Fewer than two taxon sets to display — aborting network build.");
+    return(0);
+  }
+
+  set.nms <- rownames(enr.mat);
+  n <- length(set.nms);
+  pvals <- setNames(enr.mat[, "Raw p"], set.nms);
+  hit.num <- setNames(enr.mat[, "hits"], set.nms);
+  hit.lists <- lapply(set.nms, function(s){
+    h <- as.character(set.hits[[s]]);
+    unique(h[!is.na(h) & nzchar(h)]);
+  });
+  names(hit.lists) <- set.nms;
+
+  # the set network: two sets are joined when they share at least 20% of the taxa of the library sets
+  members <- lapply(set.nms, function(s){
+    m <- current.mset[[s]];
+    if(is.null(m)) hit.lists[[s]] else m
+  });
+  pairs <- utils::combn(n, 2);
+  ovl <- mapply(function(i, j) overlap_ratio(members[[i]], members[[j]]), pairs[1, ], pairs[2, ]);
+  keep <- !is.na(ovl) & ovl >= 0.2;
+  e.df <- data.frame(from = set.nms[pairs[1, keep]], to = set.nms[pairs[2, keep]], weight = ovl[keep], stringsAsFactors = FALSE);
+  g <- igraph::graph_from_data_frame(e.df, directed = FALSE, vertices = data.frame(name = set.nms, stringsAsFactors = FALSE));
+
+  # colour by the p value, size by the number of hits
+  set.cols <- .enrnet.gradient(-log10(pmax(pvals, 1e-300) + min(pvals) / 2));
+  set.sizes <- .enrnet.rescale(log10(pmax(hit.num, 0) + 1), 8, 20, 12);
+  pos.xy <- .enrnet.layout(g, "Default");
+
+  nodes <- lapply(seq_len(n), function(i){
+    list(id = set.nms[i], pwId = set.nms[i], label = set.nms[i], size = set.sizes[i], true_size = set.sizes[i],
+         molType = "pathway", colorb = set.cols[i], colorw = set.cols[i], pval = unname(pvals[i]),
+         hits = unname(hit.num[i]), posx = pos.xy[i, 1], posy = pos.xy[i, 2]);
+  });
+  edges <- lapply(seq_len(nrow(e.df)), function(k){
+    list(id = k, source = e.df$from[k], target = e.df$to[k], weight = e.df$weight[k], width = 0.5);
+  });
+
+  # the bipartite network: the sets and the taxa that hit them (a taxon named like a set is left out: node ids are unique)
+  taxa <- setdiff(unique(unlist(hit.lists, use.names = FALSE)), set.nms);
+  b.from <- unlist(lapply(set.nms, function(s) rep(s, length(intersect(hit.lists[[s]], taxa)))), use.names = FALSE);
+  b.to <- unlist(lapply(set.nms, function(s) intersect(hit.lists[[s]], taxa)), use.names = FALSE);
+  if(is.null(b.from)){ b.from <- character(0); b.to <- character(0); }
+  bg <- igraph::graph_from_data_frame(data.frame(from = b.from, to = b.to, stringsAsFactors = FALSE), directed = FALSE,
+                                      vertices = data.frame(name = c(set.nms, taxa), stringsAsFactors = FALSE));
+  deg <- as.numeric(igraph::degree(bg));
+  is.set <- seq_along(deg) <= n;
+  b.cols <- rep("#6CD0D0", length(deg));
+  b.cols[is.set] <- .enrnet.gradient(.enrnet.rescale(deg[is.set], 0, 1, 0.5));
+  b.sizes <- .enrnet.rescale(log10(deg + 1), 6, 20, 13);
+  b.sizes[is.set] <- set.sizes;
+  b.pos <- .enrnet.layout(bg, "Default");
+  b.nms <- igraph::V(bg)$name;
+  bnodes <- lapply(seq_along(b.nms), function(i){
+    list(id = b.nms[i], label = b.nms[i], size = b.sizes[i], colorb = b.cols[i], colorw = b.cols[i], true_size = b.sizes[i],
+         molType = if(is.set[i]) "pathway" else "compound", posx = b.pos[i, 1], posy = b.pos[i, 2]);
+  });
+  bedges <- lapply(seq_along(b.from), function(k){
+    list(id = paste0("b", k), source = b.to[k], target = b.from[k]);
+  });
+
+  # the table of the viewer and the file it offers to download
+  csv.mat <- enr.mat;
+  colnames(enr.mat) <- gsub("[ .]", "_", colnames(enr.mat));
+  colnames(enr.mat)[colnames(enr.mat) == "hits"] <- "Hits";
+  fast.write(enr.mat, file = paste0(gsub("enrichNet", "enrichment", netNm), ".csv"), row.names = TRUE);
+  enr <- apply(enr.mat, 1, as.list);
+
+  # RJSONIO writes the names of a list as keys without escaping them: a set named with a quote or a backslash would break the JSON
+  hits.json <- hit.lists;
+  names(hits.json) <- gsub("([\"\\\\])", "\\\\\\1", names(hits.json));
+  netData <- list(nodes = nodes, edges = edges, bnodes = bnodes, bedges = bedges, enr = unname(enr), id = names(enr),
+                  sigCmpds = "", sizes = NULL, hits = hits.json, genelist = NULL, analType = "tsea", pwType = "taxon",
+                  org = "NA", backgroundColor = list("#f5f5f5", "#0066CC"), naviString = "EnrichNetwork");
+  writeLines(enc2utf8(RJSONIO::toJSON(netData)), paste0(netNm, ".json"), useBytes = TRUE);
+
+  # kept for the viewer's Layout option (UpdateNetworkLayout)
+  pheno.comps <- list();
+  pheno.comps[["enrichNet"]] <- g;
+  pheno.comps[["enrichNet_bipartite"]] <- bg;
+  pheno.comps <<- pheno.comps;
+
+  return(1);
+}
+
+#'Positions for the enrichment network on screen, by the layout the viewer's Layout option names.
+#'@description The viewer asks for a new layout of the network it shows (the sets only or the sets with their taxa) and draws the
+#'positions it gets back. The networks are those PrepareEnrichNetViewer kept.
+#'@param algo The layout: Default, FrR, circle, random, lgl or gopt.
+#'@param filenm The JSON file to write: the id and the position of every node.
+#'@param curr.nm The network: enrichNet or enrichNet_bipartite.
+#'@return The name of the file written.
+#'@export
+UpdateNetworkLayout <- function(algo, filenm, curr.nm = "enrichNet"){
+
+  g <- pheno.comps[[curr.nm]];
+  pos.xy <- .enrnet.layout(g, algo);
+  nms <- igraph::V(g)$name;
+  nodes <- lapply(seq_along(nms), function(i) list(id = nms[i], x = pos.xy[i, 1], y = pos.xy[i, 2]));
+  writeLines(enc2utf8(RJSONIO::toJSON(list(nodes = nodes))), filenm, useBytes = TRUE);
+  return(filenm);
+}
+
+# orange to fire-brick, the viewer's colours for a p value; values that are all the same get the middle colour (a gradient needs a range)
+.enrnet.gradient <- function(x){
+  col <- grDevices::colorRampPalette(c("#FFA500", "#FF4500", "#B22222"))(100);
+  if(length(unique(x)) < 2) return(rep(col[50], length(x)));
+  col[as.integer(cut(x, breaks = seq(min(x), max(x), length.out = 101), include.lowest = TRUE))]
+}
+
+# x rescaled to [from, to]; all the same: `same`
+.enrnet.rescale <- function(x, from, to, same){
+  x <- unname(x);
+  if(length(x) == 0 || max(x) == min(x)) return(rep(same, length(x)));
+  (x - min(x)) / (max(x) - min(x)) * (to - from) + from
+}
+
+# the same picture for the same network: a layout that draws on the random numbers is run under a fixed seed, and the caller's random state is kept
+.enrnet.layout <- function(g, algo = "Default"){
+  vc <- igraph::vcount(g);
+  if(igraph::ecount(g) == 0 || vc < 3 || algo == "circle") return(igraph::layout_in_circle(g));
+  rs <- if(exists(".Random.seed", envir = globalenv(), inherits = FALSE)) get(".Random.seed", envir = globalenv()) else NULL;
+  on.exit(if(is.null(rs)) suppressWarnings(rm(".Random.seed", envir = globalenv())) else assign(".Random.seed", rs, envir = globalenv()));
+  set.seed(8574);
+  if(algo == "FrR"){
+    igraph::layout_with_fr(g)
+  }else if(algo == "random"){
+    igraph::layout_randomly(g)
+  }else if(algo == "lgl"){
+    igraph::layout_with_lgl(g)
+  }else if(algo == "gopt"){
+    igraph::layout_with_graphopt(g)
+  }else if(vc > 5000){
+    igraph::layout_with_lgl(g)
+  }else if(vc < 100){
+    igraph::layout_with_kk(g)
+  }else{
+    igraph::layout_with_fr(g)
+  }
+}
+
 #'Set the microbe set library
 #'@description This function sets the microbe
 # ---- taxon name canonicalisation -------------------------------------------------------------
