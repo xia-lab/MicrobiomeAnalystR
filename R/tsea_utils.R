@@ -777,20 +777,26 @@ ResolveTaxonSetLib <- function(tset.type, rank){
   host_diet_species = "tsea_host_diet_lifestyle_species.csv",
   host_drug_species = "tsea_host_medication_species.csv",
   env_species       = "tsea_environment_species.csv",
+  mic_int_species   = "tsea_microbiome_int_species.csv",
   food_matrix_species = "tsea_food_matrix_species.csv",
   # strain level
   host_int_strain   = "tsea_host_int_strain.csv",
+  host_ext_strain   = "tsea_host_ext_strain.csv",
+  host_diet_strain  = "tsea_host_diet_lifestyle_strain.csv",
+  host_drug_strain  = "tsea_host_medication_strain.csv",
   env_strain        = "tsea_environment_strain.csv",
   mic_int_strain    = "tsea_microbiome_int_strain.csv",
   food_matrix_strain = "tsea_food_matrix_strain.csv",
-  # genus level: the library curation ships tsea_<category>_genus.csv one file at a time. A genus list is tested against the variant
-  # when the file is there and against the mixed library, said so, when it is not.
+  # genus level: the library curation ships a _genus file for every category (mic_met and gene included). A genus list is tested against
+  # the variant when the file is there and against the mixed library, said so, when it is not.
   host_int_genus    = "tsea_host_int_genus.csv",
   host_ext_genus    = "tsea_host_ext_genus.csv",
   host_diet_genus   = "tsea_host_diet_lifestyle_genus.csv",
   host_drug_genus   = "tsea_host_medication_genus.csv",
   env_genus         = "tsea_environment_genus.csv",
+  mic_met_genus     = "taxon_metabolite_tsea_genus.csv",
   mic_int_genus     = "tsea_microbiome_int_genus.csv",
+  gene_genus        = "tsea_host_snps_genus.csv",
   food_matrix_genus = "tsea_food_matrix_genus.csv"
 );
 
