@@ -35,5 +35,5 @@ Compute alpha diversity indices of datasets and plot summary figure, adapted fro
 \author{
 Jeff Xia \email{jeff.xia@mcgill.ca}
 McGill University, Canada
-License: GNU GPL (>= 2)
+License: MIT
 }

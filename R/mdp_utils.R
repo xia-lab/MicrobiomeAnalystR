@@ -15,7 +15,7 @@
 #'to group the samples.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 PerformAlphaDiversityComp <- function(mbSetObj, opt, metadata, pair.wise = "false"){
   #print(metadata)
@@ -162,7 +162,7 @@ PerformNetworkCorrelation <- function(mbSetObj, taxrank, cor.method="pearson", c
 #'"dark" for the RColor brewer Dark2 palette.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import grid
 #'@import gridExtra
@@ -444,7 +444,7 @@ PrepareBoxPlot <- function(mbSetObj, taxrank, variable){
 #'as an interactive html plot.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import RColorBrewer
 #'@import viridis
@@ -1030,7 +1030,7 @@ prevalence_nsamples <- function(x) {
 #'or median /("med"/) counts across all samples or groups.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import reshape
 PlotOverallPieGraph<-function(mbSetObj, taxalvl, feat_cnt, calcmeth, 
@@ -1168,7 +1168,7 @@ PlotOverallPieGraph<-function(mbSetObj, taxalvl, feat_cnt, calcmeth,
 #'or median /("med"/) counts across all samples or groups.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import reshape
 PlotGroupPieGraph <- function(mbSetObj, taxalvl, metadata, clslevel,
@@ -1295,7 +1295,7 @@ PlotGroupPieGraph <- function(mbSetObj, taxalvl, metadata, clslevel,
 #'together small taxa. 
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@exportmbSetObj, taxalvl, smplmbSetObj, taxalvl, smplnm, feat_cnt, calcmethnm, feat_cnt, calcmeth
 #'@import reshape
 PlotSamplePieGraph<-function(mbSetObj, taxalvl, smplnm, feat_cnt, toptaxapie, pietoptaxaopt){
@@ -1417,7 +1417,7 @@ PlotSamplePieGraph<-function(mbSetObj, taxalvl, smplnm, feat_cnt, toptaxapie, pi
 #'classification. For instance, "Genus" to use the Genus level.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import reshape
 
@@ -1480,7 +1480,7 @@ PlotDataPieFromPie<-function(mbSetObj, taxalvl, metadata, clslevel,
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import reshape
 UpdatePieData<-function(mbSetObj, lowtaxa){
@@ -1535,7 +1535,7 @@ UpdatePieData<-function(mbSetObj, lowtaxa){
 #'@param interactive boolean, if true, return plotly else save png using Cairo
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 SavePiechartImg <- function(mbSetObj, taxalvl, pieName="", format="png", dpi=default.dpi, interactive=F) {
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -1592,7 +1592,7 @@ SavePiechartImg <- function(mbSetObj, taxalvl, pieName="", format="png", dpi=def
 #'it is set to 72.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 PlotPiechart <- function(mbSetObj, rel_perct, pieName, format="png", dpi=default.dpi) {
   
@@ -1665,7 +1665,7 @@ PlotPiechart <- function(mbSetObj, rel_perct, pieName, format="png", dpi=default
 #'it is set to 72.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import viridis
 PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName, metadata, 
@@ -1816,7 +1816,7 @@ PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName, metadata,
 #'it is set to 72.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import reshape
 PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
@@ -2043,7 +2043,7 @@ sink();
 #'it is set to 72.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import ggplot2
 #'@import viridis
@@ -2151,7 +2151,7 @@ sink();
 #'as an interactive html plot.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import data.table
 #'@import ape
@@ -2499,7 +2499,7 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
 #'it is set to 72.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 PlotFunAnotSummary<-function(mbSetObj, imgName, format="png",funanno, dpi=default.dpi){
   
@@ -2565,7 +2565,7 @@ PlotFunAnotSummary<-function(mbSetObj, imgName, format="png",funanno, dpi=defaul
 #'it is set to 72.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import reshape
 #'@import viridis
@@ -2879,7 +2879,7 @@ sink();
 #'version of the Stacked Bar plot using plotly.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import reshape
 #'@import ggplot2
@@ -3193,7 +3193,7 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
 #'level of the other variable (additive model) or it may depend on the level of the other variable (interaction model)." 
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import vegan
 PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pairwise=FALSE,
@@ -3431,7 +3431,7 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pai
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import reshape
 PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, facet2, imgOpt,
@@ -3751,7 +3751,7 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
 #'as an interactive html plot.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 PlotRarefactionCurve <- function(mbSetObj, data.src, linecolor, linetype, facet, step=5, 
                                  imgName, format="png", dpi=default.dpi, interactive = FALSE){
@@ -3843,7 +3843,7 @@ PlotRarefactionCurve <- function(mbSetObj, data.src, linecolor, linetype, facet,
 #'it is set to 72.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 PlotPhylogeneticTree <-function(mbSetObj, color, shape, taxa, treeshape, imgName, format="png", dpi=default.dpi){
 
@@ -3996,7 +3996,7 @@ GetHtMetaCpInfo <- function(mbSetObj, meta){
 #'it is set to 72.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import metacoder
 PrepareHeatTreePlot <- function(mbSetObj, meta, taxalvl, color, layoutOpt, comparison,
@@ -4084,7 +4084,7 @@ PrepareHeatTreePlot <- function(mbSetObj, meta, taxalvl, color, layoutOpt, compa
 #'@param meta Input the name of the group.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import metacoder
 #'@import taxa
@@ -4128,7 +4128,7 @@ PrepareHeatTreePlotDataParse_cmf <- function(dm_otu_cmf,
 #'@description This functions plots the heat tree.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import metacoder
 PrepareHeatTreePlotDataParse_cmf_diff_table <- function(PrepareHeatTreePlotDataParse_cmf_res){#generate diff table for downloading
@@ -4173,7 +4173,7 @@ PrepareHeatTreePlotDataParse_cmf_diff_table <- function(PrepareHeatTreePlotDataP
 #'it is set to 72.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import metacoder
 #'@import viridis
@@ -4612,7 +4612,7 @@ PrepareHeatTreePlotAbR <- function(dm = dm, tax_dm = tax_dm, taxalvl = taxalvl, 
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import Tax4Fun
 

@@ -13,5 +13,5 @@ produced by MicrobiomeAnalystR for further processing and analysis.
 \author{
 Jeff Xia \email{jeff.xia@mcgill.ca}
 McGill University, Canada
-License: GNU GPL (>= 2)
+License: MIT
 }

@@ -15,5 +15,5 @@ This function extracts necessary data to create a piechart.
 \author{
 Jeff Xia \email{jeff.xia@mcgill.ca}
 McGill University, Canada
-License: GNU GPL (>= 2)
+License: MIT
 }

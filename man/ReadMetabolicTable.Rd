@@ -13,7 +13,7 @@ ReadMetabolicTable(mbSetObj, dataName, metType, idType)
 
 \item{idType}{One of compound name,KEGG or HMDB ID. Only applicable when the metType is metabolite. 
 McGill University, Canada
-License: GNU GPL (>= 2)}
+License: MIT}
 }
 \description{
 This is the main function read in the metabolomics data

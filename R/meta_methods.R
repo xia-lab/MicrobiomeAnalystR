@@ -11,7 +11,7 @@
 #'@param dpi dots per inch resolution of image (default 72)
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'
 PerformMetaEffectSize <- function(mbSetObj=NA, imgName="", taxrank="OTU", selMeta, BHth=0.05, de.method="LM", ef.method="REML", format="png", dpi=default.dpi){
@@ -237,7 +237,7 @@ SetupMetaStats <- function(BHth, paramSet,analSet){
 #'@param dpi dots per inch resolution of image (default 72)
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank="Family", view.mode="ratio", format="png", dpi=default.dpi) {
 
@@ -673,7 +673,7 @@ bf_ratio <- function(phylo){
 #'@param dpi dots per inch resolution of image (default 72)
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 PlotBetaSummary <- function(mbSetObj, plotNm,taxalvl, sel.meta, alg, format="png", dpi=default.dpi){
   mbSetObj <- .get.mbSetObj(mbSetObj);

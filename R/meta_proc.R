@@ -272,7 +272,7 @@ PlotDataOverview<-function(imgNm){
 #'@param is.normalized Specify whether uploaded data is normalized or raw counts
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import phyloseq
 Read16SAbundDataMeta <- function(mbSetObj, dataName, format, taxa_type, ismetafile, is.normalized=F) {
@@ -307,7 +307,7 @@ SanityCheckSampleDataMeta <- function(mbSetObj=NA, dataName=""){
 #'@param metaName Input the file name of meta-data file name.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 ReadSampleTableMetaInd <- function(mbSetObj, dataName, metaName) {
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -332,7 +332,7 @@ ReadSampleTableMetaInd <- function(mbSetObj, dataName, metaName) {
 #'the OTU table and F if not.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import phyloseq
 CreatePhyloseqObjMeta<-function(mbSetObj, dataName, type, taxa_type, taxalabel,isNormInput){
@@ -357,7 +357,7 @@ CreatePhyloseqObjMeta<-function(mbSetObj, dataName, type, taxa_type, taxalabel,i
 #'@param smpl.perc Numeric, input the percentage of samples for which to filter low counts.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 
 ApplyAbundanceFilterMeta <- function(mbSetObj, dataName, filt.opt, count, smpl.perc){
@@ -380,7 +380,7 @@ ApplyAbundanceFilterMeta <- function(mbSetObj, dataName, filt.opt, count, smpl.p
 #'@param filtPerct Numeric, input the percentage cutoff for low variance. 
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 ApplyVarianceFilterMeta <- function(mbSetObj, dataName, filtopt, filtPerct){
   
@@ -410,7 +410,7 @@ ApplyVarianceFilterMeta <- function(mbSetObj, dataName, filtopt, filtPerct){
 #'M-values, "clr" for centered log ratio, and "none" for none.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import edgeR
 #'@import metagenomeSeq
@@ -438,7 +438,7 @@ PerformNormalizationMeta <- function(mbSetObj, dataName, rare.opt, scale.opt, tr
 #'to remove features occuring in <2 samples.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 SanityCheckDataMeta <- function(mbSetObj, dataName, filetype, disableFilter = FALSE){
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -460,7 +460,7 @@ SanityCheckDataMeta <- function(mbSetObj, dataName, filetype, disableFilter = FA
 #'@param fileName Input the name of selected dataset's taxa file
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 Read16STaxaTableMeta <- function(mbSetObj, dataName, fileName) {
     cat(fileName, dataName, "\n");
@@ -482,7 +482,7 @@ Read16STaxaTableMeta <- function(mbSetObj, dataName, fileName) {
 #'@param fileName Input the name of merged metadata file
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 ReadSampleTableMeta <- function(mbSetObj, fileName) {
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -603,7 +603,7 @@ GetMetaInfoMeta <- function(mbSetObj, dataName, type="disc"){
 #'@description This function determines if all annotated data are ready for meta-analysis
 #'@author Jeff Xia\email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 
 # Aggregate every study to the finest taxonomic rank whose names are shared
@@ -966,7 +966,7 @@ CheckMetaDataIntegrity <- function(mbSetObj, taxo_type="OTU", sample_var="NA"){
 #'Merge two or more datasets into merged phyloseq object
 #'@author Jeff Xia\email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 MergeDatasets <- function(mbSetObj, taxo_type, sample_var){
 

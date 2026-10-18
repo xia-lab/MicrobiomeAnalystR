@@ -4,7 +4,7 @@
 #'@param imgNm name of the image to output
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'
 
@@ -106,7 +106,7 @@ PlotMetaPCA <- function(imgNm, dpi, format, factor="NA"){
 #'@param dpi dots per inch resolution of image (default 72)
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'
 PlotMetaDensity <- function(imgNm, dpi=default.dpi, format="png", factor=""){
@@ -194,7 +194,7 @@ PlotMetaDensity <- function(imgNm, dpi=default.dpi, format="png", factor=""){
 #'@description 
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'
 ApplyMetaAutoScale <- function(apply="true"){

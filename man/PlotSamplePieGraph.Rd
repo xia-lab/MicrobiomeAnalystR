@@ -28,5 +28,5 @@ This functions plots sample-wise pie graphs of microbiome data.
 \author{
 Jeff Xia \email{jeff.xia@mcgill.ca}
 McGill University, Canada
-License: GNU GPL (>= 2)
+License: MIT
 }

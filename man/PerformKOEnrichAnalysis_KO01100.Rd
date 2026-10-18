@@ -16,5 +16,5 @@ using the KO01100 map.
 \author{
 Jeff Xia \email{jeff.xia@mcgill.ca}
 McGill University, Canada
-License: GNU GPL (>= 2)
+License: MIT
 }

@@ -20,7 +20,7 @@
 #'to remove features occuring in <2 samples.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 SanityCheckData <- function(mbSetObj, filetype, preFilter = "sample", rmConstant = TRUE){
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -216,7 +216,7 @@ SanityCheckData <- function(mbSetObj, filetype, preFilter = "sample", rmConstant
 #'to remove features occuring in <2 samples.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 
 
@@ -304,7 +304,7 @@ SanityCheckMetData <- function(mbSetObj,isNormMetInput, disableFilter = FALSE){
 #'@param smpl.perc Numeric, input the percentage of samples for which to filter low counts.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 
 ApplyAbundanceFilter <- function(mbSetObj, filt.opt, count, smpl.perc){
@@ -372,7 +372,7 @@ ApplyAbundanceFilter <- function(mbSetObj, filt.opt, count, smpl.perc){
 #'@param filtPerct Numeric, input the percentage cutoff for low variance. 
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 
 ApplyVarianceFilter <- function(mbSetObj, filtopt, filtPerct){
@@ -479,7 +479,7 @@ ApplyVarianceFilter <- function(mbSetObj, filtopt, filtPerct){
 #'@param filtPerct Numeric, input the percentage cutoff for low variance. 
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 
 ApplyMetaboFilter <- function(mbSetObj=NA, filter,  rsd){
@@ -594,7 +594,7 @@ ApplyMetaboFilter <- function(mbSetObj=NA, filter,  rsd){
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 UpdateSampleItems <- function(mbSetObj){
   
@@ -750,7 +750,7 @@ UpdateUploadedSampleItems <- function(mbSetObj){
 #'M-values, "clr" for centered log ratio, and "none" for none.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import edgeR
 #'@import metagenomeSeq
@@ -1022,7 +1022,7 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
 #'@param ratioNum Relevant only for biomarker analysis.  
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import edgeR
 #'@import metagenomeSeq
@@ -1207,7 +1207,7 @@ GetLibscale <- function(mbSetObj){
 #'"rarewo" to rarefy without replacemet to the minimum library depth.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 PerformRarefaction <- function(mbSetObj, data, rare.opt,rareDepth=NULL){
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -1318,7 +1318,7 @@ PerformRarefaction <- function(mbSetObj, data, rare.opt,rareDepth=NULL){
 #'@param variable Input the experimental factor.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import vegan
 
@@ -1431,7 +1431,7 @@ PlotRareCurve <- function(mbSetObj, graphName, variable){
 #'it is set to 72.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=default.dpi, dataName="", interactive=F){
 
@@ -1663,7 +1663,7 @@ PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=default.d
 #'@param imgNm name of the image to output
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'
 
@@ -1855,7 +1855,7 @@ PlotDensityView <- function(imgName, format="png",  init=0, autoScale=T,dpi=defa
 #'the OTU table and F if not.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import phyloseq
 CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){

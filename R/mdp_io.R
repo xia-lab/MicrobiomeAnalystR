@@ -16,7 +16,7 @@ SetCurrentSelectedTaxLevel<-function(taxLvl){
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import phyloseq
 Read16SAbundData <- function(mbSetObj, dataName, format, taxa_type, ismetafile, is.normalized) {
@@ -77,7 +77,7 @@ Read16SAbundData <- function(mbSetObj, dataName, format, taxa_type, ismetafile, 
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 
 Read16STabData <- function(mbSetObj, dataName) {
@@ -144,7 +144,7 @@ Read16STabData <- function(mbSetObj, dataName) {
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import phyloseq
 Read16SBiomData <- function(mbSetObj, dataName, taxa_type, ismetadata){
@@ -307,7 +307,7 @@ Read16SBiomData <- function(mbSetObj, dataName, taxa_type, ismetadata){
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import phyloseq
 #'@import data.table
@@ -404,7 +404,7 @@ ReadMothurData<-function(mbSetObj, dataName, taxdataNm, taxa_type){
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 Read16STaxaTable <- function(mbSetObj, dataName) {
   mydata <- .readDataTable(dataName);
@@ -482,7 +482,7 @@ if("Species" %in% colnames( mydata)){# for mapping to the database in mmp module
 #'@param metType whether a peak or metabolite intensity table
 #'@param idType One of compound name,KEGG or HMDB ID. Only applicable when the metType is metabolite. 
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 
 ReadMetabolicTable <- function(mbSetObj, dataName, metType, idType) {
@@ -637,7 +637,7 @@ return(.set.mbSetObj(mbSetObj));
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import reshape
 PlotSelectedSample <-function(mbSetObj, imgNm, smplID, OtuIdType, rel_perct, format="png", dpi=default.dpi){
@@ -707,7 +707,7 @@ PlotSelectedSample <-function(mbSetObj, imgNm, smplID, OtuIdType, rel_perct, for
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import stringr
 GetDataForPie<-function(data_n, datataxa, txlvl, OtuIdType, feat_cnt){

@@ -25,7 +25,7 @@
 #' @param jsonNm Character, input the name of the json file to output.
 #' @author Jeff Xia \email{jeff.xia@mcgill.ca}
 #' McGill University, Canada
-#' License: GNU GPL (>= 2)
+#' License: MIT
 #' @export
 #' @import vegan
 
@@ -62,7 +62,7 @@ PCoA3D.Anal <- function(mbSetObj, ordMeth, distName, taxrank, colopt, variable, 
 #' "triangle".
 #' @author Jeff Xia \email{jeff.xia@mcgill.ca}
 #' McGill University, Canada
-#' License: GNU GPL (>= 2)
+#' License: MIT
 #' @export
 #' @import ape
 #' @import viridis
@@ -206,7 +206,7 @@ PlotTreeGraph <- function(mbSetObj, plotNm, distnm, clstDist, metadata,
 #' it is set to 72.
 #' @author Jeff Xia \email{jeff.xia@mcgill.ca}
 #' McGill University, Canada
-#' License: GNU GPL (>= 2)
+#' License: MIT
 #' @export
 #' @import grid
 #' @import gridExtra
@@ -523,7 +523,7 @@ PlotBoxMultiMetabo <- function(mbSetObj, boxplotName, analysis.var, feat,plotTyp
 #' it is set to 150.
 #' @author Jeff Xia \email{jeff.xia@mcgill.ca}
 #' McGill University, Canada
-#' License: GNU GPL (>= 2)
+#' License: MIT
 #' @export
 #' @import pheatmap
 #' @import viridis
@@ -828,7 +828,7 @@ as_list <- to_plotly_list(p)
 #' @param grayscale Logical, default set to F.
 #' @author Jeff Xia \email{jeff.xia@mcgill.ca}
 #' McGill University, Canada
-#' License: GNU GPL (>= 2)
+#' License: MIT
 #' @export
 GetColorSchema <- function(mbSetObj, grayscale = F) {
   mbSetObj <- .get.mbSetObj(mbSetObj)

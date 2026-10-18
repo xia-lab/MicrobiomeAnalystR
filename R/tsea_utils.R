@@ -22,7 +22,7 @@ GetTseaCol <-function(mbSetObj, colInx){
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 Setup.MapData<-function(mbSetObj, qvec, method="ora"){
 
@@ -54,7 +54,7 @@ Setup.MapData<-function(mbSetObj, qvec, method="ora"){
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import xtable
 GetORATable<-function(mbSetObj){
@@ -72,7 +72,7 @@ GetORATable<-function(mbSetObj){
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 
 CrossReferencing <- function(mbSetObj, q.type){
@@ -378,7 +378,7 @@ GetTseaListLevel <- function(mbSetObj){
 #'\code{analSet$ora.background}.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 CalculateHyperScore <- function(mbSetObj, background = NULL){
   
@@ -672,7 +672,7 @@ CalculateGseaScore <- function(mbSetObj){
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 GetFinalNameMap<-function(mbSetObj){
   
@@ -714,7 +714,7 @@ GetFinalNameMap<-function(mbSetObj){
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 PrepareEnrichNet<-function(mbSetObj){
   
@@ -1148,7 +1148,7 @@ ResolveTaxonSetLib <- function(tset.type, rank){
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 SetTaxonSetLib <- function(mbSetObj, tset.type){
 
@@ -1221,7 +1221,7 @@ SetTaxonSetLib <- function(mbSetObj, tset.type){
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import igraph
 #'@import reshape

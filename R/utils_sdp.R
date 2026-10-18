@@ -13,7 +13,7 @@
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 
 GetGeneListStat <- function(mbSetObj){
@@ -36,7 +36,7 @@ GetGeneListStat <- function(mbSetObj){
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 
 UpdateListInput <- function(mbSetObj, minL, maxL=Inf){
@@ -65,7 +65,7 @@ UpdateListInput <- function(mbSetObj, minL, maxL=Inf){
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 ReadShotgunTabData <- function(mbSetObj, dataName, geneidtype,is.normalized) {
   
@@ -120,7 +120,7 @@ ReadShotgunTabData <- function(mbSetObj, dataName, geneidtype,is.normalized) {
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import biomformat
 ReadShotgunBiomData <- function(mbSetObj, dataName, geneidtype, module.type, ismetadata,is.normalized) {
@@ -180,7 +180,7 @@ ReadShotgunBiomData <- function(mbSetObj, dataName, geneidtype, module.type, ism
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import ggfortify
 PreparePCA4Shotgun <- function(mbSetObj, imgName,imgName2, format="json", inx1, inx2, inx3,
@@ -264,7 +264,7 @@ PreparePCA4Shotgun <- function(mbSetObj, imgName,imgName2, format="json", inx1, 
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import reshape
 PlotFunctionStack <-function(mbSetObj, summaryplot, functionlvl, abundcal, geneidtype, metadata,
@@ -488,7 +488,7 @@ sink();
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 PerformKOmapping <- function(mbSetObj, geneIDs, type){
   
@@ -547,7 +547,7 @@ PerformKOmapping <- function(mbSetObj, geneIDs, type){
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 
 PrepareQueryJson <- function(mbSetObj){
@@ -645,7 +645,7 @@ filtKOmap <- function(include, fileName){
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 PerformKOEnrichAnalysis_KO01100 <- function(mbSetObj, category, contain="all",file.nm){
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -843,7 +843,7 @@ LoadKEGGKO_lib<-function(category,contain="all"){
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 
 PerformKOProjection <- function(mbSetObj){

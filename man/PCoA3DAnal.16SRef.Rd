@@ -24,5 +24,5 @@ This function creates data for plotting PCoA.
 \author{
 Jeff Xia \email{jeff.xia@mcgill.ca}
 McGill University, Canada
-License: GNU GPL (>= 2)
+License: MIT
 }

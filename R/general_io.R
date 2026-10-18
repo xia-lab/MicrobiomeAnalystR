@@ -54,7 +54,7 @@
 #'@usage Init.mbSetObj()
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 Init.mbSetObj <- function(default.dpi=72){
 
@@ -208,7 +208,7 @@ Init.mbSetObj <- function(default.dpi=72){
 #'If performing Taxon Set Enrichment Analysis, use "tsea". 
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 SetModuleType <- function(mbSetObj, nm){
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -225,7 +225,7 @@ SetModuleType <- function(mbSetObj, nm){
 #'@param dataName Input the sample data file name.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 ReadSampleTable <- function(mbSetObj, fileName) {
   suppressMessages(library(stringr));
@@ -329,7 +329,7 @@ mydata <- sapply(mydata[,-1,drop=F], format, trim = TRUE)
 #'@param dataName Input the tree file name.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import phyloseq
 ReadTreeFile <- function(mbSetObj, fileName, dataName="",module.type) {

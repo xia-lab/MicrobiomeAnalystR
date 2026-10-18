@@ -3,7 +3,7 @@
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 PrepareMergedData <- function(mbSetObj, metadata, keepfeat){
   
@@ -42,7 +42,7 @@ PrepareMergedData <- function(mbSetObj, metadata, keepfeat){
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import phyloseq
 PerformRefDataMapping <- function(mbSetObj, refdataNm, taxo_type, sample_var, biome){
@@ -196,7 +196,7 @@ PerformRefDataMapping <- function(mbSetObj, refdataNm, taxo_type, sample_var, bi
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import vegan
 PCoA3DAnal.16SRef <- function(mbSetObj, barplotNm, ordMeth, distName, taxrank, metadata, format="png", dpi=default.dpi){
@@ -283,7 +283,7 @@ PCoA3DAnal.16SRef <- function(mbSetObj, barplotNm, ordMeth, distName, taxrank, m
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 PlotUsrRefPCoA3DScore <- function(mbSetObj, imgName, format="json", inx1, inx2, inx3, variable){
 

@@ -22,7 +22,7 @@
 #'marker gene data and "metageno" if performing RF on shotgun metagenomic data.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import randomForest
 RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank, impMeasure="MeanDecreaseAccuracy"){
@@ -132,7 +132,7 @@ RF.Anal <- function(mbSetObj, treeNum, tryNum, randomOn, variable, taxrank, impM
 #'@param width Width of the plot. Numeric, by default it is set to NA.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 PlotRF.Classify<-function(mbSetObj, feature, imgName, format="png", dpi=default.dpi, width=NA){
 
@@ -166,7 +166,7 @@ PlotRF.Classify<-function(mbSetObj, feature, imgName, format="png", dpi=default.
 #'@param width Width of the plot. Numeric, by default it is set to NA.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 PlotRF.VIP<-function(mbSetObj, feature, imgName, format="png", dpi=default.dpi, width=NA){
 
@@ -208,7 +208,7 @@ PlotRF.VIP<-function(mbSetObj, feature, imgName, format="png", dpi=default.dpi, 
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 PlotImpVar <- function(mbSetObj, imp.vec, xlbl, feature, color.BW=FALSE){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -323,7 +323,7 @@ PlotImpVar <- function(mbSetObj, imp.vec, xlbl, feature, color.BW=FALSE){
 #'for multiple group comparisons.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import MASS
 
@@ -514,7 +514,7 @@ PerformUnivarTest <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, t
 #'and "ffm" for the fitFeatureModel.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import metagenomeSeq
 
@@ -785,7 +785,7 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
 #'univariate analysis.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import MASS
 
@@ -974,7 +974,7 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
 #'"cividis", or "plasma".
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 PlotLEfSeSummary <- function(mbSetObj, ldaFeature, layoutOptlf, imgName, format="png", width = NA, dpi=default.dpi, colOpt="default") {
   
@@ -1075,7 +1075,7 @@ PlotLEfSeSummary <- function(mbSetObj, ldaFeature, layoutOptlf, imgName, format=
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 
 PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="default", color.BW=FALSE){
@@ -1207,7 +1207,7 @@ PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="defaul
 #'to use for RNAseq analysis.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 #'@import DESeq2
 
@@ -2270,7 +2270,7 @@ PerformANCOMBC2Uni <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, 
 #'@param shotgunid Only valid for SDP module, set to "NA".
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 
 FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, feat){
@@ -2394,7 +2394,7 @@ FeatureCorrelation <- function(mbSetObj, dist.name, taxrank, feat){
 #'it is set to 72.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 PlotCorr <- function(mbSetObj, imgName, format="png", dpi=default.dpi,appendnm, width=NA){
   
@@ -2577,7 +2577,7 @@ PlotCorr <- function(mbSetObj, imgName, format="png", dpi=default.dpi,appendnm, 
 #'@param shotgunid Only valid for SDP module, set to "NA".
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 
 
@@ -2900,7 +2900,7 @@ KendallCorrFunc <- function(var1, var2, data){
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 
 GenerateTemplates <- function(mbSetObj, variable){
@@ -3047,7 +3047,7 @@ GetMDI <- function(mbSetObj){
 #'@param mbSetObj Input the name of the mbSetObj.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 GetSigTable.UNIVAR<-function(mbSetObj){
   mbSetObj <- .get.mbSetObj(mbSetObj);

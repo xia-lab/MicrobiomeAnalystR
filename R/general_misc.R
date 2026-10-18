@@ -199,7 +199,7 @@ scale_colours = function(mat, col = rainbow(10), breaks = NA){
 #'@param fileName Input filename
 #'@author Jeff Xia\email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 .readDataTable <- function (fileName) {
   dat <- try(data.table::fread(fileName, header=TRUE, check.names=FALSE, blank.lines.skip=TRUE, data.table=FALSE));

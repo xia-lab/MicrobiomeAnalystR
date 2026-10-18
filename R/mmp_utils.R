@@ -122,7 +122,7 @@ CreateMMPFakeFile <- function(mbSetObj,isNormalized="true",isNormalizedMet="true
 #'to group the samples.
 #'@author Jeff Xia \email{jeff.xia@mcgill.ca}
 #'McGill University, Canada
-#'License: GNU GPL (>= 2)
+#'License: MIT
 #'@export
 
 PerformDEAnalyse<- function(mbSetObj, taxalvl="Genus",netType="gem",overlay,initDE=1,
