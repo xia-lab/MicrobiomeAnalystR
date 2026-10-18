@@ -789,6 +789,26 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
 #'@export
 #'@import MASS
 
+# Kruskal-Wallis p-value of every column of dat against the classes, computed together: the same statistic,
+# tie correction and chi-squared p-value as kruskal.test, identical values, a few times faster than one
+# kruskal.test per column. A table with missing values takes kruskal.test column by column (it drops them).
+.kruskal.pvalues <- function(dat, cls){
+  if(anyNA(dat)){
+    return(apply(dat, 2, function(x) kruskal.test(x, cls)$p.value));
+  }
+  cls <- factor(cls); n <- nrow(dat); k <- nlevels(cls);
+  r <- apply(dat, 2, rank);
+  if(is.null(dim(r))) r <- matrix(r, nrow = n);
+  rs <- rowsum(r, cls, reorder = TRUE);
+  ng <- as.vector(table(cls));
+  stat <- colSums(rs^2 / ng);
+  ties <- apply(dat, 2, function(x){ t <- rle(sort(x))$lengths; sum(t^3 - t) });
+  stat <- ((12 * stat / (n * (n + 1)) - 3 * (n + 1)) / (1 - ties / (n^3 - n)));
+  p <- pchisq(stat, k - 1, lower.tail = FALSE);
+  names(p) <- colnames(dat);
+  p
+}
+
 PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, isfunc, shotgunid, taxrank){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -815,7 +835,7 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
   
   set.seed(56290);
   #KW rank sum test
-  rawpvalues <- apply(dat3t, 2, function(x) kruskal.test(x, claslbl)$p.value);
+  rawpvalues <- .kruskal.pvalues(dat3t, claslbl);
   ord.inx <- order(rawpvalues);
   rawpvalues <- rawpvalues[ord.inx];
   clapvalues <- p.adjust(rawpvalues, method ="fdr");
