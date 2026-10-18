@@ -18,6 +18,28 @@
   return(mbSetObj);
 }
 
+# Saves a plot object (ggplot or plotly widget) built in the calling function. A plot keeps the
+# environment it was built in (its plot_env and every aes() mapping point to the function frame),
+# so a plain save() writes that whole frame along with it, mbSetObj included: tens of megabytes and
+# seconds per plot. The frame's large objects are set aside while the plot is saved and put back
+# afterwards; the plot and its small surroundings are saved as before. Unevaluated arguments are
+# left alone (reading one would evaluate it).
+.save.plot.light <- function(name, file, frame = parent.frame(), max.bytes = 2e6){
+  nms <- setdiff(ls(frame, all.names = TRUE), name);
+  if(length(nms) > 0){
+    nms <- nms[!rlang::env_binding_are_lazy(frame, nms) & !rlang::env_binding_are_active(frame, nms)];
+  }
+  big <- nms[vapply(nms, function(n){
+    tryCatch(as.numeric(object.size(get(n, envir = frame))) > max.bytes, error = function(e) FALSE)
+  }, logical(1))];
+  if(length(big) > 0){
+    stash <- mget(big, envir = frame);
+    rm(list = big, envir = frame);
+    on.exit(list2env(stash, envir = frame), add = TRUE);
+  }
+  save(list = name, envir = frame, file = file);
+}
+
 .get.mbSetObj <- function(mbSetObj=NA){
   if(.on.public.web){
     return(mbSet);

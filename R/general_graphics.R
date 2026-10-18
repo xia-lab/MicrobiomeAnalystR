@@ -793,7 +793,7 @@ as_list <- to_plotly_list(p)
   mbSetObj$analSet$heatmap.clust <- clstDist
   mbSetObj$analSet$heat.taxalvl <- taxrank
   mbSetObj$imgSet$heatmap_int <- plotwidget
-  save(p, file=plotwidget);
+  .save.plot.light("p", plotwidget);
 
   pstatic <- CreateStaticHeatmap(data1sc, fzAnno, colors, nrows, x_start, y_start, x_spacing, annotation, sz, bf, showColnm, showRownm, doclust, smplDist, clstDist, fzCol, fzRow)
 

@@ -2009,7 +2009,7 @@ box <- ggplot(data, aes(x = reorder(variable, value), y = value)) +
   print(box);
   dev.off();
 
-  save(box,file=rdaName);
+  .save.plot.light("box", rdaName);
       box <- box + theme(plot.margin = margin(5.5, 5.5, 5.5, 5.5, unit = "pt"))
 
     p <- ggplotly_modified(box, tempfile_path = paste0(getwd(), "/temp_file4plotly"));
@@ -2826,7 +2826,7 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
   # for plotly
     box <- box + theme(plot.margin = margin(5.5, 5.5, 5.5, 5.5, unit = "pt"))
 
-  save(box,file=rdaName);
+  .save.plot.light("box", rdaName);
     p <- ggplotly_modified(box, tempfile_path = paste0(getwd(), "/temp_file4plotly"));
 
  narm <- p[["x"]][["data"]]
@@ -3148,7 +3148,7 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
   }
     box <- box + theme( text = element_text(size = 14), axis.text.x = element_text(size = 9))
     box <- box + theme(plot.margin = margin(5.5, 5.5, 5.5, 5.5, unit = "pt"))
-  save(box,file=rdaName);
+  .save.plot.light("box", rdaName);
   print(box)
   dev.off();
   p <- ggplotly_modified(box, tempfile_path = paste0(getwd(), "/temp_file4plotly"));
@@ -3712,7 +3712,7 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
     box <- box + scale_fill_manual(values=c(x.colors)) + guides(fill=guide_legend(ncol=guide_num))
   }
   
-  save(box,file=rdaName);
+  .save.plot.light("box", rdaName);
   print(box+guides(fill=guide_legend(ncol=3)));
   dev.off();
       box <- box + theme(plot.margin = margin(5.5, 5.5, 5.5, 5.5, unit = "pt"))

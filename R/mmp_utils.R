@@ -1787,7 +1787,7 @@ CreatM2MHeatmap<-function(mbSetObj,htMode,overlay, taxalvl, plotNm,  format="png
   # Save annotated widget — inject annotations so stars/symbols appear in report
   pwidget <- to_widget(p)
   pwidget$x$layout$annotations <- as_list$layout$annotations
-  save(pwidget, file = plotwidget)
+  .save.plot.light("pwidget", plotwidget)
 
   if(is.null(current.msg)){
     current.msg<<-"null"
@@ -3325,7 +3325,7 @@ CreatM2MHeatmapList<-function(mbSetObj, plotNm,  format="png",
 
   plotwidget <- paste0(plotNm, ".rda")
   pwidget <- to_widget(p)
-  save(pwidget, file = plotwidget)
+  .save.plot.light("pwidget", plotwidget)
   
   if (viewOpt != "overview") {
     as_list[["layout"]][["width"]] <- max(map.width,1000)

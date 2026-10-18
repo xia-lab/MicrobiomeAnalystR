@@ -463,7 +463,7 @@ PlotFunctionStack <-function(mbSetObj, summaryplot, functionlvl, abundcal, genei
   print(box);
   dev.off();
  # for plotly
-  save(box,file=rdaName);
+  .save.plot.light("box", rdaName);
       box <- box + theme(plot.margin = margin(5.5, 5.5, 5.5, 5.5, unit = "pt"))
     p <- ggplotly_modified(box, tempfile_path = paste0(getwd(), "/temp_file4plotly"));
 

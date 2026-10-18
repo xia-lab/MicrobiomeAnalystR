@@ -3353,7 +3353,7 @@ don$color[don$FDR > sigLevel] <- "#808080"
                                max.overlaps = 15,
                                min.segment.length = 0,
                                inherit.aes = FALSE)
-    save(p,file=gsub("json","rda",fileName));
+    .save.plot.light("p", gsub("json","rda",fileName));
     Cairo::Cairo(file = fileName2, width = w, height = h,unit="in", type = format, bg = "white", dpi = 200)
     
     
