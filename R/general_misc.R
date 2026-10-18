@@ -316,21 +316,20 @@ fast_tax_glom_first <- function(physeq, taxrank){
 # needed to allow colSums to work
 condenseOTUs <- function(otutable, splitcol) {
 
-  otutable[[splitcol]] <- as.numeric(factor(otutable[[splitcol]], labels=c(1:length(unique(otutable[[splitcol]])))))
+  # one group per taxon, in the order of the sorted taxon names
+  grp <- as.integer(factor(otutable[[splitcol]]))
 
-  # split apply, combine
-  splits <- split(otutable, otutable[[splitcol]])
-  summed <- Map(colSums, splits)
-  summeddf <- Reduce(rbind, summed, init = NULL)
+  # sum each group's rows in one vectorized pass (rowsum); growing the result with
+  # Reduce(rbind) copied it once per group, quadratic in the number of taxa
+  counts <- as.matrix(otutable[, colnames(otutable) != splitcol, drop=FALSE])
+  storage.mode(counts) <- "double"
+  summeddf <- rowsum(counts, grp, reorder = TRUE)
 
-  #get rownames.
+  # rownames: the first OTU of each group
   # this needs to be changed to get most abundant OTU if thats what is used elsewhere
-  # rightnow it returns the first OTU in the group
-  newrownames <- Map(function(x){rownames(x)[[1]]}, splits)
-
-  #add back rowname and remove tax column
-  rownames(summeddf) <- newrownames
-  summeddf[, !colnames(summeddf) %in% c(splitcol), drop=FALSE]
+  first <- !duplicated(grp)
+  rownames(summeddf) <- rownames(otutable)[first][order(grp[first])]
+  summeddf
 }
 
 # need to return consistent color assignments for the same taxa
