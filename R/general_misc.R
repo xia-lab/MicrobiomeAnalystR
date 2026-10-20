@@ -1039,10 +1039,6 @@ rowcolFt =  function(x, fac, var.equal, which = 1L) {
 
 rowcoltt =  function(x, fac, tstatOnly, which, na.rm) {
  
-  if(.on.public.web){
-    dyn.load(.getDynLoadPath());
-  }
-  
   f = checkfac(fac)
   if (any(c((f$nrgrp > 2), (f$nrgrp <= 0))))
     stop("Number of groups is ", f$nrgrp, ", but must be >0 and <=2 for 'rowttests'.")
@@ -1050,7 +1046,7 @@ rowcoltt =  function(x, fac, tstatOnly, which, na.rm) {
   if (typeof(x) == "integer")
       x[] <- as.numeric(x)
 
-  cc = .Call("rowcolttests", x, f$fac, f$nrgrp, which-1L, na.rm)
+  cc = .rowcolttests(x, f$fac, f$nrgrp, which, na.rm)
     
   res = data.frame(statistic = cc$statistic,
                    dm        = cc$dm,
@@ -1061,6 +1057,45 @@ rowcoltt =  function(x, fac, tstatOnly, which, na.rm) {
 
   attr(res, "df") = cc$df    
   return(res)
+}
+
+## rowcoltt() and checkfac() follow genefilter (W. Huber, Artistic-2.0), whose compiled routine this
+## package no longer carries. .rowcolttests() gives the same numbers in vectorised base R: the one- or
+## two-sample (pooled variance) t statistic, mean difference and degrees of freedom of every row
+## (which = 1) or column (which = 2) of x. 'fac' holds 0/1, NA leaves a sample out; with na.rm = TRUE an
+## NA value is left out of its test (a NaN is not an NA: it is kept and makes the statistic NaN), and a
+## test with an empty group is NA throughout.
+.rowcolttests = function(x, fac, nrgrp, which, na.rm) {
+  if (!is.matrix(x) || !is.double(x))
+    stop("Invalid argument 'x': must be a real matrix.")
+  if (!is.logical(na.rm) || length(na.rm) != 1L || is.na(na.rm))
+    stop("'na.rm' must be TRUE or FALSE")
+  xm <- if (which == 2L) t(x) else x
+  if (length(fac) != ncol(xm))
+    stop(sprintf("length(fac)=%d, %s(x)=%d, should be the same.", length(fac),
+                 if (which == 2L) "nrow" else "ncol", ncol(xm)))
+  grp <- function(g) {                       # n, mean and sum of squares about the mean, per test
+    m <- xm[, which(fac == g), drop = FALSE]
+    gone <- if (na.rm) is.na(m) & !is.nan(m) else matrix(FALSE, nrow(m), ncol(m))
+    n <- ncol(m) - rowSums(gone)
+    mu <- rowSums(replace(m, gone, 0)) / n
+    list(n = n, mean = mu, ss = rowSums(replace((m - mu)^2, gone, 0)))
+  }
+  g0 <- grp(0L)
+  if (nrgrp == 1L) {
+    df <- g0$n - 1
+    dm <- g0$mean
+    stat <- sqrt(df * g0$n) * dm / sqrt(g0$ss)
+    none <- g0$n == 0
+  } else {
+    g1 <- grp(1L)
+    df <- g0$n + g1$n - 2
+    dm <- g0$mean - g1$mean
+    stat <- sqrt(df * g0$n * g1$n / (g0$n + g1$n)) * dm / sqrt(g0$ss + g1$ss)
+    none <- g0$n == 0 | g1$n == 0
+  }
+  df[none] <- dm[none] <- stat[none] <- NA_real_
+  list(statistic = as.numeric(stat), dm = as.numeric(dm), df = as.numeric(df))
 }
 
 checkfac = function(fac) {
@@ -1084,17 +1119,6 @@ checkfac = function(fac) {
     stop("'fac' must not be negative.")
     
   return(list(fac=fac, nrgrp=nrgrp))
-}
-
-
-.getDynLoadPath <- function() {
-    
- if(dir.exists("/Users/lzy/NetBeansProjects/MicrobiomeAnalyst")){
-        path <- "/Users/lzy/NetBeansProjects/MicrobiomeAnalyst/target/MicrobiomeAnalyst-3.15/resources/rscripts/microbiomeanalystr/src/MicrobiomeAnalyst.so"
-    }else{
-        path = paste0(rpath, "rscripts/MicrobiomeAnalystR/src/MicrobiomeAnalyst.so");
-}
-     return(path)  
 }
 
 # obtain a numeric matrix, exclude comments if any
