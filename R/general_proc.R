@@ -164,16 +164,32 @@ SanityCheckData <- function(mbSetObj, filetype, preFilter = "sample", rmConstant
   samname_same_number <- sum(row.names(mbSetObj$dataSet$sample_data) %in% colnames(data.proc));
   if(samname_same_number){
     mis.num <- length(which(!row.names(mbSetObj$dataSet$sample_data) %in% colnames(data.proc)))
+    # said only when a sample is missing ("A total of 0 sample names were not included" was said of every complete table)
     if(mis.num==1){
       current.msg <<- paste0("One sample name was not included in the OTU/ASV abundance table.");
-      
-    }else{
+    }else if(mis.num > 1){
       current.msg <<- paste0("A total of ",mis.num," sample names were not included in the OTU/ASV abundance table.");
-      
     }
-    
   }
   
+  # Values that are not raw counts, in a table not uploaded as Normalized data, are said here with what that option changes: a table of
+  # relative abundances otherwise passed in silence and was then filtered and modelled as counts (every sample summing to 1).
+  value_kind <- 0;   # what the values are, for the data summary: 0 whole numbers (counts), 1 relative abundances, 2 other fractional values
+  if(!.is.normalized.input(mbSetObj)){
+    vals <- suppressWarnings(as.numeric(as.matrix(mbSetObj$dataSet$data.orig)));
+    if(any(abs(vals - round(vals)) > 1e-6, na.rm = TRUE)){
+      cs <- colSums(mbSetObj$dataSet$data.orig, na.rm = TRUE);
+      rel <- all(abs(cs - 1) < 0.02) || all(abs(cs - 100) < 2);
+      value_kind <- if(rel) 1 else 2;
+      current.msg <<- c(current.msg, paste0(
+        if(rel) "The values look like relative abundances (every sample sums to the same total), not raw counts. "
+        else "The values are not whole numbers, so they are not raw counts. ",
+        "If the table is normalized, upload it again with Normalized data ticked: filtering and normalization are then bypassed, ",
+        "and the methods that need read counts (rarefaction, Chao1 and ACE richness, DESeq2 and edgeR, function prediction) do not apply."));
+      singleton <- FALSE; singleton_length <- 0;   # a singleton is one read: fractional values have none to count
+    }
+  }
+
   # now store data.orig to RDS
   saveDataQs(mbSetObj$dataSet$data.orig, "data.orig", module.type, dataName);
   saveDataQs(data.proc,"data.proc", module.type, dataName);
@@ -199,7 +215,7 @@ SanityCheckData <- function(mbSetObj, filetype, preFilter = "sample", rmConstant
  
   if(.on.public.web){
     .set.mbSetObj(mbSetObj)
-    return(c(1,taxa_no,sample_no,vari_no, smin,smean,smax,gd_feat,samplemeta_no,tot_size, tree_exist, samname_same, samname_same_number, sample_no_in_outfile, disc_no, cont_no,vari_dup_no,tree_tip,singleton,singleton_length));
+    return(c(1,taxa_no,sample_no,vari_no, smin,smean,smax,gd_feat,samplemeta_no,tot_size, tree_exist, samname_same, samname_same_number, sample_no_in_outfile, disc_no, cont_no,vari_dup_no,tree_tip,singleton,singleton_length,value_kind));
   }else{
     print("Sanity check passed!")
     
@@ -2559,4 +2575,12 @@ GetSampleNamesaftNorm<-function(mbSetObj, dataName){
     }
   }
   taxonomy
+}
+
+# The upload's "Normalized data" option as stored by Read16SAbundData: the page passes it as the text "true"/"false" (or T/F), so it is read
+# here, once, for every check that asks.
+.is.normalized.input <- function(mbSetObj){
+  v <- mbSetObj$dataSet$is.normalized;
+  if(is.null(v) || !length(v)) return(FALSE);
+  isTRUE(as.logical(v[1])) || toupper(as.character(v[1])) %in% c("TRUE", "T");
 }
