@@ -21,13 +21,17 @@ my.fast.spar <- function(mbSetObj, taxrank, permNum, pvalCutoff, corrCutoff, out
   # rscripts dir, set at session init); libs/fastspar is its sibling. Fall back to the
   # original relative / remote paths if the anchor is unavailable (no regression).
   spar_home <- NULL
-  if (exists(".rscripts.dir", envir = .GlobalEnv) && !is.na(.rscripts.dir) && nzchar(.rscripts.dir)) {
+  # The Microbiome pack's copy of the binaries comes first when it holds them
+  # (OMICS_LIB_DIR/microbiome/libs/fastspar/); the lookups below cover the webapp copy as before.
+  pack_bin <- .get.mb.pack.lib.path("fastspar/fastspar")
+  if (!is.null(pack_bin)) spar_home <- paste0(dirname(pack_bin), "/")
+  if (is.null(spar_home) && exists(".rscripts.dir", envir = .GlobalEnv) && !is.na(.rscripts.dir) && nzchar(.rscripts.dir)) {
     cand <- file.path(sub("/rscripts/?$", "", .rscripts.dir), "libs", "fastspar/")
     if (file.exists(paste0(cand, "fastspar"))) spar_home <- cand
   }
   if (is.null(spar_home)) {
     if(.on.public.web){
-      spar_home <- paste0(rpath, "libs/fastspar/");
+      spar_home <- .get.mb.lib.path("fastspar/");
     }else if (file.exists("/home/jasmine/Downloads/fastspar/fastspar")){ #jas local
       spar_home <- "/home/jasmine/Downloads/fastspar/"
     }else{

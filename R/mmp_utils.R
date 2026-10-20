@@ -885,7 +885,12 @@ ProcessMaaslinRes <- function(mbSetObj,taxalvl,analysis.var,thresh){
 
 
 #####lib path
-lib.path.mmp <<- paste0(rpath, "libs/mmp/");
+# A file of the MMP reference libraries (libs/mmp/): the Microbiome pack's copy when it holds one,
+# <rpath>libs/mmp/<file> otherwise. rpath is read at each call, so setResourceDir() needs no
+# second variable to keep in step.
+.mmp.lib.path <- function(...){
+  .get.mb.lib.path(paste0("mmp/", ...));
+}
   
 
 MetaboIDmap <- function(netModel,predDB,IDtype,met.vec=NA){
@@ -926,9 +931,9 @@ MetaboIDmap <- function(netModel,predDB,IDtype,met.vec=NA){
 
   if(netModel=="gem"){
     if(predDB=="agora"){
-      metdb <- ov_qs_read(paste0(lib.path.mmp,"agora.met.qs"))
+      metdb <- ov_qs_read(.mmp.lib.path("agora.met.qs"))
     }else if(predDB=="embl"){
-      metdb <- ov_qs_read(paste0(lib.path.mmp,"embl.met.qs"))
+      metdb <- ov_qs_read(.mmp.lib.path("embl.met.qs"))
     }else{
       # Unknown reference model: match nothing rather than fail on an undefined metdb
       message("[MetaboIDmap] Unknown reference database '", predDB, "' - no metabolite can be matched.");
@@ -936,19 +941,19 @@ MetaboIDmap <- function(netModel,predDB,IDtype,met.vec=NA){
     }
 
     if(IDtype=="name"){
-      metInfo <- ov_qs_read(paste0(lib.path.mmp,"synonymGem.qs"));
+      metInfo <- ov_qs_read(.mmp.lib.path("synonymGem.qs"));
       met.map <- data.frame(Query=met.vec,Match=met.vec,stringsAsFactors = F)
       met.map$Match <-  metInfo$metID[match(tolower(met.map$Query),tolower(metInfo$Name))]
       met.map <- met.map[which(met.map$Match %in% metdb),]
       map.l <- length(unique(met.map$Match))
     }else if(IDtype=="kegg"){
-      metInfo <- ov_qs_read(paste0(lib.path.mmp,"gem2kegg.qs"));
+      metInfo <- ov_qs_read(.mmp.lib.path("gem2kegg.qs"));
       met.map <- data.frame(Query=met.vec,Match=met.vec,stringsAsFactors = F)
       met.map$Match <-  metInfo$metID[match(met.map$Query,metInfo$KEGG)]
       met.map <- met.map[which(met.map$Match %in% metdb),]
       map.l <- length(unique(met.map$KEGG))
     }else if(IDtype=="hmdb"){
-      metInfo <- ov_qs_read(paste0(lib.path.mmp,"gem2hmdb.qs"));
+      metInfo <- ov_qs_read(.mmp.lib.path("gem2hmdb.qs"));
       met.map <- data.frame(Query=met.vec,Match=met.vec,stringsAsFactors = F)
       met.map$Match <-  metInfo$metID[match(met.map$Query,metInfo$HMDB)]
       met.map <- met.map[which(met.map$Match %in% metdb),]
@@ -957,7 +962,7 @@ MetaboIDmap <- function(netModel,predDB,IDtype,met.vec=NA){
   }else if(netModel=="keggNet"){
     
     if(IDtype=="name"){
-      metInfo <- ov_qs_read(paste0(lib.path.mmp,"general_kegg2name.qs"));
+      metInfo <- ov_qs_read(.mmp.lib.path("general_kegg2name.qs"));
       met.map <- data.frame(Query=met.vec,Match=met.vec,stringsAsFactors = F)
       met.map$Match <-  metInfo$ID[match(tolower(met.map$Query),tolower(metInfo$Name))]
       met.map$Name <- met.map$Query
@@ -966,7 +971,7 @@ MetaboIDmap <- function(netModel,predDB,IDtype,met.vec=NA){
       map.l <- length(unique(met.map$Match))
     }else if(IDtype=="kegg"){
 
-      metInfo <- ov_qs_read(paste0(lib.path.mmp,"general_kegg2name.qs"));
+      metInfo <- ov_qs_read(.mmp.lib.path("general_kegg2name.qs"));
       met.map <- data.frame(Query=met.vec,Match=met.vec,Name=met.vec,stringsAsFactors = F)
       met.map$Name <-  metInfo$Name[match(met.map$Query,metInfo$ID)]
       met.map$Node <-  metInfo$node[match(met.map$Query,metInfo$ID)]
@@ -1078,7 +1083,7 @@ MicIDmap <- function(netModel,predDB,taxalvl="all"){
 
 doGemNameMatch <- function(qvec,l,predDB){
   
-  taxMapLong <- ov_qs_read(paste0(lib.path.mmp,predDB,"_tax.qs"))[[l]]
+  taxMapLong <- ov_qs_read(.mmp.lib.path(predDB,"_tax.qs"))[[l]]
   names(taxMapLong)[1] <- "taxa"
   res <- data.frame(Query=qvec[[1]],Qtrans=qvec[[2]],stringsAsFactors = F)
   taxMapLong$taxa2<-  gsub("[[:space:]./_-]", "_",taxMapLong$taxa)
@@ -1091,7 +1096,7 @@ doGemNameMatch <- function(qvec,l,predDB){
 doKeggNameMatch <- function(qvec,taxalvl){
   taxalvl = tolower(taxalvl)
   taxalvl<<- taxalvl
-  taxMapKEGG <- ov_qs_read(paste0(lib.path.mmp,"taxMapKEGG.qs"))[[taxalvl]]
+  taxMapKEGG <- ov_qs_read(.mmp.lib.path("taxMapKEGG.qs"))[[taxalvl]]
   taxnms <- gsub("[[:space:]./_-]", "_",names(taxMapKEGG)[-1])
   taxnms<-  gsub("\\[|\\]","",taxnms)
   names(taxnms) <- names(taxMapKEGG)[-1]
@@ -1121,7 +1126,7 @@ CreatPathwayLib <- function(contain){
   }else if(contain=="sigbac"){
     mtcls = sig.mic[sig.mic!="NA"]
   }
-  bacpath <- ov_qs_read(paste0(lib.path.mmp,"bacpathway.met.qs"))[mtcls]
+  bacpath <- ov_qs_read(.mmp.lib.path("bacpathway.met.qs"))[mtcls]
   bacpath <- bacpath[!is.na(names(bacpath))]
   paths <- unique(unlist(lapply(bacpath,function(x) names(x))))
   
@@ -1138,7 +1143,7 @@ CreatPathwayLib <- function(contain){
   nodes_val <- unique(unlist(current.lib))
   if (is.null(nodes_val)) nodes_val <- character(0)
   includeInfo = list(nodes = nodes_val)
-  edges.bc = ov_qs_read(paste0(lib.path.mmp,"edge.bac.qs"))
+  edges.bc = ov_qs_read(.mmp.lib.path("edge.bac.qs"))
   edges  = data.frame(edge=edges.bc$id_rxn,cpd = edges.bc$met)
   edges = edges[which(edges$cpd %in% includeInfo$nodes),]
   edges = edges.bc[which(edges.bc$id_rxn %in% edges$edge),]
@@ -1213,7 +1218,7 @@ doGemPrediction <- function(predDB,taxalvl,psc=0.5,metType,matchonly=T,sigonly=T
   taxalvl<-tolower(taxalvl) 
   tax_map <- ov_qs_read("gem.mic.map.qs")[[taxalvl]]
   tax_map <- tax_map[which(!is.na(tax_map$Match)),]
-  m2m_ls <- ov_qs_read(paste0(lib.path.mmp,predDB,".qs"))[[taxalvl]]
+  m2m_ls <- ov_qs_read(.mmp.lib.path(predDB,".qs"))[[taxalvl]]
   names(m2m_ls)[1] <- "taxa"
   m2m_ls <- m2m_ls[which(m2m_ls$potential>=psc),]
   m2m_ls <- m2m_ls[which(m2m_ls$taxa %in% tax_map$Match),]
@@ -1956,13 +1961,13 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
 
   if(dataType=="metabolite"){
     if(contain=="bac"){
-      current.set <- ov_qs_read(paste0(lib.path.mmp,"kegg_bac_mummichog.qs"))$pathways$cpds
+      current.set <- ov_qs_read(.mmp.lib.path("kegg_bac_mummichog.qs"))$pathways$cpds
     }else if(contain=="hsabac"){
-      current.set <- ov_qs_read(paste0(lib.path.mmp,"kegg_hsa_bac_mummichog.qs"))$pathways$cpds
+      current.set <- ov_qs_read(.mmp.lib.path("kegg_hsa_bac_mummichog.qs"))$pathways$cpds
     }else if(contain=="hsa"){
-      current.set <- ov_qs_read(paste0(lib.path.mmp,"kegg_hsa_mummichog.qs"))$pathways$cpds
+      current.set <- ov_qs_read(.mmp.lib.path("kegg_hsa_mummichog.qs"))$pathways$cpds
     }else if(contain=="all"){
-      current.set <- ov_qs_read(paste0(lib.path.mmp,"kegg_all_mummichog.qs"))$pathways$cpds
+      current.set <- ov_qs_read(.mmp.lib.path("kegg_all_mummichog.qs"))$pathways$cpds
     }else{
       current.set <- ov_qs_read(paste0(taxalvl,".current.lib.qs"))
     }
@@ -1980,20 +1985,20 @@ PerformTuneEnrichAnalysis <- function(mbSetObj, dataType,category, file.nm,conta
 
   }else if(dataType=="ko"){
     if(contain=="bac"){
-      current.set <- ov_qs_read(paste0(lib.path.mmp,"ko_set_bac.qs"))
+      current.set <- ov_qs_read(.mmp.lib.path("ko_set_bac.qs"))
     }else if(contain=="hsabac"){
-      current.set <- ov_qs_read(paste0(lib.path.mmp,"ko_set_hsa_bac.qs"))
+      current.set <- ov_qs_read(.mmp.lib.path("ko_set_hsa_bac.qs"))
     }else if(contain=="hsa"){
-      current.set <- ov_qs_read(paste0(lib.path.mmp,"ko_set_hsa.qs"))
+      current.set <- ov_qs_read(.mmp.lib.path("ko_set_hsa.qs"))
     }else if(contain=="all"){
       kegg.anot <- .read.microbiomeanalyst.lib.rds("ko_pathways.rds", "ko")
       current.setlink <- kegg.anot$link;
       current.set <- kegg.anot$sets$Metabolism;
     }else{
-      current.set <- ov_qs_read(paste0(lib.path.mmp,"ko_set_bac.qs"))
+      current.set <- ov_qs_read(.mmp.lib.path("ko_set_bac.qs"))
     }
 
-    set2nm <- ov_qs_read(paste0(rpath, "libs/mmp/set2nm.qs"))[["pathway"]];
+    set2nm <- ov_qs_read(.get.mb.lib.path("mmp/set2nm.qs"))[["pathway"]];
     set.ids <- names(current.set);
     names(set.ids) <- names(current.set) <- set2nm[set.ids];
     current.setids <<- set.ids;
@@ -2647,7 +2652,7 @@ UpdateAssociationPlot <- function(imgNm,topNum=10){
 }
 
 tuneKOmap <- function(){
-  edges.ko = ov_qs_read(paste0(lib.path.mmp,"ko.info.qs"))
+  edges.ko = ov_qs_read(.mmp.lib.path("ko.info.qs"))
   include = rownames(current.proc$mic$data.proc)
   edges.ko = edges.ko[which(edges.ko$ko %in% include),]
   includeInfo = list(edges=edges.ko)
@@ -2940,20 +2945,20 @@ SetListInfo <-function(mbSetObj,taxalvl){
 PerformMicNameMap <- function(mbSetObj,taxalvl){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   mic.map = data.frame(Query=mbSetObj$dataSet$mic$original,agora=NA,embl=NA,kegg=NA,ncbi=NA,stringsAsFactors = F)
-  taxMapLong <- ov_qs_read(paste0(lib.path.mmp,"agora_tax.qs"))[[taxalvl]]
+  taxMapLong <- ov_qs_read(.mmp.lib.path("agora_tax.qs"))[[taxalvl]]
   names(taxMapLong)[1] <- "taxa"
   
   mic.map$agora <- taxMapLong[match(mic.map$Query,taxMapLong$taxa),1]
   
   mic.map$ncbi <- taxMapLong$ncbi_id[match(mic.map$agora,taxMapLong$taxa)]
   
-  taxMapLong <- ov_qs_read(paste0(lib.path.mmp,"embl_tax.qs"))[[taxalvl]]
+  taxMapLong <- ov_qs_read(.mmp.lib.path("embl_tax.qs"))[[taxalvl]]
   names(taxMapLong)[1] <- "taxa"
   mic.map$embl <- taxMapLong[match(mic.map$Query,taxMapLong$taxa),1]
   
   mic.map$ncbi[is.na(mic.map$ncbi)] <- taxMapLong$ncbi_id[match(mic.map$embl[is.na(mic.map$ncbi)],taxMapLong$taxa)]
   
-  taxMapKEGG <- ov_qs_read(paste0(lib.path.mmp,"taxMapKEGG.qs"))[[taxalvl]]
+  taxMapKEGG <- ov_qs_read(.mmp.lib.path("taxMapKEGG.qs"))[[taxalvl]]
   taxMapLong <- taxMapKEGG[["info"]]
   names(taxMapLong)[1] <- "taxa"
   mic.map$kegg <- taxMapLong[match(mic.map$Query,taxMapLong$taxa),1]
@@ -2982,14 +2987,14 @@ PerformMetNameMap <- function(mbSetObj,metIDType="kegg"){
   met.map$embl_id = res$Match[match( met.map$Query,res$Query)]
   
   if(metIDType !='name'){
-    metInfo <- ov_qs_read(paste0(lib.path.mmp,"synonymGem.qs"));
+    metInfo <- ov_qs_read(.mmp.lib.path("synonymGem.qs"));
     met.map$agora = metInfo$Name[match(met.map$agora_id,metInfo$metID)]
     met.map$embl = metInfo$Name[match(met.map$embl_id,metInfo$metID)]
   }
   
   if(metIDType=="kegg"){
     met.map$kegg = met.map$Query
-    metInfo <- ov_qs_read(paste0(lib.path.mmp,"general_kegg2name.qs"));
+    metInfo <- ov_qs_read(.mmp.lib.path("general_kegg2name.qs"));
     
     met.map$name <- metInfo$Name[match(met.map$kegg,metInfo$ID)]
     met.map$node <- metInfo$node[match(met.map$kegg,metInfo$ID)]
@@ -3048,16 +3053,16 @@ PerformMetListEnrichment <- function(mbSetObj, contain,file.nm){
     mbSetObj <- .get.mbSetObj(mbSetObj);
  
   if(contain=="bac"){
-    current.set <- ov_qs_read(paste0(lib.path.mmp,"kegg_bac_mummichog.qs"))$pathways$cpds
+    current.set <- ov_qs_read(.mmp.lib.path("kegg_bac_mummichog.qs"))$pathways$cpds
     
   }else if(contain=="hsabac"){
-    current.set <- ov_qs_read(paste0(lib.path.mmp,"kegg_hsa_bac_mummichog.qs"))$pathways$cpds
+    current.set <- ov_qs_read(.mmp.lib.path("kegg_hsa_bac_mummichog.qs"))$pathways$cpds
     
   }else if(contain=="hsa"){
-    current.set <- ov_qs_read(paste0(lib.path.mmp,"kegg_hsa_mummichog.qs"))$pathways$cpds
+    current.set <- ov_qs_read(.mmp.lib.path("kegg_hsa_mummichog.qs"))$pathways$cpds
     
   }else if(contain=="all"){
-    current.set <- ov_qs_read(paste0(lib.path.mmp,"kegg_all_mummichog.qs"))$pathways$cpds
+    current.set <- ov_qs_read(.mmp.lib.path("kegg_all_mummichog.qs"))$pathways$cpds
     
   }else{
     current.set <- ov_qs_read(paste0(taxalvl,".current.lib.qs"))
@@ -3188,7 +3193,7 @@ M2MPredictionList<- function(mbSetObj,model,predDB,psc=0.5,metType="metabolite",
   
   tax_map <- mbSetObj$analSet$mic.map
   tax_map <- tax_map[which(!is.na(tax_map[,predDB])),]
-  m2m_ls <- ov_qs_read(paste0(lib.path.mmp,predDB,".qs"))[[taxalvl]]
+  m2m_ls <- ov_qs_read(.mmp.lib.path(predDB,".qs"))[[taxalvl]]
   names(m2m_ls)[1] <- "taxa"
   m2m_ls <- m2m_ls[which(m2m_ls$potential>=psc),]
   m2m_ls <- m2m_ls[which(m2m_ls$taxa %in% tax_map[,predDB]),]
@@ -3432,7 +3437,7 @@ GetPredictionPlot <- function(mbSetObj, keggid,imgNm,predDB="agora",potentialThr
   taxalvl<-tolower(taxalvl) 
   
   tax_map <- mic.map[which(!is.na(mic.map[,predDB])),]
-  m2m_ls <- ov_qs_read(paste0(lib.path.mmp,predDB,".qs"))[[taxalvl]]
+  m2m_ls <- ov_qs_read(.mmp.lib.path(predDB,".qs"))[[taxalvl]]
   names(m2m_ls)[1] <- "taxa"
   m2m_ls <- m2m_ls[which(m2m_ls$potential>=potentialThresh),]
   m2m_ls <- m2m_ls[which(m2m_ls$taxa %in% tax_map[,predDB]),]
@@ -4561,7 +4566,7 @@ InitCurrentProc <-function(){
   names(current.proc)<-c("mic","met")
   moduleType <<-"mmp"
   if(metIDType=="kegg"){
-    metInfo <- ov_qs_read(paste0(lib.path.mmp,"general_kegg2name.qs"));
+    metInfo <- ov_qs_read(.mmp.lib.path("general_kegg2name.qs"));
     mbSetObj <- .get.mbSetObj(mbSetObj);
     keggids <- rownames(mbSetObj$dataSet$metabolomics$data.orig)
     nms<- metInfo$Name[match(keggids, metInfo$ID)]

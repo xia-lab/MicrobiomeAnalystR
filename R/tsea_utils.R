@@ -1117,7 +1117,7 @@ ResolveTaxonSetLib <- function(tset.type, rank){
 # .read.microbiomeanalyst.lib.rds), instead of being fetched on every call.
 .get.tsea.lib.path <- function(filenm, quiet = FALSE){
   if(.on.public.web){
-    return(paste0(rpath, "libs/tsea/", filenm));
+    return(.get.mb.lib.path(paste0("tsea/", filenm)));
   }
   stale <- !file.exists(filenm) ||
            difftime(Sys.time(), file.info(filenm)$mtime, units="days") > 30;

@@ -1078,7 +1078,7 @@ current.sample <- current.refset@sam_data
     #taxonomy mapping file
     
     if(.on.public.web){
-      otu.dic <<- ov_qs_read(paste0(rpath, "libs/picrust/greengenes_taxmap.qs"));
+      otu.dic <<- ov_qs_read(.get.mb.lib.path("picrust/greengenes_taxmap.qs"));
     }else{
       otu.dic <<- readRDS("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/picrust/greengenes_taxmap.rds");
     }

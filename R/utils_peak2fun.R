@@ -42,7 +42,7 @@ performPeakEnrich <- function(lib){
 if(lib=="usrbac"|lib=="sigbac"){
 
 pathways = ov_qs_read(paste0(taxalvl,".current.lib.qs"))
-allmet = ov_qs_read(paste0(lib.path.mmp,"keggmet_allpathway.qs"))
+allmet = ov_qs_read(.mmp.lib.path("keggmet_allpathway.qs"))
 
 cpd.lib = allmet[!is.na(allmet$mw) & allmet$id %in% unique(unlist(pathways)),]
 
@@ -65,14 +65,14 @@ shadow_save(mummichog.lib,"current_mummichog_lib.qs")
 }else{
 
   if(lib=="bac"){
-     filenm <- paste0(lib.path.mmp,"kegg_bac_mummichog.qs")
+     filenm <- .mmp.lib.path("kegg_bac_mummichog.qs")
 
     }else if(lib=="hsa"){
-     filenm <- paste0(lib.path.mmp,"kegg_hsa_mummichog.qs")
+     filenm <- .mmp.lib.path("kegg_hsa_mummichog.qs")
     }else if(lib=="all"){
-      filenm <- paste0(lib.path.mmp,"kegg_all_mummichog.qs")
+      filenm <- .mmp.lib.path("kegg_all_mummichog.qs")
     }else if(lib=="hsabac"){
-    filenm <- paste0(lib.path.mmp,"kegg_hsa_bac_mummichog.qs")
+    filenm <- .mmp.lib.path("kegg_hsa_bac_mummichog.qs")
 
 
 }
@@ -797,7 +797,7 @@ ComputeMummichogRTPermPvals <- function(input_ecpdlist, total_matched_ecpds, pat
   hits.sig <- cpds_feats[hit.inx];  
   path.nms <- names(current.proc$pathways$emp_cpds)[hit.inx];
   
-  metInfo <- ov_qs_read(paste0(lib.path.mmp,"general_kegg2name.qs"));
+  metInfo <- ov_qs_read(.mmp.lib.path("general_kegg2name.qs"));
   hits.nms <- lapply(hits.all, function(x){
   x=metInfo$Name[match(x,metInfo$ID)]  
   return(x)

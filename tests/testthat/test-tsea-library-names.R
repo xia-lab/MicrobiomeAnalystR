@@ -5,6 +5,9 @@ context("Taxon set enrichment: a set whose name is the text NA keeps its name wh
 # that was missing. The set keeps the text.
 env <- new.env()
 suppressMessages(sys.source(testthat::test_path("../../R/tsea_utils.R"), envir = env))
+# the library path resolver tsea_utils.R reads through (general_io.R also sets globals when sourced whole, so only the two functions)
+for (e in parse(testthat::test_path("../../R/general_io.R"), keep.source = FALSE))
+  if (is.call(e) && as.character(e[[1]]) == "<-" && as.character(e[[2]])[1] %in% c(".get.mb.lib.path", ".get.mb.pack.lib.path")) eval(e, env)
 dir <- tempfile("tsea_lib"); dir.create(file.path(dir, "libs", "tsea"), recursive = TRUE)
 writeLines(c("name,member,reference",
              "AARS,Bacteroides; Prevotella,r1",

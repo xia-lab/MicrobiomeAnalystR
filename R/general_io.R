@@ -113,6 +113,29 @@ Init.mbSetObj <- function(default.dpi=72){
   return(.set.mbSetObj(mbSetObj))
 }
 
+# Where a reference library file is read from. The Microbiome libraries (mmp/, ko/, tsea/, ppd/, ...)
+# can sit in a downloadable pack folder instead of the webapp, so that folder is asked first:
+# $OMICS_LIB_DIR/microbiome/libs/<rel>. A file the pack does not hold, or no OMICS_LIB_DIR at all,
+# reads <rpath>libs/<rel> exactly as before. rel = "" answers the library folder itself.
+# Package-local on purpose: this package must not depend on the app's own scripts.
+.get.mb.lib.path <- function(rel){
+    ext <- .get.mb.pack.lib.path(rel);
+    if(!is.null(ext)){
+        return(ext);
+    }
+    paste0(rpath, "libs/", sub("^/+", "", rel));
+}
+
+# The pack's copy of <rel>, or NULL when OMICS_LIB_DIR is unset or the pack does not hold it.
+.get.mb.pack.lib.path <- function(rel){
+    pack <- Sys.getenv("OMICS_LIB_DIR", "");
+    if(!nzchar(pack)){
+        return(NULL);
+    }
+    ext <- file.path(sub("/+$", "", pack), "microbiome", "libs", sub("^/+", "", rel));
+    if(file.exists(ext)) ext else NULL;
+}
+
 #' Read RDS files from the internet
 #' @description Function downloads the required file and reads it only if not already in working directory.
 #' Need to specify the file URL and the destfile. 
@@ -125,9 +148,9 @@ Init.mbSetObj <- function(default.dpi=72){
   
   if(.on.public.web){
     if(is.null(sub.dir)){
-      lib.path <- paste(rpath, "libs/", filenm, sep="");
+      lib.path <- .get.mb.lib.path(filenm);
     }else{
-      lib.path <- paste(rpath, "libs/", sub.dir, "/", filenm,  sep="");
+      lib.path <- .get.mb.lib.path(paste0(sub.dir, "/", filenm));
     }
     return(readRDS(lib.path));
   }else{

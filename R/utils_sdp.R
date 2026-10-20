@@ -369,12 +369,12 @@ PlotFunctionStack <-function(mbSetObj, summaryplot, functionlvl, abundcal, genei
   }
   output <- result
   if(functionlvl=="KEGG pathways"){
-    set2nm <- ov_qs_read(paste0(rpath, "libs/mmp/set2nm.qs")) 
+    set2nm <- ov_qs_read(.get.mb.lib.path("mmp/set2nm.qs")) 
   nms = unname(set2nm[["pathway"]][match(rownames(output),names(set2nm[["pathway"]]))])
   output = cbind(name=nms,output)
 
   }else if(functionlvl=="KEGG modules"){
-  set2nm <- ov_qs_read(paste0(rpath, "libs/mmp/set2nm.qs"))
+  set2nm <- ov_qs_read(.get.mb.lib.path("mmp/set2nm.qs"))
    nms = unname(set2nm[["module"]][match(rownames(output),names(set2nm[["module"]]))])
   output = cbind(name=nms,output)
  }
@@ -604,7 +604,7 @@ PrepareQueryJson <- function(mbSetObj){
   names(query.res) <- eids; # named by edge
   filtKOmap(query.ko, includeInfoNm)
 
- labels <- ov_qs_read(paste0(rpath, "libs/ko/ko_lbs.qs"))
+ labels <- ov_qs_read(.get.mb.lib.path("ko/ko_lbs.qs"))
  labels <-labels[labels$info %in% query.ko,c(3,4)]
  if(nrow(labels) == 0){
    # mapped KOs carry no reaction label - keep the abundances, skip the labels
@@ -626,7 +626,7 @@ PrepareQueryJson <- function(mbSetObj){
 }
 
 filtKOmap <- function(include, fileName){
-  edges.ko = ov_qs_read(paste0(rpath, "libs/mmp/ko.info.qs"))
+  edges.ko = ov_qs_read(.get.mb.lib.path("mmp/ko.info.qs"))
   edges.ko = edges.ko[which(edges.ko$ko %in% include),]
   
   includeInfo = list(edges=edges.ko)
@@ -760,19 +760,19 @@ LoadKEGGKO_lib<-function(category,contain="all"){
   if(category == "module"){
        current.setlink <- "http://www.genome.jp/kegg-bin/show_module?";
        if(contain=="bac"){
-            current.mset <- ov_qs_read(paste0(rpath, "libs/ko/module_bac.qs"))
+            current.mset <- ov_qs_read(.get.mb.lib.path("ko/module_bac.qs"))
       
         }else if(contain=="hsabac"){
-            current.mset <- ov_qs_read(paste0(rpath, "libs/ko/module_hsa_bac.qs"))
+            current.mset <- ov_qs_read(.get.mb.lib.path("ko/module_hsa_bac.qs"))
       
         }else if(contain=="hsa"){
-            current.mset <- ov_qs_read(paste0(rpath, "libs/ko/module_hsa.qs"))
+            current.mset <- ov_qs_read(.get.mb.lib.path("ko/module_hsa.qs"))
       
         }else if(contain=="all"){
             kegg.anot <- .read.microbiomeanalyst.lib.rds("ko_modules.rds", "ko")
             current.mset <- kegg.anot$sets$"Pathway module";
         }else{
-            current.mset <- ov_qs_read(paste0(rpath, "libs/ko/module_bac.qs")) ## filter users' data based on bacterial metabolism
+            current.mset <- ov_qs_read(.get.mb.lib.path("ko/module_bac.qs")) ## filter users' data based on bacterial metabolism
             full.mset <- current.mset;
             if(enrich.type != "hyper"){
                 current.mset <-  lapply(current.mset, function(x) x[x %in% query.ko])
@@ -782,19 +782,19 @@ LoadKEGGKO_lib<-function(category,contain="all"){
    }else{
         current.setlink <- "http://www.genome.jp/kegg-bin/show_pathway?";
         if(contain=="bac"){
-            current.mset <- ov_qs_read(paste0(rpath, "libs/mmp/ko_set_bac.qs"))
+            current.mset <- ov_qs_read(.get.mb.lib.path("mmp/ko_set_bac.qs"))
       
         }else if(contain=="hsabac"){
-            current.mset <- ov_qs_read(paste0(rpath, "libs/mmp/ko_set_hsa_bac.qs"))
+            current.mset <- ov_qs_read(.get.mb.lib.path("mmp/ko_set_hsa_bac.qs"))
       
         }else if(contain=="hsa"){
-            current.mset <- ov_qs_read(paste0(rpath, "libs/mmp/ko_set_hsa.qs"))
+            current.mset <- ov_qs_read(.get.mb.lib.path("mmp/ko_set_hsa.qs"))
       
         }else if(contain=="all"){
             kegg.anot <- .read.microbiomeanalyst.lib.rds("ko_pathways.rds", "ko")
             current.mset <- kegg.anot$sets$Metabolism;
         }else{
-            current.mset <- ov_qs_read(paste0(rpath, "libs/mmp/ko_set_bac.qs")) ## filter users' data based on bacterial metabolism
+            current.mset <- ov_qs_read(.get.mb.lib.path("mmp/ko_set_bac.qs")) ## filter users' data based on bacterial metabolism
             full.mset <- current.mset;
             if(enrich.type != "hyper"){
                 current.mset <-  lapply(current.mset, function(x) x[x %in% query.ko])
@@ -806,7 +806,7 @@ LoadKEGGKO_lib<-function(category,contain="all"){
   # now need to update the msets to contain only those in ko01100 map
   if(!exists("ko.edge.map")){
     if(.on.public.web){
-      ko.edge.path <- paste(paste0(rpath, "libs/ko/ko_edge.csv", sep=""));
+      ko.edge.path <- paste(.get.mb.lib.path("ko/ko_edge.csv"));
     }else{
       ko.edge.path <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/ko/ko_edge.csv", sep="");
     }
@@ -823,7 +823,7 @@ LoadKEGGKO_lib<-function(category,contain="all"){
   mset.ln <- lapply(current.mset, length);
   current.mset <- current.mset[mset.ln > 0];
   set.ids <- names(current.mset);
-  set2nm <- ov_qs_read(paste0(rpath, "libs/mmp/set2nm.qs"))[[category]];
+  set2nm <- ov_qs_read(.get.mb.lib.path("mmp/set2nm.qs"))[[category]];
   names(set.ids) <- names(current.mset) <- set2nm[set.ids];
 
   current.setlink <<-  current.setlink;
@@ -899,7 +899,7 @@ MapKO2KEGGEdges<- function(kos, net="ko01100"){
   if(!exists("ko.edge.map")){
     
     if(.on.public.web){
-      ko.edge.path <- paste(paste0(rpath, "libs/ko/ko_edge.csv", sep=""));
+      ko.edge.path <- paste(.get.mb.lib.path("ko/ko_edge.csv"));
     }else{
       ko.edge.path <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/ko/ko_edge.csv", sep="");
     }
@@ -1063,7 +1063,7 @@ Save2KEGGJSON <- function(mbSetObj, hits.query, res.mat, file.nm){
   if(!exists("ko.edge.map")){
     
     if(.on.public.web){
-      ko.edge.path <- paste(paste0(rpath, "libs/ko/ko_edge.csv", sep=""));
+      ko.edge.path <- paste(.get.mb.lib.path("ko/ko_edge.csv"));
     }else{
       ko.edge.path <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/ko/ko_edge.csv", sep="");
     }

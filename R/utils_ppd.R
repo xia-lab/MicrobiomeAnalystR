@@ -72,7 +72,7 @@ PerformRefDataMapping <- function(mbSetObj, refdataNm, taxo_type, sample_var, bi
   refsmpldataNm <- paste("/", refdataNm, "/", refdataNm ,"_sampledata.csv", sep="");
   
   if(.on.public.web){
-    refsmpldataloc <- paste(rpath, "libs/ppd",refsmpldataNm,sep="");
+    refsmpldataloc <- .get.mb.lib.path(paste0("ppd", refsmpldataNm));
   }else{
     refsmpldataloc <- paste("https://www.microbiomeanalyst.ca/MicrobiomeAnalyst/resources/libs/ppd", refsmpldataNm, sep="");
   }
