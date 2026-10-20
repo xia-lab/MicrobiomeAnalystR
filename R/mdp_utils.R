@@ -366,7 +366,7 @@ PrepareBoxPlot <- function(mbSetObj, taxrank, variable){
   claslbl_boxplot <- claslbl_boxplot[which(claslbl_boxplot %in% grps)];
   # build phyloslim obj in fly
   filt.dataphy <- mbSetObj$dataSet$filt.data;
-  filt.dataphy <- apply(filt.dataphy, 2, as.integer);
+  filt.dataphy <- .counts.or.as.uploaded(mbSetObj, filt.dataphy);
   filt.dataphy <- otu_table(filt.dataphy, taxa_are_rows =TRUE);
   sample_table_boxplot <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
   filt.dataphy <- merge_phyloseq(filt.dataphy, sample_table_boxplot);

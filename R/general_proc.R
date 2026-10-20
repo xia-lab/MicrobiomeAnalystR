@@ -2317,7 +2317,11 @@ CreateFakeFile <- function(mbSetObj,isNormalized="true",isNormalizedMet,module.t
     return(0)
     
   }
-  mbSetObj$dataSet$filt.data <- mbSetObj$dataSet$data.orig
+  # The table the filter step would start from (data.prefilt, saved by CreatePhyloseqObj with the
+  # names of the taxonomy table), not the upload as read: lineage rows merged or renamed there no
+  # longer match data.orig, and every analysis that pairs filt.data with proc.phyobj failed on it.
+  prefilt <- tryCatch(readDataQs("data.prefilt", mbSetObj$module.type, mbSetObj$dataSet$name), error = function(e) NULL);
+  mbSetObj$dataSet$filt.data <- if(is.null(prefilt)) mbSetObj$dataSet$data.orig else as.matrix(prefilt);
   mbSetObj$dataSet$filt.msg <- "No data filtering has been performed since the input data has been transformed."
   
   mbSetObj$dataSet$norm.phyobj <- mbSetObj$dataSet$proc.phyobj

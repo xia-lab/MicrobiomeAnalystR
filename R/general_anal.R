@@ -371,7 +371,7 @@ PerformUnivarTest <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, t
   fast.write(resTable, file="univar_test_output.csv");
 
   #getting log2fc from edgeR
-  if(!is.null(mbSetObj$analSet$rnaseq$resTable.edger.all)& mbSetObj[["analSet"]][["var.type"]]== variable & mbSetObj[["analSet"]][["rnaseq.taxalvl"]]==taxrank){
+  if(!is.null(mbSetObj$analSet$rnaseq$resTable.edger.all) && isTRUE(mbSetObj[["analSet"]][["var.type"]]== variable) && isTRUE(mbSetObj[["analSet"]][["rnaseq.taxalvl"]]==taxrank)){
   edger_df <- mbSetObj$analSet$rnaseq$resTable.edger.all
   resTable_logFC <- edger_df[match(rownames(resTable), rownames(edger_df)), 'log2FC']
   resTable_logCPM <- edger_df[match(rownames(resTable), rownames(edger_df)), 'logCPM']
@@ -425,7 +425,7 @@ PerformUnivarTest <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, t
   claslbl_boxplot <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
   # build phyloslim obj in fly
   filt.dataphy <- mbSetObj$dataSet$filt.data;
-  filt.dataphy <- apply(filt.dataphy, 2, as.integer);
+  filt.dataphy <- .counts.or.as.uploaded(mbSetObj, filt.dataphy);
   filt.dataphy <- otu_table(filt.dataphy, taxa_are_rows =TRUE);
   sample_table_boxplot <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
   filt.dataphy <- merge_phyloseq(filt.dataphy, sample_table_boxplot);
@@ -522,6 +522,10 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   current.msg<<-"null"
+  if(.is.normalized.input(mbSetObj)){
+    AddErrMsg(.counts.only.msg("metagenomeSeq"));
+    return(0);
+  }
  
   sample_table <- sample_data(mbSetObj$dataSet$norm.phyobj, errorIfNULL=TRUE);
   filt.dataphy <- mbSetObj$dataSet$filt.data;
@@ -662,7 +666,7 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
   }
  
   #getting log2fc from edgeR
-  if(!is.null(mbSetObj$analSet$rnaseq$resTable.edger.all)& mbSetObj[["analSet"]][["var.type"]]== variable & mbSetObj[["analSet"]][["rnaseq.taxalvl"]]==taxrank){
+  if(!is.null(mbSetObj$analSet$rnaseq$resTable.edger.all) && isTRUE(mbSetObj[["analSet"]][["var.type"]]== variable) && isTRUE(mbSetObj[["analSet"]][["rnaseq.taxalvl"]]==taxrank)){
   edger_df <- mbSetObj$analSet$rnaseq$resTable.edger.all
      if(model=="ffm"){
   resTable_logFC <- edger_df[match(rownames(resTable), rownames(edger_df)), 'log2FC']
@@ -832,6 +836,7 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
     } 
   }
   data.impfeat_lefse <<- dat3t;
+  lda.scale <- .lefse.lda.scale(mbSetObj, dat3t);
   
   set.seed(56290);
   #KW rank sum test
@@ -851,7 +856,8 @@ PerformLefseAnal <- function(mbSetObj, p.lvl, pvalOpt="fdr", lda.lvl, variable, 
   
   #if no subclass within classes then no wilcoxon rank sum test  
   #Linear Discriminant analysis (LDA)
-  ldares <- lda(claslbl~ .,data = wil_datadf);
+  lda.datadf <- if(is.null(lda.scale)) wil_datadf else as.data.frame(as.matrix(dat3t) * lda.scale, check.names=FALSE);
+  ldares <- lda(claslbl~ .,data = lda.datadf);
   ldamean <- as.data.frame(t(ldares$means),check.names=FALSE);
   class_no <<- length(unique(claslbl));
   if(class_no==2){
@@ -1213,6 +1219,10 @@ PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="defaul
 
 PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, fc.thresh=0, comp1=1, comp2=2){
 
+  if(.is.normalized.input(.get.mbSetObj(mbSetObj))){
+    AddErrMsg(.counts.only.msg(opts));
+    return(0);
+  }
   if(opts=="DESeq2"){
     .run.deseq(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, fc.thresh, comp1, comp2);
     res = 1;
@@ -1484,7 +1494,14 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, f
 ########################################################
 ########### LinDA (Linear DA) ##########################
 
-.linda_winsor <- function(Y, quan) {
+.linda_winsor <- function(Y, quan, type = 'count') {
+  if(type == 'proportion') {   # as LinDA: proportions are capped as they are, never rounded
+    cut <- apply(Y, 1, quantile, quan)
+    Cut <- matrix(rep(cut, ncol(Y)), nrow(Y))
+    ind <- Y > Cut
+    Y[ind] <- Cut[ind]
+    return(Y)
+  }
   N <- colSums(Y)
   P <- t(t(Y) / N)
   cut <- apply(P, 1, quantile, quan)
@@ -1535,7 +1552,11 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, f
   ind <- sapply(1:ncol(Z), function(i) is.numeric(Z[, i]))
   if(any(ind)) Z[, ind] <- scale(Z[, ind])
 
-  if(!is.null(winsor.quan)) Y <- .linda_winsor(Y, winsor.quan)
+  if(!is.null(winsor.quan)) Y <- .linda_winsor(Y, winsor.quan, type)
+  if(type == 'proportion') {   # a taxon all zero (absent, or capped to 0) has no smallest non-zero value to impute from
+    nz <- rowSums(Y > 0) > 0
+    Y <- Y[nz, , drop = FALSE]; keep.tax <- keep.tax[nz]; m <- nrow(Y)
+  }
 
   taxa.name <- if(is.null(rownames(otu.tab))) (1:nrow(otu.tab))[keep.tax] else rownames(otu.tab)[keep.tax]
   samp.name <- if(is.null(rownames(meta))) (1:nrow(meta))[keep.sam] else rownames(meta)[keep.sam]
@@ -1566,6 +1587,11 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, f
       } else {
         Y <- Y + pseudo.cnt
       }
+    }
+  } else if(type == 'proportion') {
+    # LinDA's own handling of proportions: a zero becomes half the taxon's smallest non-zero value.
+    if(any(Y == 0)) {
+      Y <- t(apply(Y, 1, function(y) { y[y == 0] <- 0.5 * min(y[y != 0]); y }))
     }
   }
 
@@ -1819,6 +1845,7 @@ PerformLinDA <- function(mbSetObj, analysis.var, is.norm = "false",
   mbSetObj <- .get.mbSetObj(mbSetObj)
   thresh <- as.numeric(thresh)
   prep <- .cov_da_prepare(mbSetObj, analysis.var, is.norm, comp, ref, block, taxrank)
+  lin.in <- .linda.input(mbSetObj)
   input.data <- prep$input.data; input.meta <- prep$input.meta
 
   # Build LinDA formula
@@ -1831,7 +1858,7 @@ PerformLinDA <- function(mbSetObj, analysis.var, is.norm = "false",
 
   # Run LinDA (adjusted)
   linda.res <- .linda_core(input.data, input.meta, formula = formula.str,
-                           prev.cut = 0, lib.cut = 1, winsor.quan = 0.97)
+                           prev.cut = 0, type = lin.in$type, lib.cut = lin.in$lib.cut, winsor.quan = 0.97)
 
   # Find the variable corresponding to the primary metadata
   # For discrete variables, LinDA creates coefficients like "varNameLevel"
@@ -1847,7 +1874,7 @@ PerformLinDA <- function(mbSetObj, analysis.var, is.norm = "false",
   if(prep$adj.bool || block != "NA") {
     formula.noadj <- paste0("~", analysis.var)
     linda.noadj <- .linda_core(input.data, input.meta, formula = formula.noadj,
-                               prev.cut = 0, lib.cut = 1, winsor.quan = 0.97)
+                               prev.cut = 0, type = lin.in$type, lib.cut = lin.in$lib.cut, winsor.quan = 0.97)
     noadj.var <- grep(paste0("^", analysis.var), linda.noadj$variables, value = TRUE)[1]
     noadj.output <- linda.noadj$output[[noadj.var]]
   } else {
@@ -2025,7 +2052,7 @@ PerformANCOMBC2 <- function(mbSetObj, analysis.var, is.norm = "false",
   # Boxplot data — mirrors PerformUnivarTest preparation
   taxrank_boxplot <- if(mbSetObj$module.type == "sdp") "OTU" else taxrank
   filt.dataphy <- mbSetObj$dataSet$filt.data
-  filt.dataphy <- apply(filt.dataphy, 2, as.integer)
+  filt.dataphy <- .counts.or.as.uploaded(mbSetObj, filt.dataphy)
   filt.dataphy <- otu_table(filt.dataphy, taxa_are_rows = TRUE)
   sample_table_boxplot <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL = TRUE)
   filt.dataphy <- merge_phyloseq(filt.dataphy, sample_table_boxplot)
@@ -2083,6 +2110,7 @@ PerformLinDAUni <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, tax
   fc.thresh <- as.numeric(fc.thresh)
   prep <- .uni_da_prepare(mbSetObj, variable, taxrank, ref.grp, comp.grp)
   data1 <- prep$data1; meta_lin <- prep$meta_lin
+  lin.in <- .linda.input(mbSetObj)
   lvl <- nlevels(prep$cls)
   if(lvl < 2) {
     AddErrMsg("LinDA requires at least 2 groups in the experimental factor.")
@@ -2090,7 +2118,7 @@ PerformLinDAUni <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, tax
   }
 
   linda.res <- .linda_core(data1, meta_lin, formula = paste0("~", variable),
-                           prev.cut = 0, lib.cut = 1, winsor.quan = 0.97)
+                           prev.cut = 0, type = lin.in$type, lib.cut = lin.in$lib.cut, winsor.quan = 0.97)
   vars_out <- linda.res$variables
   feats <- rownames(linda.res$output[[vars_out[1]]])
   baseMean <- linda.res$output[[vars_out[1]]]$baseMean
@@ -3657,4 +3685,34 @@ SetKEGGNetVisOpt <- function(mbSetObj, nm){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   mbSetObj$analSet$keggnet$background <- nm;
   return(.set.mbSetObj(mbSetObj));
+}
+
+# A table uploaded as Normalized data keeps its values: rounding to integers, which the count
+# models need, turns relative abundances into zeros.
+.counts.or.as.uploaded <- function(mbSetObj, dat){
+  if(.is.normalized.input(mbSetObj)) as.matrix(dat) else apply(dat, 2, as.integer)
+}
+
+.counts.only.msg <- function(method){
+  paste0(method, " models read counts, and this table was uploaded as Normalized data. ",
+         "Use the Wilcoxon rank-sum (non-parametric) test, the t-test or LinDA instead.")
+}
+
+# LEfSe scales every sample to a total of one million before the LDA, and the LDA score cutoff
+# (2 by default) is set on that scale. A normalized upload (relative abundances sum to 1 or 100)
+# is put on the same scale for the LDA score; the Kruskal-Wallis test reads the values as uploaded.
+# Returns the per-sample factor, or NULL when the values are counts or are not abundances.
+.lefse.lda.scale <- function(mbSetObj, dat3t){
+  if(!.is.normalized.input(mbSetObj)) return(NULL);
+  m <- as.matrix(dat3t);
+  if(any(!is.finite(m)) || any(m < 0)) return(NULL);
+  lib <- rowSums(m);
+  if(any(lib <= 0)) return(NULL);
+  1e6 / lib
+}
+
+# LinDA reads a table uploaded as Normalized data as proportions (its type = "proportion"): a pseudo-count
+# of 0.5 swamps values below 1, and the library-size cut of 1 drops samples whose fractions sum to 0.9999.
+.linda.input <- function(mbSetObj){
+  if(.is.normalized.input(.get.mbSetObj(mbSetObj))) list(type = "proportion", lib.cut = 0) else list(type = "count", lib.cut = 1)
 }
