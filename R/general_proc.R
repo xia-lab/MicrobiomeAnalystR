@@ -1935,6 +1935,8 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
             feat_nm<-data.frame(mbSetObj$dataSet$feat_nm,check.names=FALSE);
             names(feat_nm)<-"Rank";
             taxonomy<-splitstackshape::cSplit(feat_nm,"Rank",";");
+            taxonomy<-.fit.lineage.ranks(as.data.frame(taxonomy));
+            if(is.null(taxonomy)){ return(0); }
             taxmat= data.frame(matrix(NA, ncol = 7, nrow = nrow(taxonomy)),check.names=FALSE);
             colnames(taxmat) <- classi.lvl;
             taxmat[,1:ncol(taxonomy)]<-taxonomy;
@@ -2507,4 +2509,54 @@ GetSampleNamesaftNorm<-function(mbSetObj, dataName){
   }else{
     return(sample_names(mbSetObj$dataSet$norm.phyobj));
   }
+}
+
+
+# A lineage read into the seven ranks (Kingdom ... Species) must have at most seven levels: an eighth was read into the ranks from the left,
+# so every rank moved by one (Phylum held "Bacteria", Genus held the family, Species the genus) and the taxa shown were not the organisms in
+# the file (a GTDB/NCBI profile written "Bacteria;Bacteria;Bacillota_A;...", 20 Oct 2026). Unprefixed names carry no rank, so the extra level is
+# recognised from the data and dropped: a leading root ("Root", "cellular organisms"); a level that only repeats the one before it, or says
+# "unclassified" for most taxa; an NCBI kingdom under the domain (Bacillati, Pseudomonadati, ... since 2024: the "Kingdom" column holds the
+# domain); a trailing strain level whose names extend the species' (MetaPhlAn t__, SGBs). A lineage still deeper than seven is refused with the
+# reason rather than read shifted. Returns the levels to read, or NULL after AddErrMsg.
+# NCBI Taxonomy's kingdoms (2024), the rank it added between domain and phylum, in lower case.
+.ncbi.kingdoms <- c("bacillati", "pseudomonadati", "fusobacteriati", "thermotogati", "thermoproteati", "methanobacteriati", "nanobdellati",
+                    "promethearchaeati", "fungi", "metazoa", "viridiplantae", "heunggongvirae", "orthornavirae", "pararnavirae", "bamfordvirae",
+                    "shotokuvirae", "loebvirae", "sangervirae", "trapavirae", "helvetiavirae")
+.fit.lineage.ranks <- function(taxonomy){
+  low <- function(x){ x <- tolower(trimws(as.character(x))); x[is.na(x)] <- ""; x }
+  while(ncol(taxonomy) > 7){
+    n <- ncol(taxonomy); dropped <- FALSE;
+    first <- low(taxonomy[[1]]);
+    if(mean(first %in% c("root", "cellular organisms", "")) > 0.9){
+      taxonomy <- taxonomy[, -1, drop = FALSE]; next;
+    }
+    for(j in 2:n){
+      cur <- low(taxonomy[[j]]); prev <- low(taxonomy[[j - 1]]);
+      if(mean(cur == prev | cur %in% c("unclassified", "")) > 0.9){
+        taxonomy <- taxonomy[, -j, drop = FALSE]; dropped <- TRUE; break;
+      }
+    }
+    if(!dropped){
+      second <- low(taxonomy[[2]]);
+      if(mean(second %in% .ncbi.kingdoms | second %in% c("unclassified", "")) > 0.9){
+        taxonomy <- taxonomy[, -2, drop = FALSE]; dropped <- TRUE;
+      }
+    }
+    if(!dropped){
+      last <- low(taxonomy[[n]]); before <- low(taxonomy[[n - 1]]);
+      # the level before must itself be a species (s__, or a binomial): a species name also extends its genus name
+      species.before <- grepl("^s__", before) | grepl("[a-z][ _][a-z]", sub("^[a-z]__", "", before));
+      strain <- grepl("^t__", last) | grepl("sgb", last) | (species.before & startsWith(last, before) & last != before) | last == "";
+      if(mean(strain) > 0.9){
+        taxonomy <- taxonomy[, -n, drop = FALSE]; dropped <- TRUE;
+      }
+    }
+    if(!dropped){
+      AddErrMsg(paste0("The taxonomy in the feature names has ", n, " levels, and seven ranks are read (Kingdom, Phylum, Class, Order, Family, ",
+                       "Genus, Species). Remove the extra level so that each name reads Kingdom;Phylum;Class;Order;Family;Genus;Species."));
+      return(NULL);
+    }
+  }
+  taxonomy
 }
