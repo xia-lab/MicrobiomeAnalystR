@@ -138,20 +138,38 @@ PlotRF.Classify<-function(mbSetObj, feature, imgName, format="png", dpi=default.
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
+  img.base <- imgName;
   imgName = paste(imgName,".", format, sep="");
 
   mbSetObj$imgSet$rf.cls <- imgName;
 
+  # The plot data is what DrawRF.Classify reads: the forest's error curves, not the forest.
+  rf <- mbSetObj$analSet$rf;
+  pd <- list(rf = list(type = rf$type, err.rate = rf$err.rate, ntree = rf$ntree, test = rf$test),
+             cls.lbl = levels(mbSetObj$analSet$cls));
+  DrawRF.Classify(pd, img.base, format, dpi);
+  .ov_plot_data(imgName, pd, "DrawRF.Classify", list(imgName = img.base, format = format, dpi = dpi));
+  return(.set.mbSetObj(mbSetObj))
+}
+
+# Draws the Random Forest error-rate plot from its plot data alone (pd: rf (type, err.rate, ntree, test), cls.lbl).
+DrawRF.Classify<-function(pd, imgName, format="png", dpi=default.dpi){
+
+  imgName = paste(imgName,".", format, sep="");
+
   w <- 8;
   h <- 6;
 
+  requireNamespace("randomForest", quietly = TRUE);   # plot() of a forest is randomForest's method
+  rf <- structure(pd$rf, class = "randomForest");
+
   Cairo::Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
   par(mar=c(4,4,3,2));
-  cols <- grDevices::rainbow(length(levels(mbSetObj$analSet$cls))+1);
-  plot(mbSetObj$analSet$rf, main="Random Forest Classification", col=cols);
-  legend("topright", legend = c("Overall", levels(mbSetObj$analSet$cls)), lty=2, lwd=1, col=cols);
+  cols <- grDevices::rainbow(length(pd$cls.lbl)+1);
+  plot(rf, main="Random Forest Classification", col=cols);
+  legend("topright", legend = c("Overall", pd$cls.lbl), lty=2, lwd=1, col=cols);
   dev.off();
-  return(.set.mbSetObj(mbSetObj))
+  return(invisible(NULL))
 }
 
 #'Plot variable importance ranked by MeanDecreaseAccuracy
@@ -172,8 +190,29 @@ PlotRF.VIP<-function(mbSetObj, feature, imgName, format="png", dpi=default.dpi, 
 
   mbSetObj <- .get.mbSetObj(mbSetObj);
 
+  img.base <- imgName;
   imgName = paste(imgName, ".", format, sep="");
   mbSetObj$imgSet$rf.imp <- imgName;
+
+  # Use selected importance measure (default to MeanDecreaseAccuracy)
+  impMeasure <- if(exists("rf.imp.measure")) rf.imp.measure else "MeanDecreaseAccuracy"
+  vip.score <- rev(sort(mbSetObj$analSet$rf$importance[,impMeasure]));
+  cls <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
+  cls.len <- length(levels(cls));
+
+  xlbl <- gsub("MeanDecrease", "Mean Decrease ", impMeasure)
+
+  # The plot data is what DrawRF.VIP reads: the top features, their per-group means and the number of groups.
+  pd <- list(imp = .ImpVarData(mbSetObj, vip.score, xlbl, feature), cls.len = cls.len);
+  DrawRF.VIP(pd, img.base, format, dpi, width);
+  .ov_plot_data(imgName, pd, "DrawRF.VIP", list(imgName = img.base, format = format, dpi = dpi, width = width));
+  return(.set.mbSetObj(mbSetObj))
+}
+
+# Draws the Random Forest variable-importance plot from its plot data alone (pd: imp (see .ImpVarData), cls.len).
+DrawRF.VIP<-function(pd, imgName, format="png", dpi=default.dpi, width=NA){
+
+  imgName = paste(imgName, ".", format, sep="");
 
   if(is.na(width)){
     w <- 9;
@@ -184,23 +223,16 @@ PlotRF.VIP<-function(mbSetObj, feature, imgName, format="png", dpi=default.dpi, 
   }
   h <- w-1; # margin is big
 
-  # Use selected importance measure (default to MeanDecreaseAccuracy)
-  impMeasure <- if(exists("rf.imp.measure")) rf.imp.measure else "MeanDecreaseAccuracy"
-  vip.score <- rev(sort(mbSetObj$analSet$rf$importance[,impMeasure]));
-  cls <- as.factor(sample_data(mbSetObj$dataSet$norm.phyobj)[[variable]]);
-  cls.len <- length(levels(cls));
-
   # re-adjust width based on group size
-  rt.mrg <- cls.len + 3;
+  rt.mrg <- pd$cls.len + 3;
   w <- w + rt.mrg/72; # convert to inch
 
-  xlbl <- gsub("MeanDecrease", "Mean Decrease ", impMeasure)
   Cairo::Cairo(file = imgName,  unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
   op <- par(mar=c(5,7,3,rt.mrg)); # update right side margin with the number of class
-  PlotImpVar(mbSetObj, vip.score, xlbl, feature);
+  DrawImpVar(pd$imp);
   par(op);
   dev.off();
-  return(.set.mbSetObj(mbSetObj))
+  return(invisible(NULL))
 }
 
 #'Helper function to plot variable importance (for RF and LEfSe)
@@ -210,6 +242,12 @@ PlotRF.VIP<-function(mbSetObj, feature, imgName, format="png", dpi=default.dpi, 
 #'McGill University, Canada
 #'License: MIT
 PlotImpVar <- function(mbSetObj, imp.vec, xlbl, feature, color.BW=FALSE){
+  DrawImpVar(.ImpVarData(mbSetObj, imp.vec, xlbl, feature, color.BW));
+}
+
+# What the important-variable plot reads: the top `feature` scores (ascending, for display), the per-class trimmed means of
+# those features (one row per feature, one column per class) and the labels.
+.ImpVarData <- function(mbSetObj, imp.vec, xlbl, feature, color.BW=FALSE){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
   cls <- as.factor(mbSetObj$analSet$cls);
@@ -243,6 +281,14 @@ PlotImpVar <- function(mbSetObj, imp.vec, xlbl, feature, color.BW=FALSE){
   
   vip.nms <- names(imp.vec);
   names(imp.vec) <- NULL;
+  
+  list(imp.vec = imp.vec, mns = mns, vip.nms = vip.nms, cls.lbl = cls.lbl, xlbl = xlbl, feat.num = feat.num, color.BW = color.BW);
+}
+
+# Draws the important-variable plot (dot chart plus per-class heat key) on the open device from the data of .ImpVarData.
+DrawImpVar <- function(imp){
+  imp.vec <- imp$imp.vec; mns <- imp$mns; vip.nms <- imp$vip.nms; cls.lbl <- imp$cls.lbl;
+  xlbl <- imp$xlbl; feat.num <- imp$feat.num; color.BW <- imp$color.BW;
   
   # modified for B/W color
   dotcolor <- ifelse(color.BW, "darkgrey", "#585855");
@@ -987,6 +1033,7 @@ PlotLEfSeSummary <- function(mbSetObj, ldaFeature, layoutOptlf, imgName, format=
   mbSetObj <- .get.mbSetObj(mbSetObj);
   set.seed(280561493);
   
+  img.base <- imgName;
   imgName = paste(imgName, ".", format, sep="");
   mbSetObj$analSet$lefse_plot <- imgName;
 
@@ -1010,17 +1057,29 @@ PlotLEfSeSummary <- function(mbSetObj, ldaFeature, layoutOptlf, imgName, format=
   if(ldaFeature < nrow(ldabar)) {
     ldabar <- ldabar[1:ldaFeature,];
   };
-  # Method-standard: persist the ranked LDA-score table plotted in the LEfSe
-  # summary figure so Refine can re-plot from data / users can regenerate it
-  # elsewhere. Guarded — wf_method.R helper is optional.
-  if (exists("WfSaveFigureData")) tryCatch(WfSaveFigureData("lefse", ldabar), error = function(e) NULL)
-
   vip.score <- ldabar[[2]];
   names(vip.score) <- ldabar[[1]];
   
     sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
     meta <- mbSetObj$analSet$meta
     cls.len <- length(levels(as.factor(sample_table[[meta]])));
+
+  # The plot data is what DrawLEfSeSummary reads: the ranked LDA scores, and for the dot layout the abundances of those
+  # features per class -- not the session.
+  pd <- .ImpVarLEfSeData(mbSetObj, vip.score, layoutOptlf, meta, ldabar);
+  pd$cls.len <- cls.len;
+  DrawLEfSeSummary(pd, img.base, format, width, dpi);
+  .ov_plot_data(imgName, pd, "DrawLEfSeSummary", list(imgName = img.base, format = format, width = width, dpi = dpi),
+                export = list(lefse = ldabar));
+  return(.set.mbSetObj(mbSetObj))
+}
+
+# Draws the LEfSe summary (dot or bar layout) from its plot data alone (pd: see .ImpVarLEfSeData, plus cls.len).
+DrawLEfSeSummary <- function(pd, imgName, format="png", width = NA, dpi=default.dpi) {
+  imgName = paste(imgName, ".", format, sep="");
+  vip.score <- pd$vip.score;
+  cls.len <- pd$cls.len;
+  layoutOptlf <- pd$layout;
 
   if(is.na(width)){
     
@@ -1070,9 +1129,9 @@ PlotLEfSeSummary <- function(mbSetObj, ldaFeature, layoutOptlf, imgName, format=
    }else{
        Cairo::Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
    }
-   PlotImpVarLEfSe(mbSetObj, vip.score, layoutOptlf, mbSetObj$analSet$meta, colOpt);
+   DrawImpVarLEfSe(pd);
    dev.off();
-   return(.set.mbSetObj(mbSetObj))
+   return(invisible(NULL))
 }
 
 #'Plot LEfSe summary
@@ -1085,8 +1144,15 @@ PlotLEfSeSummary <- function(mbSetObj, ldaFeature, layoutOptlf, imgName, format=
 #'@export
 
 PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="default", color.BW=FALSE){
+  DrawImpVarLEfSe(.ImpVarLEfSeData(mbSetObj, imp.vec, layoutOptlf, meta, ldabar, color.BW));
+}
+
+# What the LEfSe summary reads: for the dot layout the important-variable data (see .ImpVarData) of the top features, with the
+# per-class trimmed means of the abundances they were scored on; for the bar layout the ranked LDA table (ldabar).
+.ImpVarLEfSeData <- function(mbSetObj, imp.vec, layoutOptlf, meta, ldabar, color.BW=FALSE){
   
   mbSetObj <- .get.mbSetObj(mbSetObj);
+  pd <- list(layout = layoutOptlf, vip.score = imp.vec, ldabar = ldabar);
   if(layoutOptlf == "dot") {
     
     sample_table <- sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL=TRUE);
@@ -1114,69 +1180,25 @@ PlotImpVarLEfSe <- function(mbSetObj, imp.vec, layoutOptlf, meta, colOpt="defaul
     vip.clean.nms <- CleanTaxaNames(mbSetObj, vip.nms)
     names(imp.vec) <- NULL;
     
-    # modified for B/W color
-    dotcolor <- ifelse(color.BW, "darkgrey", "#585855");
-    dotchart(imp.vec, bg=dotcolor, xlab= "LDA score", cex=1.35);
-    
-    mtext(side=2, at=1:feat.num, vip.clean.nms, las=2, line=1, cex=1.1)
-    
-    axis.lims <- par("usr"); # x1, x2, y1 ,y2
-    
-    # get character width
-    shift <- 2*par("cxy")[1];
-    lgd.x <- axis.lims[2] + shift;
-    
-    x <- rep(lgd.x, feat.num);
-    y <- 1:feat.num;
-    par(xpd=T);
-    
-    nc <- ncol(mns);
-    
-    # modified for B/W color
-    colorpalette <- ifelse(color.BW, "Greys", "RdYlBu");
-    col <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(10, colorpalette))(nc); # set colors for each class
-    if(color.BW) col <- rev(col);
-    
-    # calculate background
-    bg <- matrix("", nrow(mns), nc);
-    for (m in 1:nrow(mns)){
-      bg[m,] <- (col[nc:1])[rank(mns[m,])];
-    }
-    
     cls.lbl <- levels(as.factor(sample_table[[meta]]));
+    pd$imp <- list(imp.vec = imp.vec, mns = mns, vip.nms = vip.clean.nms, cls.lbl = cls.lbl, xlbl = "LDA score",
+                   feat.num = feat.num, color.BW = color.BW);
+  }
+  pd
+}
+
+# Draws the LEfSe summary on the open device from the data of .ImpVarLEfSeData.
+DrawImpVarLEfSe <- function(pd){
+  
+  if(pd$layout == "dot") {
     
-    for (n in 1:ncol(mns)){
-      points(x,y, bty="n", pch=22, bg=bg[,n], cex=3);
-      # now add label
-      text(x[1], axis.lims[4], cls.lbl[n], srt=45, adj=c(0.2,0.5), cex=1.1);
-      # shift x, note, this is good for current size
-      x <- x + shift/1.25;
-    }
-    
-    # now add color key, padding with more intermediate colors for contiuous band
-    col <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(25, colorpalette))(50)
-    
-    if(color.BW) col <- rev(col);
-    
-    nc <- length(col);
-    x <- rep(x[1] + shift, nc);
-    
-    shifty <- (axis.lims[4]-axis.lims[3])/3;
-    starty <- axis.lims[3] + shifty;
-    endy <- axis.lims[3] + 2*shifty;
-    y <- seq(from = starty, to = endy, length = nc);
-    
-    points(x,y, bty="n", pch=15, col=rev(col), cex=2);
-    
-    text(x[1], endy+shifty/8, "High", cex=1.1);
-    text(x[1], starty-shifty/8, "Low", cex=1.1);
-    
-    #par(op);
+    DrawImpVar(pd$imp);
     
   } else {
     
+    ldabar <- pd$ldabar;
     ldabar <-  ldabar[order(-abs(ldabar[[2]])), ];
-    feat.num <- length(imp.vec);
+    feat.num <- length(pd$vip.score);
     if(feat.num > nrow(ldabar)){
       ldabar <- ldabar;
     }else{
@@ -2468,9 +2490,38 @@ PlotCorr <- function(mbSetObj, imgName, format="png", dpi=default.dpi,appendnm, 
 
   
   title <- paste("Top",nrow(cor.res), tolower(mbSetObj$analSet$taxrank), "correlated with", pattern);
+  img.base <- imgName;
   imgName = paste(imgName, ".", format, sep="");
   mbSetObj$imgSet$cor.ph <- imgName;
-  feat.num <- nrow(cor.res);
+  
+  cls.len <- length(levels(as.factor(sample_table[[variable]])));
+  
+  # for heatmap
+  mns <- by(data[, rownames(cor.res)], 
+            sample_table[[variable]],
+            # sample_table[["SampleType"]],
+            function(x){ # inner function note, by send a subset of dataframe
+              apply(x, 2, mean, trim=0.1)
+            });
+  mns <- t(matrix(unlist(mns), ncol=nrow(cor.res), byrow=TRUE));
+  
+  feat.nms <- substr(rownames(cor.res), 1, 20);
+  rownames(cor.res) <- NULL;
+  cls.lbl <- levels(as.factor(sample_table[[variable]]));
+  
+  # The plot data is what DrawCorr reads: the top correlations, the per-group means of those features and the labels.
+  pd <- list(cor.res = cor.res, mns = mns, feat.nms = feat.nms, cls.lbl = cls.lbl, cls.len = cls.len, title = title);
+  DrawCorr(pd, img.base, format, dpi, width);
+  .ov_plot_data(imgName, pd, "DrawCorr", list(imgName = img.base, format = format, dpi = dpi, width = width));
+  
+  return(.set.mbSetObj(mbSetObj))
+}
+
+# Draws the pattern-search correlation plot from its plot data alone (pd: cor.res, mns, feat.nms, cls.lbl, cls.len, title).
+DrawCorr <- function(pd, imgName, format="png", dpi=default.dpi, width=NA){
+  
+  cor.res <- pd$cor.res; mns <- pd$mns; feat.nms <- pd$feat.nms; cls.lbl <- pd$cls.lbl; cls.len <- pd$cls.len; title <- pd$title;
+  imgName = paste(imgName, ".", format, sep="");
   
   if(is.na(width)){
     h <- w <- 10
@@ -2480,8 +2531,6 @@ PlotCorr <- function(mbSetObj, imgName, format="png", dpi=default.dpi,appendnm, 
     w <- width;
     h <- w/0.85
   }
-  
-  cls.len <- length(levels(as.factor(sample_table[[variable]])));
   
   if(cls.len == 2){
     rt.mrg <- 7.75;
@@ -2502,22 +2551,11 @@ PlotCorr <- function(mbSetObj, imgName, format="png", dpi=default.dpi,appendnm, 
     w <- w + 3
   }
   
-  # for heatmap
-  mns <- by(data[, rownames(cor.res)], 
-            sample_table[[variable]],
-            # sample_table[["SampleType"]],
-            function(x){ # inner function note, by send a subset of dataframe
-              apply(x, 2, mean, trim=0.1)
-            });
-  mns <- t(matrix(unlist(mns), ncol=nrow(cor.res), byrow=TRUE));
-  
   Cairo::Cairo(file = imgName, unit="in", dpi=dpi, width=w, height=h, type=format, bg="white");
   
   op <- par(mar=c(5, 10, 3, rt.mrg));
   
-  feat.nms <- substr(rownames(cor.res), 1, 20);
   feat.num <- length(feat.nms)
-  rownames(cor.res) <- NULL;
   
   cols <- case_when(
     cor.res > 0.75 ~ "#d47273",
@@ -2554,8 +2592,6 @@ PlotCorr <- function(mbSetObj, imgName, format="png", dpi=default.dpi,appendnm, 
     bg[m,] <- (col[nc:1])[rank(mns[m,])];
   }
   
-  cls.lbl <- levels(as.factor(sample_table[[variable]]));
-  
   for (n in 1:ncol(mns)){
     points(x,y, bty="n", pch=22, bg=bg[,n], cex=3);
     # now add label
@@ -2583,7 +2619,7 @@ PlotCorr <- function(mbSetObj, imgName, format="png", dpi=default.dpi,appendnm, 
   par(op)
   dev.off();
   
-  return(.set.mbSetObj(mbSetObj))
+  return(invisible(NULL))
 }
 
 #'Match Patterns Function

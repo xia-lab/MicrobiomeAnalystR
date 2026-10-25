@@ -4436,6 +4436,7 @@ GenerateDiabloCircosJson <- function(cutoff=0.5, maxEdges=100) {
 PlotDiabloCirocs <- function(imgNm, cutoff=0.5, featureSize=0.25, dpi=150, format="png") {
   dpi <- as.numeric(dpi)
   cutoff <- as.numeric(cutoff)
+  img.base <- imgNm
   imgNm <- paste(imgNm, ".", format, sep="")
   work_dir <- getwd()
 
@@ -4446,72 +4447,13 @@ PlotDiabloCirocs <- function(imgNm, cutoff=0.5, featureSize=0.25, dpi=150, forma
   }
 
   tryCatch({
-    require(circlize)
     edges <- jsonlite::read_json(json_path, simplifyVector = TRUE)$DIABLO
     if (is.null(edges) || length(edges) == 0) {
       message("[PlotDiabloCirocs] No edges in circos JSON")
     } else {
-      # Build sector (feature) list grouped by data type
-      sources <- data.frame(name = edges$source, type = edges$type1, stringsAsFactors = FALSE)
-      targets <- data.frame(name = edges$target, type = edges$type2, stringsAsFactors = FALSE)
-      nodes <- unique(rbind(sources, targets))
-      nodes <- nodes[order(nodes$type, nodes$name), ]
-
-      # Assign colors by data type
-      type_colors <- c("#ED7D31", "#70AD47", "#FFC000", "#9B59B6")
-      type_names <- unique(nodes$type)
-      sector_colors <- setNames(
-        type_colors[match(nodes$type, type_names)],
-        nodes$name
-      )
-
-      # Build link data frame: from, to, correlation
-      link_df <- data.frame(
-        from = edges$source,
-        to = edges$target,
-        value = abs(as.numeric(edges$corr)),
-        stringsAsFactors = FALSE
-      )
-      link_colors <- ifelse(as.numeric(edges$corr) > 0,
-                            rgb(255, 80, 80, alpha = 153, maxColorValue = 255),
-                            rgb(80, 80, 255, alpha = 153, maxColorValue = 255))
-
-      Cairo::Cairo(file = file.path(work_dir, imgNm), width = 10, height = 10,
-                   type = format, bg = "white", unit = "in", dpi = dpi)
-
-      circos.clear()
-      circos.par(gap.after = c(rep(1, nrow(nodes) - 1), 8), start.degree = 90)
-
-      # Initialize sectors — each feature is a sector of equal size
-      circos.initialize(factors = factor(nodes$name, levels = nodes$name),
-                        xlim = c(0, 1))
-
-      # Draw sectors with labels
-      circos.track(ylim = c(0, 1), panel.fun = function(x, y) {
-        sector.name <- CELL_META$sector.index
-        circos.text(CELL_META$xcenter, CELL_META$ycenter,
-                    sector.name, facing = "clockwise", niceFacing = TRUE,
-                    adj = c(0, 0.5), cex = 0.6)
-      }, bg.col = sector_colors, bg.border = "grey50",
-      track.height = 0.05)
-
-      # Draw links (chords) colored by correlation direction
-      for (i in seq_len(nrow(link_df))) {
-        circos.link(link_df$from[i], c(0.2, 0.8),
-                    link_df$to[i], c(0.2, 0.8),
-                    col = link_colors[i], border = NA)
-      }
-
-      # Add legend
-      legend("bottomleft", legend = type_names, fill = type_colors[1:length(type_names)],
-             title = "Data Type", bty = "n", cex = 0.9)
-      legend("bottomright", legend = c("Positive", "Negative"),
-             fill = c(rgb(255, 80, 80, alpha = 153, maxColorValue = 255),
-                      rgb(80, 80, 255, alpha = 153, maxColorValue = 255)),
-             title = "Correlation", bty = "n", cex = 0.9)
-
-      circos.clear()
-      dev.off()
+      # The plot data is what DrawDiabloCircos reads: the cross-block correlation edges.
+      DrawDiabloCircos(edges, img.base, dpi, format)
+      .ov_plot_data(imgNm, edges, "DrawDiabloCircos", list(imgNm = img.base, dpi = dpi, format = format))
     }
   }, error = function(e) { message("[PlotDiabloCirocs] ", e$message) })
 
@@ -4519,6 +4461,79 @@ PlotDiabloCirocs <- function(imgNm, cutoff=0.5, featureSize=0.25, dpi=150, forma
   mbSetObj$imgSet$diablo$circos <- imgNm
   .set.mbSetObj(mbSetObj)
   return(1)
+}
+
+# Draws the DIABLO circos (chord diagram of the strongest cross-block correlations) from its plot data alone (edges: source,
+# target, type1, type2, corr).
+DrawDiabloCircos <- function(edges, imgNm, dpi=150, format="png") {
+  dpi <- as.numeric(dpi)
+  imgNm <- paste(imgNm, ".", format, sep="")
+  work_dir <- getwd()
+
+  require(circlize)
+
+  # Build sector (feature) list grouped by data type
+  sources <- data.frame(name = edges$source, type = edges$type1, stringsAsFactors = FALSE)
+  targets <- data.frame(name = edges$target, type = edges$type2, stringsAsFactors = FALSE)
+  nodes <- unique(rbind(sources, targets))
+  nodes <- nodes[order(nodes$type, nodes$name), ]
+
+  # Assign colors by data type
+  type_colors <- c("#ED7D31", "#70AD47", "#FFC000", "#9B59B6")
+  type_names <- unique(nodes$type)
+  sector_colors <- setNames(
+    type_colors[match(nodes$type, type_names)],
+    nodes$name
+  )
+
+  # Build link data frame: from, to, correlation
+  link_df <- data.frame(
+    from = edges$source,
+    to = edges$target,
+    value = abs(as.numeric(edges$corr)),
+    stringsAsFactors = FALSE
+  )
+  link_colors <- ifelse(as.numeric(edges$corr) > 0,
+                        rgb(255, 80, 80, alpha = 153, maxColorValue = 255),
+                        rgb(80, 80, 255, alpha = 153, maxColorValue = 255))
+
+  Cairo::Cairo(file = file.path(work_dir, imgNm), width = 10, height = 10,
+               type = format, bg = "white", unit = "in", dpi = dpi)
+
+  circos.clear()
+  circos.par(gap.after = c(rep(1, nrow(nodes) - 1), 8), start.degree = 90)
+
+  # Initialize sectors — each feature is a sector of equal size
+  circos.initialize(factors = factor(nodes$name, levels = nodes$name),
+                    xlim = c(0, 1))
+
+  # Draw sectors with labels
+  circos.track(ylim = c(0, 1), panel.fun = function(x, y) {
+    sector.name <- CELL_META$sector.index
+    circos.text(CELL_META$xcenter, CELL_META$ycenter,
+                sector.name, facing = "clockwise", niceFacing = TRUE,
+                adj = c(0, 0.5), cex = 0.6)
+  }, bg.col = sector_colors, bg.border = "grey50",
+  track.height = 0.05)
+
+  # Draw links (chords) colored by correlation direction
+  for (i in seq_len(nrow(link_df))) {
+    circos.link(link_df$from[i], c(0.2, 0.8),
+                link_df$to[i], c(0.2, 0.8),
+                col = link_colors[i], border = NA)
+  }
+
+  # Add legend
+  legend("bottomleft", legend = type_names, fill = type_colors[1:length(type_names)],
+         title = "Data Type", bty = "n", cex = 0.9)
+  legend("bottomright", legend = c("Positive", "Negative"),
+         fill = c(rgb(255, 80, 80, alpha = 153, maxColorValue = 255),
+                  rgb(80, 80, 255, alpha = 153, maxColorValue = 255)),
+         title = "Correlation", bty = "n", cex = 0.9)
+
+  circos.clear()
+  dev.off()
+  return(invisible(NULL))
 }
 
 

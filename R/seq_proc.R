@@ -1041,7 +1041,18 @@ libSizeQuickView <- function(dataObj = NULL, format = "png", dpi = default.dpi){
   names(smpl.sums) <- NULL;
   vip.nms <- substr(vip.nms, 1, 16);
   
-  myH <- ncol(data_bef)*25 + 50;
+  # The plot data is what DrawLibSizeQuickView reads: the read count and the (shortened) name of each sample.
+  pd <- list(smpl.sums = smpl.sums, vip.nms = vip.nms, nsmpl = ncol(data_bef));
+  DrawLibSizeQuickView(pd, "libsize_quickview", format, dpi);
+  .ov_plot_data(paste0("libsize_quickview.", format), pd, "DrawLibSizeQuickView", list(imgNm = "libsize_quickview", format = format, dpi = dpi));
+  
+}
+
+# Draws the raw library-size overview from its plot data alone (pd: smpl.sums, vip.nms, nsmpl).
+DrawLibSizeQuickView <- function(pd, imgNm = "libsize_quickview", format = "png", dpi = default.dpi){
+  smpl.sums <- pd$smpl.sums; vip.nms <- pd$vip.nms;
+  
+  myH <- pd$nsmpl*25 + 50;
   if(format == "png"){
       myW = 840
   } else {
@@ -1050,14 +1061,14 @@ libSizeQuickView <- function(dataObj = NULL, format = "png", dpi = default.dpi){
   }
   
   # plot libsize_quickview
-  Cairo::Cairo(file=paste0("libsize_quickview.", format), unit="in", dpi=dpi, width=myW/72, height=myH/72, type=format, bg="white");
+  Cairo::Cairo(file=paste0(imgNm, ".", format), unit="in", dpi=dpi, width=myW/72, height=myH/72, type=format, bg="white");
   xlim.ext <- GetExtendRange(smpl.sums, 10);
   par(mar=c(4,10,2,2));
   dotchart(smpl.sums, col="forestgreen", xlim=xlim.ext, pch=19, xlab="Read Counts", main="Library Raw Size Overview");
   mtext(side=2, at=1:length(vip.nms), vip.nms, las=2, line=1);
   text(x=smpl.sums,y=1:length(smpl.sums),labels= round(smpl.sums), col="blue", pos=4, xpd=T);
   dev.off();
-  
+  return(invisible(NULL))
 }
 
 plotSeqDiagnotics <- function(imageName = "diagnotics", format = "png", dpi = 120){

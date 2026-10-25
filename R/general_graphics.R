@@ -75,6 +75,7 @@ PlotTreeGraph <- function(mbSetObj, plotNm, distnm, clstDist, metadata,
   mbSetObj <- .get.mbSetObj(mbSetObj)
 
   set.seed(2805619)
+  img.base <- plotNm
   plotNm <- paste(plotNm, ".", format, sep = "")
   variable <<- metadata
 
@@ -125,14 +126,6 @@ PlotTreeGraph <- function(mbSetObj, plotNm, distnm, clstDist, metadata,
     h <- max(9.0, nsamp * 0.35 + 2)
   }
 
-  # Scale text for DPI: larger pointsize for high DPI, normal for 72
-  pt <- if(dpi > 100) 16 else 12
-  lab_cex <- if(dpi > 100) 1.0 else 0.8
-
-  Cairo::Cairo(file = plotNm, unit = "in", dpi = dpi, width = w, height = h, type = format, bg = "white", pointsize = pt)
-  par(mar = c(4, 2, 2, 10))
-  clusDendro <- as.dendrogram(hc_tree)
-
   if (colorOpts == "default") {
     cols <- GetColorSchema(mbSetObj)
   } else {
@@ -157,7 +150,37 @@ PlotTreeGraph <- function(mbSetObj, plotNm, distnm, clstDist, metadata,
     cols <- colors
   }
 
+
   names(cols) <- sample_names(data)
+
+  legend.nm <- unique(as.character(hc.cls))
+  legend.nm <- gsub("\\.", " ", legend.nm)
+
+  # The plot data is what DrawTreeGraph reads: the clustering, the colour of each sample and the legend -- not the session.
+  pd <- list(hc_tree = hc_tree, cols = cols, legend.nm = legend.nm, plotType = plotType, w = w, h = h)
+  DrawTreeGraph(pd, img.base, format, dpi)
+  .ov_plot_data(plotNm, pd, "DrawTreeGraph", list(imgName = img.base, format = format, dpi = dpi))
+
+  mbSetObj$analSet$tree <- hc_tree
+  mbSetObj$analSet$tree.dist <- distnm
+  mbSetObj$analSet$tree.clust <- clstDist
+  mbSetObj$analSet$tree.taxalvl <- taxrank
+  return(.set.mbSetObj(mbSetObj))
+}
+
+# Draws the sample dendrogram from its plot data alone (pd: hc_tree, cols (a colour per sample, named), legend.nm, plotType, w, h).
+DrawTreeGraph <- function(pd, imgName, format = "png", dpi = default.dpi) {
+  plotNm <- paste(imgName, ".", format, sep = "")
+  hc_tree <- pd$hc_tree; cols <- pd$cols; w <- pd$w; h <- pd$h
+
+  # Scale text for DPI: larger pointsize for high DPI, normal for 72
+  pt <- if(dpi > 100) 16 else 12
+  lab_cex <- if(dpi > 100) 1.0 else 0.8
+
+  Cairo::Cairo(file = plotNm, unit = "in", dpi = dpi, width = w, height = h, type = format, bg = "white", pointsize = pt)
+  par(mar = c(4, 2, 2, 10))
+  clusDendro <- as.dendrogram(hc_tree)
+
   labelColors <- cols[hc_tree$order]
 
   colLab <- function(n) {
@@ -176,17 +199,10 @@ PlotTreeGraph <- function(mbSetObj, plotNm, distnm, clstDist, metadata,
 
   clusDendro <- dendrapply(clusDendro, colLab)
   par(cex = 1.2)
-  plot(clusDendro, horiz = T, axes = T, type = plotType)
-  legend.nm <- unique(as.character(hc.cls))
-  legend.nm <- gsub("\\.", " ", legend.nm)
-  legend("topleft", legend = legend.nm, pch = 15, col = unique(cols), bty = "n")
+  plot(clusDendro, horiz = T, axes = T, type = pd$plotType)
+  legend("topleft", legend = pd$legend.nm, pch = 15, col = unique(cols), bty = "n")
   dev.off()
-
-  mbSetObj$analSet$tree <- hc_tree
-  mbSetObj$analSet$tree.dist <- distnm
-  mbSetObj$analSet$tree.clust <- clstDist
-  mbSetObj$analSet$tree.taxalvl <- taxrank
-  return(.set.mbSetObj(mbSetObj))
+  return(invisible(NULL))
 }
 
 #######################################
@@ -795,16 +811,14 @@ as_list <- to_plotly_list(p)
   mbSetObj$imgSet$heatmap_int <- plotwidget
   .save.plot.light("p", plotwidget);
 
-  pstatic <- CreateStaticHeatmap(data1sc, fzAnno, colors, nrows, x_start, y_start, x_spacing, annotation, sz, bf, showColnm, showRownm, doclust, smplDist, clstDist, fzCol, fzRow)
-
+  # The plot data is what DrawHeatmap reads: the scaled matrix the static heatmap shows, its sample annotation, the colours and the
+  # clustering and label settings -- not the session.
   imgFile <- paste0(plotNm, "_dpi", dpi, ".", format)
-  Cairo::Cairo(file = imgFile, unit = "in", dpi = dpi, width = w / 150, height = h / 150, type = format, bg = "white");
-  print(pstatic)
-  dev.off()
-  # Method-standard: persist the scaled matrix actually rendered in the static
-  # heatmap so the AI "Refine" control can re-plot from data / users can
-  # regenerate it elsewhere. Guarded — wf_method.R helper is optional.
-  if (exists("WfSaveFigureData")) tryCatch(WfSaveFigureData("heatmap", data1sc), error = function(e) NULL)
+  pd <- list(data1sc = data1sc, fzAnno = fzAnno, colors = colors, annotation = annotation, showColnm = showColnm,
+             showRownm = showRownm, doclust = doclust, smplDist = smplDist, clstDist = clstDist, fzCol = fzCol, fzRow = fzRow,
+             w = w, h = h)
+  DrawHeatmap(pd, plotNm, dpi, format)
+  .ov_plot_data(imgFile, pd, "DrawHeatmap", list(imgNm = plotNm, dpi = dpi, format = format), export = list(heatmap = data1sc))
 
   # Store the static heatmap path for report generation
   mbSetObj$imgSet$heatmap <- imgFile
@@ -1061,6 +1075,22 @@ PlotCovariateMap <- function(mbSetObj,
   }
 }
 
+
+# Draws the static heatmap from its plot data alone (pd: data1sc, fzAnno, colors, annotation, showColnm, showRownm, doclust,
+# smplDist, clstDist, fzCol, fzRow, w, h). pheatmap lays the heatmap out against the device it is built on, so it is built on a
+# null PDF device -- the default device of the session that first drew it -- and drawn onto the image file.
+DrawHeatmap <- function(pd, imgNm, dpi = 150, format = "png") {
+  grDevices::pdf(NULL)
+  pstatic <- tryCatch(CreateStaticHeatmap(pd$data1sc, pd$fzAnno, pd$colors, NULL, NULL, NULL, NULL, pd$annotation, NULL, NULL,
+                                          pd$showColnm, pd$showRownm, pd$doclust, pd$smplDist, pd$clstDist, pd$fzCol, pd$fzRow),
+                      finally = grDevices::dev.off())
+
+  imgFile <- paste0(imgNm, "_dpi", dpi, ".", format)
+  Cairo::Cairo(file = imgFile, unit = "in", dpi = dpi, width = pd$w / 150, height = pd$h / 150, type = format, bg = "white");
+  print(pstatic)
+  dev.off()
+  return(invisible(NULL))
+}
 
 CreateStaticHeatmap <- function(data1sc, fzAnno, colors, nrows, x_start, y_start, x_spacing, annotation, sz, bf, showColnm, showRownm, doclust, smplDist, clstDist, fzCol, fzRow) {
   library(pheatmap);
