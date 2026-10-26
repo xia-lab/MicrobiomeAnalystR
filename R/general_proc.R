@@ -1533,20 +1533,11 @@ PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=default.d
   width <- ifelse(num_samples < 50, 800, 800 + (num_samples - 50) * 10)
   height <- 400
   
-  # Plotting with ggplot2
+  # The plot data is what DrawLibSizeView reads: the library size and group of each sample, and the figure's size.
   imgName <- paste0(origImgName, ".", format)
-  g <- ggplot(library_size_data, aes(x = Sample, y = LibrarySize)) +
-    geom_point(aes(color = library_size_data$group)) +
-    geom_hline(yintercept = mean(library_size_data$LibrarySize), color = "blue", linetype = "dashed") +
-    labs(x = "Sample", y = "Read Counts", color="") +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1),
-          legend.text = element_text(size = 14), legend.title = element_text(size = 14))
-  
-  if(imgName != ""){
-    Cairo::Cairo(file=imgName, unit="in", dpi=dpi, width=width/72, height=height/72, type=format, bg="white");
-    print(g);
-    dev.off();
-  }
+  pd <- list(library_size_data = library_size_data, width = width, height = height);
+  DrawLibSizeView(pd, origImgName, format, dpi);
+  .ov_plot_data(imgName, pd, "DrawLibSizeView", list(imgName = origImgName, format = format, dpi = dpi));
   
   mbSetObj$imgSet$lib.size <- imgName;
   
@@ -1674,6 +1665,25 @@ PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=default.d
   }
 }
 
+# Draws the normalized library-size plot from its plot data alone (pd: library_size_data (Sample, LibrarySize, group), width, height).
+DrawLibSizeView <- function(pd, imgName = "", format = "png", dpi = default.dpi){
+  library_size_data <- pd$library_size_data;
+  imgName <- paste0(imgName, ".", format)
+  g <- ggplot(library_size_data, aes(x = Sample, y = LibrarySize)) +
+    geom_point(aes(color = library_size_data$group)) +
+    geom_hline(yintercept = mean(library_size_data$LibrarySize), color = "blue", linetype = "dashed") +
+    labs(x = "Sample", y = "Read Counts", color="") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1),
+          legend.text = element_text(size = 14), legend.title = element_text(size = 14))
+  
+  if(imgName != ""){
+    Cairo::Cairo(file=imgName, unit="in", dpi=dpi, width=pd$width/72, height=pd$height/72, type=format, bg="white");
+    print(g);
+    dev.off();
+  }
+  return(invisible(g))
+}
+
 #'Plot PCA plot for multi-omics samples
 #'@description 
 #'@param imgNm name of the image to output
@@ -1687,9 +1697,10 @@ PlotLibSizeView <- function(mbSetObj, origImgName="",format="png", dpi=default.d
 PlotPCAView <- function(imgName, format="png", dpi=default.dpi, init=0){
   require("ggsci")
 
+  img.base <- imgName;
   imgName = paste(imgName,".", format, sep="");
 
-  fig.list <- list()
+  panels <- list()
   pca.list <- list()
   pct <- list()
 
@@ -1707,12 +1718,7 @@ PlotPCAView <- function(imgName, format="png", dpi=default.dpi, init=0){
     yl <- paste0("PC2 (", 100*round(imp.pca[2,2], 3), "%)")
     pca.res <- as.data.frame(pca$x[,c(1,2)])
     pca.res$Conditions <- Factor
-    ggplot(pca.res, aes(x=PC1, y=PC2, color=Conditions)) +
-      geom_point(size=3, alpha=0.7) +
-      scale_color_npg() +
-      xlab(xl) + ylab(yl) + ggtitle(title) +
-      theme_bw() +
-      theme(plot.title=element_text(size=11, face="bold"))
+    list(scores = pca.res, xl = xl, yl = yl, title = title)
   }
 
   datasets <- list(
@@ -1758,17 +1764,37 @@ PlotPCAView <- function(imgName, format="png", dpi=default.dpi, init=0){
     } else {
       x.before <- x.after
     }
-    fig.list[[idx]] <- .make_pca_plot(x.before, "", "", paste0(ds$name, " (Before)"))
+    panels[[idx]] <- .make_pca_plot(x.before, "", "", paste0(ds$name, " (Before)"))
     idx <- idx + 1
 
     # After normalization (right)
-    fig.list[[idx]] <- .make_pca_plot(x.after, "", "", paste0(ds$name, " (After)"))
+    panels[[idx]] <- .make_pca_plot(x.after, "", "", paste0(ds$name, " (After)"))
     idx <- idx + 1
   }
 
   pca.list$pct2 <- pct
   shadow_save(pca.list, file="pca.scatter.qs")
 
+  # The plot data is what DrawPCAView reads: the scores of each of the four panels, their axis labels and titles.
+  pd <- list(panels = panels);
+  DrawPCAView(pd, img.base, format);
+  .ov_plot_data(imgName, pd, "DrawPCAView", list(imgName = img.base, format = format));
+  return(1)
+
+}
+
+# Draws the before/after PCA overview (four panels) from its plot data alone (pd: panels, a list of (scores, xl, yl, title)).
+DrawPCAView <- function(pd, imgName, format="png"){
+  require("ggsci")
+  imgName = paste(imgName,".", format, sep="");
+  fig.list <- lapply(pd$panels, function(x){
+    ggplot(x$scores, aes(x=PC1, y=PC2, color=Conditions)) +
+      geom_point(size=3, alpha=0.7) +
+      scale_color_npg() +
+      xlab(x$xl) + ylab(x$yl) + ggtitle(x$title) +
+      theme_bw() +
+      theme(plot.title=element_text(size=11, face="bold"))
+  })
   # ggpubr quarantined — ggarrange in subprocess
   rsclient_isolated_exec(
     func_body = function(d) {
@@ -1782,13 +1808,13 @@ PlotPCAView <- function(imgName, format="png", dpi=default.dpi, init=0){
     input_data = list(imgName = imgName, format = format, figs = fig.list),
     packages = c("ggpubr", "Cairo", "qs"), timeout = 120, output_type = "qs"
   )
-  return(1)
-
+  return(invisible(NULL))
 }
 
 
 PlotDensityView <- function(imgName, format="png",  init=0, autoScale=T,dpi=default.dpi){
 
+  img.base <- imgName;
   imgName = paste(imgName,".", format, sep="");
   merged.df <- data.frame()
 
@@ -1839,6 +1865,18 @@ PlotDensityView <- function(imgName, format="png",  init=0, autoScale=T,dpi=defa
     "Microbiome (Before)", "Microbiome (After)",
     "Metabolomics (Before)", "Metabolomics (After)"))
 
+  # The plot data is what DrawDensityView reads: every value of the four panels (Before/After x Microbiome/Metabolomics).
+  pd <- list(df = merged.df[, c("values", "ind", "panel")]);
+  DrawDensityView(pd, img.base, format, dpi);
+  .ov_plot_data(imgName, pd, "DrawDensityView", list(imgName = img.base, format = format, dpi = dpi));
+
+  return(1)
+}
+
+# Draws the before/after density plot from its plot data alone (pd: df (values, ind, panel)).
+DrawDensityView <- function(pd, imgName, format="png", dpi=default.dpi){
+  imgName = paste(imgName,".", format, sep="");
+  merged.df <- pd$df;
   Cairo::Cairo(file=imgName, width=10, height=8, type=format, bg="white", dpi=dpi, unit="in");
   g <- ggplot(merged.df, aes(x=values)) +
     geom_line(aes(group=ind), stat="density", alpha=0.1, color="#E64B35B2") +
@@ -1849,8 +1887,7 @@ PlotDensityView <- function(imgName, format="png",  init=0, autoScale=T,dpi=defa
     theme(strip.text=element_text(size=11, face="bold"))
   print(g)
   dev.off();
-
-  return(1)
+  return(invisible(NULL))
 }
 
 

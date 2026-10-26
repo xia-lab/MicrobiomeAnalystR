@@ -518,6 +518,7 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
     # can re-plot from data / users can regenerate it. Guarded (wf_method.R).
     if (exists("WfSaveFigureData")) tryCatch(WfSaveFigureData("core_micro", core.nm), error = function(e) NULL)
 
+    img.base <- imgName;
     imgName = paste(imgName, ".", format, sep="");
     mbSetObj$imgSet$core <- imgName;
 
@@ -549,6 +550,46 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
         }
     }
  
+
+  # The plot data is what DrawCoreMicrobe reads: the abundances of the core features and how to draw them.
+  pd <- list(abund = abundances(data.core), viewOpt = viewOpt, palette = palette, detection = detection,
+             taxrank = taxrank, w = w, h = h);
+  p <- DrawCoreMicrobe(pd, img.base, format, dpi);
+  .ov_plot_data(imgName, pd, "DrawCoreMicrobe", list(imgName = img.base, format = format, dpi = dpi));
+  
+  if(interactive){
+    library(plotly)
+    library(htmlwidgets)
+    ax <- list(
+      zeroline = FALSE,
+      showline = FALSE,
+      showgrid = FALSE
+    )
+    p <- plotly::ggplotly(p)
+    p <- p %>% layout(xaxis = ax, yaxis = ax)
+    htmlwidgets::saveWidget(p, "core_interactive.html")
+  }
+  mbSetObj$analSet$core<-signif(as.matrix(core.nm),5);
+  mbSetObj$analSet$core.taxalvl<-taxrank;
+  mbSetObj$paramSet$core <- list(
+        taxalvl=taxrank,
+        preval=preval, 
+        detection=detection,
+        analOpt = analOpt,
+        expFact = expFact, 
+        group = group,
+        expFact2 = expFact2
+    )
+   };
+  return(.set.mbSetObj(mbSetObj));
+}
+
+# Draws the core-microbiome figure (heatmap, lineplot or prevalence bars) from its plot data alone (pd: abund (features x samples
+# relative abundances), viewOpt, palette, detection, taxrank, w, h). Returns the ggplot.
+DrawCoreMicrobe <- function(pd, imgName, format="png", dpi=default.dpi){
+  imgName = paste(imgName, ".", format, sep="");
+  viewOpt <- pd$viewOpt; palette <- pd$palette; detection <- pd$detection; taxrank <- pd$taxrank; w <- pd$w; h <- pd$h;
+  data.core <- phyloseq::otu_table(pd$abund, taxa_are_rows = TRUE);
 
   if(viewOpt!="bar"){
     Cairo::Cairo(file=imgName, unit="in",width=w, height=h, type=format, bg="white",dpi=dpi);
@@ -611,32 +652,7 @@ CoreMicrobeAnalysis<-function(mbSetObj, imgName, preval, detection, taxrank,
 
   print(p);
   dev.off();
-  
-  if(interactive){
-    library(plotly)
-    library(htmlwidgets)
-    ax <- list(
-      zeroline = FALSE,
-      showline = FALSE,
-      showgrid = FALSE
-    )
-    p <- plotly::ggplotly(p)
-    p <- p %>% layout(xaxis = ax, yaxis = ax)
-    htmlwidgets::saveWidget(p, "core_interactive.html")
-  }
-  mbSetObj$analSet$core<-signif(as.matrix(core.nm),5);
-  mbSetObj$analSet$core.taxalvl<-taxrank;
-  mbSetObj$paramSet$core <- list(
-        taxalvl=taxrank,
-        preval=preval, 
-        detection=detection,
-        analOpt = analOpt,
-        expFact = expFact, 
-        group = group,
-        expFact2 = expFact2
-    )
-   };
-  return(.set.mbSetObj(mbSetObj));
+  return(invisible(p))
 }
 
 core_comp_grp <- function(mbSetObj,imgName, preval, detection, taxrank,
@@ -1711,6 +1727,7 @@ PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName, metadata,
     width <- 900
   }
 
+  img.base <- bargraphName;
   bargraphName = paste(bargraphName, ".", format, sep="");
   mbSetObj$imgSet$alpha <- bargraphName;
 
@@ -1746,46 +1763,24 @@ PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName, metadata,
       stringsAsFactors = FALSE
     )
     alpha_df$samples <- factor(alpha_df$samples, levels = smplord)
-    box <- ggplot(alpha_df, aes_string(x = "samples", y = "value", color = metadata)) +
-      geom_point(size = 3, alpha = 0.7) +
-      scale_x_discrete(limits = smplord) +
-      labs(y = "Alpha Diversity Measure\nPD") +
-      theme_bw() +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+    alpha.data <- alpha_df;
   } else {
-    box = plot_richness(data, color = metadata, measures = distName) + scale_x_discrete(limits=c(smplord));
-    box = box + theme_bw() + theme(axis.text.x = element_text(angle = 45, hjust = 1,vjust= 1));
-    box$layers <- box$layers[-1];
-    box <- box + geom_point(size=3, alpha=0.7);
+    alpha.data <- plot_richness(data, color = metadata, measures = distName)$data;
   }
 
-  if(colors == "viridis"){
-    box = box + viridis::scale_color_viridis(discrete=TRUE)
-  }else if(colors %in% c("magma","plasma","inferno")){
-    box <- box + viridis::scale_color_viridis(option=colors, discrete=TRUE)
-  }
-
-  if(distName == "PD") {
-    mbSetObj$analSet$alpha <- alpha_df
-  } else {
-    mbSetObj$analSet$alpha <- box$data;
-  }
+  mbSetObj$analSet$alpha <- alpha.data;
   fast.write(mbSetObj$analSet$alpha, file="alphadiversity.csv");
   # Method-standard: persist the plotted data behind the alpha-diversity figure
   # (per-sample diversity value + metadata) so the AI "Refine" control can
   # re-plot from data and users can regenerate it in any tool. Helper lives in
   # wf_method.R; guard so the public package still runs standalone.
   if (exists("WfSaveFigureData")) tryCatch(WfSaveFigureData("alpha_diversity", mbSetObj$analSet$alpha), error = function(e) NULL)
-  #getting scale for plot (using same for boxplot also)
-  ylimits <<- layer_scales(box)$y$range$range;
-  
-  Cairo::Cairo(file=bargraphName, unit="in", dpi=dpi, width=width/72, height=6.3, type=format, bg="white");
 
-  if(mbSetObj$module.type == "meta"){
-     box <- box + facet_grid(. ~ dataset, scales = "free", space = "free");
-  }
-  print(box);
-  dev.off();
+  # The plot data is what DrawAlphaData reads: the per-sample diversity table (with the metadata) and how to lay it out.
+  pd <- list(df = alpha.data, pd = (distName == "PD"), metadata = metadata, smplord = smplord, colors = colors,
+             width = width, meta = (mbSetObj$module.type == "meta"));
+  box <- DrawAlphaData(pd, img.base, format, dpi);
+  .ov_plot_data(bargraphName, pd, "DrawAlphaData", list(imgName = img.base, format = format, dpi = dpi));
   
   mbSetObj$analSet$alpha.meth <- distName;
   mbSetObj$analSet$alpha.metadata <- metadata;
@@ -1802,6 +1797,57 @@ PlotAlphaData<-function(mbSetObj, data.src, bargraphName, distName, metadata,
   }
   
   return(.set.mbSetObj(mbSetObj))
+}
+
+# Draws the alpha-diversity plot from its plot data alone (pd: df, pd (TRUE for Faith's PD), metadata, smplord, colors, width, meta).
+# Returns the ggplot invisibly; sets the global `ylimits` the alpha box plot is cut to, as the plotter always did.
+DrawAlphaData <- function(pd, imgName, format="png", dpi=default.dpi){
+
+  imgName = paste(imgName, ".", format, sep="");
+  metadata <- pd$metadata;
+  smplord <- pd$smplord;
+  colors <- pd$colors;
+
+  if(isTRUE(pd$pd)) {
+    box <- ggplot(pd$df, aes_string(x = "samples", y = "value", color = metadata)) +
+      geom_point(size = 3, alpha = 0.7) +
+      scale_x_discrete(limits = smplord) +
+      labs(y = "Alpha Diversity Measure\nPD") +
+      theme_bw() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+  } else {
+    # what phyloseq::plot_richness draws from the table it builds (its measure panels, error bars and labels)
+    mdf <- pd$df;
+    box <- ggplot(mdf, aes_string(x = "samples", y = "value", colour = metadata, shape = NULL)) + geom_point(na.rm = TRUE)
+    if (any(!is.na(mdf[, "se"]))) {
+      box <- box + geom_errorbar(aes(ymax = value + se, ymin = value - se), width = 0.1)
+    }
+    box <- box + theme(axis.text.x = element_text(angle = -90, vjust = 0.5, hjust = 0))
+    box <- box + ylab("Alpha Diversity Measure")
+    box <- box + facet_wrap(~variable, nrow = 1, scales = "free_y")
+    box = box + scale_x_discrete(limits=c(smplord));
+    box = box + theme_bw() + theme(axis.text.x = element_text(angle = 45, hjust = 1,vjust= 1));
+    box$layers <- box$layers[-1];
+    box <- box + geom_point(size=3, alpha=0.7);
+  }
+
+  if(colors == "viridis"){
+    box = box + viridis::scale_color_viridis(discrete=TRUE)
+  }else if(colors %in% c("magma","plasma","inferno")){
+    box <- box + viridis::scale_color_viridis(option=colors, discrete=TRUE)
+  }
+
+  #getting scale for plot (using same for boxplot also)
+  ylimits <<- layer_scales(box)$y$range$range;
+
+  Cairo::Cairo(file=imgName, unit="in", dpi=dpi, width=pd$width/72, height=6.3, type=format, bg="white");
+
+  if(isTRUE(pd$meta)){
+     box <- box + facet_grid(. ~ dataset, scales = "free", space = "free");
+  }
+  print(box);
+  dev.off();
+  return(invisible(box))
 }
 
 #'Function to create bar plots of selected taxa level.
@@ -1988,14 +2034,31 @@ PlotSampleTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, samplnm,
   }
   
   #sorting by descending
-  rdaName = paste(barplotName, ".rda", sep="");
-  jsonName = paste(barplotName, ".json", sep="")
+  img.base <- barplotName;
   barplotName = paste(barplotName, ".",format, sep="");
   mbSetObj$imgSet$stack<-barplotName;
-  mbSetObj$imgSet$stackRda <-rdaName;
+  mbSetObj$imgSet$stackRda <-paste(img.base, ".rda", sep="");
   mbSetObj$imgSet$stackType <- "sample";
   
-  Cairo::Cairo(file=barplotName, unit="in", dpi=dpi, width=w/72, height=h/72, type=format, bg="white");
+  # The plot data is what DrawSampleTaxaBar reads: the taxa of the chosen sample and their abundances.
+  pd <- list(data = data, yLbl = yLbl, w = w, h = h);
+  DrawSampleTaxaBar(pd, img.base, format, dpi);
+  .ov_plot_data(barplotName, pd, "DrawSampleTaxaBar", list(imgName = img.base, format = format, dpi = dpi));
+
+  mbSetObj$analSet$stack<-data;
+  mbSetObj$analSet$stack.taxalvl<-taxalvl;
+  mbSetObj$analSet$plot<-"Stacked Bar";
+  return(.set.mbSetObj(mbSetObj));
+}
+
+# Draws the single-sample taxa bar plot, and writes its interactive json, from its plot data alone (pd: data (variable, value), yLbl, w, h).
+DrawSampleTaxaBar <- function(pd, imgName, format="png", dpi=default.dpi){
+  data <- pd$data; yLbl <- pd$yLbl; w <- pd$w; h <- pd$h;
+  rdaName = paste(imgName, ".rda", sep="");
+  jsonName = paste(imgName, ".json", sep="")
+  imgName = paste(imgName, ".",format, sep="");
+  
+  Cairo::Cairo(file=imgName, unit="in", dpi=dpi, width=w/72, height=h/72, type=format, bg="white");
 box <- ggplot(data, aes(x = reorder(variable, value), y = value)) +
   geom_bar(stat = "identity", width = 0.6, fill = "steelblue") +
   theme_bw() +
@@ -2018,11 +2081,7 @@ jsonlist <- RJSONIO::toJSON(p, pretty = T,force = TRUE,.na = "null");
 sink(jsonName);
 cat(jsonlist);
 sink();
-
-  mbSetObj$analSet$stack<-data;
-  mbSetObj$analSet$stack.taxalvl<-taxalvl;
-  mbSetObj$analSet$plot<-"Stacked Bar";
-  return(.set.mbSetObj(mbSetObj));
+  return(invisible(NULL))
 }
 
 #'Function to create box plots for alpha diversity analysis
@@ -2055,10 +2114,30 @@ sink();
     
     set.seed(1313397);
     data <- mbSetObj$analSet$alpha;
-    CLASS <- data[,metadata];
-    vals <- data[,"value"]
+    img.base <- boxplotName;
     boxplotName = paste(boxplotName, ".", format, sep="");
     mbSetObj$imgSet$alpha.box<-boxplotName;
+    
+    # The plot data is what DrawAlphaBoxData reads: the alpha-diversity table, and the y range PlotAlphaData cut its figure to.
+    pd <- list(data = data, metadata = metadata, colors = colors, ylimits = ylimits, meta = (mbSetObj$module.type == "meta"));
+    DrawAlphaBoxData(pd, img.base, format, dpi);
+    .ov_plot_data(boxplotName, pd, "DrawAlphaBoxData", list(imgName = img.base, format = format, dpi = dpi));
+    
+    return(.set.mbSetObj(mbSetObj))
+  }
+
+# Draws the alpha-diversity box plot from its plot data alone (pd: data, metadata, colors, ylimits, meta).
+DrawAlphaBoxData <- function(pd, imgName, format="png", dpi=default.dpi){
+    suppressMessages(library(viridis));
+
+    set.seed(1313397);
+    data <- pd$data;
+    metadata <- pd$metadata;
+    colors <- pd$colors;
+    ylimits <- pd$ylimits;
+    CLASS <- data[,metadata];
+    vals <- data[,"value"]
+    imgName = paste(imgName, ".", format, sep="");
     
     grp_size <- length(levels(CLASS))
     
@@ -2101,15 +2180,14 @@ sink();
       box1 <- box1 + viridis::scale_fill_viridis(option=colors, discrete=TRUE)
     }
     
-    Cairo::Cairo(file=boxplotName, unit="in", dpi=dpi, width=width/72, height=5.6, type=format, bg="white");
-    if(mbSetObj$module.type == "meta"){
+    Cairo::Cairo(file=imgName, unit="in", dpi=dpi, width=width/72, height=5.6, type=format, bg="white");
+    if(isTRUE(pd$meta)){
       box1 <- box1 + facet_grid(. ~ dataset, scales = "free", space = "free");
     }
     print(box1);
     dev.off();
-    
-    return(.set.mbSetObj(mbSetObj))
-  }
+    return(invisible(NULL))
+}
   
 
 ######################################
@@ -2387,9 +2465,13 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
     ord.list[[dataName]] <- ord;
 
   }
+  img.base <- plotNm;
   plotNm = paste(plotNm, ".", format, sep="");
   mbSetObj$imgSet$beta2d<-plotNm;
   
+  # What the figure is drawn from: the ordination coordinates joined to the sample data (`df`), their axis labels and how
+  # the points are coloured and labelled. DrawBetaDiversity draws from this alone.
+  bd <- list(colopt = colopt, alphaopt = alphaopt, showlabel = showlabel, custom_col = custom_col);
   if(all(c(module.type == "meta", !combined))){
     dat.num <- length(ord.list);
     if(dat.num > 3){
@@ -2414,15 +2496,6 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
     }
     names(stats) <- dataNames;
     
-    if(colopt =="continuous") {
-      box <- ggplot(pdataframe, aes(Axis.1, Axis.2, color=loading)) + scale_colour_gradient2(low="green",mid="black", high="red");
-    }else if(colopt =="alphadiv"){
-      box <- ggplot(pdataframe, aes(Axis.1, Axis.2, color=pdataframe[,alphaopt])) + scale_colour_gradient2(low="green", high="red") + labs(color = alphaopt);
-    }else{
-      box <- ggplot(pdataframe, aes(Axis.1, Axis.2, color=study_condition, fill=study_condition));
-    }
-    box <- box + geom_point(size=4) +
-      facet_wrap(~dataset, scales="free", ncol= colNum, labeller = labeller(dataset = stats));
     if(colNum == 1){
       height.multiplier <- dat.num;
       width <- 720;
@@ -2431,46 +2504,31 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
       width <- 1220;
     }
     height <- 100 + 400 * height.multiplier;
-    
+    bd <- c(bd, list(kind = "meta", df = pdataframe, stats = stats, colNum = colNum));
+    if(colopt=="expfac" && ellopt=="yes") bd$ellipse <- sam_data[[metadata]];
   }else{
     sam_data <- as.data.frame(sample_data(data),check.names=FALSE);
     if(colopt=="taxa"){
-      box = plot_ordination(data, ord, color=taxa) + labs(aesthetic=taxaorig) + scale_colour_gradient(low="green", high="red");
+      ordcolor <- taxa;
     }else if(colopt=="alphadiv") {
-      box = plot_ordination(data, ord, color=alphaopt)+ scale_colour_gradient(low="green", high="red");
+      ordcolor <- alphaopt;
     }else if(colopt=="continuous") {
-      box = plot_ordination(data, ord, color="loading")+ scale_colour_gradient2(low="green", high="red");
+      ordcolor <- "loading";
     }else{
-      box = plot_ordination(data, ord, color=metadata);
-    }  
+      ordcolor <- metadata;
+    }
+    ordp = plot_ordination(data, ord, color=ordcolor);
     height <- 500;
     width <- 720;
+    bd <- c(bd, list(kind = "ord", df = ordp$data, color = ordcolor, xlab = ordp$labels$x, ylab = ordp$labels$y,
+                     taxaorig = if(colopt=="taxa") taxaorig else NULL));
+    if(colopt=="expfac" && ellopt=="yes") bd$ellipse <- sam_data[[metadata]];
   }
-  
-  box$layers <- box$layers[-1];
-  
-  if(showlabel=="samnm"){
-    box = box + ggrepel::geom_text_repel(aes(label=sample_id), hjust=0.5, vjust=2, size=3, fontface="bold");
-    box = box + geom_point(size=4, alpha=0.6) + theme_bw();
-  }else if(showlabel=="none"){
-    box=box+geom_point(size=4, alpha=0.8) + theme_bw();
-  }else{
-    showlabel <<- showlabel;
-    bx_data <<- data.frame(box$data,check.names=FALSE);
-    box = box + ggrepel::geom_text_repel(aes(label=bx_data[ ,showlabel]), hjust=0.5, vjust=2, size=3, fontface="bold");
-    box = box + geom_point(size=4, alpha=0.6) + theme_bw();
-  }
-  
-  #used for area color for ellipse
-  if(colopt=="expfac"){
-    clsLbl <- quo(sam_data[[metadata]]);
-    
-    if (ellopt=="yes"){
-      box = box + stat_ellipse(type="norm", linetype=2, geom = "polygon", alpha = 0.2, aes(fill = !!clsLbl), show.legend=FALSE);
-    }
-  }
-  
-  .finalizeBetaOrdinationPlot(box, custom_col, plotNm, format, dpi, width, height);
+  bd$width <- width; bd$height <- height;
+  # sample labels are placed by ggrepel, which draws on the random numbers: keep the state they are drawn from, so a redraw lays them out the same
+  if(showlabel != "none" && exists(".Random.seed", envir = globalenv())) bd$seed <- get(".Random.seed", envir = globalenv());
+  DrawBetaDiversity(bd, img.base, format, dpi);
+  .ov_plot_data(plotNm, bd, "DrawBetaDiversity", list(imgName = img.base, format = format, dpi = dpi));
   # Method-standard: persist the plotted ordination coordinates + sample
   # metadata behind the beta-diversity figure so Refine can re-plot from data
   # / users can regenerate it elsewhere. Guarded (wf_method.R).
@@ -2488,6 +2546,62 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
     mbSetObj$analSet$beta.stress <- paste("[NMDS] Stress =", signif(ord$stress, 5));
   }
   return(.set.mbSetObj(mbSetObj))
+}
+
+# Draws the beta-diversity ordination from its plot data alone (bd: kind ("ord" or "meta"), df, colopt, alphaopt, showlabel,
+# custom_col, width, height, seed (the random state the sample labels are laid out from); "ord": color, xlab, ylab, taxaorig, ellipse; "meta": stats, colNum).
+DrawBetaDiversity <- function(bd, imgName, format="png", dpi=default.dpi){
+  imgName = paste(imgName, ".", format, sep="");
+  if(!is.null(bd$seed)) assign(".Random.seed", bd$seed, envir = globalenv());
+  colopt <- bd$colopt; alphaopt <- bd$alphaopt; showlabel <- bd$showlabel;
+  if(identical(bd$kind, "meta")){
+    pdataframe <- bd$df; stats <- bd$stats; colNum <- bd$colNum;
+    if(colopt =="continuous") {
+      box <- ggplot(pdataframe, aes(Axis.1, Axis.2, color=loading)) + scale_colour_gradient2(low="green",mid="black", high="red");
+    }else if(colopt =="alphadiv"){
+      box <- ggplot(pdataframe, aes(Axis.1, Axis.2, color=pdataframe[,alphaopt])) + scale_colour_gradient2(low="green", high="red") + labs(color = alphaopt);
+    }else{
+      box <- ggplot(pdataframe, aes(Axis.1, Axis.2, color=study_condition, fill=study_condition));
+    }
+    box <- box + geom_point(size=4) +
+      facet_wrap(~dataset, scales="free", ncol= colNum, labeller = labeller(dataset = stats));
+  }else{
+    DF <- bd$df;
+    x <- colnames(DF)[1]; y <- colnames(DF)[2];
+    # what phyloseq::plot_ordination draws from the table it builds (its points and axis labels)
+    box <- ggplot(DF, aes_string(x = x, y = y, color = bd$color, shape = NULL, na.rm = TRUE)) + geom_point(na.rm = TRUE)
+    if(!is.null(bd$xlab)) box <- box + xlab(bd$xlab)    # only an ordination with eigenvalues (PCoA, PCA) has its own axis labels
+    if(!is.null(bd$ylab)) box <- box + ylab(bd$ylab)
+    if(colopt=="taxa"){
+      box = box + labs(aesthetic=bd$taxaorig) + scale_colour_gradient(low="green", high="red");
+    }else if(colopt=="alphadiv") {
+      box = box + scale_colour_gradient(low="green", high="red");
+    }else if(colopt=="continuous") {
+      box = box + scale_colour_gradient2(low="green", high="red");
+    }
+  }
+  
+  box$layers <- box$layers[-1];
+  
+  if(showlabel=="samnm"){
+    box = box + ggrepel::geom_text_repel(aes(label=sample_id), hjust=0.5, vjust=2, size=3, fontface="bold");
+    box = box + geom_point(size=4, alpha=0.6) + theme_bw();
+  }else if(showlabel=="none"){
+    box=box+geom_point(size=4, alpha=0.8) + theme_bw();
+  }else{
+    bx_data <- data.frame(box$data,check.names=FALSE);
+    box = box + ggrepel::geom_text_repel(aes(label=bx_data[ ,showlabel]), hjust=0.5, vjust=2, size=3, fontface="bold");
+    box = box + geom_point(size=4, alpha=0.6) + theme_bw();
+  }
+  
+  #used for area color for ellipse
+  if(!is.null(bd$ellipse)){
+    clsLbl <- quo(bd$ellipse);
+    box = box + stat_ellipse(type="norm", linetype=2, geom = "polygon", alpha = 0.2, aes(fill = !!clsLbl), show.legend=FALSE);
+  }
+  
+  .finalizeBetaOrdinationPlot(box, bd$custom_col, imgName, format, dpi, bd$width, bd$height);
+  return(invisible(NULL))
 }
 
 #'Plot functional annotation summary
@@ -2529,14 +2643,25 @@ PlotFunAnotSummary<-function(mbSetObj, imgName, format="png",funanno, dpi=defaul
     mbSetObj$analSet[[func.file]] <- NULL;
   }
  
+  img.base <- imgName;
   imgName = paste(imgName, ".",format, sep="");
   mbSetObj$imgSet[[func.file]] <- imgName;
-  Cairo::Cairo(file=imgName, unit="in", dpi=96, width=12.5, height=6.7, type=format, bg="white");
-  box <- ggplot(stack(log(result)), aes(x = factor(ind, levels = names(result)), y=values)) + labs(x=NULL, y="log (KO Counts)") + geom_boxplot() + theme(axis.text.x = element_text(angle = 90, hjust = 1))
-  print(box);
-  dev.off();
+  # The plot data is what DrawFunAnotSummary reads: the log counts per sample and the sample order.
+  pd <- list(stacked = stack(log(result)), samples = names(result));
+  DrawFunAnotSummary(pd, img.base, format);
+  .ov_plot_data(imgName, pd, "DrawFunAnotSummary", list(imgName = img.base, format = format));
   
   return(.set.mbSetObj(mbSetObj))
+}
+
+# Draws the functional annotation summary box plot from its plot data alone (pd: stacked (values, ind), samples).
+DrawFunAnotSummary <- function(pd, imgName, format="png"){
+  imgName = paste(imgName, ".",format, sep="");
+  Cairo::Cairo(file=imgName, unit="in", dpi=96, width=12.5, height=6.7, type=format, bg="white");
+  box <- ggplot(pd$stacked, aes(x = factor(ind, levels = pd$samples), y=values)) + labs(x=NULL, y="log (KO Counts)") + geom_boxplot() + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  print(box);
+  dev.off();
+  return(invisible(NULL))
 }
 
 #'Plot functional annotation summary
@@ -2776,14 +2901,35 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
     x.colors <- rep(custom_col42,length.out=x);
   }
   
-  jsonName = paste(barplotName, ".json", sep="");
-  rdaName = paste(barplotName, ".rda", sep="");
+  img.base <- barplotName;
   barplotName = paste(barplotName, ".",format, sep="");
   mbSetObj$imgSet$stack <- barplotName;
-  mbSetObj$imgSet$stackRda <-rdaName;
+  mbSetObj$imgSet$stackRda <-paste(img.base, ".rda", sep="");
   mbSetObj$imgSet$stackType <- "area";
  
-  Cairo::Cairo(file=barplotName, unit="in", dpi=dpi, width=min(w,1000)/72, height=h/72, type=format, bg="white");
+  # The plot data is what DrawTaxaAbundanceArea reads: the melted abundance table and how to lay it out.
+  pd <- list(data = data, lbl = lbl, taxalvl = taxalvl, colpalopt = colpalopt, x.colors = x.colors,
+             metadata = metadata, w = w, h = h);
+  DrawTaxaAbundanceArea(pd, img.base, format, dpi);
+  .ov_plot_data(barplotName, pd, "DrawTaxaAbundanceArea", list(imgName = img.base, format = format, dpi = dpi));
+  mbSetObj$analSet$stack<-data;
+  mbSetObj$analSet$stack.taxalvl<-taxalvl;
+  mbSetObj$analSet$plot<-"Stacked Area";
+  
+  return(.set.mbSetObj(mbSetObj));
+  
+}
+
+# Draws the stacked area plot of taxa abundance, and writes its interactive json, from its plot data alone
+# (pd: data (melted), lbl, taxalvl, colpalopt, x.colors, metadata, w, h).
+DrawTaxaAbundanceArea <- function(pd, imgName, format="png", dpi=default.dpi){
+  data <- pd$data; lbl <- pd$lbl; taxalvl <- pd$taxalvl; colpalopt <- pd$colpalopt; x.colors <- pd$x.colors;
+  metadata <- pd$metadata; w <- pd$w; h <- pd$h;
+  jsonName = paste(imgName, ".json", sep="");
+  rdaName = paste(imgName, ".rda", sep="");
+  imgName = paste(imgName, ".",format, sep="");
+ 
+  Cairo::Cairo(file=imgName, unit="in", dpi=dpi, width=min(w,1000)/72, height=h/72, type=format, bg="white");
   
   box <- ggplot(data,aes(x=step,y=value)) + theme_bw() +
     theme(axis.text.x = element_text(angle = 90, hjust =1,vjust=0.5)) +
@@ -2817,9 +2963,6 @@ PlotTaxaAbundanceArea<-function(mbSetObj, barplotName, viewOpt, taxalvl, metadat
   if(metadata == "newnewnew"){
     box <- box + theme(strip.text.x = element_blank())
   }
-  if(mbSetObj$module.type == "meta"){
-    #box <- box + facet_grid(. ~ dataset  , scales = "free", space = "free");
-  }
   
   print(box);
   dev.off();
@@ -2839,12 +2982,7 @@ jsonlist <- RJSONIO::toJSON(p, pretty = T,force = TRUE,.na = "null");
 sink(jsonName);
 cat(jsonlist);
 sink();
-  mbSetObj$analSet$stack<-data;
-  mbSetObj$analSet$stack.taxalvl<-taxalvl;
-  mbSetObj$analSet$plot<-"Stacked Area";
-  
-  return(.set.mbSetObj(mbSetObj));
-  
+  return(invisible(NULL))
 }
 
 #'Function to plot bar charts for alpha diversity
@@ -3076,15 +3214,39 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
     x.colors <- rep(custom_col42,length.out=x);
   }
   
-  jsonName = paste(barplotName,".json", sep="");
-  rdaName = paste(barplotName,".rda", sep="");
+  img.base <- barplotName;
   barplotName = paste(barplotName, ".",format, sep="");
   
   mbSetObj$imgSet$stack <- barplotName;
-  mbSetObj$imgSet$stackRda <-rdaName;
+  mbSetObj$imgSet$stackRda <-paste(img.base,".rda", sep="");
   mbSetObj$imgSet$stackType <- "default";
   
+  # The plot data is what DrawTaxaAbundanceBar reads: the melted abundance table and how to lay it out.
+  pd <- list(data = data, facet = facet, facet2 = facet2, taxalvl = taxalvl, colpalopt = colpalopt,
+             x.colors = x.colors, yLbl = yLbl, w = w, h = h);
+  DrawTaxaAbundanceBar(pd, img.base, format, dpi);
+  .ov_plot_data(barplotName, pd, "DrawTaxaAbundanceBar", list(imgName = img.base, format = format, dpi = dpi));
   
+  mbSetObj$analSet$stack <- data;
+  mbSetObj$analSet$stack.taxalvl <- taxalvl;
+  mbSetObj$analSet$plot <- "Stacked Bar";
+  # Method-standard: persist the plotted (melted) abundance data behind the
+  # stacked-bar figure so Refine can re-plot from data / users can regenerate
+  # it elsewhere. Guarded — wf_method.R helper is optional.
+  if (exists("WfSaveFigureData")) tryCatch(WfSaveFigureData("taxa_abundance", data), error = function(e) NULL)
+
+  return(.set.mbSetObj(mbSetObj));
+}
+
+# Draws the stacked taxa abundance bar plot, and writes its interactive json, from its plot data alone
+# (pd: data (melted), facet, facet2, taxalvl, colpalopt, x.colors, yLbl, w, h).
+DrawTaxaAbundanceBar <- function(pd, imgName, format="png", dpi=default.dpi){
+  data <- pd$data; facet <- pd$facet; facet2 <- pd$facet2; taxalvl <- pd$taxalvl; colpalopt <- pd$colpalopt;
+  x.colors <- pd$x.colors; yLbl <- pd$yLbl; w <- pd$w; h <- pd$h;
+  jsonName = paste(imgName,".json", sep="");
+  rdaName = paste(imgName,".rda", sep="");
+  imgName = paste(imgName, ".",format, sep="");
+
   if(length(unique(data$sample)) <= 10){
     guide_num = 3
   }else if (length(unique(data$sample)) <= 20){
@@ -3092,7 +3254,7 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
   }else{
     guide_num = 5
   }
-  Cairo::Cairo(file=barplotName, unit="in", dpi=dpi, width=w/72, height=h/72, type=format, bg="white");
+  Cairo::Cairo(file=imgName, unit="in", dpi=dpi, width=w/72, height=h/72, type=format, bg="white");
   box <- ggplot(data = data,
                 aes(x = sample,
                     y = value,
@@ -3157,16 +3319,7 @@ PlotTaxaAundanceBar<-function(mbSetObj, barplotName, taxalvl, facet, facet2, img
   sink(jsonName);
   cat(jsonlist);
   sink();
-  
-  mbSetObj$analSet$stack <- data;
-  mbSetObj$analSet$stack.taxalvl <- taxalvl;
-  mbSetObj$analSet$plot <- "Stacked Bar";
-  # Method-standard: persist the plotted (melted) abundance data behind the
-  # stacked-bar figure so Refine can re-plot from data / users can regenerate
-  # it elsewhere. Guarded — wf_method.R helper is optional.
-  if (exists("WfSaveFigureData")) tryCatch(WfSaveFigureData("taxa_abundance", data), error = function(e) NULL)
-
-  return(.set.mbSetObj(mbSetObj));
+  return(invisible(NULL))
 }
 
 
@@ -3645,6 +3798,30 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
     x.colors<-rep(custom_col42,length.out=x);
   }
   
+  img.base <- barplotName;
+  barplotName = paste(barplotName, ".",format, sep="");
+  mbSetObj$imgSet$stack<-barplotName;
+  mbSetObj$imgSet$stackRda <-paste(img.base, ".rda", sep="");
+  mbSetObj$imgSet$stackType <- "group";
+  
+  stackdata <<- data
+  # The plot data is what DrawTaxaAbundanceBarGrp reads: the melted abundance table and how to lay it out.
+  pd <- list(data = data, x = x, flag = flag, yLbl = yLbl, taxalvl = taxalvl, colpalopt = colpalopt, x.colors = x.colors, w = w, h = h);
+  DrawTaxaAbundanceBarGrp(pd, img.base, format, dpi);
+  .ov_plot_data(barplotName, pd, "DrawTaxaAbundanceBarGrp", list(imgName = img.base, format = format, dpi = dpi));
+  
+  
+  mbSetObj$analSet$stack<-data;
+  mbSetObj$analSet$stack.taxalvl<-taxalvl;
+  mbSetObj$analSet$plot<-"Stacked Bar";
+  return(.set.mbSetObj(mbSetObj));
+}
+
+# Draws the group-level stacked taxa bar plot, and writes its interactive json, from its plot data alone
+# (pd: data (melted), x (number of taxa), flag, yLbl, taxalvl, colpalopt, x.colors, w, h).
+DrawTaxaAbundanceBarGrp <- function(pd, imgName, format="png", dpi=default.dpi){
+  data <- pd$data; x <- pd$x; flag <- pd$flag; yLbl <- pd$yLbl; taxalvl <- pd$taxalvl; colpalopt <- pd$colpalopt;
+  x.colors <- pd$x.colors; w <- pd$w; h <- pd$h;
   if(x <= 10){
     guide_num = 3
   }else if (x <= 20){
@@ -3653,15 +3830,11 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
     guide_num = 5
   }
   
-  rdaName = paste(barplotName, ".rda", sep="");
-  jsonName = paste(barplotName, ".json", sep="");
-  barplotName = paste(barplotName, ".",format, sep="");
-  mbSetObj$imgSet$stack<-barplotName;
-  mbSetObj$imgSet$stackRda <-rdaName;
-  mbSetObj$imgSet$stackType <- "group";
+  rdaName = paste(imgName, ".rda", sep="");
+  jsonName = paste(imgName, ".json", sep="");
+  imgName = paste(imgName, ".",format, sep="");
   
-  stackdata <<- data
-  Cairo::Cairo(file=barplotName, unit="in", dpi=dpi, width=w/72, height=h/72, type=format, bg="white");
+  Cairo::Cairo(file=imgName, unit="in", dpi=dpi, width=w/72, height=h/72, type=format, bg="white");
   box <- ggplot(data,aes(x = step, y = value, fill = variable))+
     geom_bar(stat="identity", position="stack", width = 0.4)+
     #scale_y_continuous(expand = c(0, 0, 0.3, 0)) +
@@ -3723,11 +3896,7 @@ PlotTaxaAbundanceBarSamGrp<-function(mbSetObj, barplotName, taxalvl, metadata, f
   sink(jsonName);
   cat(jsonlist);
   sink();
-  
-  mbSetObj$analSet$stack<-data;
-  mbSetObj$analSet$stack.taxalvl<-taxalvl;
-  mbSetObj$analSet$plot<-"Stacked Bar";
-  return(.set.mbSetObj(mbSetObj));
+  return(invisible(NULL))
 }
 
 #'Function to create rarefraction curves of microbiome data
@@ -3794,26 +3963,23 @@ PlotRarefactionCurve <- function(mbSetObj, data.src, linecolor, linetype, facet,
     w<-w+500;
   }
   
+  img.base <- imgName;
   imgName = paste(imgName,".", format, sep="");
-  Cairo::Cairo(file=imgName, unit="in", dpi=dpi, width=1.5*w/72, height=7.5, type=format, bg="white");
   linecolor <- ifelse(linecolor == "none", "NULL", linecolor);
   linetype <- ifelse(linetype == "none", "NULL", linetype);
 
-  box <- ggrare2(data_rare,
+  # The plot data is what DrawRarefactionCurve reads: each sample's rarefaction curve and label position, and how they are mapped.
+  pd <- ggrare2(data_rare,
                  data.src = data.src,
                  color = linecolor,
                  label = "Sample",
                  linetype = linetype,
                  se = FALSE,  # this is not to meaningful
                  step = step);
- 
-  if(!is.null(facet) & facet != "none"){
-    box <- box + facet_wrap(as.formula(paste("~", facet)))
-  } else {
-    box <- box;
-  }
-  print(box);
-  dev.off();
+  if(!is.list(pd)){ return(0); }   # ggrare2 already set the reason (current.msg or the error message)
+  pd$facet <- facet; pd$w <- w;
+  box <- DrawRarefactionCurve(pd, img.base, format, dpi);
+  .ov_plot_data(imgName, pd, "DrawRarefactionCurve", list(imgName = img.base, format = format, dpi = dpi));
   
   mbSetObj$analSet$rarefaction_curve <- imgName;
   mbSetObj$analSet$rarefaction_curve_data.src = ifelse(data.src == "orig", "original", "filtered");
@@ -4203,18 +4369,25 @@ PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, co
 
   mbSetObj$analSet$heat_tree_plot <- imgName; # for PDF reporter
 
-  set.seed(56784);
   wilcox.cutoff <- as.numeric(wilcox.cutoff)
 
+  # The plot data is what DrawHeatTreeCmf reads: the heat tree's taxmap (taxa, abundances, the differential table) and how to draw it.
+  pd <- list(dm_obj_cmf = dm_obj_cmf, color_new = color_new, colorMode = colorMode, wilcox_cutoff = wilcox.cutoff,
+             showLabels = showLabels, layoutOpt = layoutOpt, comparison = comparison);
+  DrawHeatTreeCmf(pd, imgName, format);
+  .ov_plot_data(paste0(imgName, ".", format), pd, "DrawHeatTreeCmf", list(imgName = imgName, format = format));
+
+  return(.set.mbSetObj(mbSetObj))
+}
+
+# Draws the heat tree of a two-group comparison from its plot data alone (pd: dm_obj_cmf (metacoder taxmap), color_new,
+# colorMode, wilcox_cutoff, showLabels, layoutOpt, comparison).
+DrawHeatTreeCmf <- function(pd, imgName, format = "png"){
+  set.seed(56784);
+  work_dir <- getwd()
+  ov_qs_save(c(pd, list(imgFile = file.path(work_dir, paste0(imgName, ".", format)), format = format)), "heattree_plot_input.qs")
   # metacoder heat_tree uses R5 NSE — must create taxmap AND plot in SAME subprocess
   # Save the raw OTU data used to create taxmap, let subprocess recreate it
-  work_dir <- getwd()
-  ov_qs_save(list(dm_obj_cmf = dm_obj_cmf, color_new = color_new, colorMode = colorMode,
-                  wilcox_cutoff = wilcox.cutoff, showLabels = showLabels,
-                  layoutOpt = layoutOpt, comparison = comparison,
-                  imgFile = file.path(work_dir, paste0(imgName, ".", format)), format = format),
-             "heattree_plot_input.qs")
-
   run_func_via_microservice(
     func = function(work_dir) {
       setwd(work_dir)
@@ -4306,8 +4479,7 @@ PrepareHeatTreePlotDataParse_cmf_plot <- function(mbSetObj, color, layoutOpt, co
     timeout_sec = 180
   )
   unlink("heattree_plot_input.qs")
-
-  return(.set.mbSetObj(mbSetObj))
+  return(invisible(NULL))
 }
 
 PlotGroupDataHeattree <- function(mbSetObj, meta, comparison, taxalvl, color, layoutOpt,
@@ -4478,6 +4650,18 @@ PrepareHeatTreePlotAbR <- function(dm = dm, tax_dm = tax_dm, taxalvl = taxalvl, 
     color_new <- c("#764b93", "gray", "#F0C808");
   };
 
+  # The plot data is what DrawHeatTreeAbundance reads: the OTU table with its lineage column, the samples and how to draw the tree.
+  pd <- list(dm_otu_cmf = dm_otu_cmf, sample_ids = dm_samples_cmf$sample_id, meta_com = dm_samples_cmf$meta_com,
+             color_new = color_new, showLabels = showLabels, layoutOpt = layoutOpt, comparison = comparison);
+  ok <- DrawHeatTreeAbundance(pd, imgName, format);
+  if (isTRUE(ok)) .ov_plot_data(paste0(imgName, ".", format), pd, "DrawHeatTreeAbundance", list(imgName = imgName, format = format));
+  return(ok);
+}
+
+# Draws the abundance heat tree (all samples, a group or one sample) from its plot data alone (pd: dm_otu_cmf, sample_ids,
+# meta_com, color_new, showLabels, layoutOpt, comparison). Returns FALSE with the reason in the error message when it cannot.
+DrawHeatTreeAbundance <- function(pd, imgName, format = "png"){
+  dm_otu_cmf <- pd$dm_otu_cmf; color_new <- pd$color_new; showLabels <- pd$showLabels; layoutOpt <- pd$layoutOpt; comparison <- pd$comparison;
   set.seed(56784);
 
   # Absolute output path resolved in THIS process (cwd = the user's home dir);
@@ -4585,8 +4769,8 @@ PrepareHeatTreePlotAbR <- function(dm = dm, tax_dm = tax_dm, taxalvl = taxalvl, 
       return(list(rendered = TRUE))
     },
     input_data = list(dm_otu_cmf = dm_otu_cmf,
-                      sample_ids = dm_samples_cmf$sample_id,
-                      meta_com = dm_samples_cmf$meta_com,
+                      sample_ids = pd$sample_ids,
+                      meta_com = pd$meta_com,
                       color_new = color_new,
                       showLabels = showLabels,
                       layoutOpt = layoutOpt,
@@ -4795,6 +4979,16 @@ ggrare2 <- function(physeq_object, data.src, label = NULL, color = NULL, plot = 
     linetype <- deparse(substitute(linetype))
   }
   
+  # what DrawRarefactionCurve draws from: the rarefaction curves, the sample labels and how they are mapped
+  invisible(list(data = data, labels = if (exists("labels", inherits = FALSE)) labels else NULL,
+                 color = color, label = label, linetype = linetype, se = se))
+}
+
+# Draws the rarefaction curves from their plot data alone (pd: data, labels, color, label, linetype, se, facet, w).
+DrawRarefactionCurve <- function(pd, imgName, format="png", dpi=default.dpi){
+  data <- pd$data; labels <- pd$labels; color <- pd$color; label <- pd$label; linetype <- pd$linetype; se <- pd$se;
+  imgName = paste(imgName,".", format, sep="");
+  Cairo::Cairo(file=imgName, unit="in", dpi=dpi, width=1.5*pd$w/72, height=7.5, type=format, bg="white");
   p <- ggplot2::ggplot(data = data,
                        ggplot2::aes_string(x = "Size",
                                            y = ".S",
@@ -4823,7 +5017,14 @@ ggrare2 <- function(physeq_object, data.src, label = NULL, color = NULL, plot = 
                                                fill = color),
                            alpha = 0.2)
   }
-  invisible(p)
+
+  facet <- pd$facet;
+  if(!is.null(facet) & facet != "none"){
+    p <- p + facet_wrap(as.formula(paste("~", facet)))
+  }
+  print(p);
+  dev.off();
+  return(invisible(p))
 }
 
 generateColorArr <- function(grp.num, filenm=NULL) {

@@ -12,6 +12,7 @@ PlotMetaPCA <- function(imgNm, dpi, format, factor="NA"){
   require('ggplot2');
   require('ggsci');
 
+  img.base <- imgNm;
   microbiome.meta <- ov_qs_read("microbiome_meta.qs");
   x <- microbiome.meta[["data"]];
   dpi <- as.numeric(dpi);
@@ -31,19 +32,13 @@ PlotMetaPCA <- function(imgNm, dpi, format, factor="NA"){
     dat <- na.omit(dat)
     vars <- apply(dat, 1, var, na.rm=TRUE)
     dat <- dat[vars > 0, , drop=FALSE]
-    if(nrow(dat) < 3 || ncol(dat) < 3) return(ggplot() + ggtitle(title) + theme_void())
+    if(nrow(dat) < 3 || ncol(dat) < 3) return(list(empty = TRUE, title = title))
     pca <- prcomp(t(dat), center=TRUE, scale.=TRUE)
     imp <- summary(pca)$importance
     xl <- paste0("PC1 (", 100*round(imp[2,1], 3), "%)")
     yl <- paste0("PC2 (", 100*round(imp[2,2], 3), "%)")
     df <- data.frame(PC1=pca$x[,1], PC2=pca$x[,2], Conditions=conditions)
-    ggplot(df, aes(x=PC1, y=PC2, color=Conditions)) +
-      geom_point(size=3, alpha=0.7) +
-      scale_color_npg() +
-      xlab(xl) + ylab(yl) + ggtitle(title) +
-      guides(color = guide_legend(nrow = legend_rows, byrow = TRUE)) +
-      theme_bw() +
-      theme(plot.title=element_text(size=11, face="bold", hjust=0.5))
+    list(df = df, xl = xl, yl = yl, title = title)
   }
 
   # Two columns: Before (individual) | After (individual from merged)
@@ -85,6 +80,29 @@ PlotMetaPCA <- function(imgNm, dpi, format, factor="NA"){
   # at the canvas edge when there are many conditions.
   h <- 4 * nrows + 0.4 * legend_rows
 
+  # The plot data is what DrawMetaPCA reads: the scores of every panel (Before/After per dataset, then combined) and the layout.
+  pd <- list(panels = fig.list, legend_rows = legend_rows, h = h, nrows = nrows);
+  DrawMetaPCA(pd, img.base, format);
+  .ov_plot_data(imgNm, pd, "DrawMetaPCA", list(imgNm = img.base, format = format));
+  invisible(NULL)
+}
+
+# Draws the meta-analysis PCA overview from its plot data alone (pd: panels (each df, xl, yl, title or empty, title), legend_rows, h, nrows).
+DrawMetaPCA <- function(pd, imgNm, format = "png"){
+  require('ggplot2');
+  require('ggsci');
+  imgNm <- paste(imgNm, ".", format, sep="");
+  legend_rows <- pd$legend_rows; h <- pd$h; nrows <- pd$nrows;
+  fig.list <- lapply(pd$panels, function(x){
+    if(isTRUE(x$empty)) return(ggplot() + ggtitle(x$title) + theme_void())
+    ggplot(x$df, aes(x=PC1, y=PC2, color=Conditions)) +
+      geom_point(size=3, alpha=0.7) +
+      scale_color_npg() +
+      xlab(x$xl) + ylab(x$yl) + ggtitle(x$title) +
+      guides(color = guide_legend(nrow = legend_rows, byrow = TRUE)) +
+      theme_bw() +
+      theme(plot.title=element_text(size=11, face="bold", hjust=0.5))
+  })
   # ggpubr quarantined — ggarrange in subprocess
   rsclient_isolated_exec(
     func_body = function(d) {
@@ -112,6 +130,7 @@ PlotMetaPCA <- function(imgNm, dpi, format, factor="NA"){
 PlotMetaDensity <- function(imgNm, dpi=default.dpi, format="png", factor=""){
   require("ggplot2")
 
+  img.base <- imgNm;
   microbiome.meta <- ov_qs_read("microbiome_meta.qs");
   x <- microbiome.meta$data;
   imgNm <- paste(imgNm, ".", format, sep="");
@@ -122,23 +141,18 @@ PlotMetaDensity <- function(imgNm, dpi=default.dpi, format="png", factor=""){
   dataset_names <- levels(Datasets);
 
   .make_density <- function(dat, conditions, title){
-    if(ncol(dat) < 2) return(ggplot() + ggtitle(title) + theme_void())
+    if(ncol(dat) < 2) return(list(empty = TRUE, title = title))
     df <- data.frame(dat, stringsAsFactors=FALSE, check.names=FALSE)
     df <- stack(df)
-    if(nrow(df) == 0 || all(is.na(df$values))) return(ggplot() + ggtitle(title) + theme_void())
+    if(nrow(df) == 0 || all(is.na(df$values))) return(list(empty = TRUE, title = title))
     df$ind <- as.character(df$ind)
     conv <- data.frame(ind=colnames(dat), class=conditions, stringsAsFactors=FALSE)
     # Normalize both sides for matching
     df$ind <- gsub("-", ".", df$ind)
     conv$ind <- gsub("-", ".", conv$ind)
     df1 <- merge(df, conv, by="ind")
-    if(nrow(df1) == 0) return(ggplot() + ggtitle(title) + theme_void())
-    ggplot(df1, aes(x=values)) +
-      geom_line(aes(color=class, group=ind), stat="density", alpha=0.3) +
-      geom_line(aes(color=class), stat="density", alpha=0.6, linewidth=1) +
-      ggtitle(title) +
-      theme_bw() +
-      theme(plot.title=element_text(size=11, face="bold", hjust=0.5))
+    if(nrow(df1) == 0) return(list(empty = TRUE, title = title))
+    list(df = df1, title = title)
   }
 
   if(file.exists("microbiome_meta_prenorm.qs")){
@@ -176,6 +190,27 @@ PlotMetaDensity <- function(imgNm, dpi=default.dpi, format="png", factor=""){
   nrows <- length(valid_datasets) + 1
   h <- 3.5 * nrows
 
+  # The plot data is what DrawMetaDensity reads: the values of every panel (Before/After per dataset, then combined) and the layout.
+  pd <- list(panels = fig.list, h = h, nrows = nrows);
+  DrawMetaDensity(pd, img.base, format);
+  .ov_plot_data(imgNm, pd, "DrawMetaDensity", list(imgNm = img.base, format = format));
+  invisible(NULL)
+}
+
+# Draws the meta-analysis density overview from its plot data alone (pd: panels (each df (ind, values, class), title or empty, title), h, nrows).
+DrawMetaDensity <- function(pd, imgNm, format = "png"){
+  require("ggplot2")
+  imgNm <- paste(imgNm, ".", format, sep="");
+  h <- pd$h; nrows <- pd$nrows;
+  fig.list <- lapply(pd$panels, function(x){
+    if(isTRUE(x$empty)) return(ggplot() + ggtitle(x$title) + theme_void())
+    ggplot(x$df, aes(x=values)) +
+      geom_line(aes(color=class, group=ind), stat="density", alpha=0.3) +
+      geom_line(aes(color=class), stat="density", alpha=0.6, linewidth=1) +
+      ggtitle(x$title) +
+      theme_bw() +
+      theme(plot.title=element_text(size=11, face="bold", hjust=0.5))
+  })
   rsclient_isolated_exec(
     func_body = function(d) {
       require(ggpubr)

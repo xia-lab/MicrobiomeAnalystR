@@ -3994,18 +3994,10 @@ PlotDiagnosticPca <- function(imgNm, dpi=default.dpi, format="png",type="diablo"
               prot$ss, prot$t0, pval_fmt, length(prot$t))
     }, error = function(e) NULL)
 
-    p <- ggplot(ctest) +
-      geom_point(aes(x=rda1, y=rda2, colour=Conditions, shape=Type)) +
-      geom_point(aes(x=xrda1, y=xrda2, colour=Conditions, shape=Type)) +
-      geom_segment(aes(x=rda1,y=rda2,xend=xrda1,yend=xrda2,colour=Conditions), alpha=0.4,arrow=arrow(length=unit(0.1,"cm"))) +
-      xlab(xlabel) + ylab(ylabel) +
-      theme_bw()
-    if (!is.null(prot_cap)) p <- p + labs(caption = prot_cap) +
-      theme(plot.caption = element_text(size = 9, hjust = 0.5, colour = "#444444",
-                                        margin = margin(t = 6)))
-    Cairo(file=imgNm, width=10, height=10, type=format, bg="white", unit="in", dpi=dpi);
-    print(p)
-    dev.off();
+    # The plot data is what DrawProcrustesPca reads: both configurations after the rotation, the axis labels and the PROTEST caption.
+    pd <- list(ctest = ctest, xlabel = xlabel, ylabel = ylabel, prot_cap = prot_cap);
+    DrawProcrustesPca(pd, sub(paste0("[.]", format, "$"), "", imgNm), format, dpi);
+    .ov_plot_data(imgNm, pd, "DrawProcrustesPca", list(imgNm = sub(paste0("[.]", format, "$"), "", imgNm), format = format, dpi = dpi));
     mbSetObj$imgSet$procrustes$pca <- imgNm
   } else if(type == "mofa"){
     mofa.res <- ov_qs_read("mofa.res.qs")
@@ -4031,6 +4023,26 @@ PlotDiagnosticPca <- function(imgNm, dpi=default.dpi, format="png",type="diablo"
   .set.mbSetObj(mbSetObj)
   }, error = function(e) { message("[PlotDiagnosticPca] error: ", e$message) })
   return(1)
+}
+
+# Draws the Procrustes superimposition plot from its plot data alone (pd: ctest, xlabel, ylabel, prot_cap).
+DrawProcrustesPca <- function(pd, imgNm, format="png", dpi=default.dpi){
+  require("Cairo"); library(ggplot2); library(grid)
+  imgNm <- paste(imgNm, ".", format, sep="");
+  ctest <- pd$ctest; prot_cap <- pd$prot_cap;
+  p <- ggplot(ctest) +
+    geom_point(aes(x=rda1, y=rda2, colour=Conditions, shape=Type)) +
+    geom_point(aes(x=xrda1, y=xrda2, colour=Conditions, shape=Type)) +
+    geom_segment(aes(x=rda1,y=rda2,xend=xrda1,yend=xrda2,colour=Conditions), alpha=0.4,arrow=arrow(length=unit(0.1,"cm"))) +
+    xlab(pd$xlabel) + ylab(pd$ylabel) +
+    theme_bw()
+  if (!is.null(prot_cap)) p <- p + labs(caption = prot_cap) +
+    theme(plot.caption = element_text(size = 9, hjust = 0.5, colour = "#444444",
+                                      margin = margin(t = 6)))
+  Cairo(file=imgNm, width=10, height=10, type=format, bg="white", unit="in", dpi=dpi);
+  print(p)
+  dev.off();
+  return(invisible(NULL))
 }
 
 # MOFA cumulative R² diagnostic — variance explained accumulated across
@@ -4255,6 +4267,18 @@ PlotMmpFeatImp <- function(imgNm, dpi=default.dpi, format="png", type="diablo", 
   dpi <- as.numeric(dpi); imgFile <- paste0(imgNm, ".", format)
   top <- .mba_featimp_per_layer(type, taxrank, 10L)
   if(is.null(top)){ message("[mmp/featimp] no importance scores for ", type); return(0) }
+  # The plot data is what DrawMmpFeatImp reads: the top features of each omics layer with their signed scores.
+  pd <- list(top = top, type = type);
+  DrawMmpFeatImp(pd, imgNm, dpi, format);
+  .ov_plot_data(imgFile, pd, "DrawMmpFeatImp", list(imgNm = imgNm, dpi = dpi, format = format));
+  return(1)
+}
+
+# Draws the per-layer feature-importance bars from its plot data alone (pd: top (Layer, Feature, VIP, ...), type).
+DrawMmpFeatImp <- function(pd, imgNm, dpi=default.dpi, format="png"){
+  require("Cairo"); library(ggplot2)
+  dpi <- as.numeric(dpi); imgFile <- paste0(imgNm, ".", format)
+  top <- pd$top; type <- pd$type
   is.loading <- type %in% c("diablo", "mofa")
   top <- top[order(top$Layer, abs(top$VIP)), , drop = FALSE]
   top$FeatKey <- factor(paste(top$Layer, top$Feature, sep = ":::"),
@@ -4278,7 +4302,7 @@ PlotMmpFeatImp <- function(imgNm, dpi=default.dpi, format="png", type="diablo", 
   Cairo::Cairo(file = imgFile, unit = "in", dpi = dpi, width = 8, height = max(5, 3.2 * n.layers),
                type = format, bg = "white")
   print(p); grDevices::dev.off()
-  return(1)
+  return(invisible(NULL))
 }
 
 # One feature-importance CSV per omics layer. Returns a NAMED char vector layer -> csv (or NULL).

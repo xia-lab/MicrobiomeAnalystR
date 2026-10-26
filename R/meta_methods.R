@@ -119,7 +119,29 @@ PerformMetaEffectSize <- function(mbSetObj=NA, imgName="", taxrank="OTU", selMet
   analSet$meta.mat.all <- es.mat;
   analSet$meta.res.obj <- fit_lm_meta;
   
+  # The plot data is what DrawMetaEffectSize reads: each feature's coefficient and FDR q-value.
+  pd <- list(res = res[, c("feature", "coef", "qval.fdr"), drop = FALSE]);
+  img.base <- imgName;
+  imgName = paste(imgName, ".", format, sep="");
+  DrawMetaEffectSize(pd, img.base, format, dpi);
+  .ov_plot_data(imgName, pd, "DrawMetaEffectSize", list(imgName = img.base, format = format, dpi = dpi));
+  res <- SetupMetaStats(BHth, paramSet, analSet);
+  saveSet(res[[1]], "paramSet");
+  mbSetObj$imgSet[[de.method]] <- imgName;
+  mbSetObj$analSet$effectsize$taxalvl <- taxrank;
+  mbSetObj$analSet$effectsize$de.method <- de.method;
+  mbSetObj$analSet$effectsize$selMeta <- selMeta;
+  mbSetObj$analSet$effectsize$ef.method <- ef.method;
+  mbSetObj$analSet$effectsize$thresh <- BHth;
+  mbSetObj$analSet$meta.restbl <- res[[2]]$meta.restbl;
+  .set.mbSetObj(mbSetObj);
+  return(saveSet(res[[2]], "analSet", length(sig.inx)));
+}
+
+# Draws the effect-size meta-analysis bar plot from its plot data alone (pd: res (feature, coef, qval.fdr)).
+DrawMetaEffectSize <- function(pd, imgName, format = "png", dpi = default.dpi){
   require(dplyr); require(ggplot2);
+  res <- pd$res;
   p <- res %>% 
     filter(qval.fdr < 0.05) %>% 
     arrange(coef) %>% 
@@ -133,17 +155,7 @@ PerformMetaEffectSize <- function(mbSetObj=NA, imgName="", taxrank="OTU", selMet
   Cairo::Cairo(file = imgName, unit="in", dpi=dpi, width=11.1, height=8.3, type=format, bg="white");
   print(p);
   dev.off();
-  res <- SetupMetaStats(BHth, paramSet, analSet);
-  saveSet(res[[1]], "paramSet");
-  mbSetObj$imgSet[[de.method]] <- imgName;
-  mbSetObj$analSet$effectsize$taxalvl <- taxrank;
-  mbSetObj$analSet$effectsize$de.method <- de.method;
-  mbSetObj$analSet$effectsize$selMeta <- selMeta;
-  mbSetObj$analSet$effectsize$ef.method <- ef.method;
-  mbSetObj$analSet$effectsize$thresh <- BHth;
-  mbSetObj$analSet$meta.restbl <- res[[2]]$meta.restbl;
-  .set.mbSetObj(mbSetObj);
-  return(saveSet(res[[2]], "analSet", length(sig.inx)));
+  return(invisible(NULL))
 }
 
 # for gene-level meta-analysis

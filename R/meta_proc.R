@@ -165,11 +165,22 @@ qc.boxplot2 <- function(dat, imgNm){
 }
 
 qc.pcaplot2 <- function(x, imgNm){
+  img.base <- imgNm;
   imgNm = paste(imgNm, ".png", sep="");
-  require('lattice');
   pca <- prcomp(t(na.omit(x)));
   names <- colnames(x);
   pca.res <- as.data.frame(pca$x);
+  # The plot data is what DrawQcPca reads: the first two scores of each sample and the sample names.
+  pd <- list(pca.res = pca.res[, c("PC1", "PC2"), drop = FALSE], names = names);
+  DrawQcPca(pd, img.base);
+  .ov_plot_data(imgNm, pd, "DrawQcPca", list(imgNm = img.base));
+}
+
+# Draws the sample PCA of the data profile from its plot data alone (pd: pca.res (PC1, PC2), names).
+DrawQcPca <- function(pd, imgNm){
+  imgNm = paste(imgNm, ".png", sep="");
+  require('lattice');
+  pca.res <- pd$pca.res; names <- pd$names;
   
   # increase xlim ylim for text label
   GetExtendRange<-function(vec, unit=10){
@@ -189,6 +200,7 @@ qc.pcaplot2 <- function(x, imgNm){
   Cairo(file=imgNm, width=480, height=480, type="png", bg="white");
   print(pcafig);
   dev.off();
+  return(invisible(NULL))
 }
 
 ###
