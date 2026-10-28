@@ -1246,13 +1246,15 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, f
     return(0);
   }
   if(opts=="DESeq2"){
-    .run.deseq(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, fc.thresh, comp1, comp2);
-    res = 1;
+    res <- .run.deseq(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, fc.thresh, comp1, comp2);
   }else{
     data <- .prepare_rnaseq(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, fc.thresh, comp1, comp2)
     res <- .perform_edger(variable, data, p.lvl, fc.thresh, comp1, comp2)
   }
-  return(1)
+  # Hand the real outcome back: a hard-coded 1 made the page re-render the PREVIOUS result table
+  # (and its message) whenever DESeq2 bailed out, so changing the comparison or taxonomy level
+  # appeared to do nothing.
+  return(res)
 }
 
 .run.deseq<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, fc.thresh=0, comp1=1, comp2=2){
@@ -1320,6 +1322,10 @@ PerformRNAseqDE<-function(mbSetObj, opts, p.lvl, variable, shotgunid, taxrank, f
   )
 
   resTable <- if (file.exists(bridge_out)) ov_qs_read(bridge_out) else NULL
+  if (is.null(resTable)) {
+    AddErrMsg("DESeq2 failed to produce results for this comparison.");
+    return(0);
+  }
 
   # Process results (what .save.deseq.res did)
   dat3t <- mbSetObj$analSet$rnaseq$data.rnaseq
