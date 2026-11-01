@@ -2141,7 +2141,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
         mbSetObj$dataSet$taxa_table<-mbSetObj$dataSet$taxa_table[,-1];
       }
       classi.lvl<- c("Phylum", "Class", "Order", "Family", "Genus", "Species");
-      colnames(mbSetObj$dataSet$taxa_table)<-classi.lvl[1:ncol(mbSetObj$dataSet$taxa_table)]; 
+      colnames(mbSetObj$dataSet$taxa_table)<-.rank_names_by_position(mbSetObj$dataSet$taxa_table, classi.lvl); 
       #sanity check: no of sample of both abundance and metadata should match.
       indx<-match(colnames(data.proc), rownames(mbSetObj$dataSet$sample_data));
      
@@ -2245,7 +2245,7 @@ CreatePhyloseqObj<-function(mbSetObj, type, taxa_type, taxalabel,isNormInput){
       }
       
       classi.lvl<- c("Phylum", "Class", "Order", "Family", "Genus", "Species"); 
-      colnames(mbSetObj$dataSet$taxa_table)<-classi.lvl[1:ncol(mbSetObj$dataSet$taxa_table)];
+      colnames(mbSetObj$dataSet$taxa_table)<-.rank_names_by_position(mbSetObj$dataSet$taxa_table, classi.lvl);
       #sanity check: no of sample of both abundance and metadata should match.
       indx<-match(colnames(data.proc), rownames(mbSetObj$dataSet$sample_data));
       
@@ -2624,4 +2624,19 @@ GetSampleNamesaftNorm<-function(mbSetObj, dataName){
   v <- mbSetObj$dataSet$is.normalized;
   if(is.null(v) || !length(v)) return(FALSE);
   isTRUE(as.logical(v[1])) || toupper(as.character(v[1])) %in% c("TRUE", "T");
+}
+
+# Rank names for a taxonomy table read by position (Phylum first). A table that names its taxa at ONE level with species
+# names - "Bifidobacterium adolescentis" or "s__Bifidobacterium_adolescentis", as a MetaPhlAn species table read by its
+# names - is a Species table, not a Phylum one (its figures and results were labelled Phylum). Any other shape keeps
+# the positional names.
+.rank_names_by_position <- function(taxa_table, classi.lvl) {
+  n <- ncol(taxa_table)
+  if (n == 1) {
+    v <- as.character(as.matrix(taxa_table)[, 1])
+    v <- v[!is.na(v) & nzchar(v)]
+    binomial <- grepl("^s__", v) | grepl("^\\[?[A-Z][a-z]+\\]?[ _][a-z][a-z.-]+", v)
+    if (length(v) > 0 && mean(binomial) >= 0.8) return("Species")
+  }
+  classi.lvl[1:n]
 }
