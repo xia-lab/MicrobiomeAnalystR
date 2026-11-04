@@ -631,7 +631,14 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
       n_cls_levels <- input_data$n_cls_levels
 
       data <- metagenomeSeq::cumNorm(data, p = metagenomeSeq::cumNormStat(data))
-      mod <- model.matrix(~Biobase::phenoData(data)@data[, variable])
+      # comp1 is the reference, as in the edgeR, DESeq2 and LinDA paths: the first level is the model's baseline, so
+      # logFC is comp2 relative to comp1. A bare factor falls alphabetical, and the sign followed the names of the groups.
+      grp <- as.character(Biobase::phenoData(data)@data[, variable])
+      comp1 <- input_data$comp1; comp2 <- input_data$comp2
+      grp <- if (isTRUE(comp1 %in% grp) && isTRUE(comp2 %in% grp) && !identical(comp1, comp2)) {
+        factor(grp, levels = c(comp1, comp2, setdiff(sort(unique(grp)), c(comp1, comp2))))
+      } else factor(grp)
+      mod <- model.matrix(~grp)
 
       fit <- NULL
       err_msg <- NULL
@@ -683,7 +690,7 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
                   pdata_col = pdata_col, tax_df = tax_df))
     },
     input_data = list(data = data, variable = variable, model = model,
-                      n_cls_levels = length(levels(cls))),
+                      n_cls_levels = length(levels(cls)), comp1 = comp1, comp2 = comp2),
     packages = c("metagenomeSeq", "Biobase", "phyloseq", "qs"),
     timeout = 300,
     output_type = "qs"
