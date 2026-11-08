@@ -802,14 +802,14 @@ PrepareEnrichNetViewer <- function(mbSetObj, netNm = "enrichNet_tsea"){
   });
   names(hit.lists) <- set.nms;
 
-  # the set network: two sets are joined when they share at least 20% of the taxa of the library sets
+  # the set network: two sets are joined when they share at least 2 taxa AND their Jaccard index is at least 0.25 (enrich_net_edge_ok)
   members <- lapply(set.nms, function(s){
     m <- current.mset[[s]];
     if(is.null(m)) hit.lists[[s]] else m
   });
   pairs <- utils::combn(n, 2);
   ovl <- mapply(function(i, j) overlap_ratio(members[[i]], members[[j]]), pairs[1, ], pairs[2, ]);
-  keep <- !is.na(ovl) & ovl >= 0.2;
+  keep <- !is.na(ovl) & mapply(function(i, j) enrich_net_edge_ok(members[[i]], members[[j]]), pairs[1, ], pairs[2, ]);
   e.df <- data.frame(from = set.nms[pairs[1, keep]], to = set.nms[pairs[2, keep]], weight = ovl[keep], stringsAsFactors = FALSE);
   g <- igraph::graph_from_data_frame(e.df, directed = FALSE, vertices = data.frame(name = set.nms, stringsAsFactors = FALSE));
 
@@ -1479,3 +1479,50 @@ GetMsetEvidence <- function(mbSetObj, msetNm){
   return(current.msetlib$evidence[matched.inx])
 }
 
+# THE EDGE RULE of the enrichment networks (owner, 7 Nov 2026): two sets are linked when their Jaccard index |A n B| / |A u B| is
+# at least 0.25 (the standard cutoff is 0.25-0.375) and they share at least 2 members. Jaccard is the adaptive part: it scales with
+# the sets' sizes and penalizes a size difference, so a small set inside a large one is not linked by a few members; the floor of 2
+# only stops a single shared member from linking two tiny sets (metabolite and taxon sets, small gene hits). A count floor by data
+# type (5 genes) removed real links between small pathways. It was an overlap ratio of 0.2-0.3 with no minimum. The same rule in
+# every tool package, so every network drawn from it links pathways the same way.
+enrich_net_edge_ok <- function(a, b, min_shared = 2, min_jaccard = 0.25) {
+  a <- unique(as.character(unlist(a))); b <- unique(as.character(unlist(b)));
+  sh <- length(intersect(a, b)); u <- length(union(a, b));
+  sh >= min_shared && u > 0 && sh / u >= min_jaccard
+}
+# Keep the edges of g whose two sets pass enrich_net_edge_ok; `sets` is a list of members named by the vertex names.
+enrich_net_keep_edges <- function(g, sets, min_shared = 2, min_jaccard = 0.25) {
+  if (igraph::ecount(g) == 0) return(g);
+  el <- igraph::as_edgelist(g, names = TRUE);
+  ok <- vapply(seq_len(nrow(el)), function(k) enrich_net_edge_ok(sets[[el[k, 1]]], sets[[el[k, 2]]], min_shared, min_jaccard), logical(1));
+  igraph::delete_edges(g, igraph::E(g)[!ok])
+}
+
+# THE ENRICHMENT NETWORK of any set of enriched pathways (7 Nov 2026): the computing, here in the tool package; a caller
+# lays it out and draws it. `hits.query` = the members of each pathway hit by the query (a list named by pathway), `pvals` = a
+# p-value per pathway (named). The `top` most significant pathways are kept (a pathway named twice keeps its first entry), and two
+# are linked by enrich_net_edge_ok. Returns list(ids, members, hits, pvals, edges = data.frame(from, to, weight = shared members,
+# jaccard)), or NULL when no pathway has a member. Base R only.
+BuildEnrichNetGraph <- function(hits.query, pvals, top = 20, min_shared = 2, min_jaccard = 0.25) {
+  if (is.null(hits.query) || !length(hits.query)) return(NULL);
+  hq <- lapply(hits.query, function(x) { x <- unique(as.character(unlist(x))); x[!is.na(x) & nzchar(x)] });
+  hq <- hq[lengths(hq) > 0];
+  hq <- hq[!duplicated(names(hq))];
+  if (!length(hq)) return(NULL);
+  ids <- names(hq);
+  pv <- suppressWarnings(as.numeric(pvals[ids])); pv[!is.finite(pv)] <- 1;
+  ord <- order(pv);
+  if (length(ord) > top) ord <- ord[seq_len(top)];
+  ids <- ids[ord]; pv <- stats::setNames(pv[ord], ids); hq <- hq[ids];
+  n <- length(ids);
+  fr <- character(0); to <- character(0); wt <- numeric(0); jc <- numeric(0);
+  if (n >= 2) for (i in seq_len(n - 1)) for (j in (i + 1):n) {
+    sh <- length(intersect(hq[[i]], hq[[j]]));
+    if (sh > 0 && enrich_net_edge_ok(hq[[i]], hq[[j]], min_shared, min_jaccard)) {
+      fr <- c(fr, ids[i]); to <- c(to, ids[j]); wt <- c(wt, sh);
+      jc <- c(jc, sh / length(union(hq[[i]], hq[[j]])));
+    }
+  }
+  list(ids = ids, members = hq, hits = lengths(hq), pvals = pv,
+       edges = data.frame(from = fr, to = to, weight = wt, jaccard = jc, stringsAsFactors = FALSE))
+}
