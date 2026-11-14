@@ -30,7 +30,7 @@ SanityCheckData <- function(mbSetObj, filetype, preFilter = "sample", rmConstant
    feat.sums <- rowSums(mbSetObj$dataSet$data.orig,na.rm = T) ###
    if(length(which(feat.sums<=1))>0){
      singleton <- TRUE
-     singleton_length <- length(feat.sums<=1)
+     singleton_length <- length(which(feat.sums<=1))
    }else{
     singleton <- FALSE
     singleton_length <- 0
