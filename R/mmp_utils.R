@@ -3753,7 +3753,7 @@ PlotDiagnostic <- function(imgName, dpi=default.dpi, format="png",alg, taxrank="
     
     error.df = data.frame(Samples=names(error), Procrustes_residual=unname(error))
     
-    rankres <- rank(-abs(error), ties.method="random");
+    rankres <- rank(-abs(error), ties.method = "first");
     inx.x <- which(rankres < 6);
     inx.y <- error[inx.x];
     nms <- names(error)[inx.x];

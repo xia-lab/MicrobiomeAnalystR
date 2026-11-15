@@ -162,7 +162,7 @@ shadow_save(mummichog.lib,"current_mummichog_lib.qs")
   
   # for empirical compounds
   if( current.proc$mumRT ){
-    ord_rt <- rank( current.proc$ret_time, ties.method = "random")
+    ord_rt <- rank( current.proc$ret_time, ties.method = "first")
     ret_time_pos <- current.proc$ret_time[pos_inx];
     ret_time_rank_pos <- ord_rt[pos_inx];
     ret_time_neg <- current.proc$ret_time[!pos_inx];
