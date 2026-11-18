@@ -13,7 +13,6 @@ LazyData: true
 RoxygenNote: 7.2.3
 Imports: 
     metacoder,
-    pryr,
     biomformat,
     RColorBrewer,
     ggplot2,
@@ -43,14 +42,13 @@ Imports:
     viridis,
     taxa,
     ggrepel,
-    qs,
-    Tax4Fun,
     ppcor,
     dplyr,
     limma,
     memoise,
     tidyverse,
     modeest,
+    qs2,
     lmerTest
 Suggests: 
     ANCOMBC,

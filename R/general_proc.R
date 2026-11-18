@@ -868,7 +868,7 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
             edgeR::calcNormFactors(y, method = input_data$method)
           },
           input_data = list(counts = data, method = "upperquartile"),
-          packages = c("edgeR", "qs"), timeout = 120, output_type = "qs"
+          packages = c("edgeR", "qs2"), timeout = 120, output_type = "qs2"
         )
         if (is.list(otuUQ) && isFALSE(otuUQ$success)) { AddErrMsg(otuUQ$message); return(0) }
         data <- as.matrix(otuUQ$counts);
@@ -886,7 +886,7 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
             metagenomeSeq::MRcounts(dataMR, norm = TRUE)
           },
           input_data = list(counts = data),
-          packages = c("metagenomeSeq", "qs"), timeout = 120, output_type = "qs"
+          packages = c("metagenomeSeq", "qs2"), timeout = 120, output_type = "qs2"
         )
         if (is.list(css_result) && isFALSE(css_result$success)) { AddErrMsg(css_result$message); return(0) }
         data <- css_result
@@ -916,7 +916,7 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
             edgeR::calcNormFactors(y, method = input_data$method)
           },
           input_data = list(counts = data, method = edger_method),
-          packages = c("edgeR", "qs"), timeout = 120, output_type = "qs"
+          packages = c("edgeR", "qs2"), timeout = 120, output_type = "qs2"
         )
         if (is.list(otuNorm) && isFALSE(otuNorm$success)) { AddErrMsg(otuNorm$message); return(0) }
         data <- as.matrix(otuNorm$counts);
@@ -1423,7 +1423,7 @@ PlotRareCurve <- function(mbSetObj, graphName, variable){
         grp_data = grp.data, raremax_grp = raremax.grp,
         dist_cols_grp = dist.cols.grp, grp_lvls = grp.lvls, grp_num_grp = grp.num.grp
       ),
-      packages = c("vegan", "Cairo", "qs"),
+      packages = c("vegan", "Cairo", "qs2"),
       timeout = 180,
       output_type = "qs"
     )
@@ -1806,7 +1806,7 @@ DrawPCAView <- function(pd, imgName, format="png"){
       dev.off()
     },
     input_data = list(imgName = imgName, format = format, figs = fig.list),
-    packages = c("ggpubr", "Cairo", "qs"), timeout = 120, output_type = "qs"
+    packages = c("ggpubr", "Cairo", "qs2"), timeout = 120, output_type = "qs2"
   )
   return(invisible(NULL))
 }

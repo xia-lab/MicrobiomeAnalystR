@@ -792,7 +792,12 @@ readSet <- function(obj=NA, set=""){
   return(obj);
 }
 
-load_qs <- function(url) qs::qdeserialize(curl::curl_fetch_memory(url)$content)
+load_qs <- function(url) {
+  x <- curl::curl_fetch_memory(url)$content
+  if (!identical(x[1:4], as.raw(c(0x0b, 0x0e, 0x0a, 0x0c)))) return(qs2::qs_deserialize(x))
+  if (requireNamespace("qs", quietly = TRUE)) return(qs::qdeserialize(x))
+  stop(basename(url), " was saved by an earlier version, in a format this R cannot read. Reopen the project on the R it was made with and save it again, or run the analysis again.", call. = FALSE)
+}
 
 readDataset <- function(fileName="", obj=NA){
 
@@ -824,7 +829,7 @@ Set.Config <-function(anal.mode="web"){
 }
 
 saveDataQs <-function(data, name, module.nm, dataName){
-  # Use qs::qsave directly for internal R workflow files
+  # Use ov_qs_save (qs2) for internal R workflow files
   # (shadow_save with Arrow is only needed for R-Java data exchange)
   if(module.nm == "meta"){
     ov_qs_save(data, file=paste0(dataName, "_data/", name));

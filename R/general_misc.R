@@ -156,7 +156,7 @@ GetNumbericalInx <- function(my.dat){
 ShowMemoryUse <- function(..., n=20) {
  
   sink(); # make sure print to screen
-  print(pryr::mem_used());
+  print(structure(sum(gc()[, 2]) * 1024^2, class = "object_size"), units = "auto");
   print(sessionInfo());
   print(.ls.objects(..., order.by="Size", decreasing=TRUE, head=TRUE, n=n));
   print(warnings());
@@ -789,18 +789,25 @@ assert_equal_type <- function(
 # as top-level definitions — not only inside the RS.eval block (which only
 # reaches the subprocess R session).
 
+# An earlier version wrote the original qs format (first bytes 0b 0e 0a 0c); it is read only where the qs package happens to be installed (qs left CRAN on 17 Jan 2026 and does not
+# build on R 4.6). Without it: one plain sentence. A file qs2 could not read that is not that format is qs2's to explain.
+.ov_qs_old <- function(file, ...) {
+  if (!identical(readBin(file, "raw", 4L), as.raw(c(0x0b, 0x0e, 0x0a, 0x0c)))) return(qs2::qs_read(file, ...))
+  if (requireNamespace("qs", quietly = TRUE)) return(qs::qread(file, ...))
+  stop(basename(file), " was saved by an earlier version, in a format this R cannot read. Reopen the project on the R it was made with and save it again, or run the analysis again.", call. = FALSE)
+}
 ov_qs_read <- function(file, ...) {
   if (file.exists(file)) {
     r <- try(qs2::qs_read(file, ...), silent = TRUE)
     if (!inherits(r, "try-error")) return(r)
-    return(qs::qread(file, ...))
+    return(.ov_qs_old(file, ...))
   }
   if (endsWith(tolower(file), ".qs")) {
     v2 <- paste0(substr(file, 1, nchar(file) - 3L), ".qs2")
-    if (file.exists(v2)) { r <- try(qs2::qs_read(v2, ...), silent = TRUE); if (!inherits(r, "try-error")) return(r); return(qs::qread(v2, ...)) }
+    if (file.exists(v2)) { r <- try(qs2::qs_read(v2, ...), silent = TRUE); if (!inherits(r, "try-error")) return(r); return(.ov_qs_old(v2, ...)) }
   } else if (endsWith(tolower(file), ".qs2")) {
     v1 <- paste0(substr(file, 1, nchar(file) - 4L), ".qs")
-    if (file.exists(v1)) { r <- try(qs2::qs_read(v1, ...), silent = TRUE); if (!inherits(r, "try-error")) return(r); return(qs::qread(v1, ...)) }
+    if (file.exists(v1)) { r <- try(qs2::qs_read(v1, ...), silent = TRUE); if (!inherits(r, "try-error")) return(r); return(.ov_qs_old(v1, ...)) }
   }
   stop("ov_qs_read: neither .qs2 nor .qs found for: ", file, call. = FALSE)
 }
@@ -841,10 +848,11 @@ run_func_via_microservice <- function(func, args = list(), timeout_sec = 60, all
     res <- tryCatch(
       callr::r(
         func = function(func, args) {
+          .ov_qs_old <- function(file, ...) { if (!identical(readBin(file, "raw", 4L), as.raw(c(0x0b, 0x0e, 0x0a, 0x0c)))) return(qs2::qs_read(file, ...)); if (requireNamespace("qs", quietly = TRUE)) return(qs::qread(file, ...)); stop(basename(file), " was saved by an earlier version, in a format this R cannot read. Reopen the project on the R it was made with and save it again, or run the analysis again.", call. = FALSE) }
           ov_qs_read <- function(file, ...) {
-            if (file.exists(file)) { r <- try(qs2::qs_read(file, ...), silent = TRUE); if (!inherits(r, "try-error")) return(r); return(qs::qread(file, ...)) }
-            if (endsWith(tolower(file), ".qs")) { v2 <- paste0(substr(file, 1, nchar(file) - 3L), ".qs2"); if (file.exists(v2)) { r <- try(qs2::qs_read(v2, ...), silent = TRUE); if (!inherits(r, "try-error")) return(r); return(qs::qread(v2, ...)) } }
-            else if (endsWith(tolower(file), ".qs2")) { v1 <- paste0(substr(file, 1, nchar(file) - 4L), ".qs"); if (file.exists(v1)) { r <- try(qs2::qs_read(v1, ...), silent = TRUE); if (!inherits(r, "try-error")) return(r); return(qs::qread(v1, ...)) } }
+            if (file.exists(file)) { r <- try(qs2::qs_read(file, ...), silent = TRUE); if (!inherits(r, "try-error")) return(r); return(.ov_qs_old(file, ...)) }
+            if (endsWith(tolower(file), ".qs")) { v2 <- paste0(substr(file, 1, nchar(file) - 3L), ".qs2"); if (file.exists(v2)) { r <- try(qs2::qs_read(v2, ...), silent = TRUE); if (!inherits(r, "try-error")) return(r); return(.ov_qs_old(v2, ...)) } }
+            else if (endsWith(tolower(file), ".qs2")) { v1 <- paste0(substr(file, 1, nchar(file) - 4L), ".qs"); if (file.exists(v1)) { r <- try(qs2::qs_read(v1, ...), silent = TRUE); if (!inherits(r, "try-error")) return(r); return(.ov_qs_old(v1, ...)) } }
             stop("ov_qs_read: neither .qs2 nor .qs found for: ", file, call. = FALSE)
           }
           ov_qs_save <- function(obj, file, ...) { .a <- list(...); for (.k in c("preset", "nthreads", "check_hash")) .a[[.k]] <- NULL; do.call(qs2::qs_save, c(list(object = obj, file = file), .a)); invisible(file) }
@@ -1336,7 +1344,7 @@ ComputeEncasing <- function(filenm, type, names.vec, level=0.95, omics="NA"){
         mesh
       },
       input_data = list(coords = coords, level = level),
-      packages = c("rgl", "qs"),
+      packages = c("rgl", "qs2"),
       timeout = 120,
       output_type = "qs"
     )

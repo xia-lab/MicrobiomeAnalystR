@@ -2356,7 +2356,7 @@ PerformBetaDiversity <- function(mbSetObj, plotNm, ordmeth, distName, colopt, me
                loading_names = rownames(fit$consensus_loadings))
         },
         input_data = list(sub_data = sub_data, sub_sam_data = sub_sam_data),
-        packages = c("vegan", "MMUPHin", "qs"), timeout = 300, output_type = "qs"
+        packages = c("vegan", "MMUPHin", "qs2"), timeout = 300, output_type = "qs2"
       )
       if (is.list(cont_result) && isFALSE(cont_result$success)) { AddErrMsg(cont_result$message); return(0) }
 
@@ -3535,7 +3535,7 @@ PerformCategoryComp <- function(mbSetObj, taxaLvl, method, distnm, variable, pai
         covariates = covariates, cov.vec = cov.vec, model.additive = model.additive,
         pairwise_grp = pairwise_grp
       ),
-      packages = c("vegan", "ape", "qs"),
+      packages = c("vegan", "ape", "qs2"),
       timeout = 300,
       output_type = "qs"
     )
@@ -4282,7 +4282,7 @@ PrepareHeatTreePlotDataParse_cmf <- function(dm_otu_cmf,
     input_data = list(dm_otu_cmf = dm_otu_cmf,
                       sample_ids = dm_samples_cmf$sample_id,
                       groups = dm_samples_cmf[[meta]]),
-    packages = c("metacoder", "qs"),
+    packages = c("metacoder", "qs2"),
     timeout = 180,
     output_type = "qs"
   )
@@ -4777,7 +4777,7 @@ DrawHeatTreeAbundance <- function(pd, imgName, format = "png"){
                       comparison = comparison,
                       imgFile = imgFile,
                       format = format),
-    packages = c("metacoder", "qs", "Cairo"),
+    packages = c("metacoder", "qs2", "Cairo"),
     timeout = 180,
     output_type = "qs"
   )
@@ -4798,7 +4798,6 @@ DrawHeatTreeAbundance <- function(pd, imgName, format = "png"){
 #'McGill University, Canada
 #'License: MIT
 #'@export
-#'@import Tax4Fun
 
 # use memoise tech to avoid repeating
 Perform16FunAnot_mem <- function(mbSetObj, type, pipeline,ggversion){
@@ -4931,7 +4930,7 @@ ggrare2 <- function(physeq_object, data.src, label = NULL, color = NULL, plot = 
       return(list(df = df, error_msgs = error_msgs))
     },
     input_data = list(x = x, se = se, step_new = step_new),
-    packages = c("vegan", "qs"),
+    packages = c("vegan", "qs2"),
     timeout = 180,
     output_type = "qs"
   )

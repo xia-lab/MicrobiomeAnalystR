@@ -113,7 +113,7 @@ DrawMetaPCA <- function(pd, imgNm, format = "png"){
       dev.off()
     },
     input_data = list(imgNm = imgNm, h = h, format = format, fig_list = fig.list, nrows = nrows),
-    packages = c("ggpubr", "Cairo", "qs"), timeout = 120, output_type = "qs"
+    packages = c("ggpubr", "Cairo", "qs2"), timeout = 120, output_type = "qs2"
   )
 }
 
@@ -220,7 +220,7 @@ DrawMetaDensity <- function(pd, imgNm, format = "png"){
       dev.off()
     },
     input_data = list(imgNm = imgNm, h = h, format = format, fig_list = fig.list, nrows = nrows),
-    packages = c("ggpubr", "Cairo", "qs"), timeout = 120, output_type = "qs"
+    packages = c("ggpubr", "Cairo", "qs2"), timeout = 120, output_type = "qs2"
   )
 }
 

@@ -691,7 +691,7 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
     },
     input_data = list(data = data, variable = variable, model = model,
                       n_cls_levels = length(levels(cls)), comp1 = comp1, comp2 = comp2),
-    packages = c("metagenomeSeq", "Biobase", "phyloseq", "qs"),
+    packages = c("metagenomeSeq", "Biobase", "phyloseq", "qs2"),
     timeout = 300,
     output_type = "qs"
   )
@@ -753,7 +753,7 @@ PerformMetagenomeSeqAnal<-function(mbSetObj, variable, p.lvl, shotgunid, taxrank
       data.frame(tt@.Data[[1]], check.names = FALSE)
     },
     input_data = list(dge = dge, comp1 = comp1, comp2 = comp2, claslbl = as.character(claslbl)),
-    packages = c("edgeR", "qs"),
+    packages = c("edgeR", "qs2"),
     timeout = 180,
     output_type = "qs"
   )
@@ -1994,7 +1994,7 @@ PerformANCOMBC2 <- function(mbSetObj, analysis.var, is.norm = "false",
     },
     input_data = list(Y = Y, meta = Z, fix = fix_formula, rand = rand_formula, group = group, global = global,
                       sens = pseudo_sens, alpha = alpha, prv = prv.cut, lib = lib.cut),
-    packages = c("ANCOMBC", "qs"), timeout = 3600, output_type = "qs", allow_fallback = FALSE)
+    packages = c("ANCOMBC", "qs2"), timeout = 3600, output_type = "qs2", allow_fallback = FALSE)
   if (is.list(result) && isFALSE(result$success)) { AddErrMsg(paste("ANCOM-BC2 failed:", result$message)); return(NULL) }
   result$variables <- sub("^lfc_", "", grep("^lfc_", colnames(result$res), value = TRUE))
   result$variables <- setdiff(result$variables, "(Intercept)")
@@ -2303,7 +2303,7 @@ PerformANCOMBC2Uni <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, 
     },
     input_data = list(x = x, grp = grp, permutations = permutations,
                       method = method, padj = padj),
-    packages = c("vegan", "qs"),
+    packages = c("vegan", "qs2"),
     timeout = 300,
     output_type = "qs"
   )
@@ -2900,7 +2900,7 @@ TSSnorm = function(features) {
         na.rm = TRUE)
     },
     input_data = list(features_norm = features_norm),
-    packages = c("vegan", "qs"),
+    packages = c("vegan", "qs2"),
     timeout = 180,
     output_type = "qs"
   )
@@ -3043,7 +3043,7 @@ phyloseq_to_edgeR = function(physeq, group, method="RLE", ...){
       edgeR::estimateTagwiseDisp(edgeR::estimateCommonDisp(z))
     },
     input_data = list(x = x, group = group, taxonomy = taxonomy),
-    packages = c("edgeR", "qs"),
+    packages = c("edgeR", "qs2"),
     timeout = 180,
     output_type = "qs"
   )
@@ -3087,7 +3087,7 @@ phyloseq_to_metagenomeSeq = function (physeq, ...)
       return(mrobj)
     },
     input_data = list(countData = countData, ADF = ADF, TDF = TDF),
-    packages = c("metagenomeSeq", "Biobase", "qs"),
+    packages = c("metagenomeSeq", "Biobase", "qs2"),
     timeout = 180,
     output_type = "qs"
   )

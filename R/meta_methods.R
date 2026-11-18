@@ -101,7 +101,7 @@ PerformMetaEffectSize <- function(mbSetObj=NA, imgName="", taxrank="OTU", selMet
       do.call(MMUPHin::lm_meta, input_data$args)
     },
     input_data = list(args = lm_meta_args),
-    packages = c("MMUPHin", "qs"),
+    packages = c("MMUPHin", "qs2"),
     timeout = 300,
     output_type = "qs"
   )
@@ -329,7 +329,7 @@ CompareSummaryStats <- function(mbSetObj=NA,fileName="abc", sel.meta="", taxrank
             erDF
           },
           input_data = list(otu_mat = otu_mat, measures = summary.stat.vec, study_name = Study),
-          packages = c("vegan", "qs"),
+          packages = c("vegan", "qs2"),
           timeout = 120,
           output_type = "qs"
         )
@@ -767,7 +767,7 @@ PlotBetaSummary <- function(mbSetObj, plotNm,taxalvl, sel.meta, alg, format="png
           },
           input_data = list(otu_t = otu_t, dist_method = dist_method, alg = alg,
                             sampledf = sampledf, sel_meta = sel.meta),
-          packages = c("vegan", "qs"),
+          packages = c("vegan", "qs2"),
           timeout = 180,
           output_type = "qs"
         )
@@ -850,7 +850,7 @@ PlotDiscreteDiagnostic <- function(mbSetObj, fileName, metadata, format="png", d
       results
     },
     input_data = list(meta_groups = meta_groups, otu_subsets = otu_subsets, sam_subsets = sam_subsets),
-    packages = c("vegan", "MMUPHin", "qs"),
+    packages = c("vegan", "MMUPHin", "qs2"),
     timeout = 300,
     output_type = "qs"
   )
@@ -896,7 +896,7 @@ PlotDiscreteDiagnostic <- function(mbSetObj, fileName, metadata, format="png", d
       TRUE
     },
     input_data = list(imgName = imgName, format = format, plot_list = plot.list, ncol = length(meta_groups)),
-    packages = c("ggpubr", "Cairo", "qs"),
+    packages = c("ggpubr", "Cairo", "qs2"),
     timeout = 120,
     output_type = "qs"
   )
@@ -947,7 +947,7 @@ PlotContinuousPopulation <- function(mbSetObj, loadingName, ordinationName, meta
       results
     },
     input_data = list(meta_groups = meta_groups, otu_subsets = otu_subsets, sam_subsets = sam_subsets),
-    packages = c("vegan", "MMUPHin", "qs"),
+    packages = c("vegan", "MMUPHin", "qs2"),
     timeout = 300,
     output_type = "qs"
   )
@@ -993,7 +993,7 @@ PlotContinuousPopulation <- function(mbSetObj, loadingName, ordinationName, meta
     },
     input_data = list(loadingName = loadingName, ordinationName = ordinationName, format = format,
                       loading_list = loading.list, ordination_list = ordination.list, ngrp = ngrp),
-    packages = c("ggpubr", "Cairo", "qs"),
+    packages = c("ggpubr", "Cairo", "qs2"),
     timeout = 120,
     output_type = "qs"
   )

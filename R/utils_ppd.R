@@ -258,7 +258,7 @@ PCoA3DAnal.16SRef <- function(mbSetObj, barplotNm, ordMeth, distName, taxrank, m
     input_data = list(otu_mat = otu_mat, sam_df = sam_df, ordMeth = ordMeth,
                       distName = distName, metadata = metadata,
                       barplotNm = barplotNm, format = format, dpi = dpi),
-    packages = c("vegan", "phyloseq", "ape", "ggplot2", "Cairo", "qs"),
+    packages = c("vegan", "phyloseq", "ape", "ggplot2", "Cairo", "qs2"),
     timeout = 180,
     output_type = "qs"
   )

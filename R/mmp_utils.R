@@ -3720,7 +3720,7 @@ PlotCorrHistogram <- function(imgNm, dpi=default.dpi, format="png"){
       dev.off()
     },
     input_data = list(imgNm = imgNm, dpi = dpi, fig_list = fig.list),
-    packages = c("ggpubr", "Cairo", "qs"), timeout = 120, output_type = "qs"
+    packages = c("ggpubr", "Cairo", "qs2"), timeout = 120, output_type = "qs2"
   )
 
 }
@@ -4851,7 +4851,7 @@ ComputeEncasingDiablo <- function(filenm, type, names.vec, level=0.95, omics="NA
         mesh
       },
       input_data = list(coords = coords, level = level),
-      packages = c("rgl", "qs"),
+      packages = c("rgl", "qs2"),
       timeout = 120,
       output_type = "qs"
     )
@@ -4940,7 +4940,7 @@ ComputeEncasingBatchDiablo <- function(filenm, type, groups_json, level = 0.95, 
         })
       },
       input_data = list(groups = group_data, level = level),
-      packages = c("rgl", "qs"),
+      packages = c("rgl", "qs2"),
       timeout = 120,
       output_type = "qs"
     )
