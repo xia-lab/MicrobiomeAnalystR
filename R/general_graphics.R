@@ -226,7 +226,7 @@ DrawTreeGraph <- function(pd, imgName, format = "png", dpi = default.dpi) {
 #' @export
 #' @import grid
 #' @import gridExtra
-PlotBoxData <- function(mbSetObj, boxplotName, feat, plotType, format = "png", dpi = default.dpi) {
+PlotBoxData <- function(mbSetObj, boxplotName, feat, plotType, format = "png", dpi = default.dpi, src = "") {
   mbSetObj <- .get.mbSetObj(mbSetObj)
 
   suppressMessages(library(grid));
@@ -242,10 +242,14 @@ PlotBoxData <- function(mbSetObj, boxplotName, feat, plotType, format = "png", d
     variable <- colnames(sample_table)[1]
   }
   data <- mbSetObj$analSet$boxdata
+  # src: the result table the feature was picked from (KeepBoxData); boxdata itself may be another page's analysis by now
+  if (!is.null(mbSetObj$analSet$boxdata.kept[[src]])) {
+    data <- mbSetObj$analSet$boxdata.kept[[src]]
+  }
 
   # Defensive: Handle empty or invalid feature name
   available_features <- setdiff(colnames(data), "class")
-  if (is.null(feat) || feat == "" || !(feat %in% available_features)) {
+  if (is.null(feat) || feat == "") {
     if (length(available_features) > 0) {
       # Default to first feature if none specified
       feat <- available_features[1]
@@ -253,6 +257,10 @@ PlotBoxData <- function(mbSetObj, boxplotName, feat, plotType, format = "png", d
     } else {
       stop("PlotBoxData: No valid features available in boxdata")
     }
+  } else if (!(feat %in% available_features)) {
+    # never draw another feature under this name's View
+    AddErrMsg(paste0(feat, " is not in the data of the current result table. Please run the analysis again, then view it."))
+    return(0)
   }
 
   a <- as.numeric(data[, feat])

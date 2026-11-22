@@ -440,6 +440,14 @@ GetResColNames <- function(mbSetObj){
   if(is.null(nms)) character(0) else nms;
 }
 
+# The page keeps showing its result table (cached as `key`) after another page's analysis replaced analSet$boxdata;
+# the box plots of that table are drawn from the data kept here (PlotBoxData src), not from whatever ran last.
+KeepBoxData <- function(mbSetObj, key){
+  mbSetObj <- .get.mbSetObj(mbSetObj);
+  mbSetObj$analSet$boxdata.kept[[key]] <- mbSetObj$analSet$boxdata;
+  return(.set.mbSetObj(mbSetObj));
+}
+
 # The metabolomics limma result lives only in the in-memory `current.proc$met$res_deAnal`
 # global. If the Rserve child is reaped (or current.proc is otherwise wiped) between the
 # metabolomics comparison and a later read, that global is NULL — which renders the
