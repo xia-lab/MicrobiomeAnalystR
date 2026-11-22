@@ -91,7 +91,12 @@ PerformSeqImport <- function(home_dir = ""){
 PerformSeqProcessing <- function(){
   MessageOutput("Step 2: Perform sequencing data processing... ")
   write.table(5.0, file = "log_progress.txt", quote = F, row.names = F, col.names = F, append = F)
-  
+
+  # dada2's multithread=TRUE forks via mclapply, which segfaults intermittently
+  # on the local dev box (a fork/ShortRead race); run single-threaded there.
+  # Servers keep multithreading (they lack /home/zgy/NetBeansProjects/).
+  use.mt <- !dir.exists("/home/zgy/NetBeansProjects/")
+
   params <- dataObj$params
   df_files <- dataObj$files;
   fnFs <- df_files$fnFs
@@ -167,12 +172,12 @@ PerformSeqProcessing <- function(){
     out <- filterAndTrim(fnFs, filtFs, fnRs, filtRs, truncLen=truncLen,
                  trimLeft = trimLeft, trimRight = trimRight,
                  maxN=maxN, maxEE=maxEE, truncQ=truncQ, rm.phix=rm.phix,
-                 compress=TRUE, multithread=TRUE) # On Windows set multithread=FALSE
+                 compress=TRUE, multithread=use.mt) # single-threaded on the dev box (fork segfault)
   } else {
     out <- filterAndTrim(fnFs, filtFs, truncLen=truncLen,
                          trimLeft = trimLeft, trimRight = trimRight,
                          maxN=maxN, maxEE=maxEE, truncQ=truncQ, rm.phix=rm.phix,
-                         compress=TRUE, multithread=TRUE) # On Windows set multithread=FALSE
+                         compress=TRUE, multithread=use.mt) # single-threaded on the dev box (fork segfault)
   }
    MessageOutput("Start Sequencing data filtering and triming2 ... ")
   if(all(out[,"reads.out"]==0)){
