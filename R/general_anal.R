@@ -2030,12 +2030,18 @@ PerformANCOMBC2 <- function(mbSetObj, analysis.var, is.norm = "false",
 # Shared preparation for the single-factor compositional methods (LinDA, ANCOM-BC2): count table at
 # the requested level and the group factor, ordered so the fold change is comp.grp relative to ref.grp.
 .uni_da_prepare <- function(mbSetObj, variable, taxrank, ref.grp = NA, comp.grp = NA) {
+  # LinDA and ANCOM-BC2 model read counts: they take the table before the normalization (the filtered counts, as the
+  # multivariable LinDA does), never the normalized one, where LinDA's pseudo-count of 0.5 stood for a millionth of a
+  # sample and inflated the fold change of every taxon absent from some samples. A table uploaded as normalized data has
+  # no counts and is taken as it is.
+  counts <- if(.is.normalized.input(mbSetObj)) NULL else readDataQs("phyloseq_prenorm_objs.qs", mbSetObj$module.type, mbSetObj$dataSet$name)
   if(mbSetObj$module.type == "sdp") {
     taxrank <- "OTU"
-    data <- mbSetObj$dataSet$norm.phyobj
-    data1 <- as.matrix(otu_table(data))
+    data1 <- if(!is.null(counts)) as.matrix(counts$count_tables$OTU) else as.matrix(otu_table(mbSetObj$dataSet$norm.phyobj))
   } else {
-    if(!exists("phyloseq_objs")) {
+    if(!is.null(counts)) {
+      phyloseq_objs <- counts
+    } else if(!exists("phyloseq_objs")) {
       phyloseq_objs <- ov_qs_read("phyloseq_objs.qs")
     }
     if(taxrank == "OTU") {
