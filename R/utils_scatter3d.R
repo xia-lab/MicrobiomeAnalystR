@@ -4,6 +4,25 @@
 ## Author: Guangyan Zhou, guangyan.zhou@mail.mcgill.ca
 ##################################################
 
+# Axis-aligned extent of each group's confidence ellipsoid, in the units of xyz. The box of {x : (x-c)' S^-1 (x-c) <= t^2} is
+# c +/- t*sqrt(diag(S)), so no mesh is needed. Groups mirror the viewer: one ellipsoid per level of the factor, at the viewer's default
+# level and ComputeEncasing's radius; groups of < 4 samples get none and are skipped. A matrix of min/max rows, empty when no group has one.
+.ellipsoid.axis.ranges <- function(xyz, fac, level = 0.95){
+  xyz <- as.matrix(xyz[, 1:3, drop = FALSE]);
+  if(is.null(fac) || length(fac) != nrow(xyz)) return(xyz[0, , drop = FALSE]);
+  t <- sqrt(qchisq(level, 3));
+  out <- lapply(split(seq_len(nrow(xyz)), as.character(fac)), function(idx){
+    if(length(idx) < 4) return(NULL);
+    S <- cov(xyz[idx, , drop = FALSE]);
+    if(any(!is.finite(S))) return(NULL);
+    half <- t * sqrt(pmax(diag(S), 0));
+    ctr <- colMeans(xyz[idx, , drop = FALSE]);
+    rbind(ctr - half, ctr + half);
+  });
+  out <- do.call(rbind, out);
+  if(is.null(out)) xyz[0, , drop = FALSE] else out;
+}
+
 my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
   ##
   mbSetObj <- .get.mbSetObj(mbSetObj);
@@ -16,10 +35,13 @@ my.json.scatter <- function(mbSetObj=NA, filenm, containsLoading=F){
     orig.pos.xyz <- res$xyz;
   }
   
-  ticksX <- pretty(range(orig.pos.xyz[,1]*1.2),10, bound=F);
-  ticksY <- pretty(range(orig.pos.xyz[,2]*1.2),10, bound=F);
-  ticksZ <- pretty(range(orig.pos.xyz[,3]*1.2),10, bound=F);
-  
+  # Widen the axes to hold every group's confidence ellipsoid, as MetaboAnalystR does (55f3c7e): sized from the points alone,
+  # a small or elongated group's ellipsoid ran far outside the plotted box (owner, 23 Nov 2026, pca_3d)
+  ell.range <- .ellipsoid.axis.ranges(orig.pos.xyz, res$facA);
+  ticksX <- pretty(range(orig.pos.xyz[,1]*1.2, ell.range[,1]),10, bound=F);
+  ticksY <- pretty(range(orig.pos.xyz[,2]*1.2, ell.range[,2]),10, bound=F);
+  ticksZ <- pretty(range(orig.pos.xyz[,3]*1.2, ell.range[,3]),10, bound=F);
+
   #add two nodes, 1 with all min values and another with all max values. For scaling purposes
   minNode <-  c(min(ticksX), min(ticksY), min(ticksZ));
   maxNode <-  c(max(ticksX), max(ticksY), max(ticksZ));
