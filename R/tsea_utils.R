@@ -444,6 +444,11 @@ CalculateHyperScore <- function(mbSetObj, background = NULL){
       AddErrMsg("None of the query taxa was both measured in the study and present in the selected taxon set library!");
       return(0);
     }
+  }else{
+    # The whole library is the background: the draws are the query taxa in it. A query taxon in no set of the library can
+    # never be a hit, and counting it as a draw inflated every expected count and deflated every p-value.
+    ora.vec <- ora.vec[ora.vec %in% unlist(current.mset, use.names = FALSE)];
+    q.size <- length(ora.vec);
   }
 
   # A set of fewer than two members is not tested (one taxon cannot be "enriched"). Filtered by size alone, before
