@@ -432,13 +432,20 @@ PerformUnivarTest <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, t
   }
   tt <- edgeR::topTags(et, n=nrow(dge$table), adjust.method="BH", sort.by="PValue")
    res <- tt@.Data[[1]]
-   resTable_logFC <- res[match(rownames(resTable), rownames(res)), 'logFC']
+  # The direction of the test: the log2 ratio of the two groups' mean abundances in the table it tested (comp2 over comp1), with half the
+  # smallest non-zero value as pseudo-count. edgeR's exact test on that already normalized table normalized it again (RLE factors from 0.009
+  # to 14 on a 16S example) and gave taxa less abundant in comp2 a positive fold change.
+  pair <- if(comp1 %in% claslbl && comp2 %in% claslbl) c(comp1, comp2) else levels(claslbl)[1:2]
+  ab <- as.matrix(data1)[, rownames(resTable), drop=FALSE]
+  pc <- min(ab[ab > 0], na.rm=TRUE) / 2
+  resTable_logFC <- log2((colMeans(ab[cls == pair[2], , drop=FALSE]) + pc) / (colMeans(ab[cls == pair[1], , drop=FALSE]) + pc))
   resTable_logCPM <- res[match(rownames(resTable), rownames(res)), 'logCPM']
   resTable <- data.frame(log2FC = resTable_logFC, resTable,logCPM=resTable_logCPM)
 
   }
 
-  if(length(cls)>2){
+  # the number of GROUPS (lvl): length(cls) is the number of samples, so every two-group table lost its fold change and its threshold
+  if(lvl > 2){
   sigHits <- (resTable$FDR < p.lvl );
   resTable$log2FC = NULL;
   }else{
