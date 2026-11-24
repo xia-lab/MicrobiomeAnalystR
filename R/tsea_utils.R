@@ -1168,6 +1168,34 @@ SetTaxonSetLib <- function(mbSetObj, tset.type){
   return(.set.mbSetObj(mbSetObj))
 }
 
+# A taxon set is named by its study: "HIV infection (increased; Ling 2016)", "Obesity (decreased; PRJEB12123)". The curation also appended the database the set was taken from
+# ("... [BugSigDB]", "[cMD3]", "[GMrepo]"; the food matrices' "[FMBN]", "[cFMD]", "[NCBI BioSample]"), and every table, figure and sentence repeated it, though it says nothing the study does not (owner, 23 Nov 2026: "the source should be
+# paper itself, not BugSigDB"). Dropped here, once, where the library is read, from every set whose name stays its own without it: a set the tag alone tells from another keeps it.
+# The databases the library took sets from are kept, in this order, for the one place that says where the sets come from (GetTseaLibSources).
+.tsea.sources <- c("BugSigDB", "cMD3", "GMrepo", "FMBN", "cFMD", "NCBI BioSample");
+.tsea.drop.source.tags <- function(lib){
+  nm <- as.character(lib[, 1]);
+  tag <- paste0("\\s*\\[(", paste(.tsea.sources, collapse="|"), ")\\]\\s*$");
+  has <- grepl(tag, nm);
+  .tsea.cache$sources <- .tsea.sources[.tsea.sources %in% sub(paste0("^.*", tag), "\\1", nm[has])];
+  if(!any(has)) return(lib);
+  bare <- sub(tag, "", nm);
+  lone <- has & !(duplicated(bare) | duplicated(bare, fromLast = TRUE)) & !(bare %in% nm[!has]);
+  lib[lone, 1] <- bare[lone];
+  lib
+}
+
+#'The databases the taxon-set library last read took sets from
+#'@description The names of the databases ("BugSigDB", "cMD3", "GMrepo", ...) whose tag the sets of the library last read carried
+#'in their names (dropped from the names, see .tsea.drop.source.tags); character(0) when the library names none.
+#'@author Jeff Xia \email{jeff.xia@mcgill.ca}
+#'McGill University, Canada
+#'License: MIT
+#'@export
+GetTseaLibSources <- function(){
+  if(is.null(.tsea.cache$sources)) character(0) else .tsea.cache$sources
+}
+
 # Read one taxon-set library into the globals the tests use (current.msetlib, current.mset, uniq.count). TRUE when it was read.
 # quiet = TRUE: a library that is not there is not an error (a variant the curation has not shipped yet); the caller falls back.
 .tsea.load.lib <- function(tset.type, quiet = FALSE){
@@ -1189,6 +1217,7 @@ SetTaxonSetLib <- function(mbSetObj, tset.type){
   lib <- .readDataTable(libPath);
   # the reader makes the text "NA" a missing value, and a set named NA would answer to no name: the set keeps the text
   if(anyNA(lib[, 1])) lib[is.na(lib[, 1]), 1] <- "NA";
+  lib <- .tsea.drop.source.tags(lib);
   current.msetlib <<- lib;
   ms.list <- strsplit(current.msetlib[,2],"; ");
   names(ms.list) <- current.msetlib[,1];
