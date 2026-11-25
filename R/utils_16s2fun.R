@@ -408,21 +408,24 @@ runRefBlast <-  function(path_to_otus="user_otus.fasta",
   blast_bin = file.path(path_to_reference_data, "blast_bin/blastn")
   if (tolower(Sys.info()[["sysname"]]) != "windows") system(paste("chmod +x", blast_bin))
   if (tolower(Sys.info()[["sysname"]]) == "windows") blast_bin = file.path(path_to_reference_data, "blast_bin/blastn.exe")
-  res = system(command = paste(blast_bin, "-help"), intern = T)
+  # A copy that cannot start here (the reference's Linux blastn on a Mac or Windows) is no copy: its error or warning is read as "none",
+  # and the blastn on the PATH is tried, as the line below intends.
+  run_help = function(bin) tryCatch(suppressWarnings(system(command = paste(shQuote(bin), "-help"), intern = T, ignore.stderr = T)), error = function(e) character(0))
+  res = run_help(blast_bin)
   if(length(res) == 0)
   {
     blast_bin = "blastn"
-    res = system(command = paste(blast_bin, "-help"), intern = T)
+    res = run_help(blast_bin)
     if(length(res) == 0) stop("blastn not found! Consider to use the buildDependencies() command.")
   }
   
   makeblastdb_bin = file.path(path_to_reference_data, "blast_bin/makeblastdb")
   if (tolower(Sys.info()[["sysname"]]) != "windows") system(paste("chmod +x", makeblastdb_bin))
   if (tolower(Sys.info()[["sysname"]]) == "windows") makeblastdb_bin = file.path(path_to_reference_data, "blast_bin/makeblastdb.exe")
-  res = system(command = paste(makeblastdb_bin, "-help"), intern = T)
+  res = run_help(makeblastdb_bin)
   if(length(res) == 0){
     makeblastdb_bin = "makeblastdb"
-    res = system(command = paste(makeblastdb_bin, "-help"), intern = T)
+    res = run_help(makeblastdb_bin)
     if(length(res) == 0) stop("makeblastdb not found! Consider to use the buildDependencies() command.")
   }
   
