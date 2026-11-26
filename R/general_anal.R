@@ -292,6 +292,18 @@ DrawImpVar <- function(imp){
   
   # modified for B/W color
   dotcolor <- ifelse(color.BW, "darkgrey", "#585855");
+  # The left margin (in lines, as the callers set it) fits the longest name: their 7 lines held ~11 characters, "Gammaproteobacteria" was cut.
+  # Names take at most a third of the width (a wider margin fails the plot: "figure margins too large"); a longer one ends in "..." (owner, 26 Nov 2026).
+  nm.w <- function(s) strwidth(s, units = "inches", cex = 1.1);
+  max.w <- par("din")[1] / 3 - 2 * par("csi");
+  for (i in which(nm.w(vip.nms) > max.w)) {
+    s <- vip.nms[i];
+    while (nchar(s) > 1 && nm.w(paste0(s, "...")) > max.w) s <- substr(s, 1, nchar(s) - 1);
+    vip.nms[i] <- paste0(s, "...");
+  }
+  mar <- par("mar");
+  mar[2] <- max(mar[2], max(nm.w(vip.nms)) / par("csi") + 2);
+  par(mar = mar);
   dotchart(imp.vec, bg=dotcolor, xlab= xlbl, cex=1.35);
   
   mtext(side=2, at=1:feat.num, vip.nms, las=2, line=1, cex=1.1)
@@ -432,13 +444,20 @@ PerformUnivarTest <- function(mbSetObj=NA, variable, p.lvl=0.05, shotgunid=NA, t
   }
   tt <- edgeR::topTags(et, n=nrow(dge$table), adjust.method="BH", sort.by="PValue")
    res <- tt@.Data[[1]]
-   resTable_logFC <- res[match(rownames(resTable), rownames(res)), 'logFC']
+  # The direction of the test: the log2 ratio of the two groups' mean abundances in the table it tested (comp2 over comp1), with half the
+  # smallest non-zero value as pseudo-count. edgeR's exact test on that already normalized table normalized it again (RLE factors from 0.009
+  # to 14 on a 16S example) and gave taxa less abundant in comp2 a positive fold change.
+  pair <- if(comp1 %in% claslbl && comp2 %in% claslbl) c(comp1, comp2) else levels(claslbl)[1:2]
+  ab <- as.matrix(data1)[, rownames(resTable), drop=FALSE]
+  pc <- min(ab[ab > 0], na.rm=TRUE) / 2
+  resTable_logFC <- log2((colMeans(ab[cls == pair[2], , drop=FALSE]) + pc) / (colMeans(ab[cls == pair[1], , drop=FALSE]) + pc))
   resTable_logCPM <- res[match(rownames(resTable), rownames(res)), 'logCPM']
   resTable <- data.frame(log2FC = resTable_logFC, resTable,logCPM=resTable_logCPM)
 
   }
 
-  if(length(cls)>2){
+  # the number of GROUPS (lvl): length(cls) is the number of samples, so every two-group table lost its fold change and its threshold
+  if(lvl > 2){
   sigHits <- (resTable$FDR < p.lvl );
   resTable$log2FC = NULL;
   }else{
@@ -2042,15 +2061,22 @@ PerformANCOMBC2 <- function(mbSetObj, analysis.var, is.norm = "false",
 # Shared preparation for the single-factor compositional methods (LinDA, ANCOM-BC2): count table at
 # the requested level and the group factor, ordered so the fold change is comp.grp relative to ref.grp.
 .uni_da_prepare <- function(mbSetObj, variable, taxrank, ref.grp = NA, comp.grp = NA) {
+  # LinDA and ANCOM-BC2 model read counts: they take the table before the normalization (the filtered counts, as the
+  # multivariable LinDA does), never the normalized one, where LinDA's pseudo-count of 0.5 stood for a millionth of a
+  # sample and inflated the fold change of every taxon absent from some samples. A table uploaded as normalized data has
+  # no counts and is taken as it is.
+  counts <- if(.is.normalized.input(mbSetObj)) NULL else readDataQs("phyloseq_prenorm_objs.qs", mbSetObj$module.type, mbSetObj$dataSet$name)
   if(mbSetObj$module.type == "sdp") {
     taxrank <- "OTU"
-    data <- mbSetObj$dataSet$norm.phyobj
-    # as(x, "matrix"), NOT as.matrix(): otu_table extends matrix, so as.matrix() returns the S4
-    # object unchanged and the class leaks into whatever consumes data1 here - LinDA and ANCOM-BC2.
-    # Same numbers either way; only the class differs. (general_io.R:741 uses this spelling.)
-    data1 <- as(otu_table(data), "matrix")
+    # as(x, "matrix"), NOT as.matrix(), on the norm.phyobj fallback: otu_table extends matrix, so
+    # as.matrix() returns the S4 object unchanged and the class leaks into whatever consumes data1
+    # here - LinDA and ANCOM-BC2, which cannot index it. count_tables already holds genuine
+    # matrices (general_io.R:741). Same numbers either way; only the class differs.
+    data1 <- if(!is.null(counts)) as.matrix(counts$count_tables$OTU) else as(otu_table(mbSetObj$dataSet$norm.phyobj), "matrix")
   } else {
-    if(!exists("phyloseq_objs")) {
+    if(!is.null(counts)) {
+      phyloseq_objs <- counts
+    } else if(!exists("phyloseq_objs")) {
       phyloseq_objs <- ov_qs_read("phyloseq_objs.qs")
     }
     if(taxrank == "OTU") {

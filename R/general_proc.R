@@ -859,19 +859,21 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
           msg <- c(msg, paste("Performed ```total sum scaling``` normalization."));
         }
       }else if(scale.opt=="upperquartile"){
-        # edgeR quarantined — isolate calcNormFactors in subprocess
+        # edgeR quarantined — isolate calcNormFactors in subprocess. The table is the counts scaled by each sample's
+        # effective library size (edgeR::cpm with the factors): the counts plus one were returned with the factors
+        # left unused, so "upper quartile normalization" changed nothing.
         otuUQ <- rsclient_isolated_exec(
           func_body = function(input_data) {
             require(edgeR)
             x <- input_data$counts + 1
             y <- edgeR::DGEList(counts = x, remove.zeros = TRUE)
-            edgeR::calcNormFactors(y, method = input_data$method)
+            edgeR::cpm(edgeR::calcNormFactors(y, method = input_data$method))
           },
           input_data = list(counts = data, method = "upperquartile"),
           packages = c("edgeR", "qs2"), timeout = 120, output_type = "qs2"
         )
         if (is.list(otuUQ) && isFALSE(otuUQ$success)) { AddErrMsg(otuUQ$message); return(0) }
-        data <- as.matrix(otuUQ$counts);
+        data <- as.matrix(otuUQ);
         if(i==1){
           msg <- c(msg, paste("Performed ```upper quartile``` normalization"));
         }
@@ -906,20 +908,22 @@ PerformNormalization <- function(mbSetObj, rare.opt, scale.opt, transform.opt,is
     
     if(transform.opt != "none"){
       if(transform.opt %in% c("rle", "TMM")){
-        # edgeR quarantined — isolate calcNormFactors in subprocess
+        # edgeR quarantined — isolate calcNormFactors in subprocess. The table is the counts scaled by each sample's
+        # effective library size (edgeR::cpm with the factors): the counts plus one were returned with the factors
+        # left unused, so "TMM normalization" changed nothing.
         edger_method <- if (transform.opt == "rle") "RLE" else "TMM"
         otuNorm <- rsclient_isolated_exec(
           func_body = function(input_data) {
             require(edgeR)
             x <- input_data$counts + 1
             y <- edgeR::DGEList(counts = x, remove.zeros = TRUE)
-            edgeR::calcNormFactors(y, method = input_data$method)
+            edgeR::cpm(edgeR::calcNormFactors(y, method = input_data$method))
           },
           input_data = list(counts = data, method = edger_method),
           packages = c("edgeR", "qs2"), timeout = 120, output_type = "qs2"
         )
         if (is.list(otuNorm) && isFALSE(otuNorm$success)) { AddErrMsg(otuNorm$message); return(0) }
-        data <- as.matrix(otuNorm$counts);
+        data <- as.matrix(otuNorm);
         if(i==1){
           msg <- c(msg, paste0("Performed ```", edger_method, "``` Normalization"));
         }
