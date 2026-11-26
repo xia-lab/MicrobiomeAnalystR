@@ -292,6 +292,18 @@ DrawImpVar <- function(imp){
   
   # modified for B/W color
   dotcolor <- ifelse(color.BW, "darkgrey", "#585855");
+  # The left margin (in lines, as the callers set it) fits the longest name: their 7 lines held ~11 characters, "Gammaproteobacteria" was cut.
+  # Names take at most a third of the width (a wider margin fails the plot: "figure margins too large"); a longer one ends in "..." (owner, 26 Nov 2026).
+  nm.w <- function(s) strwidth(s, units = "inches", cex = 1.1);
+  max.w <- par("din")[1] / 3 - 2 * par("csi");
+  for (i in which(nm.w(vip.nms) > max.w)) {
+    s <- vip.nms[i];
+    while (nchar(s) > 1 && nm.w(paste0(s, "...")) > max.w) s <- substr(s, 1, nchar(s) - 1);
+    vip.nms[i] <- paste0(s, "...");
+  }
+  mar <- par("mar");
+  mar[2] <- max(mar[2], max(nm.w(vip.nms)) / par("csi") + 2);
+  par(mar = mar);
   dotchart(imp.vec, bg=dotcolor, xlab= xlbl, cex=1.35);
   
   mtext(side=2, at=1:feat.num, vip.nms, las=2, line=1, cex=1.1)
