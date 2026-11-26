@@ -1975,7 +1975,19 @@ PerformANCOMBC2 <- function(mbSetObj, analysis.var, is.norm = "false",
   model.vars <- unique(c(all.vars(as.formula(paste("~", fix_formula))),
                          if(!is.null(rand_formula)) gsub("^\\(1\\||\\)$", "", rand_formula)))
   keep <- complete.cases(meta[, model.vars, drop = FALSE])
-  Y <- round(as.matrix(otu.tab[, keep, drop = FALSE]))
+  # Hand ancombc2 a genuine base matrix. phyloseq's otu_table IS a matrix subclass, so as.matrix()
+  # and round() are both no-ops on one and the S4 class survives; ANCOMBC 2.10's data_sanity_check
+  # accepts anything that inherits "matrix" and passes the table straight through to
+  # .get_struc_zero, which indexes a row expecting a plain numeric vector
+  # (present_table[i, ] -> split() -> x[i]) and dies with "subscript out of bounds". Because the app
+  # sets struc_zero = !is.null(group), that fires on every grouped comparison. .uni_da_prepare's
+  # shotgun branch builds data1 as as.matrix(otu_table(norm.phyobj)), which is exactly that no-op,
+  # so this is a live path and not a hypothetical one. as(x, "matrix") is the coercion that really
+  # strips the class - the spelling general_io.R:741 already uses - and leaves a base matrix, a
+  # data.frame or a plain matrix input untouched.
+  Y <- otu.tab[, keep, drop = FALSE]
+  if(isS4(Y)) Y <- methods::as(Y, "matrix")
+  Y <- round(as.matrix(Y))
   Z <- meta[keep, , drop = FALSE]
   # ancombc2 drops a single-column meta_data to a vector and then reports the variable as missing;
   # a second (unused) column keeps it a data.frame
@@ -2033,7 +2045,10 @@ PerformANCOMBC2 <- function(mbSetObj, analysis.var, is.norm = "false",
   if(mbSetObj$module.type == "sdp") {
     taxrank <- "OTU"
     data <- mbSetObj$dataSet$norm.phyobj
-    data1 <- as.matrix(otu_table(data))
+    # as(x, "matrix"), NOT as.matrix(): otu_table extends matrix, so as.matrix() returns the S4
+    # object unchanged and the class leaks into whatever consumes data1 here - LinDA and ANCOM-BC2.
+    # Same numbers either way; only the class differs. (general_io.R:741 uses this spelling.)
+    data1 <- as(otu_table(data), "matrix")
   } else {
     if(!exists("phyloseq_objs")) {
       phyloseq_objs <- ov_qs_read("phyloseq_objs.qs")
