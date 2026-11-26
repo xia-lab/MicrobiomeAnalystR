@@ -1343,8 +1343,23 @@ PlotRareCurve <- function(mbSetObj, graphName, variable){
   mbSetObj <- .get.mbSetObj(mbSetObj);
   set.seed(13789);
 
-  data <- data.matrix(mbSetObj$dataSet$filt.data);
-  rarefaction_curve_data<-as.matrix(otu_table(data));
+  # Build the phyloseq object the rest of this function has always assumed `data` to be. It used to
+  # do data.matrix(filt.data) and then call otu_table(data) and sample_data(data) on the result,
+  # which cannot work for any class filt.data takes: a phyloseq dies in data.matrix() ("no method
+  # for coercing this S4 class to a vector"), a plain matrix dies in otu_table() ("argument
+  # taxa_are_rows is missing, with no default"), and an otu_table dies in sample_data() ("sam_data
+  # slot is empty"). So the rarefaction curve could not be drawn at all. This is the construction
+  # the box-plot path uses (general_anal.R:472): counts as uploaded, taxa in rows, the sample table
+  # from proc.phyobj. taxa_names is restored afterwards because .counts.or.as.uploaded() goes
+  # through apply(), which drops the rownames.
+  counts <- .counts.or.as.uploaded(mbSetObj, mbSetObj$dataSet$filt.data);
+  data <- merge_phyloseq(otu_table(counts, taxa_are_rows = TRUE),
+                         sample_data(mbSetObj$dataSet$proc.phyobj, errorIfNULL = TRUE));
+  taxa_names(data) <- rownames(mbSetObj$dataSet$filt.data);
+  # as(x, "matrix"), not as.matrix(): otu_table extends matrix, so as.matrix() hands back the S4
+  # object, and vegan::rarecurve below indexes it with a logical (x[x > 0]) and fails with
+  # "(subscript) logical subscript too long".
+  rarefaction_curve_data <- as(otu_table(data), "matrix");
 
   #sample-wise
   subsmpl=50;
@@ -1354,11 +1369,12 @@ PlotRareCurve <- function(mbSetObj, graphName, variable){
     rarefaction_curve_data = rarefaction_curve_data[,ss,drop=FALSE];
     #retaining the column names
     data<-prune_samples(colnames(rarefaction_curve_data),data);
-  } else {
-    rarefaction_curve_data = rarefaction_curve_data;
   }
 
-  sam_data<-sample_data(data);
+  # `colors` and `cls.lbls` below are matched to the columns of rarefaction_curve_data positionally,
+  # and neither merge_phyloseq nor prune_samples (which keeps the object's own sample order, not the
+  # order of the names handed to it) promises that order, so align the metadata to the matrix here.
+  sam_data<-sample_data(data)[colnames(rarefaction_curve_data), ];
   raremax <- min(rowSums(t(rarefaction_curve_data)));
 
   #getting colors
