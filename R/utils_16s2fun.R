@@ -374,6 +374,7 @@ my.16sfun.anot<-function(mbSetObj, type, pipeline,ggversion) {
 
 # Function to reduce blast results
 blastTableReducer <-  function(path_to_blast_file = '') {
+  if(!file.exists(path_to_blast_file)) stop('blastn wrote no result file: it did not run, or it stopped with an error.')
   if(file.size(path_to_blast_file) == 0) stop('Blast file empty!')
   
   id1 = ""
@@ -405,8 +406,18 @@ runRefBlast <-  function(path_to_otus="user_otus.fasta",
                          use_force = T, num_threads = 1, 
                          include_user_data = F, path_to_user_data = '', 
                          name_of_user_data = ""){
+  # A PATH WITH A SPACE IN IT IS ONE ARGUMENT: every path of the commands below is quoted. The reference under ".../Application Support/..." (the desktop app's
+  # folder on a Mac) made makeblastdb and blastn read half a path, write nothing, and the step fail on the missing result with "missing value where TRUE/FALSE needed".
+  q = function(x) shQuote(x, type = if (tolower(Sys.info()[["sysname"]]) == "windows") "cmd" else "sh")
+  # BLAST reads the value of -db (and makeblastdb's -in) as a LIST split at spaces, quoted or not ("No alias or index file found for nucleotide database
+  # [/Users/x/Library/Application]"), so a database is named from inside its own folder: the command runs there and the other paths are absolute.
+  full = function(x) normalizePath(x, winslash = "/", mustWork = FALSE)
+  run_in = function(dir, cmd) {
+    old = setwd(dir); on.exit(setwd(old))
+    if (tolower(Sys.info()[["sysname"]]) == "windows") system(cmd, show.output.on.console = F) else system(cmd, ignore.stdout = T, ignore.stderr = T)
+  }
   blast_bin = file.path(path_to_reference_data, "blast_bin/blastn")
-  if (tolower(Sys.info()[["sysname"]]) != "windows") system(paste("chmod +x", blast_bin))
+  if (tolower(Sys.info()[["sysname"]]) != "windows") system(paste("chmod +x", q(blast_bin)), ignore.stderr = T)
   if (tolower(Sys.info()[["sysname"]]) == "windows") blast_bin = file.path(path_to_reference_data, "blast_bin/blastn.exe")
   # A copy that cannot start here (the reference's Linux blastn on a Mac or Windows) is no copy: its error or warning is read as "none",
   # and the blastn on the PATH is tried, as the line below intends.
@@ -420,7 +431,7 @@ runRefBlast <-  function(path_to_otus="user_otus.fasta",
   }
   
   makeblastdb_bin = file.path(path_to_reference_data, "blast_bin/makeblastdb")
-  if (tolower(Sys.info()[["sysname"]]) != "windows") system(paste("chmod +x", makeblastdb_bin))
+  if (tolower(Sys.info()[["sysname"]]) != "windows") system(paste("chmod +x", q(makeblastdb_bin)), ignore.stderr = T)
   if (tolower(Sys.info()[["sysname"]]) == "windows") makeblastdb_bin = file.path(path_to_reference_data, "blast_bin/makeblastdb.exe")
   res = run_help(makeblastdb_bin)
   if(length(res) == 0){
@@ -462,13 +473,12 @@ runRefBlast <-  function(path_to_otus="user_otus.fasta",
   
   message('Copy and generate database')
   
-  cmd = paste(makeblastdb_bin, '-dbtype nucl -in', path_to_ref_db)
-  if (tolower(Sys.info()[["sysname"]]) == "windows") system(cmd, show.output.on.console = F)
-  if (tolower(Sys.info()[["sysname"]]) != "windows") system(cmd, ignore.stdout = T, ignore.stderr = T)
+  if (basename(blast_bin) != blast_bin) blast_bin = full(blast_bin)
+  if (basename(makeblastdb_bin) != makeblastdb_bin) makeblastdb_bin = full(makeblastdb_bin)
+  path_to_otus = full(path_to_otus); path_to_temp_folder = full(path_to_temp_folder)
+  run_in(dirname(path_to_ref_db), paste(q(makeblastdb_bin), '-dbtype nucl -in', q(basename(path_to_ref_db))))
   message('Reference blast started')
-  cmd = paste(blast_bin, '-db', path_to_ref_db, '-query', path_to_otus, '-evalue 1e-20 -max_target_seqs 1000000 -outfmt 6 -out', file.path(path_to_temp_folder, 'ref_blast.txt'), '-num_threads', num_threads)
-  if (tolower(Sys.info()[["sysname"]]) == "windows") system(cmd, show.output.on.console = F)
-  if (tolower(Sys.info()[["sysname"]]) != "windows") system(cmd, ignore.stdout = T, ignore.stderr = T)
+  run_in(dirname(path_to_ref_db), paste(q(blast_bin), '-db', q(basename(path_to_ref_db)), '-query', q(path_to_otus), '-evalue 1e-20 -max_target_seqs 1000000 -outfmt 6 -out', q(file.path(path_to_temp_folder, 'ref_blast.txt')), '-num_threads', num_threads))
   blastTableReducer(file.path(path_to_temp_folder, 'ref_blast.txt'))
   message('Reference blast finished')
   message('Cleanup finished')
@@ -477,13 +487,9 @@ runRefBlast <-  function(path_to_otus="user_otus.fasta",
     message('Copy and generate user database')
     path_to_user_db = file.path(path_to_user_data, name_of_user_data, 'USER.fasta')
     file.copy(from = path_to_user_db, to = file.path(path_to_temp_folder, 'user_blast.fasta'))
-    cmd = paste(makeblastdb_bin, '-dbtype nucl -in', file.path(path_to_temp_folder, 'user_blast.fasta'))
-    if (tolower(Sys.info()[["sysname"]]) == "windows") system(cmd, show.output.on.console = F)
-    if (tolower(Sys.info()[["sysname"]]) != "windows") system(cmd, ignore.stdout = T, ignore.stderr = T)
+    run_in(path_to_temp_folder, paste(q(makeblastdb_bin), '-dbtype nucl -in user_blast.fasta'))
     message('User blast started')
-    cmd = paste(blast_bin, '-db', file.path(path_to_temp_folder, '/user_blast.fasta'), '-query', path_to_otus, '-evalue 1e-20 -max_target_seqs 1000000 -outfmt 6 -out', file.path(path_to_temp_folder, 'user_blast.txt'), '-num_threads', num_threads)
-    if (tolower(Sys.info()[["sysname"]]) == "windows") system(cmd, show.output.on.console = F)
-    if (tolower(Sys.info()[["sysname"]]) != "windows") system(cmd, ignore.stdout = T, ignore.stderr = T)
+    run_in(path_to_temp_folder, paste(q(blast_bin), '-db user_blast.fasta -query', q(path_to_otus), '-evalue 1e-20 -max_target_seqs 1000000 -outfmt 6 -out', q(file.path(path_to_temp_folder, 'user_blast.txt')), '-num_threads', num_threads))
     blastTableReducer(file.path(path_to_temp_folder, 'user_blast.txt'))
     message('User blast finished')
     unlink(file.path(path_to_temp_folder, 'user_blast.fasta*'))
